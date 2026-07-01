@@ -31607,6 +31607,9 @@ def test_frontier_research_queue_command_plan_cli_filters_action_ids(tmp_path):
 
 def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
     registry_module = importlib.import_module("eigentruth.registry")
     summary_path = tmp_path / "unresolved-summary.json"
@@ -31736,6 +31739,7 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert "fill_world_model_rule_inputs_from_numeric_bindings.py" in (
         rule_entry["command_templates"][0]
     )
+    assert "--subject-bindings" not in rule_entry["command_templates"][0]
     assert "fill_world_model_rule_inputs_from_temporal_bindings.py" in (
         rule_entry["command_templates"][3]
     )
@@ -31773,6 +31777,54 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert record.metadata["workflow"] == "frontier_research_queue_command_plan"
     assert record.metadata["source_workflow"] == "unresolved_frontier_evidence_summary"
     assert record.metadata["entry_count"] == 2
+
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        bindings_json_path=tmp_path / "unresolved-frontier-command-bindings.json",
+    )
+    scaffold_entries = {entry["action_id"]: entry for entry in scaffold["entries"]}
+    citation_placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold_entries[
+            "improve_unresolved_citation_alignment"
+        ]["placeholder_records"]
+    }
+    rule_placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold_entries[
+            "fill_and_promote_remaining_world_model_rules"
+        ]["placeholder_records"]
+    }
+    assert citation_placeholders[(1, "--output-dir")]["suggested_binding"] == {
+        "path": "artifacts/improve-unresolved-citation-alignment/command-1",
+        "source": "derived_command_output_dir",
+    }
+    assert citation_placeholders[(1, "--workflow-report")]["suggested_binding"] == {
+        "path": "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+        "source": "derived_command_report_path",
+    }
+    assert citation_placeholders[(1, "--artifact-manifest")]["suggested_binding"] == {
+        "path": "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
+        "source": "derived_manifest_path",
+    }
+    assert rule_placeholders[(1, "--rule-inputs-jsonl")]["suggested_binding"][
+        "source"
+    ] == "derived_command_sidecar_path"
+    assert rule_placeholders[(2, "--rule-inputs")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "upstream_command_output",
+        "input_name_hint": "rule_inputs",
+        "flag": "--rule-inputs",
+    }
+    assert rule_placeholders[(2, "--rule-results-jsonl")]["suggested_binding"][
+        "source"
+    ] == "derived_command_sidecar_path"
+    assert rule_placeholders[(3, "--adapter-report")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "upstream_command_output",
+        "input_name_hint": "adapter_report",
+        "flag": "--adapter-report",
+    }
 
 
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):

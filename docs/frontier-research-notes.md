@@ -1399,14 +1399,18 @@ Added the first monitor-first tool-selection audit layer:
   current default refreshed queue it surfaces `53` ordered placeholders and
   `10` required inputs, with safe suggestions for outputs/manifests/registry
   metadata and shared command-requirement summaries while keeping direct binder
-  output at `needs_inputs`. The abstention participation scaffold now surfaces
-  the missing `--scores`/`--signal-groups` planner flags and missing
-  `--scores`/`--signals` stability-eval flags before binding review; after
-  adding frontier-release comparison requirements it also exposes the missing
-  `--verifier-stability-report`/`--abstention-stability-report`/`--json` flags
-  on the final comparison template. The promotion-metrics refresh action's
-  four known commands now scaffold as command-requirement ready, and direct
-  placeholder hints map flags back to exact required inputs such as
+  output at `needs_inputs`. For unresolved citation/world-model closure plans it
+  now uses distinct command-level output-dir, workflow-report, rule sidecar, and
+  manifest suggestions so alternate replay commands and fill/adapter/promotion
+  chains do not collide on one artifact path. The abstention participation
+  scaffold now surfaces the missing `--scores`/`--signal-groups` planner flags
+  and missing `--scores`/`--signals` stability-eval flags before binding
+  review; after adding frontier-release comparison requirements it also exposes
+  the missing `--verifier-stability-report`/`--abstention-stability-report`/
+  `--json` flags on the final comparison template. The promotion-metrics
+  refresh action's four known commands now scaffold as command-requirement
+  ready, and direct placeholder hints map flags back to exact required inputs
+  such as
   `product_promotion_contract_source`, `product_trace_corpus`, and
   `baseline_product_runtime_report`. The bindings sidecar now includes those
   input and placeholder review records while leaving actual `inputs` and

@@ -360,8 +360,6 @@ def _world_model_rule_commands(
             str(input_tasks),
             "--numeric-bindings",
             "...",
-            "--subject-bindings",
-            "...",
             "--output-dir",
             "...",
             "--json",

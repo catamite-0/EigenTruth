@@ -6706,11 +6706,15 @@ python benchmarks/scaffold_frontier_research_queue_bindings.py \
 ```
 
 The scaffold lists each ordered `...` placeholder, required input, suggested
-output/manifest/registry/name/version binding, and known command-specific CLI
-requirements. For example, it will mark an abstention rerun planner template as
-still needing `--scores`/`--signal-groups` when the action requires score dumps
-and signal groups, and it recognizes the frontier release-evidence promotion
-refresh scripts before binding review. Placeholders whose flags map directly to
+output/manifest/registry/name/version binding, command-level report/sidecar
+paths, and known command-specific CLI requirements. For example, it will mark an
+abstention rerun planner template as still needing `--scores`/`--signal-groups`
+when the action requires score dumps and signal groups, and it recognizes the
+frontier release-evidence promotion refresh scripts before binding review.
+Unresolved citation and world-model command plans also receive distinct
+per-command output-dir, workflow-report, rule-input/result sidecar, and manifest
+suggestions so alternate replays and chained rule fill/adapter/promotion runs do
+not collide on one artifact path. Placeholders whose flags map directly to
 required inputs carry that exact input name, such as
 `--contract -> product_promotion_contract_source` or
 `--baseline -> baseline_product_runtime_report`. The generated bindings sidecar

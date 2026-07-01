@@ -261,13 +261,39 @@ def _placeholder_suggestion(
     default_version: str,
 ) -> tuple[Mapping[str, Any] | None, int, str | None]:
     normalized = "" if flag is None else flag.lstrip("-").replace("-", "_")
+    if normalized == "output_dir":
+        return {
+            "path": _command_output_dir(action_id, command_index),
+            "source": "derived_command_output_dir",
+        }, output_index, previous_report_path
     if normalized in {"json", "audit_json"}:
         if output_index < len(planned_outputs):
             path = _optional_str(planned_outputs[output_index].get("path"))
             output_index += 1
             if path:
                 return {"path": path, "source": "planned_output"}, output_index, path
-        return None, output_index, previous_report_path
+        path = _command_output_path(action_id, command_index, f"{normalized}.json")
+        return {
+            "path": path,
+            "source": "derived_command_report_path",
+        }, output_index, path
+    if normalized == "workflow_report":
+        path = _command_output_path(action_id, command_index, "workflow-report.json")
+        return {
+            "path": path,
+            "source": "derived_command_report_path",
+        }, output_index, path
+    if normalized in {"rule_inputs_jsonl", "rule_results_jsonl"}:
+        path = _sidecar_output_path(
+            normalized,
+            action_id=action_id,
+            command_index=command_index,
+            previous_report_path=previous_report_path,
+        )
+        return {
+            "path": path,
+            "source": "derived_command_sidecar_path",
+        }, output_index, previous_report_path
     if normalized == "artifact_manifest":
         path = _manifest_suggestion(previous_report_path, action_id, command_index)
         return {"path": path, "source": "derived_manifest_path"}, output_index, previous_report_path
@@ -288,6 +314,13 @@ def _placeholder_suggestion(
             "input_name": required_input_name,
             "flag": flag,
         }, output_index, previous_report_path
+    if normalized in {"adapter_report", "rule_inputs", "rule_results"}:
+        return {
+            "review_required": True,
+            "reason": "upstream_command_output",
+            "input_name_hint": normalized,
+            "flag": flag,
+        }, output_index, previous_report_path
     if normalized.startswith("min_") or normalized.endswith("_rate"):
         return {"review_required": True, "reason": "metric_gate_threshold"}, output_index, previous_report_path
     if normalized.startswith("max_"):
@@ -305,10 +338,41 @@ def _placeholder_suggestion(
     }, output_index, previous_report_path
 
 
+def _command_output_dir(action_id: str, command_index: int) -> str:
+    return str(Path("artifacts") / _slug(action_id) / f"command-{command_index}")
+
+
+def _command_output_path(action_id: str, command_index: int, filename: str) -> str:
+    return str(Path(_command_output_dir(action_id, command_index)) / filename)
+
+
 def _manifest_suggestion(previous_report_path: str | None, action_id: str, command_index: int) -> str:
     if previous_report_path:
-        return str(Path(previous_report_path).with_name("artifact-manifest.json"))
-    return str(Path("artifacts") / _slug(action_id) / f"command-{command_index}-manifest.json")
+        report = Path(previous_report_path)
+        if report.parent.name == f"command-{command_index}":
+            return str(report.parent / "artifact-manifest.json")
+        stem = report.stem or f"command-{command_index}"
+        return str(report.with_name(f"{stem}-manifest.json"))
+    return _command_output_path(action_id, command_index, "artifact-manifest.json")
+
+
+def _sidecar_output_path(
+    normalized_flag: str,
+    *,
+    action_id: str,
+    command_index: int,
+    previous_report_path: str | None,
+) -> str:
+    filename = {
+        "rule_inputs_jsonl": "rule-inputs.jsonl",
+        "rule_results_jsonl": "rule-results.jsonl",
+    }.get(normalized_flag, f"{normalized_flag}.jsonl")
+    if previous_report_path:
+        report = Path(previous_report_path)
+        if report.parent.name == f"command-{command_index}":
+            return str(report.parent / filename)
+        return str(report.with_name(f"{report.stem}-{filename}"))
+    return _command_output_path(action_id, command_index, filename)
 
 
 def _required_input_name_for_flag(requirement: Mapping[str, Any], flag: str | None) -> str | None:
