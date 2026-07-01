@@ -249,6 +249,40 @@ _ACTION_GATE_RUNTIME_EVIDENCE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_EVIDENCE_HANDOFF_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+    "--contract ... --json ... --audit-json ... "
+    "--pre-generation-probe-comparison ... "
+    "--triple-extraction-fixture-matrix ... "
+    "--counterfactual-verification ... "
+    "--product-trace-replay-workflow ... "
+    "--frontier-release-evidence ... "
+    "--triple-audit-enrichment ... --runtime-baseline ... "
+    "--covered-fact-property-metrics ... --artifact-manifest ... "
+    "--registry ... --name ... --version ...",
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-evidence-handoff-coverage ... "
+    "--min-runtime-drift-evidence-handoff-manifest-verified-rate ... "
+    "--min-runtime-drift-evidence-handoff-present-metric-rate ... "
+    "--max-runtime-drift-evidence-handoff-missing-metric-rate ... "
+    "--max-runtime-drift-evidence-handoff-missing-metric-count ... "
+    "--max-runtime-drift-evidence-handoff-blocked-group-count ... "
+    "--min-runtime-drift-evidence-handoff-promoted-group-rate ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-evidence-handoff-coverage ... "
+    "--min-evidence-handoff-manifest-verified-rate ... "
+    "--min-evidence-handoff-present-metric-rate ... "
+    "--max-evidence-handoff-missing-metric-rate ... "
+    "--max-evidence-handoff-missing-metric-count ... "
+    "--max-evidence-handoff-blocked-group-count ... "
+    "--min-evidence-handoff-promoted-group-rate ... "
+    "--json ... --artifact-manifest ...",
+)
+
 _TRIPLE_AUDIT_RUNTIME_EVIDENCE_COMMANDS = (
     "benchmarks/run_triple_extraction_fixture_matrix.py "
     "--corpus NAME=... --output-dir ... --artifact-manifest ...",
@@ -975,6 +1009,98 @@ def _assert_action_gate_runtime_evidence_action(action):
         "product_trace_replay_workflow",
         "product_trace_action_audit_gate",
         "product_trace_action_execution_gate",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_evidence_handoff_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "product_promotion_contract",
+        "product_promotion_evidence_handoff",
+        "evidence_handoff_audit",
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "evidence_handoff_evidence",
+    )
+    assert action["suggested_commands"] == _EVIDENCE_HANDOFF_RUNTIME_EVIDENCE_COMMANDS
+    assert action["metadata"]["evidence_handoff_script"] == (
+        "benchmarks/export_product_promotion_contract_evidence_handoff.py"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["evidence_audit_api"] == (
+        "eigentruth.control.audit_product_promotion_contract_evidence"
+    )
+    assert action["metadata"]["evidence_handoff_workflow"] == (
+        "product_promotion_evidence_handoff_export"
+    )
+    assert action["metadata"]["evidence_audit_workflow"] == (
+        "product_promotion_evidence_handoff_audit"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == (
+        "promotion_contract_evidence_provenance"
+    )
+    assert action["metadata"]["default_required_groups"] == (
+        "promotion",
+        "pre_generation",
+        "counterfactual",
+        "triple_audit",
+        "covered_fact_property",
+        "action_gate",
+        "action_receipts",
+        "receipt_claim_support",
+        "frontier_release_evidence",
+    )
+    assert action["metadata"]["optional_runtime_groups"] == (
+        "claim_factuality",
+        "claim_risk_localization",
+        "trajectory_audit",
+        "evidence_handoff",
+        "world_model",
+        "context_sensitivity",
+        "counterfactual_robustness",
+    )
+    assert action["metadata"]["required_runtime_metrics"] == (
+        "promotion_contract.evidence_handoff.coverage_rate",
+        "promotion_contract.evidence_handoff.manifest_verified_rate",
+        "promotion_contract.evidence_handoff.present_metric_rate.mean",
+        "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+        "promotion_contract.evidence_handoff.missing_metric_count.mean",
+        "promotion_contract.evidence_handoff.blocked_group_count.mean",
+        "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_evidence_handoff_coverage": 1.0,
+        "min_evidence_handoff_manifest_verified_rate": 1.0,
+        "min_evidence_handoff_present_metric_rate": 1.0,
+        "max_evidence_handoff_missing_metric_rate": 0.0,
+        "max_evidence_handoff_missing_metric_count": 0.0,
+        "max_evidence_handoff_blocked_group_count": 0.0,
+        "min_evidence_handoff_promoted_group_rate": 1.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "product_promotion_contract_source",
+        "frontier_and_runtime_child_evidence_reports",
+        "artifact_manifests_for_child_evidence",
+        "product_trace_corpus",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "product_promotion_evidence_handoff_export",
+        "product_promotion_evidence_handoff_audit",
+        "product_trace_replay_workflow",
         "product_runtime_baseline",
         "product_runtime_drift_comparison",
     )
@@ -1847,13 +1973,11 @@ def test_evidence_gap_plan_maps_product_runtime_trace_and_handoff_blockers():
     _assert_trajectory_audit_runtime_evidence_action(
         actions["rerun_product_trace_trajectory_audit_evidence"]
     )
-    assert actions[
-        "refresh_product_promotion_evidence_handoff"
-    ]["evidence_routes"] == (
-        "product_promotion_contract",
-        "evidence_handoff",
-        "product_runtime_drift",
+    _assert_evidence_handoff_runtime_evidence_action(
+        actions["refresh_product_promotion_evidence_handoff"]
     )
+    strict_json_dumps(payload, sort_keys=True)
+    assert EvidenceGapPlan.from_dict(payload).to_dict() == payload
 
 
 def test_evidence_gap_plan_maps_product_runtime_triple_audit_blockers():

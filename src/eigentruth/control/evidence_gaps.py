@@ -2004,14 +2004,115 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
             ),
             evidence_routes=(
                 "product_promotion_contract",
-                "evidence_handoff",
+                "product_promotion_evidence_handoff",
+                "evidence_handoff_audit",
+                "product_trace_replay",
+                "product_runtime_baseline",
                 "product_runtime_drift",
+                "evidence_handoff_evidence",
             ),
             suggested_commands=(
-                "benchmarks/export_product_promotion_contract_evidence_handoff.py",
-                "benchmarks/run_product_runtime_baseline.py",
-                "benchmarks/compare_product_runtime_baselines.py",
+                "benchmarks/export_product_promotion_contract_evidence_handoff.py "
+                "--contract ... --json ... --audit-json ... "
+                "--pre-generation-probe-comparison ... "
+                "--triple-extraction-fixture-matrix ... "
+                "--counterfactual-verification ... "
+                "--product-trace-replay-workflow ... "
+                "--frontier-release-evidence ... "
+                "--triple-audit-enrichment ... --runtime-baseline ... "
+                "--covered-fact-property-metrics ... --artifact-manifest ... "
+                "--registry ... --name ... --version ...",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-evidence-handoff-coverage ... "
+                "--min-runtime-drift-evidence-handoff-manifest-verified-rate ... "
+                "--min-runtime-drift-evidence-handoff-present-metric-rate ... "
+                "--max-runtime-drift-evidence-handoff-missing-metric-rate ... "
+                "--max-runtime-drift-evidence-handoff-missing-metric-count ... "
+                "--max-runtime-drift-evidence-handoff-blocked-group-count ... "
+                "--min-runtime-drift-evidence-handoff-promoted-group-rate ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-evidence-handoff-coverage ... "
+                "--min-evidence-handoff-manifest-verified-rate ... "
+                "--min-evidence-handoff-present-metric-rate ... "
+                "--max-evidence-handoff-missing-metric-rate ... "
+                "--max-evidence-handoff-missing-metric-count ... "
+                "--max-evidence-handoff-blocked-group-count ... "
+                "--min-evidence-handoff-promoted-group-rate ... "
+                "--json ... --artifact-manifest ...",
             ),
+            metadata={
+                "evidence_handoff_script": (
+                    "benchmarks/export_product_promotion_contract_evidence_handoff.py"
+                ),
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "evidence_audit_api": (
+                    "eigentruth.control.audit_product_promotion_contract_evidence"
+                ),
+                "evidence_handoff_workflow": "product_promotion_evidence_handoff_export",
+                "evidence_audit_workflow": "product_promotion_evidence_handoff_audit",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "promotion_contract_evidence_provenance",
+                "default_required_groups": (
+                    "promotion",
+                    "pre_generation",
+                    "counterfactual",
+                    "triple_audit",
+                    "covered_fact_property",
+                    "action_gate",
+                    "action_receipts",
+                    "receipt_claim_support",
+                    "frontier_release_evidence",
+                ),
+                "optional_runtime_groups": (
+                    "claim_factuality",
+                    "claim_risk_localization",
+                    "trajectory_audit",
+                    "evidence_handoff",
+                    "world_model",
+                    "context_sensitivity",
+                    "counterfactual_robustness",
+                ),
+                "required_runtime_metrics": (
+                    "promotion_contract.evidence_handoff.coverage_rate",
+                    "promotion_contract.evidence_handoff.manifest_verified_rate",
+                    "promotion_contract.evidence_handoff.present_metric_rate.mean",
+                    "promotion_contract.evidence_handoff.missing_metric_rate.mean",
+                    "promotion_contract.evidence_handoff.missing_metric_count.mean",
+                    "promotion_contract.evidence_handoff.blocked_group_count.mean",
+                    "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+                ),
+                "default_gate_thresholds": {
+                    "min_evidence_handoff_coverage": 1.0,
+                    "min_evidence_handoff_manifest_verified_rate": 1.0,
+                    "min_evidence_handoff_present_metric_rate": 1.0,
+                    "max_evidence_handoff_missing_metric_rate": 0.0,
+                    "max_evidence_handoff_missing_metric_count": 0.0,
+                    "max_evidence_handoff_blocked_group_count": 0.0,
+                    "min_evidence_handoff_promoted_group_rate": 1.0,
+                },
+                "required_inputs": (
+                    "product_promotion_contract_source",
+                    "frontier_and_runtime_child_evidence_reports",
+                    "artifact_manifests_for_child_evidence",
+                    "product_trace_corpus",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "product_promotion_evidence_handoff_export",
+                    "product_promotion_evidence_handoff_audit",
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "product_runtime_frontier_release_evidence":
         return EvidenceGapAction(
