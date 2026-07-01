@@ -1067,8 +1067,61 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "Current frontier work treats hallucination risk before decoding as a "
                 "probability; release drift needs multi-run probe evidence and redline margins."
             ),
-            evidence_routes=("pre_generation_probe_comparison", "product_runtime_drift"),
-            suggested_commands=("benchmarks/compare_pre_generation_probe_workflows.py",),
+            evidence_routes=(
+                "pre_generation_probe_workflow",
+                "pre_generation_text_redline",
+                "pre_generation_probe_comparison",
+                "product_promotion_contract",
+                "product_runtime_drift",
+            ),
+            suggested_commands=(
+                "benchmarks/run_pre_generation_probe_workflow.py "
+                "--output-dir ... --json ... --artifact-manifest ...",
+                "benchmarks/eval_pre_generation_text_baselines.py "
+                "--records ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_pre_generation_probe_workflows.py "
+                "--workflow-report MODEL=... --redline-report MODEL=... "
+                "--json ... --artifact-manifest ...",
+                "benchmarks/export_product_promotion_contract.py "
+                "--source ... --output ... --artifact-manifest ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-pre-generation-probe-comparison-coverage ... "
+                "--min-pre-generation-probe-comparison-manifest-verified-rate ... "
+                "--min-pre-generation-probe-comparison-redline-pass-rate ... "
+                "--json ... --artifact-manifest ...",
+            ),
+            metadata={
+                "workflow_script": "benchmarks/run_pre_generation_probe_workflow.py",
+                "redline_script": "benchmarks/eval_pre_generation_text_baselines.py",
+                "comparison_script": "benchmarks/compare_pre_generation_probe_workflows.py",
+                "promotion_contract_script": "benchmarks/export_product_promotion_contract.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "workflow": "pre_generation_probe_workflow",
+                "redline_workflow": "pre_generation_text_baseline_eval",
+                "comparison_workflow": "pre_generation_probe_workflow_comparison",
+                "handoff_artifact_kind": "product_promotion_contract",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "pre_generation_hidden_state_probe",
+                "redline_required": True,
+                "required_inputs": (
+                    "pre_generation_hidden_state_records_or_truthfulqa_export",
+                    "pre_generation_probe_workflow_reports",
+                    "pre_generation_text_redline_reports",
+                    "release_candidate_or_product_contract_source",
+                    "product_trace_corpus",
+                ),
+                "closure_outputs": (
+                    "pre_generation_probe_workflow_comparison",
+                    "product_promotion_contract",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "product_runtime_claim_factuality_evidence":
         return EvidenceGapAction(

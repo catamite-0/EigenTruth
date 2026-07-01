@@ -60,6 +60,26 @@ _DETECTABILITY_RERUN_COMMANDS = (
     "benchmarks/compare_frontier_release_evidence.py --frontier-rerun-rollup-report ...",
 )
 
+_PRE_GENERATION_PROBE_COMMANDS = (
+    "benchmarks/run_pre_generation_probe_workflow.py "
+    "--output-dir ... --json ... --artifact-manifest ...",
+    "benchmarks/eval_pre_generation_text_baselines.py "
+    "--records ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_pre_generation_probe_workflows.py "
+    "--workflow-report MODEL=... --redline-report MODEL=... "
+    "--json ... --artifact-manifest ...",
+    "benchmarks/export_product_promotion_contract.py "
+    "--source ... --output ... --artifact-manifest ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-pre-generation-probe-comparison-coverage ... "
+    "--min-pre-generation-probe-comparison-manifest-verified-rate ... "
+    "--min-pre-generation-probe-comparison-redline-pass-rate ... "
+    "--json ... --artifact-manifest ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -235,6 +255,58 @@ def _assert_detectability_rerun_rollup_action(action):
     )
 
 
+def _assert_pre_generation_probe_comparison_action(action):
+    assert action["evidence_routes"] == (
+        "pre_generation_probe_workflow",
+        "pre_generation_text_redline",
+        "pre_generation_probe_comparison",
+        "product_promotion_contract",
+        "product_runtime_drift",
+    )
+    assert action["suggested_commands"] == _PRE_GENERATION_PROBE_COMMANDS
+    assert action["metadata"]["workflow_script"] == (
+        "benchmarks/run_pre_generation_probe_workflow.py"
+    )
+    assert action["metadata"]["redline_script"] == (
+        "benchmarks/eval_pre_generation_text_baselines.py"
+    )
+    assert action["metadata"]["comparison_script"] == (
+        "benchmarks/compare_pre_generation_probe_workflows.py"
+    )
+    assert action["metadata"]["promotion_contract_script"] == (
+        "benchmarks/export_product_promotion_contract.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["workflow"] == "pre_generation_probe_workflow"
+    assert action["metadata"]["redline_workflow"] == "pre_generation_text_baseline_eval"
+    assert action["metadata"]["comparison_workflow"] == (
+        "pre_generation_probe_workflow_comparison"
+    )
+    assert action["metadata"]["handoff_artifact_kind"] == "product_promotion_contract"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == "pre_generation_hidden_state_probe"
+    assert action["metadata"]["redline_required"] is True
+    assert action["metadata"]["required_inputs"] == (
+        "pre_generation_hidden_state_records_or_truthfulqa_export",
+        "pre_generation_probe_workflow_reports",
+        "pre_generation_text_redline_reports",
+        "release_candidate_or_product_contract_source",
+        "product_trace_corpus",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "pre_generation_probe_workflow_comparison",
+        "product_promotion_contract",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
 def test_evidence_gap_plan_maps_release_blockers_to_frontier_actions():
     plan = plan_evidence_gaps_from_release_candidate(
         _blocked_registry_workflow_payload(),
@@ -258,9 +330,8 @@ def test_evidence_gap_plan_maps_release_blockers_to_frontier_actions():
     assert payload["summary"]["top_action_ids"][0] == "refresh_readiness_baseline"
     assert "run_pre_generation_probe_comparison" in actions
     assert "rerun_product_trace_action_gates" in actions
-    assert actions["run_pre_generation_probe_comparison"]["evidence_routes"] == (
-        "pre_generation_probe_comparison",
-        "product_runtime_drift",
+    _assert_pre_generation_probe_comparison_action(
+        actions["run_pre_generation_probe_comparison"]
     )
     pre_generation_gap = next(
         gap
