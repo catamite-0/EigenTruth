@@ -253,6 +253,50 @@ _TRAJECTORY_AUDIT_RUNTIME_EVIDENCE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_PROVENANCE_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-product-trace-provenance-coverage-rate ... "
+    "--min-runtime-drift-product-trace-provenance-supported-claim-evidence-coverage ... "
+    "--max-runtime-drift-product-trace-provenance-missing-reference-rate-increase ... "
+    "--max-runtime-drift-product-trace-provenance-unsupported-supported-claim-rate-increase ... "
+    "--max-runtime-drift-product-trace-provenance-error-rate-increase ... "
+    "--min-runtime-drift-product-trace-provenance-final-answer-evidence-reference-rate ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-product-trace-provenance-coverage-rate ... "
+    "--min-product-trace-provenance-supported-claim-evidence-coverage ... "
+    "--max-product-trace-provenance-missing-reference-rate-increase ... "
+    "--max-product-trace-provenance-unsupported-supported-claim-rate-increase ... "
+    "--max-product-trace-provenance-error-rate-increase ... "
+    "--min-product-trace-provenance-final-answer-evidence-reference-rate ... "
+    "--json ... --artifact-manifest ...",
+)
+
+_CITATION_INTEGRITY_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-product-trace-citation-integrity-participating-trace-rate ... "
+    "--min-runtime-drift-product-trace-citation-integrity-coverage-rate ... "
+    "--max-runtime-drift-product-trace-citation-integrity-mismatch-rate-increase ... "
+    "--max-runtime-drift-product-trace-citation-integrity-unresolved-rate-increase ... "
+    "--max-runtime-drift-product-trace-citation-integrity-issue-rate-increase ... "
+    "--max-runtime-drift-product-trace-citation-integrity-trace-gap-rate-increase ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-product-trace-citation-integrity-participating-trace-rate ... "
+    "--min-product-trace-citation-integrity-coverage-rate ... "
+    "--max-product-trace-citation-integrity-mismatch-rate-increase ... "
+    "--max-product-trace-citation-integrity-unresolved-rate-increase ... "
+    "--max-product-trace-citation-integrity-issue-rate-increase ... "
+    "--max-product-trace-citation-integrity-trace-gap-rate-increase ... "
+    "--json ... --artifact-manifest ...",
+)
+
 _ACTION_GATE_RUNTIME_EVIDENCE_COMMANDS = (
     "benchmarks/run_product_trace_replay_workflow.py "
     "--trace-glob ... --promotion-contract ... "
@@ -1084,6 +1128,117 @@ def _assert_trajectory_audit_runtime_evidence_action(action):
     }
     assert action["metadata"]["required_inputs"] == (
         "full_product_trace_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "product_trace_replay_workflow",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_provenance_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "product_trace_replay",
+        "trace_provenance",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "provenance_evidence",
+    )
+    assert action["suggested_commands"] == _PROVENANCE_RUNTIME_EVIDENCE_COMMANDS
+    assert action["metadata"]["trace_summary_api"] == (
+        "eigentruth.control.ProductTrace.provenance_summary"
+    )
+    assert action["metadata"]["provenance_audit_api"] == (
+        "eigentruth.control.audit_trace_provenance"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == "trace_evidence_provenance"
+    assert action["metadata"]["required_trace_metrics"] == (
+        "provenance.coverage_rate",
+        "provenance.supported_claim_evidence_coverage",
+        "provenance.missing_reference_rate",
+        "provenance.unsupported_supported_claim_rate",
+        "provenance.error_rate",
+        "provenance.final_answer_evidence_reference_rate",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_product_trace_provenance_coverage_rate": 1.0,
+        "min_product_trace_provenance_supported_claim_evidence_coverage": 1.0,
+        "max_product_trace_provenance_missing_reference_rate_increase": 0.0,
+        "max_product_trace_provenance_unsupported_supported_claim_rate_increase": 0.0,
+        "max_product_trace_provenance_error_rate_increase": 0.0,
+        "min_product_trace_provenance_final_answer_evidence_reference_rate": 1.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "full_product_trace_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "product_trace_replay_workflow",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_citation_integrity_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "product_trace_replay",
+        "citation_integrity",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "citation_integrity_evidence",
+    )
+    assert (
+        action["suggested_commands"] == _CITATION_INTEGRITY_RUNTIME_EVIDENCE_COMMANDS
+    )
+    assert action["metadata"]["trace_summary_api"] == (
+        "eigentruth.control.ProductTrace.citation_integrity_summary"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == "citation_integrity_traceability"
+    assert action["metadata"]["required_trace_metrics"] == (
+        "citation_integrity.participating_trace_rate",
+        "citation_integrity.coverage_rate",
+        "citation_integrity.mismatch_rate",
+        "citation_integrity.unresolved_rate",
+        "citation_integrity.issue_rate",
+        "citation_integrity.trace_gap_rate",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_product_trace_citation_integrity_participating_trace_rate": 1.0,
+        "min_product_trace_citation_integrity_coverage_rate": 1.0,
+        "max_product_trace_citation_integrity_mismatch_rate_increase": 0.0,
+        "max_product_trace_citation_integrity_unresolved_rate_increase": 0.0,
+        "max_product_trace_citation_integrity_issue_rate_increase": 0.0,
+        "max_product_trace_citation_integrity_trace_gap_rate_increase": 0.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "product_trace_corpus_with_citation_metadata",
         "promotion_contract_or_release_candidate",
         "baseline_product_runtime_report",
     )
@@ -2142,6 +2297,108 @@ def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
         "world_model.trace_gap_rate",
     )
     assert payload["gaps"][1]["missing_metrics"] == ()
+
+
+def test_evidence_gap_plan_maps_product_runtime_provenance_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift provenance evidence metrics are incomplete: "
+                        "provenance.coverage_rate, "
+                        "provenance.supported_claim_evidence_coverage",
+                        "product runtime drift provenance evidence blocked 1 metric(s)",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 2
+    assert payload["summary"]["action_count"] == 1
+    assert payload["summary"]["missing_metric_count"] == 2
+    assert payload["summary"]["root_causes"] == {"evidence_coverage": 2}
+    assert payload["summary"]["research_axes"] == {"trace_provenance": 2}
+    assert payload["summary"]["top_action_ids"] == (
+        "rerun_product_trace_provenance_evidence",
+    )
+    _assert_provenance_runtime_evidence_action(
+        actions["rerun_product_trace_provenance_evidence"]
+    )
+    for gap in payload["gaps"]:
+        assert gap["metadata"]["evidence_kind"] == (
+            "product_runtime_provenance_evidence"
+        )
+        assert gap["recommended_action_ids"] == (
+            "rerun_product_trace_provenance_evidence",
+        )
+    assert payload["gaps"][0]["missing_metrics"] == (
+        "provenance.coverage_rate",
+        "provenance.supported_claim_evidence_coverage",
+    )
+    assert payload["gaps"][1]["missing_metrics"] == ()
+    strict_json_dumps(payload, sort_keys=True)
+    assert EvidenceGapPlan.from_dict(payload).to_dict() == payload
+
+
+def test_evidence_gap_plan_maps_product_runtime_citation_integrity_blockers():
+    plan = plan_evidence_gaps_from_release_candidate({
+        "workflow": "release_candidate_comparison",
+        "decision": {
+            "status": "blocked",
+            "blocking_reasons": [
+                {
+                    "gate": "product_runtime_drift",
+                    "status": "blocked",
+                    "reasons": (
+                        "product runtime drift citation integrity evidence metrics are incomplete: "
+                        "citation_integrity.participating_trace_rate, "
+                        "citation_integrity.trace_gap_rate",
+                        "product runtime drift citation integrity evidence blocked 2 metric(s)",
+                    ),
+                }
+            ],
+        },
+    })
+
+    payload = plan.to_dict()
+    actions = {action["action_id"]: action for action in payload["actions"]}
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["summary"]["gap_count"] == 2
+    assert payload["summary"]["action_count"] == 1
+    assert payload["summary"]["missing_metric_count"] == 2
+    assert payload["summary"]["root_causes"] == {"evidence_coverage": 2}
+    assert payload["summary"]["research_axes"] == {"citation_integrity": 2}
+    assert payload["summary"]["top_action_ids"] == (
+        "rerun_product_trace_citation_integrity_evidence",
+    )
+    _assert_citation_integrity_runtime_evidence_action(
+        actions["rerun_product_trace_citation_integrity_evidence"]
+    )
+    for gap in payload["gaps"]:
+        assert gap["metadata"]["evidence_kind"] == (
+            "product_runtime_citation_integrity_evidence"
+        )
+        assert gap["recommended_action_ids"] == (
+            "rerun_product_trace_citation_integrity_evidence",
+        )
+    assert payload["gaps"][0]["missing_metrics"] == (
+        "citation_integrity.participating_trace_rate",
+        "citation_integrity.trace_gap_rate",
+    )
+    assert payload["gaps"][1]["missing_metrics"] == ()
+    strict_json_dumps(payload, sort_keys=True)
+    assert EvidenceGapPlan.from_dict(payload).to_dict() == payload
 
 
 def test_evidence_gap_plan_maps_product_runtime_trace_robustness_blockers():

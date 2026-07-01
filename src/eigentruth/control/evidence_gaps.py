@@ -766,6 +766,18 @@ def _classify_gap(
             "trajectory_audit",
             "runtime_drift",
         )
+    if _is_product_runtime_provenance_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_provenance_evidence",
+            "evidence_coverage",
+            "trace_provenance",
+        )
+    if _is_product_runtime_citation_integrity_evidence(gate, text, missing_metrics):
+        return _kind(
+            "product_runtime_citation_integrity_evidence",
+            "evidence_coverage",
+            "citation_integrity",
+        )
     if _is_product_runtime_evidence_handoff_evidence(gate, text, missing_metrics):
         return _kind(
             "product_runtime_evidence_handoff_evidence",
@@ -955,6 +967,43 @@ def _is_product_runtime_trajectory_audit_evidence(
             "trajectory_audit_evidence",
             "trajectory_audit.",
             "product_trace_trajectory_audit",
+        ),
+    )
+
+
+def _is_product_runtime_provenance_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "provenance evidence",
+            "provenance_evidence",
+            "provenance.",
+            "product_trace_provenance",
+        ),
+    )
+
+
+def _is_product_runtime_citation_integrity_evidence(
+    gate: str,
+    text: str,
+    missing_metrics: Sequence[str],
+) -> bool:
+    return _is_product_runtime_evidence_kind(
+        gate,
+        text,
+        missing_metrics,
+        patterns=(
+            "citation-integrity evidence",
+            "citation integrity evidence",
+            "citation_integrity_evidence",
+            "citation_integrity.",
+            "product_trace_citation_integrity",
         ),
     )
 
@@ -2126,6 +2175,164 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 },
                 "required_inputs": (
                     "full_product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
+        )
+    if evidence_kind == "product_runtime_provenance_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_provenance_evidence",
+            title="Replay product traces with provenance evidence",
+            action_type="workflow",
+            priority=86,
+            rationale=(
+                "Runtime drift gates need trace-level provenance coverage, supported-claim "
+                "evidence references, and missing/unsupported reference drift before "
+                "release checks can trust generated answer evidence."
+            ),
+            evidence_routes=(
+                "product_trace_replay",
+                "trace_provenance",
+                "product_runtime_baseline",
+                "product_runtime_drift",
+                "provenance_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-product-trace-provenance-coverage-rate ... "
+                "--min-runtime-drift-product-trace-provenance-supported-claim-evidence-coverage ... "
+                "--max-runtime-drift-product-trace-provenance-missing-reference-rate-increase ... "
+                "--max-runtime-drift-product-trace-provenance-unsupported-supported-claim-rate-increase ... "
+                "--max-runtime-drift-product-trace-provenance-error-rate-increase ... "
+                "--min-runtime-drift-product-trace-provenance-final-answer-evidence-reference-rate ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-product-trace-provenance-coverage-rate ... "
+                "--min-product-trace-provenance-supported-claim-evidence-coverage ... "
+                "--max-product-trace-provenance-missing-reference-rate-increase ... "
+                "--max-product-trace-provenance-unsupported-supported-claim-rate-increase ... "
+                "--max-product-trace-provenance-error-rate-increase ... "
+                "--min-product-trace-provenance-final-answer-evidence-reference-rate ... "
+                "--json ... --artifact-manifest ...",
+            ),
+            metadata={
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "trace_summary_api": "eigentruth.control.ProductTrace.provenance_summary",
+                "provenance_audit_api": "eigentruth.control.audit_trace_provenance",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "trace_evidence_provenance",
+                "required_trace_metrics": (
+                    "provenance.coverage_rate",
+                    "provenance.supported_claim_evidence_coverage",
+                    "provenance.missing_reference_rate",
+                    "provenance.unsupported_supported_claim_rate",
+                    "provenance.error_rate",
+                    "provenance.final_answer_evidence_reference_rate",
+                ),
+                "default_gate_thresholds": {
+                    "min_product_trace_provenance_coverage_rate": 1.0,
+                    "min_product_trace_provenance_supported_claim_evidence_coverage": 1.0,
+                    "max_product_trace_provenance_missing_reference_rate_increase": 0.0,
+                    (
+                        "max_product_trace_provenance_"
+                        "unsupported_supported_claim_rate_increase"
+                    ): 0.0,
+                    "max_product_trace_provenance_error_rate_increase": 0.0,
+                    "min_product_trace_provenance_final_answer_evidence_reference_rate": 1.0,
+                },
+                "required_inputs": (
+                    "full_product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
+        )
+    if evidence_kind == "product_runtime_citation_integrity_evidence":
+        return EvidenceGapAction(
+            action_id="rerun_product_trace_citation_integrity_evidence",
+            title="Replay product traces with citation-integrity evidence",
+            action_type="workflow",
+            priority=86,
+            rationale=(
+                "Citation-backed answers need trace-level citation participation, "
+                "coverage, catalog mismatch, unresolved-reference, and trace-gap drift "
+                "evidence before final release gates trust cited claims."
+            ),
+            evidence_routes=(
+                "product_trace_replay",
+                "citation_integrity",
+                "product_runtime_baseline",
+                "product_runtime_drift",
+                "citation_integrity_evidence",
+            ),
+            suggested_commands=(
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-product-trace-citation-integrity-participating-trace-rate ... "
+                "--min-runtime-drift-product-trace-citation-integrity-coverage-rate ... "
+                "--max-runtime-drift-product-trace-citation-integrity-mismatch-rate-increase ... "
+                "--max-runtime-drift-product-trace-citation-integrity-unresolved-rate-increase ... "
+                "--max-runtime-drift-product-trace-citation-integrity-issue-rate-increase ... "
+                "--max-runtime-drift-product-trace-citation-integrity-trace-gap-rate-increase ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-product-trace-citation-integrity-participating-trace-rate ... "
+                "--min-product-trace-citation-integrity-coverage-rate ... "
+                "--max-product-trace-citation-integrity-mismatch-rate-increase ... "
+                "--max-product-trace-citation-integrity-unresolved-rate-increase ... "
+                "--max-product-trace-citation-integrity-issue-rate-increase ... "
+                "--max-product-trace-citation-integrity-trace-gap-rate-increase ... "
+                "--json ... --artifact-manifest ...",
+            ),
+            metadata={
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "trace_summary_api": (
+                    "eigentruth.control.ProductTrace.citation_integrity_summary"
+                ),
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "citation_integrity_traceability",
+                "required_trace_metrics": (
+                    "citation_integrity.participating_trace_rate",
+                    "citation_integrity.coverage_rate",
+                    "citation_integrity.mismatch_rate",
+                    "citation_integrity.unresolved_rate",
+                    "citation_integrity.issue_rate",
+                    "citation_integrity.trace_gap_rate",
+                ),
+                "default_gate_thresholds": {
+                    "min_product_trace_citation_integrity_participating_trace_rate": 1.0,
+                    "min_product_trace_citation_integrity_coverage_rate": 1.0,
+                    "max_product_trace_citation_integrity_mismatch_rate_increase": 0.0,
+                    "max_product_trace_citation_integrity_unresolved_rate_increase": 0.0,
+                    "max_product_trace_citation_integrity_issue_rate_increase": 0.0,
+                    "max_product_trace_citation_integrity_trace_gap_rate_increase": 0.0,
+                },
+                "required_inputs": (
+                    "product_trace_corpus_with_citation_metadata",
                     "promotion_contract_or_release_candidate",
                     "baseline_product_runtime_report",
                 ),
