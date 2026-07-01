@@ -7620,6 +7620,10 @@ answers above `--max-high-confidence-accepted-false-rate`. Uncertainty-style
 signals such as `nll_answer`, `first_token_entropy`, and
 `inside_semantic_energy` default to `--confidence-direction lower` because lower
 values mean higher model confidence.
+Runtime recommendations now honor each candidate's
+`release_gate_at_best_alpha`: a score-fusion route is only promoted as a
+quality signal when both the conformal gate and the high-confidence release gate
+pass.
 
 Verifier outputs can be converted into the same score-dump interface before
 running the geometry-fusion comparison:
@@ -9294,7 +9298,8 @@ and records
 It keeps `truth_proj` as the best quality signal while adding promoted
 `score_fusion_mean_rank` evidence (`AUROC=0.679`, false alarm `0.090`,
 detection `0.196`, `alpha=0.1`) to the runtime recommendation and performance
-evidence bundle.
+evidence bundle; current runtime recommendations also require that score-fusion
+candidate's high-confidence release gate to pass when present.
 The selected-fusion handoff baseline at
 `artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/`
 reuses the same worker-sweep matrix plus
@@ -9328,7 +9333,8 @@ Its manifest and release registry metadata carry
 `recommended_score_fusion_status=promote`,
 `recommended_score_fusion_signal=score_fusion_mean_rank`,
 `recommended_score_fusion_auroc=0.679`,
-`recommended_score_fusion_conformal_gate_passed=true`, and
+`recommended_score_fusion_conformal_gate_passed=true`,
+`recommended_score_fusion_release_gate_status=promote`, and
 `performance_score_ensemble_report=artifacts/truthfulqa_score_ensemble_report.json`.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness

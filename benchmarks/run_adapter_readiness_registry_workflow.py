@@ -169,6 +169,14 @@ def _promotion_metadata(
         "recommended_score_fusion_signal": score_fusion.get("signal_name"),
         "recommended_score_fusion_auroc": score_fusion.get("auroc"),
         "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+        "recommended_score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+        "recommended_score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+        "recommended_score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+            "high_confidence_accepted_false_rate"
+        ),
+        "recommended_score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+            "high_confidence_accepted_false_count"
+        ),
         "adapter_family_matrix_report": readiness_report.get("adapter_family_matrix_path"),
         "adapter_family_routes": tuple(adapter_family.get("routes") or ()),
         "adapter_family_retrieval_routes": tuple(adapter_family.get("retrieval_routes") or ()),

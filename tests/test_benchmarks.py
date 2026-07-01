@@ -15613,6 +15613,16 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
                     },
                     "ensemble_results": {
                         "max_rank": {
+                            "release_gate_at_best_alpha": {
+                                "status": "promote",
+                                "alpha": 0.2,
+                                "false_alarm_pass": True,
+                                "max_high_confidence_accepted_false_rate": 0.0,
+                                "high_confidence_accepted_false_rate": 0.0,
+                                "high_confidence_accepted_false_count": 0,
+                                "high_confidence_accepted_count": 3,
+                                "reasons": [],
+                            },
                             "alphas": {
                                 "0.2": {
                                     "alpha": 0.2,
@@ -15657,6 +15667,8 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     }
     assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["status"] == "promote"
     assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["false_alarm"] == pytest.approx(0.18)
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["release_gate_status"] == "promote"
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["release_gate_passed"] is True
     assert payload["runtime_recommendation"]["recommendation"]["inside_sampling"]["recommended_run"] == (
         "adaptive_selfcheck"
     )
@@ -15689,6 +15701,8 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     assert manifest["metadata"]["recommended_best_quality_auroc"] == pytest.approx(0.94)
     assert manifest["metadata"]["recommended_score_fusion_status"] == "promote"
     assert manifest["metadata"]["recommended_score_fusion_conformal_gate_passed"] is True
+    assert manifest["metadata"]["recommended_score_fusion_release_gate_status"] == "promote"
+    assert manifest["metadata"]["recommended_score_fusion_release_gate_passed"] is True
     assert manifest["metadata"]["recommended_inside_sampling"]["recommended_run"] == "adaptive_selfcheck"
 
 
@@ -25159,6 +25173,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "score_fusion_signal": "score_fusion_mean_rank",
                         "score_fusion_auroc": 0.68,
                         "score_fusion_conformal_gate_passed": True,
+                        "score_fusion_release_gate_status": "promote",
+                        "score_fusion_release_gate_passed": True,
+                        "score_fusion_high_confidence_accepted_false_rate": 0.0,
+                        "score_fusion_high_confidence_accepted_false_count": 0,
                         "selected_fusion_status": "promote",
                         "selected_fusion_run": "smollm2",
                         "selected_fusion_candidate": "geometry:mean_rank",
@@ -25903,6 +25921,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["performance_score_fusion_signal"] == "score_fusion_mean_rank"
     assert contract["metadata"]["performance_score_fusion_auroc"] == pytest.approx(0.68)
     assert contract["metadata"]["performance_score_fusion_conformal_gate_passed"] is True
+    assert contract["metadata"]["performance_score_fusion_release_gate_status"] == "promote"
+    assert contract["metadata"]["performance_score_fusion_release_gate_passed"] is True
+    assert contract["metadata"]["performance_score_fusion_high_confidence_accepted_false_rate"] == pytest.approx(
+        0.0
+    )
+    assert contract["metadata"]["performance_score_fusion_high_confidence_accepted_false_count"] == 0
     assert contract["metadata"]["performance_selected_fusion_status"] == "promote"
     assert contract["metadata"]["performance_selected_fusion_run"] == "smollm2"
     assert contract["metadata"]["performance_selected_fusion_candidate"] == "geometry:mean_rank"
@@ -26179,6 +26203,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["performance_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
     assert record.metadata["performance_best_quality_signal"] == "truth_proj"
     assert record.metadata["performance_score_fusion_signal"] == "score_fusion_mean_rank"
+    assert record.metadata["performance_score_fusion_release_gate_status"] == "promote"
+    assert record.metadata["performance_score_fusion_high_confidence_accepted_false_count"] == 0
     assert record.metadata["performance_selected_fusion_status"] == "promote"
     assert record.metadata["performance_selected_fusion_run"] == "smollm2"
     assert record.metadata["performance_selected_fusion_signal"] == "selected_fusion_mean_rank"
@@ -26634,6 +26660,10 @@ def _write_performance_baseline_record(
     score_fusion_signal=None,
     score_fusion_auroc=None,
     score_fusion_conformal_gate_passed=None,
+    score_fusion_release_gate_status=None,
+    score_fusion_release_gate_passed=None,
+    score_fusion_high_confidence_accepted_false_rate=None,
+    score_fusion_high_confidence_accepted_false_count=None,
     selected_fusion_artifact_report=None,
     selected_fusion_status=None,
     selected_fusion_run=None,
@@ -26735,6 +26765,14 @@ def _write_performance_baseline_record(
             "score_fusion_signal": score_fusion_signal,
             "score_fusion_auroc": score_fusion_auroc,
             "score_fusion_conformal_gate_passed": score_fusion_conformal_gate_passed,
+            "score_fusion_release_gate_status": score_fusion_release_gate_status,
+            "score_fusion_release_gate_passed": score_fusion_release_gate_passed,
+            "score_fusion_high_confidence_accepted_false_rate": (
+                score_fusion_high_confidence_accepted_false_rate
+            ),
+            "score_fusion_high_confidence_accepted_false_count": (
+                score_fusion_high_confidence_accepted_false_count
+            ),
             "selected_fusion_status": selected_fusion_status,
             "selected_fusion_run": selected_fusion_run,
             "selected_fusion_candidate": selected_fusion_candidate,
@@ -26758,6 +26796,14 @@ def _write_performance_baseline_record(
             "score_fusion_signal": score_fusion_signal,
             "score_fusion_auroc": score_fusion_auroc,
             "score_fusion_conformal_gate_passed": score_fusion_conformal_gate_passed,
+            "score_fusion_release_gate_status": score_fusion_release_gate_status,
+            "score_fusion_release_gate_passed": score_fusion_release_gate_passed,
+            "score_fusion_high_confidence_accepted_false_rate": (
+                score_fusion_high_confidence_accepted_false_rate
+            ),
+            "score_fusion_high_confidence_accepted_false_count": (
+                score_fusion_high_confidence_accepted_false_count
+            ),
             "selected_fusion_artifact_report": selected_fusion_artifact_report,
             "selected_fusion_status": selected_fusion_status,
             "selected_fusion_run": selected_fusion_run,
@@ -32564,6 +32610,16 @@ def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
                 },
                 "ensemble_results": {
                     "max_rank": {
+                        "release_gate_at_best_alpha": {
+                            "status": "promote",
+                            "alpha": 0.2,
+                            "false_alarm_pass": True,
+                            "max_high_confidence_accepted_false_rate": 0.0,
+                            "high_confidence_accepted_false_rate": 0.0,
+                            "high_confidence_accepted_false_count": 0,
+                            "high_confidence_accepted_count": 2,
+                            "reasons": [],
+                        },
                         "alphas": {
                             "0.2": {
                                 "alpha": 0.2,
@@ -32577,6 +32633,20 @@ def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
                     }
                 },
                 "best_fusion_artifact": {"path": "fusion.json", "method": "max_rank"},
+                "fusion_release_gate_at_alpha": {
+                    "status": "promote",
+                    "alpha": 0.2,
+                    "confidence_audit_enabled": True,
+                    "candidate_count": 1,
+                    "promoted_candidate_count": 1,
+                    "recommended": {
+                        "candidate_group": "ensemble",
+                        "candidate_name": "max_rank",
+                        "status": "promote",
+                        "high_confidence_accepted_false_rate": 0.0,
+                        "reasons": [],
+                    },
+                },
             }
         ],
     }
@@ -32595,9 +32665,26 @@ def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
     }
     assert report["recommendation"]["score_fusion"]["status"] == "promote"
     assert report["recommendation"]["score_fusion"]["conformal_gate_passed"] is True
+    assert report["recommendation"]["score_fusion"]["release_gate_status"] == "promote"
+    assert report["recommendation"]["score_fusion"]["release_gate_passed"] is True
+    assert report["recommendation"]["score_fusion"]["high_confidence_accepted_false_rate"] == pytest.approx(0.0)
+    assert report["recommendation"]["score_fusion"]["fusion_release_gate_at_alpha"] == {
+        "status": "promote",
+        "alpha": pytest.approx(0.2),
+        "confidence_audit_enabled": True,
+        "candidate_count": 1,
+        "promoted_candidate_count": 1,
+        "recommended_candidate_group": "ensemble",
+        "recommended_candidate_name": "max_rank",
+        "recommended_candidate_status": "promote",
+        "recommended_high_confidence_accepted_false_rate": pytest.approx(0.0),
+        "recommended_reasons": (),
+    }
     assert report["evidence"]["score_ensemble_report"] == str(score_report_path)
     assert report["evidence"]["score_fusion_status"] == "promote"
     assert report["evidence"]["score_fusion_false_alarm"] == pytest.approx(0.19)
+    assert report["evidence"]["score_fusion_release_gate_status"] == "promote"
+    assert report["evidence"]["score_fusion_high_confidence_accepted_false_count"] == 0
 
     blocked_score_ensemble = json.loads(json.dumps(score_ensemble_report))
     blocked_score_ensemble["runs"][0]["best_ensemble_at_alpha"]["auroc"] = 0.99
@@ -32616,6 +32703,38 @@ def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
     }
     assert blocked["recommendation"]["score_fusion"]["status"] == "blocked"
     assert blocked["recommendation"]["score_fusion"]["conformal_gate_passed"] is False
+
+    release_blocked_score_ensemble = json.loads(json.dumps(score_ensemble_report))
+    release_blocked_score_ensemble["runs"][0]["best_ensemble_at_alpha"]["auroc"] = 0.99
+    release_gate = release_blocked_score_ensemble["runs"][0]["ensemble_results"]["max_rank"][
+        "release_gate_at_best_alpha"
+    ]
+    release_gate["status"] = "blocked"
+    release_gate["high_confidence_accepted_false_rate"] = 0.5
+    release_gate["high_confidence_accepted_false_count"] = 1
+    release_gate["reasons"] = [
+        "high-confidence accepted false rate 0.5 exceeds max 0",
+    ]
+
+    release_blocked = module.build_runtime_recommendation(
+        matrix_report,
+        score_ensemble_report=release_blocked_score_ensemble,
+        score_ensemble_report_path=score_report_path,
+    )
+
+    assert "score_fusion_max_rank" not in release_blocked["recommendation"]["quality_signals"]
+    assert release_blocked["recommendation"]["best_quality_signal"] == {
+        "name": "truth_proj",
+        "auroc": pytest.approx(0.72),
+    }
+    assert release_blocked["recommendation"]["score_fusion"]["status"] == "blocked"
+    assert release_blocked["recommendation"]["score_fusion"]["conformal_gate_passed"] is True
+    assert release_blocked["recommendation"]["score_fusion"]["release_gate_status"] == "blocked"
+    assert release_blocked["recommendation"]["score_fusion"]["release_gate_passed"] is False
+    assert release_blocked["recommendation"]["score_fusion"]["high_confidence_accepted_false_rate"] == (
+        pytest.approx(0.5)
+    )
+    assert release_blocked["evidence"]["score_fusion_release_gate_status"] == "blocked"
 
 
 def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_path):
@@ -33662,6 +33781,16 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
                     },
                     "ensemble_results": {
                         "max_rank": {
+                            "release_gate_at_best_alpha": {
+                                "status": "promote",
+                                "alpha": 0.2,
+                                "false_alarm_pass": True,
+                                "max_high_confidence_accepted_false_rate": 0.0,
+                                "high_confidence_accepted_false_rate": 0.0,
+                                "high_confidence_accepted_false_count": 0,
+                                "high_confidence_accepted_count": 3,
+                                "reasons": [],
+                            },
                             "alphas": {
                                 "0.2": {
                                     "alpha": 0.2,
@@ -33676,6 +33805,20 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
                     "best_fusion_artifact": {
                         "path": str(fusion_artifact_path),
                         "method": "max_rank",
+                    },
+                    "fusion_release_gate_at_alpha": {
+                        "status": "promote",
+                        "alpha": 0.2,
+                        "confidence_audit_enabled": True,
+                        "candidate_count": 1,
+                        "promoted_candidate_count": 1,
+                        "recommended": {
+                            "candidate_group": "ensemble",
+                            "candidate_name": "max_rank",
+                            "status": "promote",
+                            "high_confidence_accepted_false_rate": 0.0,
+                            "reasons": [],
+                        },
                     },
                 }
             ],
@@ -33783,6 +33926,8 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     }
     assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["status"] == "promote"
     assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["false_alarm"] == pytest.approx(0.18)
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["release_gate_status"] == "promote"
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["release_gate_passed"] is True
     assert payload["performance_evidence_bundle"]["status"] == "promote"
     assert payload["performance_evidence_bundle"]["release_ready"] is True
     assert payload["performance_evidence_bundle"]["recommendation"]["cell_id"] == (
@@ -33793,10 +33938,17 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     )
     assert payload["performance_evidence_bundle"]["recommendation"]["score_fusion_status"] == "promote"
     assert payload["performance_evidence_bundle"]["recommendation"]["score_fusion_auroc"] == pytest.approx(0.96)
+    assert payload["performance_evidence_bundle"]["recommendation"][
+        "score_fusion_release_gate_status"
+    ] == "promote"
+    assert payload["performance_evidence_bundle"]["recommendation"][
+        "score_fusion_high_confidence_accepted_false_count"
+    ] == 0
     assert payload["performance_evidence_bundle"]["evidence"]["score_ensemble_report"] == str(
         score_ensemble_report_path
     )
     assert payload["performance_evidence_bundle"]["evidence"]["score_fusion_conformal_gate_passed"] is True
+    assert payload["performance_evidence_bundle"]["evidence"]["score_fusion_release_gate_passed"] is True
     assert payload["performance_evidence_bundle"]["cost"]["cache_only_total_seconds"] == pytest.approx(0.2)
     assert payload["config"]["model"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
     assert payload["config"]["layers"] == (-12,)
@@ -33834,6 +33986,10 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert manifest["metadata"]["score_ensemble_report_enabled"] is True
     assert manifest["metadata"]["recommended_score_fusion_status"] == "promote"
     assert manifest["metadata"]["recommended_score_fusion_conformal_gate_passed"] is True
+    assert manifest["metadata"]["recommended_score_fusion_release_gate_status"] == "promote"
+    assert manifest["metadata"]["recommended_score_fusion_high_confidence_accepted_false_rate"] == pytest.approx(
+        0.0
+    )
     assert manifest["metadata"]["model"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
     assert manifest["metadata"]["layers"] == [-12]
     assert manifest["metadata"]["max_batch_token_budgets"] == [0, 128]
@@ -33849,6 +34005,8 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert record.metadata["recommended_best_quality_signal"] == "score_fusion_max_rank"
     assert record.metadata["recommended_score_fusion_status"] == "promote"
     assert record.metadata["recommended_score_fusion_conformal_gate_passed"] is True
+    assert record.metadata["recommended_score_fusion_release_gate_passed"] is True
+    assert record.metadata["recommended_score_fusion_high_confidence_accepted_false_count"] == 0
     assert record.metadata["performance_evidence_bundle_status"] == "promote"
     assert record.metadata["performance_evidence_bundle_release_ready"] is True
     assert record.metadata["manifest_verified"] is True

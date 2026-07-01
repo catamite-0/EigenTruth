@@ -642,8 +642,12 @@ def _score_fusion_quality_signal(
         }
     passed = alpha_payload.get("pass") is True
     auroc = _float_or_none(best.get("auroc"))
+    release_gate = _score_ensemble_release_gate_payload(selected, str(method))
+    release_gate_configured = bool(release_gate)
+    release_gate_status = release_gate.get("status") if release_gate_configured else None
+    release_gate_passed = None if not release_gate_configured else release_gate_status == "promote"
     signal_name = f"score_fusion_{method}"
-    status = "promote" if passed and auroc is not None else "blocked"
+    status = "promote" if passed and auroc is not None and release_gate_passed is not False else "blocked"
     return {
         "status": status,
         "report": _optional_path_str(score_ensemble_report_path),
@@ -656,6 +660,26 @@ def _score_fusion_quality_signal(
         "detection": _float_or_none(alpha_payload.get("detection")),
         "coverage": _float_or_none(alpha_payload.get("coverage")),
         "conformal_gate_passed": passed,
+        "release_gate_configured": release_gate_configured,
+        "release_gate_status": release_gate_status,
+        "release_gate_passed": release_gate_passed,
+        "release_gate_reasons": tuple(release_gate.get("reasons", ())),
+        "release_gate_alpha": _float_or_none(release_gate.get("alpha")),
+        "max_high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("max_high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_false_count")
+        ),
+        "high_confidence_accepted_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_count")
+        ),
+        "fusion_release_gate_at_alpha": _score_ensemble_route_gate_summary(
+            _mapping(selected.get("fusion_release_gate_at_alpha"))
+        ),
         "artifact": _mapping(selected.get("best_fusion_artifact")),
     }
 
@@ -705,6 +729,34 @@ def _score_ensemble_alpha_payload(
         if numeric is not None and math.isclose(numeric, alpha, rel_tol=1e-9, abs_tol=1e-12):
             return _mapping(value)
     return {}
+
+
+def _score_ensemble_release_gate_payload(
+    run: Mapping[str, Any],
+    method: str,
+) -> dict[str, Any]:
+    method_payload = _mapping(_mapping(run.get("ensemble_results")).get(method))
+    return _mapping(method_payload.get("release_gate_at_best_alpha"))
+
+
+def _score_ensemble_route_gate_summary(gate: Mapping[str, Any]) -> dict[str, Any]:
+    if not gate:
+        return {}
+    recommended = _mapping(gate.get("recommended"))
+    return {
+        "status": gate.get("status"),
+        "alpha": _float_or_none(gate.get("alpha")),
+        "confidence_audit_enabled": gate.get("confidence_audit_enabled") is True,
+        "candidate_count": _int_or_none(gate.get("candidate_count")),
+        "promoted_candidate_count": _int_or_none(gate.get("promoted_candidate_count")),
+        "recommended_candidate_group": recommended.get("candidate_group"),
+        "recommended_candidate_name": recommended.get("candidate_name"),
+        "recommended_candidate_status": recommended.get("status"),
+        "recommended_high_confidence_accepted_false_rate": _float_or_none(
+            recommended.get("high_confidence_accepted_false_rate")
+        ),
+        "recommended_reasons": tuple(recommended.get("reasons", ())),
+    }
 
 
 def _selected_fusion_artifact_quality_signal(
@@ -1802,6 +1854,22 @@ def _evidence(
         "score_fusion_false_alarm": score_fusion.get("false_alarm"),
         "score_fusion_detection": score_fusion.get("detection"),
         "score_fusion_alpha": score_fusion.get("alpha"),
+        "score_fusion_release_gate_configured": score_fusion.get("release_gate_configured"),
+        "score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+        "score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+        "score_fusion_release_gate_reasons": score_fusion.get("release_gate_reasons"),
+        "score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+            "high_confidence_accepted_false_rate"
+        ),
+        "score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+            "high_confidence_accepted_false_count"
+        ),
+        "score_fusion_high_confidence_accepted_count": score_fusion.get(
+            "high_confidence_accepted_count"
+        ),
+        "score_fusion_max_high_confidence_accepted_false_rate": score_fusion.get(
+            "max_high_confidence_accepted_false_rate"
+        ),
         "selected_fusion_artifact_report": _optional_path_str(selected_fusion_artifact_report_path),
         "selected_fusion_requested_run": selected_fusion_run,
         "selected_fusion_status": selected_fusion.get("status"),

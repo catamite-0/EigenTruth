@@ -389,8 +389,9 @@ The current small CPU SmolLM2 l8 evidence registers
 `performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2`;
 it keeps the read-cache sweep winner at size 2, selects `max_workers=2`,
 lowers matrix wall-clock from 184.467s to 141.385s on this machine, preserves
-`truth_proj` AUROC 0.830, and carries a conformal-gated
-`score_fusion_mean_rank` auxiliary signal from the l80 score-ensemble report.
+`truth_proj` AUROC 0.830, and carries `score_fusion_mean_rank` auxiliary
+evidence from the l80 score-ensemble report only after both conformal and
+high-confidence release gates pass.
 The follow-up selected-fusion handoff registers
 `performance_baseline:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline:0.3`;
 it reuses the same runtime cell and worker/cache evidence, explicitly selects

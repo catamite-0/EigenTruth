@@ -2177,6 +2177,22 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_score_fusion_conformal_gate_passed": (
             performance_evidence_recommendation.get("score_fusion_conformal_gate_passed")
         ),
+        "recommended_score_fusion_release_gate_status": (
+            performance_evidence_recommendation.get("score_fusion_release_gate_status")
+        ),
+        "recommended_score_fusion_release_gate_passed": (
+            performance_evidence_recommendation.get("score_fusion_release_gate_passed")
+        ),
+        "recommended_score_fusion_high_confidence_accepted_false_rate": (
+            performance_evidence_recommendation.get(
+                "score_fusion_high_confidence_accepted_false_rate"
+            )
+        ),
+        "recommended_score_fusion_high_confidence_accepted_false_count": (
+            performance_evidence_recommendation.get(
+                "score_fusion_high_confidence_accepted_false_count"
+            )
+        ),
         "performance_selected_fusion_artifact_report": performance_evidence.get(
             "selected_fusion_artifact_report"
         ),

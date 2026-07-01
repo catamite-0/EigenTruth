@@ -535,6 +535,14 @@ def _write_artifact_manifest(
             "recommended_score_fusion_signal": score_fusion.get("signal_name"),
             "recommended_score_fusion_auroc": score_fusion.get("auroc"),
             "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "recommended_score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+            "recommended_score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+            "recommended_score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "recommended_score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "recommended_inside_sampling": runtime_config.get("inside_sampling"),
             "recommended_inside_trigger_budget_sweep": runtime_config.get("inside_trigger_budget_sweep"),
             "recommended_inside_trigger_budget_policy": dict(

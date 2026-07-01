@@ -700,6 +700,14 @@ def _write_artifact_manifest(
             "recommended_score_fusion_signal": score_fusion.get("signal_name"),
             "recommended_score_fusion_auroc": score_fusion.get("auroc"),
             "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "recommended_score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+            "recommended_score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+            "recommended_score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "recommended_score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "recommended_selected_fusion_artifact": selected_fusion or None,
             "recommended_selected_fusion_status": selected_fusion.get("status"),
             "recommended_selected_fusion_run": selected_fusion.get("run_name"),
@@ -854,6 +862,14 @@ def _performance_evidence_bundle_summary(
             "score_fusion_signal": score_fusion.get("signal_name"),
             "score_fusion_auroc": score_fusion.get("auroc"),
             "score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+            "score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+            "score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "selected_fusion_status": selected_fusion.get("status"),
             "selected_fusion_run": selected_fusion.get("run_name"),
             "selected_fusion_candidate": selected_fusion.get("selected_candidate"),
@@ -895,6 +911,14 @@ def _performance_evidence_bundle_summary(
             "score_fusion_signal": evidence.get("score_fusion_signal"),
             "score_fusion_auroc": evidence.get("score_fusion_auroc"),
             "score_fusion_conformal_gate_passed": evidence.get("score_fusion_conformal_gate_passed"),
+            "score_fusion_release_gate_status": evidence.get("score_fusion_release_gate_status"),
+            "score_fusion_release_gate_passed": evidence.get("score_fusion_release_gate_passed"),
+            "score_fusion_high_confidence_accepted_false_rate": evidence.get(
+                "score_fusion_high_confidence_accepted_false_rate"
+            ),
+            "score_fusion_high_confidence_accepted_false_count": evidence.get(
+                "score_fusion_high_confidence_accepted_false_count"
+            ),
             "selected_fusion_artifact_report": evidence.get("selected_fusion_artifact_report"),
             "selected_fusion_requested_run": evidence.get("selected_fusion_requested_run"),
             "selected_fusion_status": evidence.get("selected_fusion_status"),
@@ -952,6 +976,14 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "recommended_score_fusion_signal": score_fusion.get("signal_name"),
             "recommended_score_fusion_auroc": score_fusion.get("auroc"),
             "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "recommended_score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+            "recommended_score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+            "recommended_score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "recommended_score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "recommended_selected_fusion_artifact": selected_fusion or None,
             "recommended_selected_fusion_status": selected_fusion.get("status"),
             "recommended_selected_fusion_run": selected_fusion.get("run_name"),
