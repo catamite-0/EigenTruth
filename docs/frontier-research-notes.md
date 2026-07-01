@@ -1436,6 +1436,15 @@ Added the first monitor-first tool-selection audit layer:
   queue into an auditable experiment contract without promoting the contract,
   dry-run report, unreviewed command binding, or missing child output as verifier
   evidence.
+- `plan_frontier_research_queue_input_collection.py` adds an execution
+  preflight for bound frontier queues: it reads remaining `unbound_inputs` plus
+  still-unfilled `...` placeholders, turns source-backed numeric/temporal/
+  subject/mechanism gaps into explicit non-evidence collection requests, and
+  keeps unmapped placeholders as review requests. In the current unresolved
+  summary smoke this makes the next frontier worklist concrete: two
+  source-backed rule-input collection requests, one missing-template review
+  request, and one remaining command-template placeholder review request, with
+  no evidence ingestion or binding approval.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

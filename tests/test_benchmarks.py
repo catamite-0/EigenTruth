@@ -32614,6 +32614,183 @@ def test_frontier_research_queue_binding_suggestion_stager_can_stage_upstream_ou
     )
 
 
+def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    collection_module = importlib.import_module(
+        "benchmarks.plan_frontier_research_queue_input_collection"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    scaffold_path = tmp_path / "frontier-research-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "frontier-research-staged-bindings.json"
+    bound_path = tmp_path / "frontier-research-bound-plan.json"
+    collection_plan_path = tmp_path / "frontier-input-collection-plan.json"
+    collection_requests_path = tmp_path / "frontier-input-collection-requests.jsonl"
+    review_requests_path = tmp_path / "frontier-input-review-requests.jsonl"
+    manifest_path = tmp_path / "frontier-input-collection-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "collect_source_backed_rule_inputs",
+                    "suggested_commands": (
+                        "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py "
+                        "--input-tasks artifacts/rule-input-tasks.jsonl "
+                        "--numeric-bindings ... --output-dir ... --json ... "
+                        "--rule-inputs-jsonl ... --artifact-manifest ...",
+                        "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py "
+                        "--input-tasks artifacts/rule-input-tasks.jsonl "
+                        "--temporal-bindings ... --output-dir ... --json ... "
+                        "--rule-inputs-jsonl ... --artifact-manifest ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": (
+                            "source_backed_numeric_bindings",
+                            "source_backed_temporal_bindings",
+                        ),
+                        "closure_outputs": (
+                            "numeric_rule_fill_report",
+                            "temporal_rule_fill_report",
+                        ),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        json_path=scaffold_path,
+    )
+    stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+    )
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=staged_bindings_path,
+        json_path=bound_path,
+    )
+
+    payload = collection_module.plan_frontier_research_queue_input_collection(
+        bound_command_plan=bound_path,
+        json_path=collection_plan_path,
+        collection_requests_path=collection_requests_path,
+        review_requests_path=review_requests_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-input-collection-plan",
+        version="0.1",
+    )
+    requests = [
+        json.loads(line)
+        for line in collection_requests_path.read_text(encoding="utf-8").splitlines()
+    ]
+    review_lines = review_requests_path.read_text(encoding="utf-8").splitlines()
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-input-collection-plan:0.1"
+    )
+
+    assert bound["entries"][0]["unbound_inputs"] == (
+        "source_backed_numeric_bindings",
+        "source_backed_temporal_bindings",
+        "bound_command_template_values",
+    )
+    assert payload["workflow"] == "frontier_research_queue_input_collection_plan"
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["collection_request_count"] == 2
+    assert payload["summary"]["source_backed_request_count"] == 2
+    assert payload["summary"]["review_request_count"] == 0
+    assert payload["summary"]["covered_input_count"] == 1
+    assert payload["summary"]["input_counts"]["bound_command_template_values"] == 1
+    assert payload["summary"]["collection_family_counts"] == {
+        "numeric_rule_input_binding_collection": 1,
+        "temporal_binding_collection": 1,
+    }
+    assert {request["input_name"] for request in requests} == {
+        "source_backed_numeric_bindings",
+        "source_backed_temporal_bindings",
+    }
+    numeric_request = next(
+        request for request in requests if request["input_name"] == "source_backed_numeric_bindings"
+    )
+    temporal_request = next(
+        request for request in requests if request["input_name"] == "source_backed_temporal_bindings"
+    )
+    assert numeric_request["blocking_placeholders"][0]["flag"] == "--numeric-bindings"
+    assert temporal_request["blocking_placeholders"][0]["flag"] == "--temporal-bindings"
+    assert "source_citation" in numeric_request["required_binding_fields"]
+    assert numeric_request["not_verifier_evidence"] is True
+    assert review_lines == []
+    assert payload["covered_inputs"][0]["input_name"] == "bound_command_template_values"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "frontier_research_queue_input_collection_plan"
+    assert record.metadata["collection_request_count"] == 2
+
+
+def test_frontier_research_queue_input_collection_plan_surfaces_unmapped_placeholders():
+    collection_module = importlib.import_module(
+        "benchmarks.plan_frontier_research_queue_input_collection"
+    )
+
+    payload = collection_module.plan_frontier_research_queue_input_collection(
+        bound_command_plan={
+            "workflow": "frontier_research_queue_bound_command_plan",
+            "status": "needs_inputs",
+            "entries": (
+                {
+                    "entry_id": "unknown-command",
+                    "action_id": "unknown_command",
+                    "command_status": "needs_inputs",
+                    "required_inputs": (),
+                    "unbound_inputs": ("bound_command_template_values",),
+                    "bound_commands": (
+                        "benchmarks/custom_frontier_adapter.py --input ... --json artifacts/out.json",
+                    ),
+                    "binding_review_status": "needs_review",
+                },
+                {
+                    "entry_id": "missing-command",
+                    "action_id": "missing_command",
+                    "command_status": "missing_command_templates",
+                    "required_inputs": (),
+                    "unbound_inputs": (),
+                    "bound_commands": (),
+                    "binding_review_status": "needs_review",
+                },
+            ),
+        },
+    )
+
+    request = payload["review_requests"][0]
+    missing_command_request = payload["review_requests"][1]
+    assert payload["status"] == "needs_review"
+    assert payload["summary"]["collection_request_count"] == 0
+    assert payload["summary"]["review_request_count"] == 2
+    assert payload["summary"]["blocking_placeholder_count"] == 1
+    assert payload["summary"]["action_ids"] == ("unknown_command", "missing_command")
+    assert request["input_name"] == "bound_command_template_values"
+    assert request["review_family"] == "command_template_binding_review"
+    assert request["blocking_placeholders"][0]["flag"] == "--input"
+    assert request["not_verifier_evidence"] is True
+    assert missing_command_request["input_name"] == "command_templates"
+    assert missing_command_request["review_family"] == "missing_command_template_review"
+    assert missing_command_request["blocking_placeholders"] == ()
+
+
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(

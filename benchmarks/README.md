@@ -6761,6 +6761,29 @@ python benchmarks/bind_frontier_research_queue_command_plan.py \
   --version 0.1
 ```
 
+Before executing, lower any remaining source-backed placeholders into an
+explicit collection/review preflight:
+
+```bash
+python benchmarks/plan_frontier_research_queue_input_collection.py \
+  --bound-command-plan artifacts/frontier-research-queue-bound-command-plan.json \
+  --json artifacts/frontier-research-queue-input-collection-plan.json \
+  --collection-requests-jsonl artifacts/frontier-research-queue-input-collection-requests.jsonl \
+  --review-requests-jsonl artifacts/frontier-research-queue-input-review-requests.jsonl \
+  --artifact-manifest artifacts/frontier-research-queue-input-collection-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-collection-plan \
+  --version 0.1
+```
+
+The preflight reads `unbound_inputs` plus still-unfilled command placeholders
+from the bound plan. Source-backed numeric, temporal, subject, and mechanism
+inputs become non-evidence collection requests with required sidecar fields and
+recommended downstream tools; unmapped `...` placeholders remain review
+requests, and actions that still lack command templates are surfaced as
+missing-template review requests. It does not approve bindings, execute
+commands, fetch evidence, or satisfy release gates.
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash
