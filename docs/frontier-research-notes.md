@@ -1085,10 +1085,12 @@ Added the first monitor-first tool-selection audit layer:
   a source-backed numeric binding supplies `numeric_value`,
   `candidate_numeric_value`, unit, reference time, calculation, and
   `source_citation`, then the deterministic calculator candidate can be observed
-  and promoted. The real unresolved `record-190` population task is intentionally
-  blocked because the binding is marked `ambiguous_subject` and lacks
-  `subject_entity`; even a source-backed World Bank USA population value is not
-  enough to fill "the country" without an explicit subject binding.
+  and promoted. It now also accepts an optional source-backed subject-binding
+  sidecar that can resolve only `ambiguous_subject` rows after review. The real
+  unresolved `record-190` population artifact remains intentionally blocked
+  because no such subject sidecar is registered; even a source-backed World Bank
+  USA population value is not enough to fill "the country" without that explicit
+  subject binding.
 - `run_world_model_rule_authoring_adapter.py` now also executes
   `temporal_consistency` rules when explicit `claim_time`, `source_time`,
   `retrieved_at`, and `source_citation` inputs are supplied. The registered

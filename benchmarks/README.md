@@ -3840,8 +3840,10 @@ citation, and the two Elon rows use the Elon Gold citation; both citation paths
 remain non-evidence adapter inputs until the promotion gate verifies matching
 source citations in the deterministic candidate evidence.
 
-The unresolved numeric/calculator lane now has the same explicit fill boundary,
-but it fail-closes when the subject binding is still ambiguous:
+The unresolved numeric/calculator lane now has the same explicit fill boundary.
+It can accept an optional source-backed subject-binding sidecar to resolve only
+`ambiguous_subject` rows; without that sidecar it fail-closes when the subject is
+still ambiguous:
 
 ```bash
 NUMERIC_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill
@@ -3855,15 +3857,20 @@ python benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py \
   --version 0.1
 ```
 
-The registered numeric-binding fill is `blocked`: `0/1` numeric tasks are
-filled, the single `record-190` population task remains unfilled, and the
-failure reasons are `binding_requires_review` plus `missing_subject_entity`.
+When an approved sidecar exists, pass
+`--subject-bindings "$NUMERIC_FILL/source-backed-subject-bindings.jsonl"`.
+
+The registered numeric-binding fill artifact remains `blocked`: `0/1` numeric
+tasks are filled, the single `record-190` population task remains unfilled, and
+the failure reasons are `binding_requires_review` plus `missing_subject_entity`.
 The supplied binding records a source-backed World Bank population value for the
 United States, but the original question only says "the country"; the fill script
 therefore refuses to turn that source value into a calculator input without an
-explicit subject entity. Focused tests also cover the positive path: a valid
-source/candidate numeric binding executes through the calculator adapter and can
-promote once `source_citation` appears in deterministic candidate evidence.
+explicit reviewed subject binding. Focused tests now cover both positive paths:
+a valid source/candidate numeric binding executes through the calculator adapter
+and promotes once `source_citation` appears in deterministic candidate evidence,
+and an approved subject-binding sidecar can resolve `ambiguous_subject` without
+allowing conflicting subjects.
 
 The unresolved temporal lane now has a minimal source-timestamp consistency
 adapter and promotion gate:

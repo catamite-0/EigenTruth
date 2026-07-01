@@ -3310,6 +3310,184 @@ def test_world_model_rule_numeric_binding_fill_executes_and_promotes_candidate(t
     assert registry_module.load_and_verify_artifact_manifest(fill_output / "artifact-manifest.json").passed is True
 
 
+def test_world_model_rule_numeric_subject_binding_resolves_ambiguous_numeric_task(tmp_path):
+    fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_numeric_bindings")
+    adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")
+    promotion_module = importlib.import_module("benchmarks.promote_world_model_rule_candidates")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    bindings_path = tmp_path / "source-backed-numeric-bindings.jsonl"
+    subject_bindings_path = tmp_path / "source-backed-subject-bindings.jsonl"
+    stubs_path = tmp_path / "world-model-rule-stubs.jsonl"
+    fill_output = tmp_path / "fill"
+    adapter_output = tmp_path / "adapter"
+    promotion_output = tmp_path / "promotion"
+    tasks_path.write_text(
+        json.dumps({
+            "task_id": "rule-input-task-0001",
+            "source_request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "rule_family": "quantity_or_arithmetic",
+            "collection_family": "numeric_rule_input_collection",
+            "question": "What is the population of the country?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "binding_id": "numeric-binding-record-190",
+            "request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "candidate_numeric_value": 330000000,
+            "source_numeric_value": 340110988,
+            "unit": "persons",
+            "reference_time": "2024",
+            "tolerance": 0.0,
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "source_url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=US",
+            "source_title": "World Bank official statistics: Population, total for United States (2024)",
+            "source_family": "official_statistics",
+            "provider": "worldbank",
+            "candidate_value_source": "candidate_claim_binding",
+            "source_value_source": "worldbank_catalog",
+            "review_status": "ambiguous_subject",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    subject_bindings_path.write_text(
+        json.dumps({
+            "binding_id": "subject-binding-record-190",
+            "request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "subject_entity": "United States",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "source_url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=US",
+            "source_title": "World Bank official statistics: Population, total for United States (2024)",
+            "source_family": "official_statistics",
+            "provider": "worldbank",
+            "review_status": "approved",
+            "source_note": "question context binds 'the country' to United States",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    stubs_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_world_model_rule_stubs",
+            "request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "request_type": "world_model_or_calculator_rule",
+            "rule_family": "quantity_or_arithmetic",
+            "required_inputs": ["numeric_value", "unit", "reference_time"],
+            "question": "What is the population of the country?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    fill_payload = fill_module.run(
+        input_tasks_path=tasks_path,
+        numeric_bindings_path=bindings_path,
+        subject_bindings_path=subject_bindings_path,
+        output_dir=fill_output,
+        metadata={"suite": "unit"},
+    )
+    filled = [
+        json.loads(line)
+        for line in (fill_output / "rule-inputs.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    adapter_payload = adapter_module.run_world_model_rule_authoring_adapter(
+        rule_stubs_path=stubs_path,
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        output_dir=adapter_output,
+        metadata={"suite": "unit"},
+    )
+    promotion_payload = promotion_module.run(
+        rule_results_path=adapter_output / "world-model-rule-results.jsonl",
+        rule_inputs_path=fill_output / "rule-inputs.jsonl",
+        adapter_report_path=adapter_output / "world-model-rule-authoring-adapter.json",
+        output_dir=promotion_output,
+        metadata={"suite": "unit"},
+    )
+    promoted = [
+        json.loads(line)
+        for line in (promotion_output / "promoted-rule-candidates.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    manifest = json.loads((fill_output / "artifact-manifest.json").read_text(encoding="utf-8"))
+
+    assert fill_payload["status"] == "filled"
+    assert fill_payload["summary"]["subject_binding_applied_count"] == 1
+    assert fill_payload["summary"]["skipped_subject_binding_count"] == 0
+    assert filled[0]["subject_entity"] == "United States"
+    assert filled[0]["provenance"]["subject_binding_id"] == "subject-binding-record-190"
+    assert adapter_payload["status"] == "observed"
+    assert adapter_payload["summary"]["candidate_refuted_count"] == 1
+    assert promotion_payload["status"] == "promote"
+    assert promoted[0]["rule_input"]["subject_entity"] == "United States"
+    assert manifest["artifacts"]["subject_bindings"]["exists"] is True
+    assert registry_module.load_and_verify_artifact_manifest(fill_output / "artifact-manifest.json").passed is True
+
+
+def test_world_model_rule_numeric_subject_binding_conflict_blocks():
+    module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_numeric_bindings")
+
+    payload = module.fill_world_model_rule_inputs_from_numeric_bindings(
+        input_tasks=[
+            {
+                "task_id": "rule-input-task-0001",
+                "source_request_id": "rule:record-190:1",
+                "target_id": "record-190",
+                "rule_family": "quantity_or_arithmetic",
+                "collection_family": "numeric_rule_input_collection",
+                "question": "What is the population of the country?",
+                "not_verifier_evidence": True,
+            }
+        ],
+        numeric_bindings=[
+            {
+                "binding_id": "numeric-binding-record-190",
+                "request_id": "rule:record-190:1",
+                "target_id": "record-190",
+                "subject_entity": "Canada",
+                "candidate_numeric_value": 330000000,
+                "source_numeric_value": 340110988,
+                "unit": "persons",
+                "reference_time": "2024",
+                "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+                "review_status": "ready",
+                "not_verifier_evidence": True,
+            }
+        ],
+        subject_bindings=[
+            {
+                "binding_id": "subject-binding-record-190",
+                "request_id": "rule:record-190:1",
+                "target_id": "record-190",
+                "subject_entity": "United States",
+                "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+                "review_status": "approved",
+                "not_verifier_evidence": True,
+            }
+        ],
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["filled_input_count"] == 0
+    assert payload["summary"]["invalid_binding_failure_counts"] == {
+        "subject_binding_conflicts_with_numeric_subject": 1,
+    }
+
+
 def test_world_model_rule_numeric_binding_fill_blocks_review_required_binding():
     module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_numeric_bindings")
 

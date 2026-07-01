@@ -4,7 +4,9 @@ This workflow is a narrow bridge for calculator rule tasks. It does not infer
 which entity a numeric claim is about and does not recover model answers from
 upstream queue rows. Callers must provide JSONL binding rows that explicitly
 name the subject, candidate numeric value, source-backed numeric value, unit,
-reference time, and source citation. Bindings that require review remain
+reference time, and source citation. Alternatively, an explicit source-backed
+subject-binding row can fill only the subject for a numeric binding that is
+otherwise blocked as `ambiguous_subject`. Bindings that require review remain
 unfilled so ambiguous numeric claims do not become calculator evidence.
 """
 
@@ -33,12 +35,14 @@ SOURCE_WORKFLOW = "world_model_rule_input_collection_plan"
 NUMERIC_COLLECTION_FAMILY = "numeric_rule_input_collection"
 RESERVED_FIELDS = {"answer", "answers", "is_false", "label", "labels", "model_answer", "score_label"}
 READY_REVIEW_STATUSES = {"", "ready", "approved"}
+SUBJECT_RESOLVABLE_REVIEW_STATUSES = {"ambiguous_subject", "subject_ambiguous"}
 
 
 def fill_world_model_rule_inputs_from_numeric_bindings(
     *,
     input_tasks: Sequence[Mapping[str, Any]],
     numeric_bindings: Sequence[Mapping[str, Any]],
+    subject_bindings: Sequence[Mapping[str, Any]] = (),
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return filled calculator rule-input rows plus fail-closed diagnostics."""
@@ -52,10 +56,22 @@ def fill_world_model_rule_inputs_from_numeric_bindings(
             duplicate_binding_ids.add(request_id)
         else:
             bindings_by_request[request_id] = _sanitize(binding)
+    subject_bindings_by_request: dict[str, Mapping[str, Any]] = {}
+    duplicate_subject_binding_ids: set[str] = set()
+    for binding in subject_bindings:
+        request_id = str(binding.get("request_id") or binding.get("source_request_id") or "")
+        if not request_id:
+            continue
+        if request_id in subject_bindings_by_request:
+            duplicate_subject_binding_ids.add(request_id)
+        else:
+            subject_bindings_by_request[request_id] = _sanitize(binding)
 
     filled: list[dict[str, Any]] = []
     unfilled: list[dict[str, Any]] = []
     unused_bindings = set(bindings_by_request)
+    unused_subject_bindings = set(subject_bindings_by_request)
+    subject_binding_applied_count = 0
     for task in input_tasks:
         request_id = str(task.get("source_request_id") or "")
         if str(task.get("collection_family") or "") != NUMERIC_COLLECTION_FAMILY:
@@ -66,6 +82,16 @@ def fill_world_model_rule_inputs_from_numeric_bindings(
             unfilled.append(_unfilled(task, reason="missing_numeric_binding"))
             continue
         unused_bindings.discard(request_id)
+        subject_binding = subject_bindings_by_request.get(request_id)
+        if subject_binding is not None:
+            unused_subject_bindings.discard(request_id)
+        binding, applied = _merge_subject_binding(
+            binding,
+            subject_binding=subject_binding,
+            duplicate_subject_binding=request_id in duplicate_subject_binding_ids,
+        )
+        if applied:
+            subject_binding_applied_count += 1
         failures = _binding_failures(binding, duplicate=request_id in duplicate_binding_ids)
         if failures:
             unfilled.append(_unfilled(task, reason="invalid_numeric_binding", failures=failures))
@@ -76,12 +102,19 @@ def fill_world_model_rule_inputs_from_numeric_bindings(
         _skipped_binding(bindings_by_request[request_id], reason="no_matching_input_task")
         for request_id in sorted(unused_bindings)
     )
+    skipped_subject_bindings = tuple(
+        _skipped_subject_binding(subject_bindings_by_request[request_id], reason="no_matching_numeric_task")
+        for request_id in sorted(unused_subject_bindings)
+    )
     summary = _summary(
         input_tasks=input_tasks,
         numeric_bindings=numeric_bindings,
+        subject_bindings=subject_bindings,
         filled=filled,
         unfilled=unfilled,
         skipped_bindings=skipped_bindings,
+        skipped_subject_bindings=skipped_subject_bindings,
+        subject_binding_applied_count=subject_binding_applied_count,
     )
     return {
         "schema_version": 1,
@@ -97,12 +130,14 @@ def fill_world_model_rule_inputs_from_numeric_bindings(
             "input_task_workflow": SOURCE_WORKFLOW,
             "input_task_count": len(input_tasks),
             "numeric_binding_count": len(numeric_bindings),
+            "subject_binding_count": len(subject_bindings),
         },
         "label_usage": {
             "labels_used_for_input_fill": False,
             "labels_copied_to_rule_inputs": False,
             "candidate_numeric_values_bound_to_rule_inputs": True,
             "source_backed_numeric_values_required": True,
+            "source_backed_subject_binding_can_resolve_ambiguous_subject": True,
             "filled_inputs_are_verifier_evidence": False,
             "requires_adapter_execution_and_promotion_gate": True,
         },
@@ -110,6 +145,7 @@ def fill_world_model_rule_inputs_from_numeric_bindings(
         "rule_inputs": tuple(filled),
         "unfilled_tasks": tuple(unfilled),
         "skipped_numeric_bindings": skipped_bindings,
+        "skipped_subject_bindings": skipped_subject_bindings,
         "metadata": dict(metadata or {}),
     }
 
@@ -119,10 +155,12 @@ def run(
     input_tasks_path: str | Path,
     numeric_bindings_path: str | Path,
     output_dir: str | Path,
+    subject_bindings_path: str | Path | None = None,
     report_json_path: str | Path | None = None,
     rule_inputs_path: str | Path | None = None,
     unfilled_tasks_path: str | Path | None = None,
     skipped_bindings_path: str | Path | None = None,
+    skipped_subject_bindings_path: str | Path | None = None,
     artifact_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     name: str | None = None,
@@ -139,44 +177,57 @@ def run(
     inputs_path = Path(rule_inputs_path or output / "rule-inputs.jsonl")
     unfilled_path = Path(unfilled_tasks_path or output / "unfilled-rule-input-tasks.jsonl")
     skipped_path = Path(skipped_bindings_path or output / "skipped-numeric-bindings.jsonl")
+    skipped_subject_path = Path(
+        skipped_subject_bindings_path or output / "skipped-subject-bindings.jsonl"
+    )
     manifest_path = Path(artifact_manifest_path or output / "artifact-manifest.json")
 
     input_tasks = _load_jsonl_mappings(input_tasks_path)
     numeric_bindings = _load_jsonl_mappings(numeric_bindings_path)
+    subject_bindings = () if subject_bindings_path is None else _load_jsonl_mappings(subject_bindings_path)
     payload = fill_world_model_rule_inputs_from_numeric_bindings(
         input_tasks=input_tasks,
         numeric_bindings=numeric_bindings,
+        subject_bindings=subject_bindings,
         metadata=metadata,
     )
     payload = dict(payload)
     payload["paths"] = {
         "input_tasks": str(input_tasks_path),
         "numeric_bindings": str(numeric_bindings_path),
+        "subject_bindings": None if subject_bindings_path is None else str(subject_bindings_path),
         "report": str(report_path),
         "rule_inputs": str(inputs_path),
         "unfilled_tasks": str(unfilled_path),
         "skipped_numeric_bindings": str(skipped_path),
+        "skipped_subject_bindings": str(skipped_subject_path),
         "artifact_manifest": str(manifest_path),
     }
     _write_json(report_path, payload, compact=compact_json)
     _write_jsonl(inputs_path, payload["rule_inputs"], compact=compact_json)
     _write_jsonl(unfilled_path, payload["unfilled_tasks"], compact=compact_json)
     _write_jsonl(skipped_path, payload["skipped_numeric_bindings"], compact=compact_json)
+    _write_jsonl(skipped_subject_path, payload["skipped_subject_bindings"], compact=compact_json)
+    manifest_artifacts: dict[str, str | Path | None] = {
+        "rule_input_numeric_binding_fill": report_path,
+        "rule_inputs": inputs_path,
+        "unfilled_rule_input_tasks": unfilled_path,
+        "skipped_numeric_bindings": skipped_path,
+        "skipped_subject_bindings": skipped_subject_path,
+        "rule_input_tasks": Path(input_tasks_path),
+        "numeric_bindings": Path(numeric_bindings_path),
+    }
+    if subject_bindings_path is not None:
+        manifest_artifacts["subject_bindings"] = Path(subject_bindings_path)
     manifest = build_artifact_manifest(
-        {
-            "rule_input_numeric_binding_fill": report_path,
-            "rule_inputs": inputs_path,
-            "unfilled_rule_input_tasks": unfilled_path,
-            "skipped_numeric_bindings": skipped_path,
-            "rule_input_tasks": Path(input_tasks_path),
-            "numeric_bindings": Path(numeric_bindings_path),
-        },
+        manifest_artifacts,
         root=manifest_path.parent,
         metadata={
             "workflow": WORKFLOW,
             "status": payload["status"],
             "filled_input_count": payload["summary"]["filled_input_count"],
             "unfilled_task_count": payload["summary"]["unfilled_task_count"],
+            "subject_binding_applied_count": payload["summary"]["subject_binding_applied_count"],
             **dict(metadata or {}),
         },
     )
@@ -192,6 +243,7 @@ def run(
                 "status": payload["status"],
                 "filled_input_count": payload["summary"]["filled_input_count"],
                 "unfilled_task_count": payload["summary"]["unfilled_task_count"],
+                "subject_binding_applied_count": payload["summary"]["subject_binding_applied_count"],
                 "artifact_manifest": str(manifest_path),
                 **dict(metadata or {}),
             },
@@ -203,6 +255,7 @@ def _filled_numeric_input(task: Mapping[str, Any], *, binding: Mapping[str, Any]
     source_value = _required_float(binding.get("source_numeric_value", binding.get("numeric_value")))
     candidate_value = _required_float(binding.get("candidate_numeric_value"))
     calculation = _calculation_payload(binding, source_value=source_value, candidate_value=candidate_value)
+    subject_binding = _mapping(binding.get("subject_binding"))
     return {
         "schema_version": 1,
         "workflow": WORKFLOW,
@@ -230,6 +283,9 @@ def _filled_numeric_input(task: Mapping[str, Any], *, binding: Mapping[str, Any]
             "source_value_source": str(binding.get("source_value_source") or ""),
             "review_status": str(binding.get("review_status") or ""),
             "source_note": str(binding.get("source_note") or ""),
+            "subject_binding_id": str(subject_binding.get("binding_id") or ""),
+            "subject_binding_source_citation": str(subject_binding.get("source_citation") or ""),
+            "subject_binding_source_note": str(subject_binding.get("source_note") or ""),
         },
     }
 
@@ -255,10 +311,62 @@ def _calculation_payload(
     }
 
 
+def _merge_subject_binding(
+    binding: Mapping[str, Any],
+    *,
+    subject_binding: Mapping[str, Any] | None,
+    duplicate_subject_binding: bool,
+) -> tuple[Mapping[str, Any], bool]:
+    if subject_binding is None:
+        return binding, False
+    merged = dict(binding)
+    failures = _subject_binding_failures(subject_binding, duplicate=duplicate_subject_binding)
+    if failures:
+        merged["_subject_binding_failures"] = failures
+        return merged, False
+    subject = _clean(subject_binding.get("subject_entity"))
+    existing_subject = _clean(merged.get("subject_entity"))
+    if existing_subject and existing_subject != subject:
+        merged["_subject_binding_failures"] = ("subject_binding_conflicts_with_numeric_subject",)
+        return merged, False
+    merged["subject_entity"] = subject
+    review_status = _clean(merged.get("review_status")).lower()
+    if review_status in SUBJECT_RESOLVABLE_REVIEW_STATUSES:
+        merged["review_status"] = "ready"
+    merged["subject_binding"] = {
+        "binding_id": str(subject_binding.get("binding_id") or ""),
+        "source_citation": _clean(subject_binding.get("source_citation")),
+        "source_url": _clean(subject_binding.get("source_url")),
+        "source_title": _clean(subject_binding.get("source_title")),
+        "source_family": _clean(subject_binding.get("source_family")),
+        "provider": _clean(subject_binding.get("provider")),
+        "review_status": _clean(subject_binding.get("review_status")),
+        "source_note": str(subject_binding.get("source_note") or ""),
+    }
+    return merged, True
+
+
+def _subject_binding_failures(binding: Mapping[str, Any], *, duplicate: bool) -> tuple[str, ...]:
+    failures = []
+    if duplicate:
+        failures.append("duplicate_subject_binding")
+    if binding.get("not_verifier_evidence") is not True:
+        failures.append("subject_binding_not_marked_non_evidence")
+    review_status = _clean(binding.get("review_status")).lower()
+    if review_status not in READY_REVIEW_STATUSES:
+        failures.append("subject_binding_requires_review")
+    for key in ("subject_entity", "source_citation"):
+        if not _clean(binding.get(key)):
+            failures.append(f"missing_subject_binding_{key}")
+    return tuple(failures)
+
+
 def _binding_failures(binding: Mapping[str, Any], *, duplicate: bool) -> tuple[str, ...]:
     failures = []
     if duplicate:
         failures.append("duplicate_numeric_binding")
+    for failure in _sequence(binding.get("_subject_binding_failures")):
+        failures.append(str(failure))
     if binding.get("not_verifier_evidence") is not True:
         failures.append("binding_not_marked_non_evidence")
     review_status = _clean(binding.get("review_status")).lower()
@@ -314,13 +422,26 @@ def _skipped_binding(binding: Mapping[str, Any], *, reason: str) -> dict[str, An
     }
 
 
+def _skipped_subject_binding(binding: Mapping[str, Any], *, reason: str) -> dict[str, Any]:
+    return {
+        "binding_id": str(binding.get("binding_id") or ""),
+        "request_id": str(binding.get("request_id") or binding.get("source_request_id") or ""),
+        "target_id": str(binding.get("target_id") or ""),
+        "reason": reason,
+        "not_verifier_evidence": True,
+    }
+
+
 def _summary(
     *,
     input_tasks: Sequence[Mapping[str, Any]],
     numeric_bindings: Sequence[Mapping[str, Any]],
+    subject_bindings: Sequence[Mapping[str, Any]],
     filled: Sequence[Mapping[str, Any]],
     unfilled: Sequence[Mapping[str, Any]],
     skipped_bindings: Sequence[Mapping[str, Any]],
+    skipped_subject_bindings: Sequence[Mapping[str, Any]],
+    subject_binding_applied_count: int,
 ) -> dict[str, Any]:
     filled_family = Counter(str(item.get("rule_family") or "") for item in filled)
     unfilled_reason = Counter(str(item.get("reason") or "") for item in unfilled)
@@ -331,18 +452,23 @@ def _summary(
     collection_family = Counter(str(item.get("collection_family") or "") for item in input_tasks)
     provider_counts = Counter(str(item.get("provider") or "") for item in filled)
     review_status_counts = Counter(str(item.get("review_status") or "") for item in numeric_bindings)
+    subject_review_status_counts = Counter(str(item.get("review_status") or "") for item in subject_bindings)
     return {
         "input_task_count": len(input_tasks),
         "numeric_binding_count": len(numeric_bindings),
+        "subject_binding_count": len(subject_bindings),
+        "subject_binding_applied_count": subject_binding_applied_count,
         "filled_input_count": len(filled),
         "unfilled_task_count": len(unfilled),
         "skipped_binding_count": len(skipped_bindings),
+        "skipped_subject_binding_count": len(skipped_subject_bindings),
         "filled_rule_family_counts": _sorted_counter(filled_family),
         "input_collection_family_counts": _sorted_counter(collection_family),
         "unfilled_reason_counts": _sorted_counter(unfilled_reason),
         "invalid_binding_failure_counts": _sorted_counter(failure_counts),
         "provider_counts": _sorted_counter(provider_counts),
         "review_status_counts": _sorted_counter(review_status_counts),
+        "subject_binding_review_status_counts": _sorted_counter(subject_review_status_counts),
         "filled_request_ids": tuple(str(item.get("request_id") or "") for item in filled),
     }
 
@@ -401,6 +527,10 @@ def _sequence(value: Any) -> tuple[Any, ...]:
     return ()
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
 def _required_float(value: Any) -> float:
     parsed = _float_or_none(value)
     if parsed is None:
@@ -452,11 +582,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-tasks", required=True)
     parser.add_argument("--numeric-bindings", required=True)
+    parser.add_argument("--subject-bindings", default=None)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--json", default=None)
     parser.add_argument("--rule-inputs-jsonl", default=None)
     parser.add_argument("--unfilled-tasks-jsonl", default=None)
     parser.add_argument("--skipped-bindings-jsonl", default=None)
+    parser.add_argument("--skipped-subject-bindings-jsonl", default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
@@ -467,11 +599,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     payload = run(
         input_tasks_path=args.input_tasks,
         numeric_bindings_path=args.numeric_bindings,
+        subject_bindings_path=args.subject_bindings,
         output_dir=args.output_dir,
         report_json_path=args.json,
         rule_inputs_path=args.rule_inputs_jsonl,
         unfilled_tasks_path=args.unfilled_tasks_jsonl,
         skipped_bindings_path=args.skipped_bindings_jsonl,
+        skipped_subject_bindings_path=args.skipped_subject_bindings_jsonl,
         artifact_manifest_path=args.artifact_manifest,
         registry_path=args.registry,
         name=args.name,
