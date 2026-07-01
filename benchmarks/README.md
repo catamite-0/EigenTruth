@@ -9511,6 +9511,12 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-world-model-conflict-rate-increase 0.0 \
   --max-world-model-low-agreement-rate-increase 0.0 \
   --max-world-model-trace-gap-rate-increase 0.0 \
+  --min-world-model-action-gate-coverage-rate 1.0 \
+  --min-world-model-action-gate-pass-rate 1.0 \
+  --max-world-model-action-gate-blocked-rate-increase 0.0 \
+  --max-world-model-action-gate-side-effect-block-violation-rate-increase 0.0 \
+  --max-world-model-action-gate-low-prediction-confidence-rate-increase 0.0 \
+  --max-world-model-action-gate-postcondition-refuted-rate-increase 0.0 \
   --min-context-sensitivity-participating-trace-rate 1.0 \
   --min-context-sensitivity-coverage-rate 1.0 \
   --max-context-sensitivity-flagged-result-rate-increase 0.0 \

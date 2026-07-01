@@ -84,6 +84,18 @@ PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_action_execution_unexpected_result_rate",
     "product_trace_action_execution_request_id_mismatch_rate",
 )
+PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS: tuple[str, ...] = (
+    "world_model_action_gate_coverage_rate",
+    "world_model_action_gate_pass_rate",
+    "world_model_action_gate_blocked_rate",
+    "world_model_action_gate_side_effect_block_violation_rate",
+    "world_model_action_gate_low_prediction_confidence_rate",
+    "world_model_action_gate_low_agreement_rate",
+    "world_model_action_gate_no_rule_matched_rate",
+    "world_model_action_gate_postcondition_refuted_rate",
+    "world_model_action_gate_postcondition_insufficient_evidence_rate",
+    "world_model_action_gate_postcondition_error_rate",
+)
 PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_action_receipts_coverage_rate",
     "product_trace_action_receipts_missing_receipt_rate",
@@ -199,6 +211,7 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "triple_audit": PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
     "covered_fact_property": PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
     "action_gate": PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
+    "world_model_action_gate": PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS,
     "action_receipts": PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS,
     "receipt_claim_support": (
         PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS

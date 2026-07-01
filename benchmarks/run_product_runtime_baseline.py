@@ -95,6 +95,18 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_action_execution_unexpected_result_rate",
     "product_trace_action_execution_request_id_mismatch_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "world_model_action_gate_coverage_rate",
+    "world_model_action_gate_pass_rate",
+    "world_model_action_gate_blocked_rate",
+    "world_model_action_gate_side_effect_block_violation_rate",
+    "world_model_action_gate_low_prediction_confidence_rate",
+    "world_model_action_gate_low_agreement_rate",
+    "world_model_action_gate_no_rule_matched_rate",
+    "world_model_action_gate_postcondition_refuted_rate",
+    "world_model_action_gate_postcondition_insufficient_evidence_rate",
+    "world_model_action_gate_postcondition_error_rate",
+)
 _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_action_receipts_coverage_rate",
     "product_trace_action_receipts_missing_receipt_rate",
@@ -256,6 +268,8 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count",
     "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count",
     "promotion_contract_product_runtime_drift_action_receipts_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count",
@@ -1262,6 +1276,71 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "action_execution_alignment_available": bool(
             metrics.get("action_execution_alignment_available")
         ),
+        "world_model_action_gate_summary": dict(
+            _mapping(metrics.get("world_model_action_gate_summary"))
+        ),
+        "world_model_action_gate_available": bool(
+            metrics.get("world_model_action_gate_available")
+        ),
+        "world_model_action_gate_source": metrics.get("world_model_action_gate_source"),
+        "world_model_action_gate_result_count": metrics.get(
+            "world_model_action_gate_result_count"
+        ),
+        "world_model_action_gate_checked_result_count": metrics.get(
+            "world_model_action_gate_checked_result_count"
+        ),
+        "world_model_action_gate_coverage_rate": metrics.get(
+            "world_model_action_gate_coverage_rate"
+        ),
+        "world_model_action_gate_passed_count": metrics.get(
+            "world_model_action_gate_passed_count"
+        ),
+        "world_model_action_gate_blocked_count": metrics.get(
+            "world_model_action_gate_blocked_count"
+        ),
+        "world_model_action_gate_pass_rate": metrics.get("world_model_action_gate_pass_rate"),
+        "world_model_action_gate_blocked_rate": metrics.get(
+            "world_model_action_gate_blocked_rate"
+        ),
+        "world_model_action_gate_side_effect_block_violation_count": metrics.get(
+            "world_model_action_gate_side_effect_block_violation_count"
+        ),
+        "world_model_action_gate_prediction_confidence_mean": metrics.get(
+            "world_model_action_gate_prediction_confidence_mean"
+        ),
+        "world_model_action_gate_prediction_confidence_min": metrics.get(
+            "world_model_action_gate_prediction_confidence_min"
+        ),
+        "world_model_action_gate_low_prediction_confidence_count": metrics.get(
+            "world_model_action_gate_low_prediction_confidence_count"
+        ),
+        "world_model_action_gate_low_agreement_count": metrics.get(
+            "world_model_action_gate_low_agreement_count"
+        ),
+        "world_model_action_gate_no_rule_matched_count": metrics.get(
+            "world_model_action_gate_no_rule_matched_count"
+        ),
+        "world_model_action_gate_postcondition_refuted_count": metrics.get(
+            "world_model_action_gate_postcondition_refuted_count"
+        ),
+        "world_model_action_gate_postcondition_insufficient_evidence_count": metrics.get(
+            "world_model_action_gate_postcondition_insufficient_evidence_count"
+        ),
+        "world_model_action_gate_postcondition_error_count": metrics.get(
+            "world_model_action_gate_postcondition_error_count"
+        ),
+        "world_model_action_gate_counts_by_status": dict(
+            _mapping(metrics.get("world_model_action_gate_counts_by_status"))
+        ),
+        "world_model_action_gate_counts_by_decision_rule": dict(
+            _mapping(metrics.get("world_model_action_gate_counts_by_decision_rule"))
+        ),
+        "world_model_action_gate_counts_by_code": dict(
+            _mapping(metrics.get("world_model_action_gate_counts_by_code"))
+        ),
+        "world_model_action_gate_counts_by_action": dict(
+            _mapping(metrics.get("world_model_action_gate_counts_by_action"))
+        ),
         "evidence_quality_summary": dict(_mapping(metrics.get("evidence_quality_summary"))),
         "evidence_quality_available": bool(metrics.get("evidence_quality_available")),
         "evidence_quality_source": metrics.get("evidence_quality_source"),
@@ -1936,6 +2015,10 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
@@ -2022,6 +2105,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_plan": _aggregate_verification_plan(metrics),
         "pre_generation_risk": _aggregate_pre_generation_risk(metrics),
         "action_execution": _aggregate_action_execution(metrics),
+        "world_model_action_gate": _aggregate_world_model_action_gate(metrics),
         "evidence_quality": _aggregate_evidence_quality(metrics),
         "metacognition": _aggregate_metacognition(metrics),
         "action_receipts": _aggregate_action_receipts(metrics),
@@ -2943,6 +3027,139 @@ def _aggregate_action_execution(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         ),
         "per_trace_missing_result_count": _numeric_summary(
             item.get("action_execution_missing_result_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_world_model_action_gate(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("world_model_action_gate_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(
+        1 for item in metrics if item.get("world_model_action_gate_available") is True
+    )
+    result_count = _sum_float(metrics, "world_model_action_gate_result_count") or 0.0
+    checked_result_count = (
+        _sum_float(metrics, "world_model_action_gate_checked_result_count") or 0.0
+    )
+    passed_count = _sum_float(metrics, "world_model_action_gate_passed_count") or 0.0
+    blocked_count = _sum_float(metrics, "world_model_action_gate_blocked_count") or 0.0
+    side_effect_block_violation_count = (
+        _sum_float(metrics, "world_model_action_gate_side_effect_block_violation_count")
+        or 0.0
+    )
+    low_prediction_confidence_count = (
+        _sum_float(metrics, "world_model_action_gate_low_prediction_confidence_count")
+        or 0.0
+    )
+    low_agreement_count = _sum_float(metrics, "world_model_action_gate_low_agreement_count") or 0.0
+    no_rule_matched_count = (
+        _sum_float(metrics, "world_model_action_gate_no_rule_matched_count") or 0.0
+    )
+    postcondition_refuted_count = (
+        _sum_float(metrics, "world_model_action_gate_postcondition_refuted_count") or 0.0
+    )
+    postcondition_insufficient_evidence_count = (
+        _sum_float(
+            metrics,
+            "world_model_action_gate_postcondition_insufficient_evidence_count",
+        )
+        or 0.0
+    )
+    postcondition_error_count = (
+        _sum_float(metrics, "world_model_action_gate_postcondition_error_count") or 0.0
+    )
+    counts_by_status: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    counts_by_action: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(
+            counts_by_status,
+            _mapping(item.get("world_model_action_gate_counts_by_status")),
+        )
+        _merge_counts(
+            counts_by_decision_rule,
+            _mapping(item.get("world_model_action_gate_counts_by_decision_rule")),
+        )
+        _merge_counts(
+            counts_by_code,
+            _mapping(item.get("world_model_action_gate_counts_by_code")),
+        )
+        _merge_counts(
+            counts_by_action,
+            _mapping(item.get("world_model_action_gate_counts_by_action")),
+        )
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "trace_coverage_rate": _safe_div(available_count, n_traces),
+        "source_counts": _counts(item.get("world_model_action_gate_source") for item in metrics),
+        "result_count": result_count,
+        "checked_result_count": checked_result_count,
+        "coverage_rate": _safe_div(checked_result_count, result_count),
+        "passed_count": passed_count,
+        "blocked_count": blocked_count,
+        "pass_rate": _safe_div(passed_count, checked_result_count),
+        "blocked_rate": _safe_div(blocked_count, checked_result_count),
+        "side_effect_block_violation_count": side_effect_block_violation_count,
+        "side_effect_block_violation_rate": _safe_div(
+            side_effect_block_violation_count,
+            blocked_count,
+        ),
+        "low_prediction_confidence_count": low_prediction_confidence_count,
+        "low_prediction_confidence_rate": _safe_div(
+            low_prediction_confidence_count,
+            checked_result_count,
+        ),
+        "low_agreement_count": low_agreement_count,
+        "low_agreement_rate": _safe_div(low_agreement_count, checked_result_count),
+        "no_rule_matched_count": no_rule_matched_count,
+        "no_rule_matched_rate": _safe_div(no_rule_matched_count, checked_result_count),
+        "postcondition_refuted_count": postcondition_refuted_count,
+        "postcondition_refuted_rate": _safe_div(
+            postcondition_refuted_count,
+            checked_result_count,
+        ),
+        "postcondition_insufficient_evidence_count": (
+            postcondition_insufficient_evidence_count
+        ),
+        "postcondition_insufficient_evidence_rate": _safe_div(
+            postcondition_insufficient_evidence_count,
+            checked_result_count,
+        ),
+        "postcondition_error_count": postcondition_error_count,
+        "postcondition_error_rate": _safe_div(
+            postcondition_error_count,
+            checked_result_count,
+        ),
+        "counts_by_status": counts_by_status,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "counts_by_code": counts_by_code,
+        "counts_by_action": counts_by_action,
+        "prediction_confidence_mean": _numeric_summary(
+            item.get("world_model_action_gate_prediction_confidence_mean")
+            for item in metrics
+        ),
+        "prediction_confidence_min": _numeric_summary(
+            item.get("world_model_action_gate_prediction_confidence_min")
+            for item in metrics
+        ),
+        "per_trace_result_count": _numeric_summary(
+            item.get("world_model_action_gate_result_count") for item in metrics
+        ),
+        "per_trace_checked_result_count": _numeric_summary(
+            item.get("world_model_action_gate_checked_result_count") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("world_model_action_gate_coverage_rate") for item in metrics
+        ),
+        "per_trace_pass_rate": _numeric_summary(
+            item.get("world_model_action_gate_pass_rate") for item in metrics
+        ),
+        "per_trace_blocked_rate": _numeric_summary(
+            item.get("world_model_action_gate_blocked_rate") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -5500,6 +5717,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "world_model_action_gate_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "world_model_action_gate_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "action_receipts_evidence_metric_count": _numeric_summary(
             item.get(
                 "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count"
@@ -5633,6 +5862,10 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "action_gate_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        ),
+        "world_model_action_gate_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES,
         ),
         "action_receipts_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
@@ -6537,6 +6770,19 @@ def _promotion_contract_runtime_drift_flat_metadata(
             "action_gate_evidence_blocked_metric_count",
             "mean",
         ),
+        "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_metric_count_mean": _nested(
+            drift,
+            "world_model_action_gate_evidence_metric_count",
+            "mean",
+        ),
+        (
+            "promotion_contract_product_runtime_drift_"
+            "world_model_action_gate_evidence_blocked_metric_count_mean"
+        ): _nested(
+            drift,
+            "world_model_action_gate_evidence_blocked_metric_count",
+            "mean",
+        ),
         "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count_mean": _nested(
             drift,
             "action_receipts_evidence_metric_count",
@@ -6671,6 +6917,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("action_gate_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("world_model_action_gate_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(

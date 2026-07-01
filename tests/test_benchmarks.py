@@ -38820,6 +38820,17 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "action": "accept",
                     "status": "dry_run",
                     "output": {"would_execute": "accept"},
+                    "metadata": {
+                        "world_model_gate": {
+                            "available": True,
+                            "passed": True,
+                            "blocked": False,
+                            "status": "passed",
+                            "decision_rule": "prediction_and_postconditions_passed",
+                            "prediction_confidence": 0.91,
+                            "counts_by_code": {},
+                        }
+                    },
                     "request_id": "action-a",
                 }
             ],
@@ -39479,6 +39490,21 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert action_execution["missing_result_count"] == pytest.approx(1.0)
     assert action_execution["missing_result_rate"] == pytest.approx(0.5)
     assert action_execution["request_id_mismatch_count"] == pytest.approx(1.0)
+    world_model_action_gate = payload["summary"]["world_model_action_gate"]
+    assert world_model_action_gate["available_trace_count"] == 1
+    assert world_model_action_gate["trace_coverage_rate"] == pytest.approx(0.5)
+    assert world_model_action_gate["result_count"] == pytest.approx(1.0)
+    assert world_model_action_gate["checked_result_count"] == pytest.approx(1.0)
+    assert world_model_action_gate["coverage_rate"] == pytest.approx(1.0)
+    assert world_model_action_gate["pass_rate"] == pytest.approx(1.0)
+    assert world_model_action_gate["blocked_rate"] == pytest.approx(0.0)
+    assert world_model_action_gate["counts_by_status"] == {"passed": 1}
+    assert world_model_action_gate["counts_by_decision_rule"] == {
+        "prediction_and_postconditions_passed": 1
+    }
+    assert world_model_action_gate["prediction_confidence_mean"]["mean"] == pytest.approx(
+        0.91
+    )
     triple_coverage = payload["summary"]["triple_coverage"]
     assert triple_coverage["claim_count"] == 2.0
     assert triple_coverage["claims_with_triples"] == 1.0
@@ -42455,6 +42481,147 @@ def test_compare_product_runtime_baselines_gates_product_trace_action_gate_drift
     assert record.metadata["product_trace_action_execution_request_id_mismatch_rate_current"] == pytest.approx(
         0.25
     )
+
+
+def test_compare_product_runtime_baselines_gates_world_model_action_gate_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    def write_gate_trace(
+        path: Path,
+        *,
+        request_id: str,
+        gate_summary: Mapping[str, Any],
+        side_effects: bool,
+    ) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "runtime_trace": {
+                    "total_seconds": 0.10,
+                    "phases": [{"name": "execute_action", "seconds": 0.01}],
+                },
+                "action_results": [
+                    {
+                        "action": "execute_tool",
+                        "status": "dry_run",
+                        "output": {"would_execute": "execute_tool"},
+                        "metadata": {
+                            "world_model_gate": dict(gate_summary),
+                            "side_effects": side_effects,
+                        },
+                        "request_id": "action-1",
+                    }
+                ],
+                "metadata": {"cache": {"verifier": {"hits": 1, "misses": 0}}},
+            }),
+            encoding="utf-8",
+        )
+
+    write_gate_trace(
+        baseline_trace,
+        request_id="baseline",
+        gate_summary={
+            "available": True,
+            "passed": True,
+            "blocked": False,
+            "status": "passed",
+            "decision_rule": "prediction_and_postconditions_passed",
+            "prediction_confidence": 0.95,
+            "counts_by_code": {},
+        },
+        side_effects=True,
+    )
+    write_gate_trace(
+        current_trace,
+        request_id="current",
+        gate_summary={
+            "available": True,
+            "passed": False,
+            "blocked": True,
+            "status": "blocked",
+            "decision_rule": "postcondition_refuted",
+            "prediction_confidence": 0.40,
+            "counts_by_code": {
+                "low_prediction_confidence": 1,
+                "postcondition_refuted": 1,
+            },
+        },
+        side_effects=True,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-world-model-action-gate",
+        version="0.1",
+        min_world_model_action_gate_coverage_rate=1.0,
+        min_world_model_action_gate_pass_rate=1.0,
+        max_world_model_action_gate_blocked_rate_increase=0.0,
+        max_world_model_action_gate_side_effect_block_violation_rate_increase=0.0,
+        max_world_model_action_gate_low_prediction_confidence_rate_increase=0.0,
+        max_world_model_action_gate_postcondition_refuted_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-world-model-action-gate:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 5
+    assert _metric_by_name(payload, "world_model_action_gate.coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "world_model_action_gate.pass_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "world_model_action_gate.blocked_rate")[
+        "absolute_delta"
+    ] == pytest.approx(1.0)
+    assert _metric_by_name(
+        payload,
+        "world_model_action_gate.side_effect_block_violation_rate",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "world_model_action_gate.low_prediction_confidence_rate",
+    )["status"] == "blocked"
+    assert _metric_by_name(
+        payload,
+        "world_model_action_gate.postcondition_refuted_rate",
+    )["status"] == "blocked"
+    assert manifest["metadata"]["world_model_action_gate_blocked_metric_count"] == 5
+    assert manifest["metadata"]["world_model_action_gate_pass_rate_current"] == pytest.approx(
+        0.0
+    )
+    assert manifest["metadata"]["world_model_action_gate_blocked_rate_status"] == "blocked"
+    assert record.metadata["world_model_action_gate_blocked_metric_count"] == 5
+    assert record.metadata[
+        "world_model_action_gate_postcondition_refuted_rate_current"
+    ] == pytest.approx(1.0)
 
 
 def test_compare_product_runtime_baselines_gates_trajectory_audit_drift(tmp_path):
