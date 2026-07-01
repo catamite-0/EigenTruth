@@ -5601,6 +5601,10 @@ and max-ratio evidence, frontier release-evidence status/decision/track rates
 plus citation-batch and rerun-rollup counts, frontier release-evidence input
 manifest verification, promoted product-trace replay action-audit/action-execution
 child gates, or registered frontier evidence handoffs.
+Trajectory-audit runtime evidence now also carries cascading-evidence propagation
+signals: `trajectory_audit_cascade_count` increments when failed upstream
+retrieval/tool actions or empty retrieval results are later treated as support
+for claims or final answered traces.
 Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
 must additionally prove that claim factuality probe comparison evidence survived
 the product-runtime handoff; it is opt-in so existing `frontier_audit` checks keep

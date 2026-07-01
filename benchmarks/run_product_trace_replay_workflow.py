@@ -211,6 +211,7 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase: float | None = None
     max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase: float | None = None
     max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase: float | None = None
+    max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
     max_action_audit_error_rate: float | None = None
     max_action_audit_missing_retrieval_rate: float | None = None
@@ -385,6 +386,7 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase,
                 self.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase,
                 self.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase,
+                self.max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase,
                 self.min_runtime_drift_current_trace_count,
             )
         )
@@ -1588,6 +1590,7 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase,
             config.max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase,
             config.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase,
+            config.max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase,
             config.min_runtime_drift_current_trace_count,
         )
     )
@@ -1902,6 +1905,9 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_product_trace_trajectory_audit_scope_rate_increase": (
             config.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_cascade_rate_increase": (
+            config.max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase
         ),
         "min_current_trace_count": config.min_runtime_drift_current_trace_count,
     }
@@ -3974,6 +3980,9 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase=(
             args.max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase
         ),
+        max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase=(
+            args.max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase
+        ),
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         max_action_audit_error_rate=args.max_action_audit_error_rate,
         max_action_audit_missing_retrieval_rate=args.max_action_audit_missing_retrieval_rate,
@@ -4438,6 +4447,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-product-trace-trajectory-audit-scope-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-product-trace-trajectory-audit-cascade-rate-increase",
         type=float,
         default=None,
     )

@@ -19694,7 +19694,7 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "summary"
     ]
     assert trajectory_summary["trajectory_audit_evidence_required"] is True
-    assert trajectory_summary["trajectory_audit_evidence_metric_count"] == 7
+    assert trajectory_summary["trajectory_audit_evidence_metric_count"] == 8
     assert trajectory_summary["trajectory_audit_evidence_blocked_metric_count"] == 0
     assert trajectory_summary["product_trace_trajectory_audit_error_rate_current"] == (
         pytest.approx(0.0)
@@ -19711,6 +19711,7 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         "trajectory_audit.logical_rate",
         "trajectory_audit.procedural_rate",
         "trajectory_audit.scope_rate",
+        "trajectory_audit.cascade_rate",
     )
     assert any(
         "trajectory-audit evidence metrics are incomplete" in reason
@@ -21812,7 +21813,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ] == 7
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "trajectory_audit_evidence_metric_count"
-    ] == 7
+    ] == 8
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "evidence_handoff_evidence_metric_count"
     ] == 7
@@ -24392,7 +24393,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 60
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 61
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -24411,7 +24412,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count"]
         == 0
     )
-    assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
+    assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert (
         manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"]
         == 0
@@ -24845,7 +24846,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_action_gate_evidence_metric_count"] == 10
     assert record.metadata["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
-    assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
+    assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
@@ -26018,7 +26019,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "action_receipts_evidence_blocked_metric_count": 0,
                         "receipt_claim_support_evidence_metric_count": 7,
                         "receipt_claim_support_evidence_blocked_metric_count": 0,
-                        "trajectory_audit_evidence_metric_count": 7,
+                        "trajectory_audit_evidence_metric_count": 8,
                         "trajectory_audit_evidence_blocked_metric_count": 0,
                         "evidence_handoff_evidence_metric_count": 7,
                         "evidence_handoff_evidence_blocked_metric_count": 0,
@@ -26658,7 +26659,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"][
         "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count"
     ] == 0
-    assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
+    assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
@@ -26765,7 +26766,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
     assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
     assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
-    assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
+    assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
     assert manifest["metadata"]["product_runtime_drift_counterfactual_verification_pass_rate_status"] == (
@@ -26895,7 +26896,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
     assert record.metadata["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
     assert record.metadata["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
-    assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 7
+    assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata[
         "product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current"
@@ -28850,6 +28851,17 @@ def _write_product_runtime_drift_report(
             },
             {
                 "metric": "trajectory_audit.scope_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "trajectory_audit.cascade_rate",
                 "status": "pass",
                 "comparison": "max_increase",
                 "baseline": 0.0,
@@ -35504,7 +35516,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     "product_runtime_drift_action_receipts_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_receipt_claim_support_evidence_metric_count": 7,
                     "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": 0,
-                    "product_runtime_drift_trajectory_audit_evidence_metric_count": 7,
+                    "product_runtime_drift_trajectory_audit_evidence_metric_count": 8,
                     "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count": 0,
                     "product_runtime_drift_evidence_handoff_evidence_metric_count": 7,
                     "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": 0,
@@ -35949,7 +35961,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert runtime_drift["action_gate_evidence_metric_count"]["mean"] == pytest.approx(10.0)
     assert runtime_drift["action_receipts_evidence_metric_count"]["mean"] == pytest.approx(5.0)
     assert runtime_drift["receipt_claim_support_evidence_metric_count"]["mean"] == pytest.approx(7.0)
-    assert runtime_drift["trajectory_audit_evidence_metric_count"]["mean"] == pytest.approx(7.0)
+    assert runtime_drift["trajectory_audit_evidence_metric_count"]["mean"] == pytest.approx(8.0)
     assert runtime_drift["evidence_handoff_evidence_metric_count"]["mean"] == pytest.approx(7.0)
     assert runtime_drift["promotion_evidence"]["promotion_contract_coverage_rate"][
         "current"
@@ -36290,7 +36302,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     ] == pytest.approx(7.0)
     assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count_mean"
-    ] == pytest.approx(7.0)
+    ] == pytest.approx(8.0)
     assert manifest["metadata"][
         "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count_mean"
     ] == pytest.approx(7.0)
@@ -36696,6 +36708,8 @@ def test_run_product_runtime_baseline_aggregates_trajectory_audit(tmp_path):
     assert trajectory["failed_trace_rate"] == pytest.approx(0.5)
     assert trajectory["error_count"] == pytest.approx(2.0)
     assert trajectory["error_rate"] == pytest.approx(1.0)
+    assert trajectory["cascade_count"] == pytest.approx(0.0)
+    assert trajectory["cascade_rate"] == pytest.approx(0.0)
     assert trajectory["factual_count"] == pytest.approx(1.0)
     assert trajectory["logical_count"] == pytest.approx(1.0)
     assert trajectory["factual_rate"] == pytest.approx(0.5)
@@ -36708,8 +36722,10 @@ def test_run_product_runtime_baseline_aggregates_trajectory_audit(tmp_path):
     assert payload["traces"][1]["metrics"]["trajectory_audit_passed"] is False
     assert payload["traces"][1]["metrics"]["trajectory_audit_factual_count"] == pytest.approx(1.0)
     assert payload["optimization"]["summary"]["trajectory_audit_error_rate"] == pytest.approx(1.0)
+    assert payload["optimization"]["summary"]["trajectory_audit_cascade_rate"] == pytest.approx(0.0)
     assert manifest["metadata"]["trajectory_audit_failed_trace_rate"] == pytest.approx(0.5)
     assert manifest["metadata"]["trajectory_audit_error_rate"] == pytest.approx(1.0)
+    assert manifest["metadata"]["trajectory_audit_cascade_rate"] == pytest.approx(0.0)
     assert record.metadata["trajectory_audit_factual_rate"] == pytest.approx(0.5)
     assert record.metadata["trajectory_audit_logical_rate"] == pytest.approx(0.5)
 
@@ -43477,6 +43493,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             max_runtime_drift_product_trace_trajectory_audit_logical_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_procedural_rate_increase=0.0,
             max_runtime_drift_product_trace_trajectory_audit_scope_rate_increase=0.0,
+            max_runtime_drift_product_trace_trajectory_audit_cascade_rate_increase=0.0,
             min_runtime_drift_pre_generation_probe_comparison_coverage=1.0,
             min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate=1.0,
             min_runtime_drift_pre_generation_probe_comparison_model_count=2,
@@ -43536,7 +43553,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["runtime_drift"][
         "product_trace_receipt_claim_support_blocked_metric_count"
     ] == 0
-    assert payload["runtime_drift"]["product_trace_trajectory_audit_metric_count"] == 7
+    assert payload["runtime_drift"]["product_trace_trajectory_audit_metric_count"] == 8
     assert payload["runtime_drift"]["product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["pre_generation_probe_comparison_metric_count"] == 8
     assert payload["runtime_drift"]["pre_generation_probe_comparison_blocked_metric_count"] == 0
@@ -43569,6 +43586,9 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == pytest.approx(0.0)
     assert payload["config"]["runtime_drift_gates"][
         "max_product_trace_trajectory_audit_error_rate_increase"
+    ] == pytest.approx(0.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_product_trace_trajectory_audit_cascade_rate_increase"
     ] == pytest.approx(0.0)
     assert payload["config"]["runtime_drift_gates"][
         "min_pre_generation_probe_comparison_coverage"
@@ -43613,6 +43633,9 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     ] == pytest.approx(0.0)
     assert drift_report["config"][
         "max_product_trace_trajectory_audit_error_rate_increase"
+    ] == pytest.approx(0.0)
+    assert drift_report["config"][
+        "max_product_trace_trajectory_audit_cascade_rate_increase"
     ] == pytest.approx(0.0)
     assert drift_report["config"]["min_pre_generation_probe_comparison_manifest_verified_rate"] == (
         pytest.approx(1.0)
@@ -43682,7 +43705,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
         for metric in drift_report["metrics"]
         if metric["metric"].startswith("trajectory_audit.")
     }
-    assert len(trajectory_audit_statuses) == 7
+    assert len(trajectory_audit_statuses) == 8
     assert set(trajectory_audit_statuses.values()) == {"pass"}
     assert trajectory_audit_statuses["trajectory_audit.error_rate"] == "pass"
     pre_generation_statuses = {
@@ -43744,7 +43767,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert manifest["metadata"][
         "runtime_drift_product_trace_receipt_claim_support_blocked_metric_count"
     ] == 0
-    assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_metric_count"] == 7
+    assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_metric_count"] == 8
     assert manifest["metadata"]["runtime_drift_product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
     assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
@@ -43763,7 +43786,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert record.metadata[
         "runtime_drift_product_trace_receipt_claim_support_blocked_metric_count"
     ] == 0
-    assert record.metadata["runtime_drift_product_trace_trajectory_audit_metric_count"] == 7
+    assert record.metadata["runtime_drift_product_trace_trajectory_audit_metric_count"] == 8
     assert record.metadata["runtime_drift_product_trace_trajectory_audit_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
     assert record.metadata["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0

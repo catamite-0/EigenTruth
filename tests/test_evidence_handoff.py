@@ -107,8 +107,8 @@ def test_promotion_contract_evidence_audit_can_require_optional_runtime_groups()
         "evidence_handoff",
         "world_model",
     )
-    assert payload["summary"]["expected_metric_count"] == 103
-    assert payload["summary"]["missing_metric_count"] == 26
+    assert payload["summary"]["expected_metric_count"] == 104
+    assert payload["summary"]["missing_metric_count"] == 27
     assert payload["summary"]["groups"]["claim_risk_localization"] == "blocked"
     assert payload["summary"]["groups"]["trajectory_audit"] == "blocked"
     assert payload["summary"]["groups"]["evidence_handoff"] == "blocked"
@@ -164,7 +164,7 @@ def test_promotion_contract_evidence_audit_passes_optional_runtime_groups():
     payload = audit.to_dict()
 
     assert payload["status"] == "promote"
-    assert payload["summary"]["expected_metric_count"] == 125
+    assert payload["summary"]["expected_metric_count"] == 126
     assert payload["summary"]["missing_metric_count"] == 0
     assert payload["recommended_action_ids"] == ()
     assert payload["summary"]["groups"]["claim_factuality"] == "promote"
@@ -883,6 +883,7 @@ def _complete_contract_with_optional_runtime_groups():
             "logical_rate": 0.0,
             "procedural_rate": 0.0,
             "scope_rate": 0.0,
+            "cascade_rate": 0.0,
         },
         "evidence_handoff": {
             "coverage_rate": 1.0,

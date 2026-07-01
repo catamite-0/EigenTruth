@@ -523,6 +523,7 @@ _PRODUCT_TRACE_TRAJECTORY_AUDIT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("trajectory_audit.logical_rate", "product_trace_trajectory_audit_logical_rate"),
     ("trajectory_audit.procedural_rate", "product_trace_trajectory_audit_procedural_rate"),
     ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
+    ("trajectory_audit.cascade_rate", "product_trace_trajectory_audit_cascade_rate"),
 )
 _PRODUCT_TRACE_ACTION_GATE_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     (
@@ -695,6 +696,11 @@ _PRODUCT_TRACE_TRAJECTORY_AUDIT_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], 
         "trajectory_audit.scope_rate",
         ("trajectory_audit", "scope_rate"),
         "max_product_trace_trajectory_audit_scope_rate_increase",
+    ),
+    (
+        "trajectory_audit.cascade_rate",
+        ("trajectory_audit", "cascade_rate"),
+        "max_product_trace_trajectory_audit_cascade_rate_increase",
     ),
 )
 _WORLD_MODEL_MIN_METRIC_SPECS: tuple[tuple[str, tuple[str, ...], str], ...] = (
@@ -1051,6 +1057,7 @@ def compare_product_runtime_baselines(
     max_product_trace_trajectory_audit_logical_rate_increase: float | None = None,
     max_product_trace_trajectory_audit_procedural_rate_increase: float | None = None,
     max_product_trace_trajectory_audit_scope_rate_increase: float | None = None,
+    max_product_trace_trajectory_audit_cascade_rate_increase: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -1539,6 +1546,9 @@ def compare_product_runtime_baselines(
         ),
         "max_product_trace_trajectory_audit_scope_rate_increase": _optional_rate_float(
             max_product_trace_trajectory_audit_scope_rate_increase
+        ),
+        "max_product_trace_trajectory_audit_cascade_rate_increase": _optional_rate_float(
+            max_product_trace_trajectory_audit_cascade_rate_increase
         ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
@@ -4384,6 +4394,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_product_trace_trajectory_audit_scope_rate_increase=(
             args.max_product_trace_trajectory_audit_scope_rate_increase
         ),
+        max_product_trace_trajectory_audit_cascade_rate_increase=(
+            args.max_product_trace_trajectory_audit_cascade_rate_increase
+        ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -4856,6 +4869,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-product-trace-trajectory-audit-scope-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-product-trace-trajectory-audit-cascade-rate-increase",
         type=float,
         default=None,
     )

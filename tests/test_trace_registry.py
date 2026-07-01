@@ -1417,6 +1417,104 @@ def test_product_trace_action_execution_summary_handles_many_request_ids():
     assert summary["alignment"]["unexpected_request_ids"] == ("request-extra",)
 
 
+def test_product_trace_trajectory_audit_flags_cascading_failed_retrieval_acceptance():
+    trace = ProductTrace(
+        request_id="trace-cascade-1",
+        claims=({"claim_id": "c1", "text": "The answer needs retrieved evidence."},),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.2,
+                metadata={"claim_id": "c1", "retrieval_request_id": "retrieve-1"},
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.91,
+            reason="accepted after retrieval",
+        ),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="fetch evidence",
+                request_id="retrieve-1",
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.FAILED,
+                request_id="retrieve-1",
+                error="retriever unavailable",
+            ),
+        ),
+    )
+
+    summary = trace.trajectory_audit_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["passed"] is False
+    assert summary["cascade_count"] == 1
+    assert summary["counts_by_code"]["accepted_after_failed_upstream_action"] == 1
+    assert summary["counts_by_code"]["accepted_unsupported_claim"] == 1
+    assert bounded["summaries"]["trajectory_audit"]["cascade_count"] == 1
+    assert metrics["trajectory_audit_cascade_count"] == 1.0
+
+
+def test_product_trace_trajectory_audit_flags_supported_claim_from_empty_retrieval():
+    trace = ProductTrace(
+        request_id="trace-cascade-2",
+        claims=({"claim_id": "c1", "text": "A cited source supports the statement."},),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.86,
+                metadata={
+                    "claim_id": "c1",
+                    "route": "retrieval_groundedness",
+                    "retrieval_request_id": "retrieve-1",
+                },
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.88,
+            reason="supported",
+        ),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="fetch evidence",
+                request_id="retrieve-1",
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"hits": ()},
+                request_id="retrieve-1",
+            ),
+        ),
+    )
+
+    summary = trace.trajectory_audit_summary()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["passed"] is False
+    assert summary["cascade_count"] == 1
+    assert summary["counts_by_code"]["supported_claim_from_empty_retrieval"] == 1
+    cascade_issue = next(
+        item for item in summary["top_issues"] if item["code"] == "supported_claim_from_empty_retrieval"
+    )
+    assert cascade_issue["claim_ids"] == ("c1",)
+    assert cascade_issue["metadata"]["request_id"] == "retrieve-1"
+    assert metrics["trajectory_audit_counts_by_code"]["supported_claim_from_empty_retrieval"] == 1
+
+
 def test_product_trace_runtime_summary_counts_phase_timings():
     trace = ProductTrace(
         runtime_trace=RuntimeTrace(

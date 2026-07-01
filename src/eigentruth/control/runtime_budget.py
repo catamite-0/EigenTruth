@@ -696,6 +696,7 @@ def _trajectory_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[s
         "trajectory_audit_error_count": _finite_float(summary.get("error_count")),
         "trajectory_audit_warning_count": _finite_float(summary.get("warning_count")),
         "trajectory_audit_info_count": _finite_float(summary.get("info_count")),
+        "trajectory_audit_cascade_count": _finite_float(summary.get("cascade_count")) or 0.0,
         "trajectory_audit_types": tuple(_sequence(summary.get("hallucination_types", ()))),
         "trajectory_audit_counts_by_type": counts_by_type,
         "trajectory_audit_counts_by_code": counts_by_code,

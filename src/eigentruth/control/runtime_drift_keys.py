@@ -97,6 +97,7 @@ PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS: tuple[str, ...] = (
     "product_trace_trajectory_audit_logical_rate",
     "product_trace_trajectory_audit_procedural_rate",
     "product_trace_trajectory_audit_scope_rate",
+    "product_trace_trajectory_audit_cascade_rate",
 )
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",

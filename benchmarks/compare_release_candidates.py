@@ -327,6 +327,7 @@ _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_FIELDS: tuple[tuple[str, str], 
     ("trajectory_audit.logical_rate", "product_trace_trajectory_audit_logical_rate"),
     ("trajectory_audit.procedural_rate", "product_trace_trajectory_audit_procedural_rate"),
     ("trajectory_audit.scope_rate", "product_trace_trajectory_audit_scope_rate"),
+    ("trajectory_audit.cascade_rate", "product_trace_trajectory_audit_cascade_rate"),
 )
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (

@@ -108,6 +108,7 @@ _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_trajectory_audit_logical_rate",
     "product_trace_trajectory_audit_procedural_rate",
     "product_trace_trajectory_audit_scope_rate",
+    "product_trace_trajectory_audit_cascade_rate",
 )
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "evidence_handoff_coverage_rate",
@@ -1227,6 +1228,7 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "trajectory_audit_error_count": metrics.get("trajectory_audit_error_count"),
         "trajectory_audit_warning_count": metrics.get("trajectory_audit_warning_count"),
         "trajectory_audit_info_count": metrics.get("trajectory_audit_info_count"),
+        "trajectory_audit_cascade_count": metrics.get("trajectory_audit_cascade_count"),
         "trajectory_audit_types": list(_sequence(metrics.get("trajectory_audit_types"))),
         "trajectory_audit_counts_by_type": dict(_mapping(metrics.get("trajectory_audit_counts_by_type"))),
         "trajectory_audit_counts_by_code": dict(_mapping(metrics.get("trajectory_audit_counts_by_code"))),
@@ -1836,6 +1838,7 @@ def _optimization_report(
                 "trajectory_audit",
                 "procedural_rate",
             ),
+            "trajectory_audit_cascade_rate": _nested(summary, "trajectory_audit", "cascade_rate"),
             "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
             "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
             "budget_enabled": budget.get("enabled"),
@@ -2752,6 +2755,7 @@ def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[st
     error_count = _sum_float(metrics, "trajectory_audit_error_count")
     warning_count = _sum_float(metrics, "trajectory_audit_warning_count")
     info_count = _sum_float(metrics, "trajectory_audit_info_count")
+    cascade_count = _sum_float(metrics, "trajectory_audit_cascade_count") or 0.0
     factual_count = _sum_float(metrics, "trajectory_audit_factual_count") or 0.0
     referential_count = _sum_float(metrics, "trajectory_audit_referential_count") or 0.0
     logical_count = _sum_float(metrics, "trajectory_audit_logical_count") or 0.0
@@ -2775,6 +2779,8 @@ def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         "error_rate": _safe_div(error_count, n_traces),
         "warning_rate": _safe_div(warning_count, n_traces),
         "info_rate": _safe_div(info_count, n_traces),
+        "cascade_count": cascade_count,
+        "cascade_rate": _safe_div(cascade_count, n_traces),
         "factual_count": factual_count,
         "factual_rate": _safe_div(factual_count, n_traces),
         "referential_count": referential_count,
@@ -2790,6 +2796,9 @@ def _aggregate_trajectory_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[st
         "counts_by_type": counts_by_type,
         "per_trace_issue_count": _numeric_summary(
             item.get("trajectory_audit_issue_count") for item in metrics
+        ),
+        "per_trace_cascade_count": _numeric_summary(
+            item.get("trajectory_audit_cascade_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -5212,10 +5221,12 @@ def _trajectory_audit_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]
         "trajectory_audit_error_count": trajectory.get("error_count"),
         "trajectory_audit_warning_count": trajectory.get("warning_count"),
         "trajectory_audit_info_count": trajectory.get("info_count"),
+        "trajectory_audit_cascade_count": trajectory.get("cascade_count"),
         "trajectory_audit_issue_rate": trajectory.get("issue_rate"),
         "trajectory_audit_error_rate": trajectory.get("error_rate"),
         "trajectory_audit_warning_rate": trajectory.get("warning_rate"),
         "trajectory_audit_info_rate": trajectory.get("info_rate"),
+        "trajectory_audit_cascade_rate": trajectory.get("cascade_rate"),
         "trajectory_audit_factual_count": trajectory.get("factual_count"),
         "trajectory_audit_referential_count": trajectory.get("referential_count"),
         "trajectory_audit_logical_count": trajectory.get("logical_count"),

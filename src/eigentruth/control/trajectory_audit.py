@@ -114,12 +114,15 @@ class TrajectoryAuditReport:
         counts_by_type: dict[str, int] = {}
         counts_by_severity: dict[str, int] = {}
         counts_by_code: dict[str, int] = {}
+        cascade_count = 0
         for issue in self.issues:
             hallucination_type = issue.hallucination_type.value
             severity = issue.severity.value
             counts_by_type[hallucination_type] = counts_by_type.get(hallucination_type, 0) + 1
             counts_by_severity[severity] = counts_by_severity.get(severity, 0) + 1
             counts_by_code[issue.code] = counts_by_code.get(issue.code, 0) + 1
+            if issue.metadata.get("cascade") is True:
+                cascade_count += 1
         hallucination_types = tuple(
             item.value for item in TrajectoryHallucinationType if counts_by_type.get(item.value, 0) > 0
         )
@@ -131,6 +134,7 @@ class TrajectoryAuditReport:
             "error_count": counts_by_severity.get(ActionAuditSeverity.ERROR.value, 0),
             "warning_count": counts_by_severity.get(ActionAuditSeverity.WARNING.value, 0),
             "info_count": counts_by_severity.get(ActionAuditSeverity.INFO.value, 0),
+            "cascade_count": cascade_count,
             "hallucination_types": hallucination_types,
             "counts_by_type": counts_by_type,
             "counts_by_severity": counts_by_severity,
@@ -171,6 +175,7 @@ def audit_product_trace_trajectory(trace: Any) -> TrajectoryAuditReport:
     issues.extend(_issues_from_action_audit(payload, summaries))
     issues.extend(_issues_from_action_execution(payload, summaries))
     issues.extend(_issues_from_verification_decision(payload))
+    issues.extend(_issues_from_cascading_evidence(payload))
     return TrajectoryAuditReport(
         trace_id=_optional_string(payload.get("request_id")),
         issues=tuple(issues),
@@ -307,6 +312,211 @@ def _issues_from_action_execution(
                 },
             ))
     return tuple(issues)
+
+
+def _issues_from_cascading_evidence(payload: Mapping[str, Any]) -> tuple[TrajectoryAuditIssue, ...]:
+    """Detect upstream action evidence failures that propagate downstream."""
+    action_results = tuple(
+        _mapping(item) for item in _sequence(payload.get("action_results", ())) if isinstance(item, Mapping)
+    )
+    if not action_results:
+        return ()
+    claims = tuple(_mapping(item) for item in _sequence(payload.get("claims", ())) if isinstance(item, Mapping))
+    results = tuple(
+        _mapping(item) for item in _sequence(payload.get("verification_results", ())) if isinstance(item, Mapping)
+    )
+    claim_ids = _claim_ids(claims)
+    decision = _mapping(payload.get("risk_decision"))
+    final_answer = _mapping(payload.get("final_answer"))
+    answered_or_accepted = _answered_or_accepted(decision, final_answer)
+    status_claim_ids = _verification_status_claim_ids(results, claim_ids)
+    unsupported_claim_ids = tuple(
+        tuple(status_claim_ids.get("insufficient_evidence", ()))
+        + tuple(status_claim_ids.get("error", ()))
+    )
+    verified_claim_ids = set(claim_id for ids in status_claim_ids.values() for claim_id in ids)
+    missing_claim_ids = tuple(claim_id for claim_id in claim_ids if claim_id not in verified_claim_ids)
+
+    failed_by_request_id: dict[str, dict[str, Any]] = {}
+    failed_results: list[dict[str, Any]] = []
+    empty_retrieval_by_request_id: dict[str, dict[str, Any]] = {}
+    empty_retrieval_results: list[dict[str, Any]] = []
+    for index, result in enumerate(action_results):
+        action = _action_name(result.get("action"))
+        status = str(result.get("status", "")).strip()
+        request_id = _optional_string(result.get("request_id"))
+        indexed = {
+            "index": index,
+            "action": action,
+            "status": status,
+            "request_id": request_id,
+        }
+        if status in _FAILED_ACTION_STATUSES and action in _EVIDENCE_ACTIONS:
+            failed_results.append(indexed)
+            if request_id is not None:
+                failed_by_request_id[request_id] = indexed
+        if action == ControlAction.RETRIEVE.value and status in _COMPLETED_RETRIEVAL_STATUSES:
+            hit_count = _retrieval_hit_count(result)
+            if hit_count == 0:
+                indexed = {
+                    **indexed,
+                    "hit_count": hit_count,
+                }
+                empty_retrieval_results.append(indexed)
+                if request_id is not None:
+                    empty_retrieval_by_request_id[request_id] = indexed
+
+    issues: list[TrajectoryAuditIssue] = []
+    downstream_claim_ids = tuple(dict.fromkeys(unsupported_claim_ids + missing_claim_ids))
+    if answered_or_accepted and failed_results:
+        issues.append(TrajectoryAuditIssue(
+            code="accepted_after_failed_upstream_action",
+            hallucination_type=TrajectoryHallucinationType.PROCEDURAL,
+            severity=ActionAuditSeverity.ERROR,
+            message="the trace answered after an evidence-bearing upstream action failed",
+            location="action_results",
+            claim_ids=downstream_claim_ids,
+            metadata={
+                "source": "cascading_evidence",
+                "cascade": True,
+                "failed_actions": tuple(failed_results[:8]),
+                "unsupported_claim_ids": unsupported_claim_ids,
+                "missing_claim_ids": missing_claim_ids,
+            },
+        ))
+    if answered_or_accepted and empty_retrieval_results and (unsupported_claim_ids or missing_claim_ids):
+        issues.append(TrajectoryAuditIssue(
+            code="accepted_after_empty_retrieval",
+            hallucination_type=TrajectoryHallucinationType.REFERENTIAL,
+            severity=ActionAuditSeverity.ERROR,
+            message="the trace answered after retrieval returned no evidence for unresolved claims",
+            location="action_results",
+            claim_ids=downstream_claim_ids,
+            metadata={
+                "source": "cascading_evidence",
+                "cascade": True,
+                "empty_retrieval_results": tuple(empty_retrieval_results[:8]),
+                "unsupported_claim_ids": unsupported_claim_ids,
+                "missing_claim_ids": missing_claim_ids,
+            },
+        ))
+
+    for index, result in enumerate(results):
+        status = str(result.get("status", "")).strip()
+        if status != "supported":
+            continue
+        claim_id = _verification_result_claim_id(result, index=index, claim_ids=claim_ids)
+        referenced_request_ids = tuple(
+            request_id
+            for request_id in _referenced_request_ids(result)
+            if request_id in failed_by_request_id or request_id in empty_retrieval_by_request_id
+        )
+        for request_id in referenced_request_ids:
+            if request_id in failed_by_request_id:
+                issues.append(TrajectoryAuditIssue(
+                    code="supported_claim_from_failed_action",
+                    hallucination_type=TrajectoryHallucinationType.REFERENTIAL,
+                    severity=ActionAuditSeverity.ERROR,
+                    message="a supported claim referenced a failed evidence-bearing action",
+                    location=f"verification_results[{index}]",
+                    claim_ids=(claim_id,),
+                    metadata={
+                        "source": "cascading_evidence",
+                        "cascade": True,
+                        "request_id": request_id,
+                        "upstream_action": failed_by_request_id[request_id],
+                    },
+                ))
+            elif request_id in empty_retrieval_by_request_id:
+                issues.append(TrajectoryAuditIssue(
+                    code="supported_claim_from_empty_retrieval",
+                    hallucination_type=TrajectoryHallucinationType.REFERENTIAL,
+                    severity=ActionAuditSeverity.ERROR,
+                    message="a supported claim referenced a retrieval action with no evidence hits",
+                    location=f"verification_results[{index}]",
+                    claim_ids=(claim_id,),
+                    metadata={
+                        "source": "cascading_evidence",
+                        "cascade": True,
+                        "request_id": request_id,
+                        "upstream_action": empty_retrieval_by_request_id[request_id],
+                    },
+                ))
+    return tuple(issues)
+
+
+def _answered_or_accepted(
+    decision: Mapping[str, Any],
+    final_answer: Mapping[str, Any],
+) -> bool:
+    decision_action = _action_name(decision.get("action"))
+    final_action = _action_name(final_answer.get("action"))
+    final_status = str(final_answer.get("status", "")).strip()
+    return (
+        decision_action == ControlAction.ACCEPT.value
+        or final_action == ControlAction.ACCEPT.value
+        or final_status == "answered"
+        or final_answer.get("answerable") is True
+    )
+
+
+def _verification_status_claim_ids(
+    results: Sequence[Mapping[str, Any]],
+    claim_ids: Sequence[str],
+) -> dict[str, list[str]]:
+    status_claim_ids: dict[str, list[str]] = {}
+    for index, result in enumerate(results):
+        status = str(result.get("status", "")).strip()
+        if not status:
+            continue
+        claim_id = _verification_result_claim_id(result, index=index, claim_ids=claim_ids)
+        status_claim_ids.setdefault(status, []).append(claim_id)
+    return status_claim_ids
+
+
+def _retrieval_hit_count(result: Mapping[str, Any]) -> int:
+    output = _mapping(result.get("output"))
+    direct_hits = _sequence(output.get("hits", ()))
+    hits_by_query = _sequence(output.get("hits_by_query", ()))
+    if direct_hits:
+        return sum(1 for item in direct_hits if isinstance(item, Mapping) or item)
+    total = 0
+    for item in hits_by_query:
+        query_result = _mapping(item)
+        if not query_result:
+            continue
+        hits = _sequence(query_result.get("hits", ()))
+        total += sum(1 for hit in hits if isinstance(hit, Mapping) or hit)
+    return total
+
+
+def _referenced_request_ids(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    request_ids: list[str] = []
+    for value in _request_id_values(payload):
+        request_id = _optional_string(value)
+        if request_id is not None:
+            request_ids.append(request_id)
+    return tuple(dict.fromkeys(request_ids))
+
+
+def _request_id_values(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, Mapping):
+        values: list[Any] = []
+        for key, item in value.items():
+            key_text = str(key).lower()
+            if key_text in _REQUEST_ID_KEYS or (
+                key_text.endswith("_request_id") and "fingerprint" not in key_text
+            ):
+                values.append(item)
+            if key_text in {"metadata", "evidence", "source", "sources", "references", "trace"}:
+                values.extend(_request_id_values(item))
+        return tuple(values)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        values = []
+        for item in value:
+            values.extend(_request_id_values(item))
+        return tuple(values)
+    return ()
 
 
 def _issues_from_verification_decision(payload: Mapping[str, Any]) -> tuple[TrajectoryAuditIssue, ...]:
@@ -618,4 +828,22 @@ _NON_ANSWERING_ACTIONS = {
     ControlAction.EXECUTE_TOOL.value,
     ControlAction.ABSTAIN.value,
     ControlAction.CLARIFY.value,
+}
+
+_EVIDENCE_ACTIONS = {
+    ControlAction.RETRIEVE.value,
+    ControlAction.EXECUTE_TOOL.value,
+}
+
+_FAILED_ACTION_STATUSES = {"failed", "timed_out"}
+
+_COMPLETED_RETRIEVAL_STATUSES = {"succeeded", "dry_run"}
+
+_REQUEST_ID_KEYS = {
+    "request_id",
+    "action_request_id",
+    "source_request_id",
+    "retrieval_request_id",
+    "tool_request_id",
+    "evidence_request_id",
 }
