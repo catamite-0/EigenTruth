@@ -5302,6 +5302,12 @@ def test_compare_frontier_release_evidence_blocks_failed_citation_batch_rollup(t
         promotion_ready=False,
         expected_batch_ids=("unresolved-evidence-batch-0001", "unresolved-evidence-batch-0002"),
         observed_batch_ids=("unresolved-evidence-batch-0001",),
+        adapter_gate_summary={
+            "adapter_gate_present_count": 1,
+            "adapter_gate_passed_count": 0,
+            "adapter_gate_failed_count": 1,
+            "adapter_gate_status_counts": {"partial": 1},
+        },
     )
     verifier_path.write_text(
         json.dumps(_synthetic_verifier_stability_payload()),
@@ -5321,9 +5327,15 @@ def test_compare_frontier_release_evidence_blocks_failed_citation_batch_rollup(t
     assert payload["decision"]["status"] == "blocked"
     assert payload["decision"]["citation_batch_track_status"] == "blocked"
     assert payload["evidence_summary"]["citation_batch_missing_expected_batch_count"] == 1
+    assert payload["evidence_summary"]["citation_batch_adapter_gate_present_count"] == 1
+    assert payload["evidence_summary"]["citation_batch_adapter_gate_failed_count"] == 1
+    assert payload["evidence_summary"]["citation_batch_adapter_gate_status_counts"] == {
+        "partial": 1,
+    }
     assert payload["evidence_summary"]["citation_batch_missing_expected_batches"] == (
         {"rollup": "citation-batch-rollup", "batch_id": "unresolved-evidence-batch-0002"},
     )
+    assert payload["citation_batch_decisions"][0]["metrics"]["adapter_gate_failed_count"] == 1
     assert payload["citation_batch_decisions"][0]["metrics"]["observed_batch_count"] == 1
     assert any(
         "citation_batch_rollup.citation-batch-rollup.summary.missing_expected_batch_count" in reason
@@ -5699,6 +5711,12 @@ def test_compare_frontier_release_evidence_manifest_includes_detectability_taxon
         promotion_ready=True,
         expected_batch_ids=("unresolved-evidence-batch-0001", "unresolved-evidence-batch-0002"),
         observed_batch_ids=("unresolved-evidence-batch-0001", "unresolved-evidence-batch-0002"),
+        adapter_gate_summary={
+            "adapter_gate_present_count": 2,
+            "adapter_gate_passed_count": 2,
+            "adapter_gate_failed_count": 0,
+            "adapter_gate_status_counts": {"complete": 2},
+        },
     )
     output_path = tmp_path / "frontier-release-evidence" / "report.json"
     manifest_path = tmp_path / "frontier-release-evidence" / "artifact-manifest.json"
@@ -5761,6 +5779,8 @@ def test_compare_frontier_release_evidence_manifest_includes_detectability_taxon
     assert manifest["artifacts"]["citation_batch_rollup_manifest_0"]["exists"] is True
     assert manifest["metadata"]["detectability_track_status"] == "promote"
     assert manifest["metadata"]["citation_batch_track_status"] == "promote"
+    assert manifest["metadata"]["citation_batch_adapter_gate_failed_count"] == 0
+    assert manifest["metadata"]["citation_batch_adapter_gate_status_counts"] == {"complete": 2}
     record = registry.get("report:synthetic-frontier-release-evidence:0.2")
     assert record.metadata["detectability_track_status"] == "promote"
     assert record.metadata["citation_batch_track_status"] == "promote"
@@ -5768,6 +5788,10 @@ def test_compare_frontier_release_evidence_manifest_includes_detectability_taxon
     assert record.metadata["citation_batch_rollup_report_count"] == 1
     assert record.metadata["citation_batch_expected_batch_count"] == 2
     assert record.metadata["citation_batch_observed_batch_count"] == 2
+    assert record.metadata["citation_batch_adapter_gate_present_count"] == 2
+    assert record.metadata["citation_batch_adapter_gate_passed_count"] == 2
+    assert record.metadata["citation_batch_adapter_gate_failed_count"] == 0
+    assert record.metadata["citation_batch_adapter_gate_status_counts"] == {"complete": 2}
 
 
 def _synthetic_verifier_stability_payload() -> dict[str, object]:
@@ -5963,6 +5987,7 @@ def _write_synthetic_citation_batch_rollup_report(
     promotion_ready: bool,
     expected_batch_ids: Sequence[str],
     observed_batch_ids: Sequence[str],
+    adapter_gate_summary: Mapping[str, Any] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -6011,6 +6036,7 @@ def _write_synthetic_citation_batch_rollup_report(
             "adapter_result_count": len(observed) * 2,
             "source_document_count": len(observed),
             "corpus_document_count": len(observed),
+            **dict(adapter_gate_summary or {}),
         },
         "paths": {
             "report": str(report_path),

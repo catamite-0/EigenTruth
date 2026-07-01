@@ -1249,6 +1249,18 @@ def _frontier_release_evidence_handoff_from_report(
             "citation_batch_unexpected_batch_count": summary.get(
                 "citation_batch_unexpected_batch_count"
             ),
+            "citation_batch_adapter_gate_present_count": summary.get(
+                "citation_batch_adapter_gate_present_count"
+            ),
+            "citation_batch_adapter_gate_passed_count": summary.get(
+                "citation_batch_adapter_gate_passed_count"
+            ),
+            "citation_batch_adapter_gate_failed_count": summary.get(
+                "citation_batch_adapter_gate_failed_count"
+            ),
+            "citation_batch_adapter_gate_status_counts": summary.get(
+                "citation_batch_adapter_gate_status_counts"
+            ),
             "run_names": tuple(summary.get("run_names") or ()),
             "blocking_reasons": blocking_reasons,
         }
@@ -1328,6 +1340,18 @@ def _frontier_release_evidence_flat_metadata(
             ),
             "frontier_release_evidence_citation_batch_unexpected_batch_count": (
                 evidence.get("citation_batch_unexpected_batch_count")
+            ),
+            "frontier_release_evidence_citation_batch_adapter_gate_present_count": (
+                evidence.get("citation_batch_adapter_gate_present_count")
+            ),
+            "frontier_release_evidence_citation_batch_adapter_gate_passed_count": (
+                evidence.get("citation_batch_adapter_gate_passed_count")
+            ),
+            "frontier_release_evidence_citation_batch_adapter_gate_failed_count": (
+                evidence.get("citation_batch_adapter_gate_failed_count")
+            ),
+            "frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
+                evidence.get("citation_batch_adapter_gate_status_counts")
             ),
             "frontier_release_evidence_run_names": evidence.get("run_names"),
             "frontier_release_evidence_blocking_reasons": evidence.get("blocking_reasons"),

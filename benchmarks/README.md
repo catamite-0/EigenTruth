@@ -1377,7 +1377,9 @@ any provided track misses its configured seed-rate, metric, or blind-spot
 threshold. It can also consume citation/source-family batch evidence rollups:
 when a `--citation-batch-rollup-report` is supplied, every expected batch must
 be observed exactly once, child evidence gates must be promotion-ready, and
-child manifests must have passed inside the rollup. Completed frontier rerun
+child manifests must have passed inside the rollup. Source-family child
+adapter-gate present/pass/fail counts and status distributions are preserved in
+the release report and registry metadata when the rollup exposes them. Completed frontier rerun
 rollups can be supplied with repeatable `--frontier-rerun-rollup-report`; each
 rollup must be `status=promote`, `gate.passed=true`, `gate.promotion_ready=true`,
 and include an artifact manifest before it can clear a previously blocked
@@ -1427,7 +1429,8 @@ per-cell conformal artifacts.
 When `--citation-batch-rollup-report` is supplied, the comparator adds a
 `citation_batch_track_status` to the release decision and records expected,
 observed, missing, duplicate, and unexpected batch counts in the release report,
-registry metadata, and artifact manifest. A rollup with missing expected
+registry metadata, and artifact manifest, along with child adapter-gate
+present/pass/fail counts and status distributions when available. A rollup with missing expected
 batches, duplicate batches, unsupported child workflows, failed child gates, or
 failed child-manifest verification blocks the frontier release verdict.
 When `--frontier-rerun-rollup-report` is supplied, the comparator records a
@@ -1442,7 +1445,9 @@ Product runtime baselines also aggregate that citation-batch track from
 promotion-contract trace metadata; `compare_product_runtime_baselines.py` can
 gate the track promote rate, require a rollup count, and fail closed on missing,
 duplicate, or unexpected citation/source-family batches so release evidence
-cannot silently disappear after handoff.
+cannot silently disappear after handoff. Adapter-gate counts remain visible in
+the promotion-contract frontier-release metadata without changing older handoff
+metric-count contracts.
 When `--detectability-taxonomy-report` is supplied, each run must have a matching
 taxonomy report. The default blind-spot gate blocks if more than 25% of false
 records fall into the `entrenched` cell, because that cell is repeatable and

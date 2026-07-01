@@ -5196,6 +5196,18 @@ def _frontier_release_evidence_metadata(
         "citation_batch_unexpected_batch_count": report.get(
             "citation_batch_unexpected_batch_count"
         ),
+        "citation_batch_adapter_gate_present_count": report.get(
+            "citation_batch_adapter_gate_present_count"
+        ),
+        "citation_batch_adapter_gate_passed_count": report.get(
+            "citation_batch_adapter_gate_passed_count"
+        ),
+        "citation_batch_adapter_gate_failed_count": report.get(
+            "citation_batch_adapter_gate_failed_count"
+        ),
+        "citation_batch_adapter_gate_status_counts": report.get(
+            "citation_batch_adapter_gate_status_counts"
+        ),
         "run_names": report.get("run_names"),
         "blocking_reasons": _first_present(
             report.get("blocking_reasons"),
@@ -5282,6 +5294,18 @@ def _frontier_release_evidence_flat_metadata(
         ),
         "frontier_release_evidence_citation_batch_unexpected_batch_count": (
             report.get("citation_batch_unexpected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_present_count": (
+            report.get("citation_batch_adapter_gate_present_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_passed_count": (
+            report.get("citation_batch_adapter_gate_passed_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_failed_count": (
+            report.get("citation_batch_adapter_gate_failed_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
+            report.get("citation_batch_adapter_gate_status_counts")
         ),
         "frontier_release_evidence_run_names": report.get("run_names"),
         "frontier_release_evidence_blocking_reasons": report.get("blocking_reasons"),
@@ -5492,6 +5516,38 @@ def _promotion_contract_frontier_release_evidence_metadata(
                 evidence.get("citation_batch_unexpected_batch_count"),
                 metadata.get(
                     "frontier_release_evidence_citation_batch_unexpected_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_present_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_present_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_passed_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_passed_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_failed_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_failed_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_status_counts"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_status_counts"
                 ),
             )
         ),

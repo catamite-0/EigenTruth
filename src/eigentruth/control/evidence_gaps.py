@@ -640,6 +640,18 @@ def _frontier_citation_batch_metadata(payload: Mapping[str, Any]) -> dict[str, A
         "citation_batch_blocked_child_report_count": evidence_summary.get(
             "citation_batch_blocked_child_report_count"
         ),
+        "citation_batch_adapter_gate_present_count": evidence_summary.get(
+            "citation_batch_adapter_gate_present_count"
+        ),
+        "citation_batch_adapter_gate_passed_count": evidence_summary.get(
+            "citation_batch_adapter_gate_passed_count"
+        ),
+        "citation_batch_adapter_gate_failed_count": evidence_summary.get(
+            "citation_batch_adapter_gate_failed_count"
+        ),
+        "citation_batch_adapter_gate_status_counts": dict(
+            _mapping(evidence_summary.get("citation_batch_adapter_gate_status_counts"))
+        ),
     }
     return {
         key: value

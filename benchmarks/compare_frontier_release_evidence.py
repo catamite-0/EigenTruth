@@ -873,6 +873,18 @@ def _citation_batch_rollup_decision(
         ),
         "adapter_request_count": _non_negative_int(summary.get("adapter_request_count")),
         "adapter_result_count": _non_negative_int(summary.get("adapter_result_count")),
+        "adapter_gate_present_count": _non_negative_int(
+            summary.get("adapter_gate_present_count")
+        ),
+        "adapter_gate_passed_count": _non_negative_int(
+            summary.get("adapter_gate_passed_count")
+        ),
+        "adapter_gate_failed_count": _non_negative_int(
+            summary.get("adapter_gate_failed_count")
+        ),
+        "adapter_gate_status_counts": _string_int_mapping(
+            summary.get("adapter_gate_status_counts")
+        ),
         "source_document_count": _non_negative_int(summary.get("source_document_count")),
         "corpus_document_count": _non_negative_int(summary.get("corpus_document_count")),
         "expected_batch_ids": _string_tuple(summary.get("expected_batch_ids")),
@@ -1003,9 +1015,13 @@ def _citation_batch_evidence_summary(
         "citation_batch_child_manifest_failed_count": 0,
         "citation_batch_adapter_request_count": 0,
         "citation_batch_adapter_result_count": 0,
+        "citation_batch_adapter_gate_present_count": 0,
+        "citation_batch_adapter_gate_passed_count": 0,
+        "citation_batch_adapter_gate_failed_count": 0,
         "citation_batch_source_document_count": 0,
         "citation_batch_corpus_document_count": 0,
     }
+    adapter_gate_status_counts: dict[str, int] = {}
     for decision in decisions:
         name = str(decision.get("name") or "")
         rollup_names.append(name)
@@ -1023,10 +1039,17 @@ def _citation_batch_evidence_summary(
             ("citation_batch_child_manifest_failed_count", "child_manifest_failed_count"),
             ("citation_batch_adapter_request_count", "adapter_request_count"),
             ("citation_batch_adapter_result_count", "adapter_result_count"),
+            ("citation_batch_adapter_gate_present_count", "adapter_gate_present_count"),
+            ("citation_batch_adapter_gate_passed_count", "adapter_gate_passed_count"),
+            ("citation_batch_adapter_gate_failed_count", "adapter_gate_failed_count"),
             ("citation_batch_source_document_count", "source_document_count"),
             ("citation_batch_corpus_document_count", "corpus_document_count"),
         ):
             totals[key] += _non_negative_int(metrics.get(metric_key)) or 0
+        for status, count in _string_int_mapping(
+            metrics.get("adapter_gate_status_counts")
+        ).items():
+            adapter_gate_status_counts[status] = adapter_gate_status_counts.get(status, 0) + count
         expected_batch_ids.update(_string_tuple(metrics.get("expected_batch_ids")))
         observed_batch_ids.update(_string_tuple(metrics.get("observed_batch_ids")))
         for batch_id in _string_tuple(metrics.get("missing_expected_batch_ids")):
@@ -1047,6 +1070,9 @@ def _citation_batch_evidence_summary(
         "citation_batch_missing_expected_batches": tuple(missing_batch_rows),
         "citation_batch_duplicate_batches": tuple(duplicate_batch_rows),
         "citation_batch_unexpected_batches": tuple(unexpected_batch_rows),
+        "citation_batch_adapter_gate_status_counts": dict(
+            sorted(adapter_gate_status_counts.items())
+        ),
         **totals,
     }
 
@@ -1584,6 +1610,18 @@ def _string_tuple(value: Any) -> tuple[str, ...]:
     return tuple(str(item) for item in value if str(item))
 
 
+def _string_int_mapping(value: Any) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        return {}
+    output: dict[str, int] = {}
+    for key, item in value.items():
+        numeric = _non_negative_int(item)
+        text_key = str(key)
+        if numeric is not None and text_key:
+            output[text_key] = numeric
+    return dict(sorted(output.items()))
+
+
 def _positive_int(value: Any) -> int | None:
     numeric = _non_negative_int(value)
     if numeric is None or numeric < 1:
@@ -1736,6 +1774,11 @@ def _write_artifact_manifest(
         artifacts[f"frontier_rerun_rollup_manifest_{index}"] = rollup_input.get(
             "artifact_manifest"
         )
+    evidence_summary = (
+        payload.get("evidence_summary")
+        if isinstance(payload.get("evidence_summary"), Mapping)
+        else {}
+    )
     manifest = context.build_artifact_manifest(
         artifacts,
         root=output_path.parent,
@@ -1772,6 +1815,12 @@ def _write_artifact_manifest(
                 tuple(payload.get("decision", {}).get("frontier_rerun_rollup_promoted_tracks", ()))
                 if isinstance(payload.get("decision"), Mapping)
                 else ()
+            ),
+            "citation_batch_adapter_gate_failed_count": evidence_summary.get(
+                "citation_batch_adapter_gate_failed_count"
+            ),
+            "citation_batch_adapter_gate_status_counts": evidence_summary.get(
+                "citation_batch_adapter_gate_status_counts"
             ),
         },
         max_workers=max_workers,
@@ -1898,6 +1947,18 @@ def _record_registry(
         ),
         "citation_batch_child_manifest_failed_count": evidence_summary.get(
             "citation_batch_child_manifest_failed_count"
+        ),
+        "citation_batch_adapter_gate_present_count": evidence_summary.get(
+            "citation_batch_adapter_gate_present_count"
+        ),
+        "citation_batch_adapter_gate_passed_count": evidence_summary.get(
+            "citation_batch_adapter_gate_passed_count"
+        ),
+        "citation_batch_adapter_gate_failed_count": evidence_summary.get(
+            "citation_batch_adapter_gate_failed_count"
+        ),
+        "citation_batch_adapter_gate_status_counts": dict(
+            _mapping(evidence_summary.get("citation_batch_adapter_gate_status_counts"))
         ),
         "citation_batch_expected_batch_ids": tuple(
             evidence_summary.get("citation_batch_expected_batch_ids", ())

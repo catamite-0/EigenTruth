@@ -876,7 +876,11 @@ Added the first monitor-first tool-selection audit layer:
   partial catalog runs cannot look promotion-ready just because a downstream
   evidence report exists. Batch rollups now carry the same child adapter-gate
   status/coverage counts and block explicitly on `child_adapter_gate`, so the
-  release-evidence layer keeps the adapter root cause visible. Its registered
+  release-evidence layer keeps the adapter root cause visible. The frontier
+  release comparator, product promotion contract metadata, and runtime metrics
+  now preserve child adapter-gate present/pass/fail counts and status
+  distributions when those rollups expose them, without changing older handoff
+  metric-count contracts. Its registered
   synthetic smoke artifact consumes `2` unresolved citation requests and returns `2`
   adapter results, passes
   provenance, and remains blocked by query/comparison gates. This is the right

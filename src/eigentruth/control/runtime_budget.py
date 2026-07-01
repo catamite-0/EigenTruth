@@ -1857,6 +1857,19 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             "citation_batch_unexpected_batch_count": _finite_float(
                 frontier_release_evidence.get("citation_batch_unexpected_batch_count")
             ),
+            "citation_batch_adapter_gate_present_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_adapter_gate_present_count")
+            ),
+            "citation_batch_adapter_gate_passed_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_adapter_gate_passed_count")
+            ),
+            "citation_batch_adapter_gate_failed_count": _finite_float(
+                frontier_release_evidence.get("citation_batch_adapter_gate_failed_count")
+            ),
+            "citation_batch_adapter_gate_status_counts": dict(
+                _mapping(frontier_release_evidence.get("citation_batch_adapter_gate_status_counts"))
+            )
+            or None,
             "run_count": float(len(frontier_release_evidence_run_names))
             if frontier_release_evidence_run_names
             else None,
@@ -2744,6 +2757,18 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count": (
             frontier_release_evidence_summary.get("citation_batch_unexpected_batch_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count": (
+            frontier_release_evidence_summary.get("citation_batch_adapter_gate_present_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count": (
+            frontier_release_evidence_summary.get("citation_batch_adapter_gate_passed_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count": (
+            frontier_release_evidence_summary.get("citation_batch_adapter_gate_failed_count")
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
+            frontier_release_evidence_summary.get("citation_batch_adapter_gate_status_counts")
         ),
         "promotion_contract_frontier_release_evidence_run_count": _finite_float(
             frontier_release_evidence_summary.get("run_count")
@@ -4416,6 +4441,18 @@ def _frontier_release_evidence_from_flat_metadata(
         ),
         "citation_batch_duplicate_batch_count": value("citation_batch_duplicate_batch_count"),
         "citation_batch_unexpected_batch_count": value("citation_batch_unexpected_batch_count"),
+        "citation_batch_adapter_gate_present_count": value(
+            "citation_batch_adapter_gate_present_count"
+        ),
+        "citation_batch_adapter_gate_passed_count": value(
+            "citation_batch_adapter_gate_passed_count"
+        ),
+        "citation_batch_adapter_gate_failed_count": value(
+            "citation_batch_adapter_gate_failed_count"
+        ),
+        "citation_batch_adapter_gate_status_counts": value(
+            "citation_batch_adapter_gate_status_counts"
+        ),
         "run_names": value("run_names"),
         "blocking_reasons": value("blocking_reasons"),
     }

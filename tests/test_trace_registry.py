@@ -3996,6 +3996,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "citation_batch_expected_batch_count": 2,
             "citation_batch_observed_batch_count": 2,
             "citation_batch_missing_expected_batch_count": 0,
+            "citation_batch_adapter_gate_present_count": 2,
+            "citation_batch_adapter_gate_passed_count": 2,
+            "citation_batch_adapter_gate_failed_count": 0,
+            "citation_batch_adapter_gate_status_counts": {"complete": 2},
             "run_names": ["verifier-stability", "abstention-stability"],
         },
         control_defaults={"max_verifier_route_attempts": 3},
@@ -4138,6 +4142,18 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata[
         "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count"
     ] == 0
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts"
+    ] == {"complete": 2}
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -4211,6 +4227,18 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"
     ] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count"
+    ] == pytest.approx(2.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count"
+    ] == pytest.approx(2.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts"
+    ] == {"complete": 2}
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_run_count"
     ] == pytest.approx(2.0)
