@@ -6586,6 +6586,35 @@ The command plan records action ids, command templates, placeholder counts,
 required inputs, and planned outputs. It is still a planning artifact; commands
 remain unbound and unexecuted until a reviewed caller supplies concrete local
 paths.
+After review, bind either ordered `command_template_values` or full
+`bound_commands` through a sidecar:
+
+```bash
+python benchmarks/bind_frontier_research_queue_command_plan.py \
+  --command-plan artifacts/frontier-research-queue-command-plan.json \
+  --bindings artifacts/frontier-research-queue-command-bindings.json \
+  --json artifacts/frontier-research-queue-bound-command-plan.json \
+  --artifact-manifest artifacts/frontier-research-queue-bound-command-plan-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-bound-command-plan \
+  --version 0.1
+```
+
+Then dry-run the bound plan before any explicit execution:
+
+```bash
+python benchmarks/run_frontier_research_queue_bound_command_plan.py \
+  --bound-command-plan artifacts/frontier-research-queue-bound-command-plan.json \
+  --json artifacts/frontier-research-queue-bound-command-run.json \
+  --artifact-manifest artifacts/frontier-research-queue-bound-command-run-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-bound-command-run \
+  --version 0.1
+```
+
+The runner defaults to `dry_run` and only parses commands/expected outputs.
+`--execute` is required to run child workflows, and the run report itself is an
+execution audit artifact rather than release evidence.
 
 Active v1.9 product contract export:
 

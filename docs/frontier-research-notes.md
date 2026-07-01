@@ -1355,6 +1355,13 @@ Added the first monitor-first tool-selection audit layer:
   manifest/registry-ready command plan. On the current default refreshed status
   it records the two frontier actions, eight command templates, and all unbound
   placeholders/required inputs, keeping execution explicit and reviewable.
+- `bind_frontier_research_queue_command_plan.py` and
+  `run_frontier_research_queue_bound_command_plan.py` add the next handoff
+  layer: reviewed bindings can turn that queue into a ready bound plan, and the
+  default runner produces a dry-run execution report before any explicit
+  `--execute` child workflow run. This closes the research queue into an
+  auditable experiment contract without promoting the contract or dry-run report
+  as verifier evidence.
 
 ## Next Research-to-Code Candidates
 

@@ -31482,6 +31482,119 @@ def test_frontier_research_queue_command_plan_requires_saved_path_for_in_memory_
         )
 
 
+def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    run_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_bound_command_plan"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    bindings_path = tmp_path / "frontier-research-command-bindings.json"
+    bound_path = tmp_path / "frontier-research-bound-command-plan.json"
+    bound_manifest_path = tmp_path / "frontier-research-bound-command-plan-manifest.json"
+    run_path = tmp_path / "frontier-research-bound-command-run.json"
+    run_manifest_path = tmp_path / "frontier-research-bound-command-run-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "status": "needs_evidence",
+            "actions": (
+                {
+                    "action_id": "refresh_frontier_fixture",
+                    "title": "Refresh frontier fixture",
+                    "action_type": "workflow",
+                    "priority": 50,
+                    "evidence_routes": ("frontier_release",),
+                    "source_gap_ids": ("gap-1",),
+                    "suggested_commands": (
+                        "benchmarks/eval_abstention_stability.py "
+                        "--scores ... --signal ... --json ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": ("frontier_release_report",),
+                        "closure_outputs": ("abstention_stability_report",),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    bindings_path.write_text(
+        json.dumps({
+            "inputs": {
+                "frontier_release_report": {"path": "artifacts/frontier-release.json"},
+            },
+            "bindings": {
+                "refresh_frontier_fixture": {
+                    "command_template_values": (
+                        {"path": "artifacts/scores.json"},
+                        {"value": "maha_last"},
+                        {"path": "artifacts/abstention-report.json"},
+                    ),
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=bindings_path,
+        json_path=bound_path,
+        artifact_manifest_path=bound_manifest_path,
+        registry_path=registry_path,
+        name="frontier-research-bound-command-plan",
+        version="0.1",
+    )
+    run_report = run_module.run_frontier_research_queue_bound_command_plan(
+        bound_command_plan=bound_path,
+        json_path=run_path,
+        artifact_manifest_path=run_manifest_path,
+        registry_path=registry_path,
+        name="frontier-research-bound-command-run",
+        version="0.1",
+        dry_run=True,
+    )
+
+    bound_manifest = json.loads(bound_manifest_path.read_text(encoding="utf-8"))
+    run_manifest = json.loads(run_manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    bound_record = registry.get("report:frontier-research-bound-command-plan:0.1")
+    run_record = registry.get("report:frontier-research-bound-command-run:0.1")
+    command = run_report["entries"][0]["commands"][0]
+
+    assert bound["workflow"] == "frontier_research_queue_bound_command_plan"
+    assert bound["status"] == "ready"
+    assert bound["summary"]["ready_entry_count"] == 1
+    assert bound["summary"]["unbound_placeholder_count"] == 0
+    assert bound["summary"]["source_gap_ids"] == ("gap-1",)
+    assert bound["entries"][0]["bound_inputs"]["frontier_release_report"]["path"] == (
+        "artifacts/frontier-release.json"
+    )
+    assert "..." not in bound["entries"][0]["bound_commands"][0]
+    assert run_report["workflow"] == "frontier_research_queue_bound_command_run_report"
+    assert run_report["status"] == "dry_run"
+    assert run_report["summary"]["dry_run_count"] == 1
+    assert run_report["summary"]["executed_count"] == 0
+    assert command["status"] == "dry_run"
+    assert command["argv"][1] == "benchmarks/eval_abstention_stability.py"
+    assert bound_manifest["artifacts"]["frontier_research_queue_bound_command_plan"][
+        "exists"
+    ] is True
+    assert run_manifest["artifacts"]["frontier_research_queue_bound_command_run_report"][
+        "exists"
+    ] is True
+    assert bound_record.metadata["workflow"] == "frontier_research_queue_bound_command_plan"
+    assert run_record.metadata["workflow"] == (
+        "frontier_research_queue_bound_command_run_report"
+    )
+    assert run_record.metadata["dry_run"] is True
+
+
 def _frontier_status_release_candidate() -> dict[str, Any]:
     return {
         "workflow": "release_candidate_comparison",
