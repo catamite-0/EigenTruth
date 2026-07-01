@@ -5992,6 +5992,11 @@ promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
+Release candidates can explicitly add
+`--require-product-runtime-drift-world-model-action-gate-evidence` when the
+runtime-drift report must carry world-model guarded-action coverage, pass/block,
+and postcondition failure evidence. This flag is optional release hardening and
+is not currently part of the `frontier_audit` default profile.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
 readiness and performance-baseline covariance tradeoff gates. Add
 `--fingerprint-cache` for repeated local release checks so recursive manifest

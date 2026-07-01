@@ -1176,6 +1176,12 @@ class ProductPromotionContract:
                 "product_runtime_drift_action_gate_evidence_required": config.get(
                     "require_product_runtime_drift_action_gate_evidence"
                 ),
+                "product_runtime_drift_world_model_action_gate_evidence_required": config.get(
+                    "require_product_runtime_drift_world_model_action_gate_evidence",
+                    product_runtime_drift_summary.get(
+                        "world_model_action_gate_evidence_required"
+                    ),
+                ),
                 "product_runtime_drift_action_receipts_evidence_required": config.get(
                     "require_product_runtime_drift_action_receipts_evidence",
                     product_runtime_drift_summary.get(
@@ -1661,6 +1667,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         ),
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
             "action_gate_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_world_model_action_gate_evidence_metric_count": summary.get(
+            "world_model_action_gate_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count": (
+            summary.get("world_model_action_gate_evidence_blocked_metric_count")
         ),
         "product_runtime_drift_action_receipts_evidence_metric_count": summary.get(
             "action_receipts_evidence_metric_count"
@@ -3807,6 +3819,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_triple_audit_evidence_required",
         "product_runtime_drift_covered_fact_property_evidence_required",
         "product_runtime_drift_action_gate_evidence_required",
+        "product_runtime_drift_world_model_action_gate_evidence_required",
         "product_runtime_drift_action_receipts_evidence_required",
         "product_runtime_drift_receipt_claim_support_evidence_required",
         "product_runtime_drift_trajectory_audit_evidence_required",
@@ -3831,6 +3844,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
         "product_runtime_drift_action_gate_evidence_metric_count",
         "product_runtime_drift_action_gate_evidence_blocked_metric_count",
+        "product_runtime_drift_world_model_action_gate_evidence_metric_count",
+        "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count",
         "product_runtime_drift_action_receipts_evidence_metric_count",
         "product_runtime_drift_action_receipts_evidence_blocked_metric_count",
         "product_runtime_drift_receipt_claim_support_evidence_metric_count",
