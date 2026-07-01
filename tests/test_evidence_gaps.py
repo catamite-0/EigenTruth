@@ -102,6 +102,32 @@ _WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_CONTEXT_SENSITIVITY_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/run_context_sensitivity_workflow.py "
+    "--scores ... --verified-records-jsonl ... --model-id ... "
+    "--output-dir ... --registry-path ... --registry-name ... --registry-version ...",
+    "benchmarks/enrich_product_trace_runtime_evidence.py "
+    "--trace-glob ... --output-dir ... --report ... --artifact-manifest ... "
+    "--min-context-sensitivity-participating-trace-rate ... "
+    "--min-context-sensitivity-coverage-rate ... "
+    "--max-context-sensitivity-trace-gap-rate ...",
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-context-sensitivity-participating-trace-rate ... "
+    "--min-runtime-drift-context-sensitivity-coverage-rate ... "
+    "--max-runtime-drift-context-sensitivity-trace-gap-rate-increase ... "
+    "--max-runtime-drift-context-sensitivity-max-ratio-increase ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-context-sensitivity-participating-trace-rate ... "
+    "--min-context-sensitivity-coverage-rate ... "
+    "--max-context-sensitivity-trace-gap-rate-increase ... "
+    "--max-context-sensitivity-max-ratio-increase ... "
+    "--json ... --artifact-manifest ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -384,6 +410,74 @@ def _assert_world_model_runtime_evidence_action(action):
     )
     assert action["metadata"]["closure_outputs"] == (
         "world_model_signal_calibration_workflow",
+        "product_trace_runtime_evidence_enrichment",
+        "product_trace_replay_workflow",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_context_sensitivity_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "context_sensitivity_workflow",
+        "product_trace_runtime_evidence",
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "context_sensitivity_evidence",
+    )
+    assert action["suggested_commands"] == _CONTEXT_SENSITIVITY_RUNTIME_EVIDENCE_COMMANDS
+    assert action["metadata"]["context_workflow_script"] == (
+        "benchmarks/run_context_sensitivity_workflow.py"
+    )
+    assert action["metadata"]["trace_enrichment_script"] == (
+        "benchmarks/enrich_product_trace_runtime_evidence.py"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["context_workflow"] == "context_sensitivity_workflow"
+    assert action["metadata"]["paired_logprob_workflow"] == (
+        "context_sensitivity_paired_logprob_extraction"
+    )
+    assert action["metadata"]["trace_enrichment_workflow"] == (
+        "product_trace_runtime_evidence_enrichment"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == (
+        "evidence_conditioned_context_sensitivity"
+    )
+    assert action["metadata"]["required_trace_metrics"] == (
+        "context_sensitivity.participating_trace_rate",
+        "context_sensitivity.coverage_rate",
+        "context_sensitivity.flagged_result_rate",
+        "context_sensitivity.trace_gap_rate",
+        "context_sensitivity.max_flagged_rate",
+        "context_sensitivity.max_context_sensitivity_ratio",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_context_sensitivity_participating_trace_rate": 1.0,
+        "min_context_sensitivity_coverage_rate": 1.0,
+        "max_context_sensitivity_trace_gap_rate_increase": 0.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "score_dump",
+        "verified_records_jsonl_with_evidence_context",
+        "context_logprob_model",
+        "product_trace_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "context_sensitivity_workflow",
         "product_trace_runtime_evidence_enrichment",
         "product_trace_replay_workflow",
         "product_runtime_baseline",
@@ -941,12 +1035,8 @@ def test_evidence_gap_plan_maps_product_runtime_trace_robustness_blockers():
     ]["recommended_action_ids"] == (
         "rerun_product_trace_counterfactual_robustness_evidence",
     )
-    assert actions[
-        "rerun_product_trace_context_sensitivity_evidence"
-    ]["evidence_routes"] == (
-        "product_trace_replay",
-        "product_runtime_drift",
-        "context_sensitivity_evidence",
+    _assert_context_sensitivity_runtime_evidence_action(
+        actions["rerun_product_trace_context_sensitivity_evidence"]
     )
     assert actions[
         "rerun_product_trace_counterfactual_robustness_evidence"

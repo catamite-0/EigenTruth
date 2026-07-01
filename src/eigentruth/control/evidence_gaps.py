@@ -1531,15 +1531,80 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "before the release can trust evidence-conditioned correction signals."
             ),
             evidence_routes=(
+                "context_sensitivity_workflow",
+                "product_trace_runtime_evidence",
                 "product_trace_replay",
+                "product_runtime_baseline",
                 "product_runtime_drift",
                 "context_sensitivity_evidence",
             ),
             suggested_commands=(
-                "benchmarks/run_product_trace_replay_workflow.py",
-                "benchmarks/run_product_runtime_baseline.py",
-                "benchmarks/compare_product_runtime_baselines.py",
+                "benchmarks/run_context_sensitivity_workflow.py "
+                "--scores ... --verified-records-jsonl ... --model-id ... "
+                "--output-dir ... --registry-path ... --registry-name ... --registry-version ...",
+                "benchmarks/enrich_product_trace_runtime_evidence.py "
+                "--trace-glob ... --output-dir ... --report ... --artifact-manifest ... "
+                "--min-context-sensitivity-participating-trace-rate ... "
+                "--min-context-sensitivity-coverage-rate ... "
+                "--max-context-sensitivity-trace-gap-rate ...",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-context-sensitivity-participating-trace-rate ... "
+                "--min-runtime-drift-context-sensitivity-coverage-rate ... "
+                "--max-runtime-drift-context-sensitivity-trace-gap-rate-increase ... "
+                "--max-runtime-drift-context-sensitivity-max-ratio-increase ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-context-sensitivity-participating-trace-rate ... "
+                "--min-context-sensitivity-coverage-rate ... "
+                "--max-context-sensitivity-trace-gap-rate-increase ... "
+                "--max-context-sensitivity-max-ratio-increase ... "
+                "--json ... --artifact-manifest ...",
             ),
+            metadata={
+                "context_workflow_script": "benchmarks/run_context_sensitivity_workflow.py",
+                "trace_enrichment_script": "benchmarks/enrich_product_trace_runtime_evidence.py",
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "context_workflow": "context_sensitivity_workflow",
+                "paired_logprob_workflow": "context_sensitivity_paired_logprob_extraction",
+                "trace_enrichment_workflow": "product_trace_runtime_evidence_enrichment",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "evidence_conditioned_context_sensitivity",
+                "required_trace_metrics": (
+                    "context_sensitivity.participating_trace_rate",
+                    "context_sensitivity.coverage_rate",
+                    "context_sensitivity.flagged_result_rate",
+                    "context_sensitivity.trace_gap_rate",
+                    "context_sensitivity.max_flagged_rate",
+                    "context_sensitivity.max_context_sensitivity_ratio",
+                ),
+                "default_gate_thresholds": {
+                    "min_context_sensitivity_participating_trace_rate": 1.0,
+                    "min_context_sensitivity_coverage_rate": 1.0,
+                    "max_context_sensitivity_trace_gap_rate_increase": 0.0,
+                },
+                "required_inputs": (
+                    "score_dump",
+                    "verified_records_jsonl_with_evidence_context",
+                    "context_logprob_model",
+                    "product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "context_sensitivity_workflow",
+                    "product_trace_runtime_evidence_enrichment",
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "product_runtime_counterfactual_robustness_evidence":
         return EvidenceGapAction(
