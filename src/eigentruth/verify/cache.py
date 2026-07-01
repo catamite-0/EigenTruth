@@ -10,6 +10,25 @@ from pathlib import Path
 from typing import Any, Mapping, MutableMapping, Sequence
 
 from eigentruth.verify.protocols import Claim, VerificationResult, Verifier
+from eigentruth.verify.rules import normalize_claim_text
+
+_CACHE_KEY_MODES = frozenset({"exact", "semantic"})
+_DEFAULT_SEMANTIC_METADATA_KEYS = (
+    "answer",
+    "calculation",
+    "citation",
+    "citations",
+    "features",
+    "question",
+    "qa_check",
+    "question_answer_check",
+    "references",
+    "requires_triple_audit",
+    "state_check",
+    "state_transition",
+    "triples",
+    "claim_triples",
+)
 
 
 @dataclass(frozen=True)
@@ -179,6 +198,8 @@ class CachedVerifier:
     verifier: Verifier
     max_size: int | None = 1024
     include_context: bool = True
+    cache_key_mode: str = "exact"
+    semantic_metadata_keys: Sequence[str] = _DEFAULT_SEMANTIC_METADATA_KEYS
     _cache: MutableMapping[str, VerificationResult] = field(default_factory=OrderedDict, init=False, repr=False)
     _hits: int = field(default=0, init=False, repr=False)
     _misses: int = field(default=0, init=False, repr=False)
@@ -186,6 +207,17 @@ class CachedVerifier:
     def __post_init__(self) -> None:
         if self.max_size is not None and self.max_size < 1:
             raise ValueError("max_size must be >= 1 or None.")
+        cache_key_mode = str(self.cache_key_mode).strip().lower()
+        if cache_key_mode not in _CACHE_KEY_MODES:
+            choices = ", ".join(sorted(_CACHE_KEY_MODES))
+            raise ValueError(f"cache_key_mode must be one of: {choices}.")
+        if isinstance(self.semantic_metadata_keys, (str, bytes, bytearray)):
+            raise ValueError("semantic_metadata_keys must be a sequence of metadata key names.")
+        semantic_metadata_keys = tuple(str(key).strip() for key in self.semantic_metadata_keys)
+        if any(not key for key in semantic_metadata_keys):
+            raise ValueError("semantic_metadata_keys must not contain empty key names.")
+        self.cache_key_mode = cache_key_mode
+        self.semantic_metadata_keys = semantic_metadata_keys
 
     @property
     def stats(self) -> VerifierCacheStats:
@@ -200,7 +232,12 @@ class CachedVerifier:
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim, returning a cached result when available."""
-        key = verifier_cache_key(claim, context if self.include_context else None)
+        key = verifier_cache_key(
+            claim,
+            context if self.include_context else None,
+            cache_key_mode=self.cache_key_mode,
+            semantic_metadata_keys=self.semantic_metadata_keys,
+        )
         result = self._cache.get(key)
         if result is not None:
             self._hits += 1
@@ -227,8 +264,31 @@ class CachedVerifier:
         return tuple(self.verify(claim, context=context) for claim in claims)
 
 
-def verifier_cache_key(claim: Claim, context: Mapping[str, Any] | None = None) -> str:
+def verifier_cache_key(
+    claim: Claim,
+    context: Mapping[str, Any] | None = None,
+    *,
+    cache_key_mode: str = "exact",
+    semantic_metadata_keys: Sequence[str] = _DEFAULT_SEMANTIC_METADATA_KEYS,
+) -> str:
     """Return a stable JSON key for claim/context verifier inputs."""
+    mode = str(cache_key_mode).strip().lower()
+    if mode not in _CACHE_KEY_MODES:
+        choices = ", ".join(sorted(_CACHE_KEY_MODES))
+        raise ValueError(f"cache_key_mode must be one of: {choices}.")
+    if mode == "semantic":
+        payload = {
+            "claim": {
+                "text": normalize_claim_text(claim.text),
+                "text_normalizer": "normalize_claim_text_v1",
+                "metadata": _semantic_claim_metadata(
+                    claim.metadata,
+                    semantic_metadata_keys=semantic_metadata_keys,
+                ),
+            },
+            "context": context,
+        }
+        return stable_cache_key(payload)
     payload = {
         "claim": {
             "text": claim.text,
@@ -239,6 +299,25 @@ def verifier_cache_key(claim: Claim, context: Mapping[str, Any] | None = None) -
         "context": context,
     }
     return stable_cache_key(payload)
+
+
+def _semantic_claim_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    semantic_metadata_keys: Sequence[str],
+) -> dict[str, Any]:
+    if not isinstance(metadata, Mapping):
+        return {}
+    if isinstance(semantic_metadata_keys, (str, bytes, bytearray)):
+        raise ValueError("semantic_metadata_keys must be a sequence of metadata key names.")
+    selected = {}
+    for key in semantic_metadata_keys:
+        key_text = str(key).strip()
+        if not key_text:
+            raise ValueError("semantic_metadata_keys must not contain empty key names.")
+        if key_text in metadata:
+            selected[key_text] = metadata[key_text]
+    return selected
 
 
 def stable_cache_key(value: Any) -> str:

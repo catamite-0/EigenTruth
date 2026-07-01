@@ -1667,6 +1667,86 @@ def test_cached_verifier_reuses_identical_claim_context_results():
     assert verifier.stats.to_dict()["misses"] == 2
 
 
+def test_cached_verifier_semantic_key_reuses_normalized_claim_variants():
+    class CountingVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, claim, context=None):
+            self.calls += 1
+            return VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={"claim": claim.text, "calls": self.calls},
+            )
+
+    base = CountingVerifier()
+    verifier = CachedVerifier(base, cache_key_mode="semantic")
+    context = {"evidence_set": "unit"}
+    first = verifier.verify(
+        Claim(
+            "Paris is the capital of France.",
+            claim_id="c1",
+            span=(0, 31),
+            metadata={"source_index": 1, "features": {"has_number": False}},
+        ),
+        context=context,
+    )
+    second = verifier.verify(
+        Claim(
+            "  PARIS   is the capital of France!  ",
+            claim_id="c9",
+            span=(100, 137),
+            metadata={"source_index": 9, "features": {"has_number": False}},
+        ),
+        context=context,
+    )
+
+    assert first is second
+    assert base.calls == 1
+    assert verifier.stats.hits == 1
+    assert verifier.stats.misses == 1
+
+
+def test_cached_verifier_semantic_key_preserves_relevant_metadata():
+    class CountingVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, claim, context=None):
+            self.calls += 1
+            return VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={"calls": self.calls},
+            )
+
+    base = CountingVerifier()
+    verifier = CachedVerifier(base, cache_key_mode="semantic")
+    first = verifier.verify(
+        Claim(
+            "The calculation is correct.",
+            metadata={"calculation": {"expression": "2 + 2", "expected": 4}, "source_index": 1},
+        )
+    )
+    changed = verifier.verify(
+        Claim(
+            "The calculation is correct!",
+            metadata={"calculation": {"expression": "2 + 2", "expected": 5}, "source_index": 2},
+        )
+    )
+
+    assert changed is not first
+    assert base.calls == 2
+    assert verifier.stats.hits == 0
+    assert verifier.stats.misses == 2
+
+
+def test_cached_verifier_rejects_invalid_cache_key_mode():
+    with pytest.raises(ValueError, match="cache_key_mode"):
+        CachedVerifier(InMemoryVerifier({}), cache_key_mode="loose")
+
+
 def test_json_trace_cache_roundtrip(tmp_path):
     cache = JsonTraceCache(tmp_path / "trace-cache.json", cache_type="unit_trace")
 

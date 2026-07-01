@@ -68,6 +68,7 @@ from eigentruth.verify.features import flag_value_enabled
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
+_TEXT_VERIFIER_CACHE_KEY_MODE = "semantic"
 
 
 @dataclass(frozen=True)
@@ -563,8 +564,16 @@ def _verify_records(
     verified = []
     state_checks = {} if state_checks is None else state_checks
     state_transitions = {} if state_transitions is None else state_transitions
-    qa_runner = CachedVerifier(qa_verifier) if qa_verifier is not None else None
-    fact_runner = CachedVerifier(fact_verifier) if fact_verifier is not None else None
+    qa_runner = (
+        CachedVerifier(qa_verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
+        if qa_verifier is not None
+        else None
+    )
+    fact_runner = (
+        CachedVerifier(fact_verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
+        if fact_verifier is not None
+        else None
+    )
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
     transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
@@ -589,7 +598,8 @@ def _verify_records(
                     evidence=evidence,
                     refutations=refutations,
                     min_overlap=verifier_min_overlap,
-                )
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
             groundedness_runners[key] = runner
         return runner
@@ -607,7 +617,8 @@ def _verify_records(
                 TripleEvidenceVerifier(
                     evidence=evidence,
                     min_slot_coverage=triple_min_slot_coverage,
-                )
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
             triple_evidence_runners[key] = runner
         return runner
@@ -623,7 +634,7 @@ def _verify_records(
             verifier = QuestionAnswerVerifier.from_corpus({"documents": documents})
         except ValueError:
             return None
-        runner = CachedVerifier(verifier)
+        runner = CachedVerifier(verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
         retrieval_qa_runners[key] = runner
         return runner
 
@@ -648,7 +659,8 @@ def _verify_records(
                     refute_threshold=selfcheck_refute_threshold,
                     early_stop=selfcheck_early_stop,
                     max_samples=selfcheck_max_samples,
-                )
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
             selfcheck_runners[key] = runner
         return runner
