@@ -524,6 +524,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         }
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
+        metrics.update(_evidence_quality_metrics(trace))
         metrics.update(_action_receipt_metrics(trace))
         metrics.update(_receipt_claim_support_metrics(trace))
         metrics.update(_action_audit_metrics(trace))
@@ -574,6 +575,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     }
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
+    metrics.update(_evidence_quality_metrics(trace))
     metrics.update(_action_receipt_metrics(trace))
     metrics.update(_receipt_claim_support_metrics(trace))
     metrics.update(_action_audit_metrics(trace))
@@ -959,6 +961,57 @@ def _action_execution_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[s
             summary.get("request_id_mismatch_count")
         ) or 0.0,
         "action_execution_alignment_available": bool(alignment.get("available")),
+    }
+
+
+def _evidence_quality_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.evidence_quality_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("evidence_quality"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                action_results=tuple(_sequence(payload.get("action_results", ()))),
+            ).evidence_quality_summary()
+            source = "full_trace"
+    reason_counts = _mapping(summary.get("reason_counts"))
+    return {
+        "evidence_quality_available": bool(summary.get("available")),
+        "evidence_quality_source": source,
+        "evidence_quality_summary": summary,
+        "evidence_quality_status": summary.get("status"),
+        "evidence_quality_result_count": _finite_float(summary.get("result_count")) or 0.0,
+        "evidence_quality_checked_result_count": (
+            _finite_float(summary.get("checked_result_count")) or 0.0
+        ),
+        "evidence_quality_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "evidence_quality_document_count": _finite_float(summary.get("document_count")) or 0.0,
+        "evidence_quality_applied_count": _finite_float(summary.get("applied_count")) or 0.0,
+        "evidence_quality_passed_count": _finite_float(summary.get("passed_count")) or 0.0,
+        "evidence_quality_failed_count": _finite_float(summary.get("failed_count")) or 0.0,
+        "evidence_quality_failed_result_count": (
+            _finite_float(summary.get("failed_result_count")) or 0.0
+        ),
+        "evidence_quality_pass_rate": _finite_float(summary.get("pass_rate")),
+        "evidence_quality_failure_rate": _finite_float(summary.get("failure_rate")),
+        "evidence_quality_missing_source_count": (
+            _finite_float(reason_counts.get("missing_source")) or 0.0
+        ),
+        "evidence_quality_untrusted_source_count": (
+            _finite_float(reason_counts.get("untrusted_source")) or 0.0
+        ),
+        "evidence_quality_stale_evidence_count": (
+            _finite_float(reason_counts.get("stale_evidence")) or 0.0
+        ),
+        "evidence_quality_missing_timestamp_count": (
+            _finite_float(reason_counts.get("missing_timestamp")) or 0.0
+        ),
+        "evidence_quality_reason_counts": _int_mapping(reason_counts),
+        "evidence_quality_status_counts": _int_mapping(summary.get("status_counts")),
     }
 
 

@@ -1405,6 +1405,61 @@ def test_product_trace_action_execution_summary_flags_result_alignment_gaps():
     assert bounded["summaries"]["action_execution"]["missing_result_count"] == 1
 
 
+def test_product_trace_evidence_quality_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={
+                    "evidence_quality": {
+                        "status": "fail",
+                        "document_count": 2,
+                        "applied_count": 2,
+                        "passed_count": 1,
+                        "failed_count": 1,
+                        "pass_rate": 0.5,
+                        "failure_rate": 0.5,
+                        "reason_counts": {
+                            "stale_evidence": 1,
+                            "untrusted_source": 1,
+                        },
+                    },
+                },
+            ),
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"hits": ()},
+            ),
+        )
+    )
+
+    summary = trace.evidence_quality_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["status"] == "fail"
+    assert summary["result_count"] == 2
+    assert summary["checked_result_count"] == 1
+    assert summary["coverage_rate"] == pytest.approx(0.5)
+    assert summary["document_count"] == 2
+    assert summary["failed_result_count"] == 1
+    assert summary["reason_counts"] == {
+        "stale_evidence": 1,
+        "untrusted_source": 1,
+    }
+    assert bounded["summaries"]["evidence_quality"]["failed_count"] == 1
+    assert metrics["evidence_quality_available"] is True
+    assert metrics["evidence_quality_source"] == "full_trace"
+    assert metrics["evidence_quality_failure_rate"] == pytest.approx(0.5)
+    assert metrics["evidence_quality_stale_evidence_count"] == 1.0
+    assert bounded_metrics["evidence_quality_source"] == "bounded_summary"
+    assert bounded_metrics["evidence_quality_failure_rate"] == pytest.approx(0.5)
+
+
 def test_product_trace_action_execution_summary_handles_many_request_ids():
     actions = tuple(
         ActionRequest(

@@ -259,6 +259,9 @@ class ProductTrace:
                 prepared.action_results,
             ),
             "action_receipts": action_receipt_summary_from_results(prepared.action_results),
+            "evidence_quality": _evidence_quality_summary_from_action_results(
+                prepared.action_results,
+            ),
             "receipt_claim_support": _receipt_claim_support_summary_from_payload(
                 claims=prepared.claims,
                 action_results=prepared.action_results,
@@ -392,6 +395,12 @@ class ProductTrace:
     def action_receipt_summary(self) -> dict[str, Any]:
         """Summarize receipt coverage for action results."""
         return action_receipt_summary_from_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def evidence_quality_summary(self) -> dict[str, Any]:
+        """Summarize retrieval evidence freshness/provenance checks."""
+        return _evidence_quality_summary_from_action_results(
             tuple(_action_result_to_dict(result) for result in self.action_results)
         )
 
@@ -575,6 +584,126 @@ def _action_execution_summary_from_payload(
         "request_id_mismatch_count": alignment["request_id_mismatch_count"],
     })
     return summary
+
+
+def _evidence_quality_summary_from_action_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result_count = len(results)
+    checked_result_count = 0
+    failed_result_count = 0
+    document_count = 0
+    applied_count = 0
+    passed_count = 0
+    failed_count = 0
+    reason_counts: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    for result in results:
+        summaries = _evidence_quality_summaries_from_action_result(result)
+        if not summaries:
+            continue
+        checked_result_count += 1
+        result_failed = False
+        for summary in summaries:
+            summary_document_count = _non_negative_int(summary.get("document_count")) or 0
+            summary_applied_count = _non_negative_int(summary.get("applied_count")) or 0
+            summary_passed_count = _non_negative_int(summary.get("passed_count")) or 0
+            summary_failed_count = _non_negative_int(summary.get("failed_count")) or 0
+            document_count += summary_document_count
+            applied_count += summary_applied_count
+            passed_count += summary_passed_count
+            failed_count += summary_failed_count
+            _merge_counts(reason_counts, _mapping(summary.get("reason_counts")))
+            status = _evidence_quality_status(
+                summary,
+                document_count=summary_document_count,
+                applied_count=summary_applied_count,
+                failed_count=summary_failed_count,
+            )
+            _increment_count(status_counts, status)
+            if summary_failed_count > 0 or status == "fail":
+                result_failed = True
+        if result_failed:
+            failed_result_count += 1
+    available = checked_result_count > 0
+    return {
+        "available": available,
+        "status": _aggregate_evidence_quality_status(
+            available=available,
+            document_count=document_count,
+            applied_count=applied_count,
+            failed_count=failed_count,
+        ),
+        "result_count": result_count,
+        "checked_result_count": checked_result_count,
+        "coverage_rate": _safe_div(checked_result_count, result_count) or 0.0,
+        "document_count": document_count,
+        "applied_count": applied_count,
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "failed_result_count": failed_result_count,
+        "pass_rate": 1.0 if applied_count == 0 else passed_count / applied_count,
+        "failure_rate": 0.0 if applied_count == 0 else failed_count / applied_count,
+        "reason_counts": dict(sorted(reason_counts.items())),
+        "status_counts": dict(sorted(status_counts.items())),
+        "missing_source_count": reason_counts.get("missing_source", 0),
+        "untrusted_source_count": reason_counts.get("untrusted_source", 0),
+        "stale_evidence_count": reason_counts.get("stale_evidence", 0),
+        "missing_timestamp_count": reason_counts.get("missing_timestamp", 0),
+    }
+
+
+def _evidence_quality_summaries_from_action_result(
+    result: Mapping[str, Any],
+) -> tuple[dict[str, Any], ...]:
+    output = _mapping(result.get("output"))
+    top_level = _mapping(output.get("evidence_quality"))
+    if top_level:
+        return (top_level,)
+    query_summaries: list[dict[str, Any]] = []
+    for item in _as_sequence(output.get("hits_by_query")):
+        quality = _mapping(_mapping(item).get("evidence_quality"))
+        if quality:
+            query_summaries.append(quality)
+    return tuple(query_summaries)
+
+
+def _evidence_quality_status(
+    summary: Mapping[str, Any],
+    *,
+    document_count: int,
+    applied_count: int,
+    failed_count: int,
+) -> str:
+    raw_status = summary.get("status")
+    if raw_status is not None:
+        text = str(raw_status).strip()
+        if text:
+            return text
+    return _aggregate_evidence_quality_status(
+        available=True,
+        document_count=document_count,
+        applied_count=applied_count,
+        failed_count=failed_count,
+    )
+
+
+def _aggregate_evidence_quality_status(
+    *,
+    available: bool,
+    document_count: int,
+    applied_count: int,
+    failed_count: int,
+) -> str:
+    if not available:
+        return "missing"
+    if document_count == 0:
+        return "empty"
+    if applied_count == 0:
+        return "not_applied"
+    if failed_count > 0:
+        return "fail"
+    return "pass"
 
 
 def _action_result_alignment(
