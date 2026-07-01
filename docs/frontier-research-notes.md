@@ -1462,6 +1462,13 @@ Added the first monitor-first tool-selection audit layer:
   before any fill bridge can be treated as ready. Empty scaffold rows therefore
   remain blocked, while an `ambiguous_subject` numeric row can become ready only
   when a matching approved subject-binding sidecar resolves the subject.
+- `run_frontier_research_queue_input_fill_commands.py` then consumes that audit
+  report and creates a dry-run or explicit execution report for only the
+  audit-ready fill commands. Real execution is gated on the whole audit being
+  `ready` unless `--allow-partial-ready` is explicitly set, and successful fill
+  commands must materialize planned report/manifest outputs. This closes the
+  scaffold -> audit -> fill-run segment without promoting rule candidates or
+  treating the execution report as verifier evidence.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

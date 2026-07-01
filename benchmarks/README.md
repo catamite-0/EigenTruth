@@ -6829,6 +6829,27 @@ ready only when a matching approved subject-binding sidecar resolves the
 subject. The audit still executes no commands and still does not promote the
 bindings as verifier evidence; it is a pre-fill quality gate.
 
+To dry-run or explicitly execute the audited fill commands:
+
+```bash
+python benchmarks/run_frontier_research_queue_input_fill_commands.py \
+  --input-binding-audit artifacts/frontier-research-queue-input-binding-audit/frontier-input-binding-audit.json \
+  --json artifacts/frontier-research-queue-input-fill-command-run.json \
+  --artifact-manifest artifacts/frontier-research-queue-input-fill-command-run-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-fill-command-run \
+  --version 0.1
+```
+
+The default mode is a dry-run over the audit-ready downstream command hints.
+Use `--execute` only after the binding audit is `ready`; execution skips all
+commands when the audit is still blocked unless `--allow-partial-ready` is
+explicitly set for local debugging. The runner checks planned `--json`,
+`--artifact-manifest`, and sidecar output paths after successful execution, but
+the run report remains a non-evidence execution artifact. Adapter execution,
+candidate promotion, and ProductTrace handoff still happen in the downstream
+world-model rule chain.
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash

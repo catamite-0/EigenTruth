@@ -33178,6 +33178,167 @@ def test_frontier_research_queue_input_binding_audit_accepts_subject_resolution(
     assert record.metadata["ready_binding_count"] == 2
 
 
+def test_frontier_research_queue_input_fill_runner_blocks_execute_when_audit_not_ready(
+    tmp_path,
+):
+    run_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_input_fill_commands"
+    )
+    marker_path = tmp_path / "should-not-exist.txt"
+    payload = run_module.run_frontier_research_queue_input_fill_commands(
+        input_binding_audit={
+            "workflow": "frontier_research_queue_input_binding_audit",
+            "status": "blocked",
+            "summary": {
+                "ready_binding_count": 1,
+                "blocked_binding_count": 1,
+            },
+            "downstream_commands": (
+                {
+                    "request_id": "action:ready-numeric",
+                    "input_name": "source_backed_numeric_bindings",
+                    "sidecar_key": "numeric_bindings",
+                    "ready_for_fill": True,
+                    "command": (
+                        f"{sys.executable} -c "
+                        f"\"from pathlib import Path; Path({str(marker_path)!r}).write_text('ran')\""
+                    ),
+                },
+            ),
+        },
+        dry_run=False,
+    )
+    command = payload["entries"][0]["commands"][0]
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["audit_ready"] is False
+    assert payload["summary"]["audit_gate_blocked_command_count"] == 1
+    assert command["status"] == "skipped"
+    assert command["skip_reason"] == "input_binding_audit_not_ready"
+    assert marker_path.exists() is False
+
+
+def test_frontier_research_queue_input_fill_runner_executes_ready_numeric_fill(
+    tmp_path,
+):
+    run_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_input_fill_commands"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    input_tasks_path = tmp_path / "rule-input-tasks.jsonl"
+    numeric_bindings_path = tmp_path / "source-backed-numeric-bindings.jsonl"
+    subject_bindings_path = tmp_path / "source-backed-subject-bindings.jsonl"
+    output_dir = tmp_path / "numeric-fill"
+    report_path = output_dir / "rule-input-numeric-binding-fill.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    run_report_path = tmp_path / "fill-command-run.json"
+    run_manifest_path = tmp_path / "fill-command-run-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    input_tasks_path.write_text(
+        json.dumps({
+            "task_id": "rule-input-task-1",
+            "source_request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "collection_family": "numeric_rule_input_collection",
+            "rule_family": "quantity_or_arithmetic",
+            "question": "What is the population of the country?",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    numeric_bindings_path.write_text(
+        json.dumps({
+            "binding_id": "numeric:req-1",
+            "request_id": "rule:record-190:1",
+            "source_request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "subject_entity": "",
+            "candidate_numeric_value": "47",
+            "source_numeric_value": "50",
+            "unit": "people",
+            "reference_time": "2024",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "review_status": "ambiguous_subject",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    subject_bindings_path.write_text(
+        json.dumps({
+            "binding_id": "subject:req-1",
+            "request_id": "rule:record-190:1",
+            "source_request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "subject_entity": "United States",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    command = (
+        "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py "
+        f"--input-tasks {input_tasks_path} "
+        f"--numeric-bindings {numeric_bindings_path} "
+        f"--subject-bindings {subject_bindings_path} "
+        f"--output-dir {output_dir} "
+        f"--json {report_path} "
+        f"--artifact-manifest {manifest_path}"
+    )
+    audit = {
+        "workflow": "frontier_research_queue_input_binding_audit",
+        "status": "ready",
+        "summary": {
+            "ready_binding_count": 2,
+            "blocked_binding_count": 0,
+        },
+        "downstream_commands": (
+            {
+                "request_id": "action:source-backed-numeric-bindings",
+                "input_name": "source_backed_numeric_bindings",
+                "sidecar_key": "numeric_bindings",
+                "ready_for_fill": True,
+                "command": command,
+            },
+        ),
+    }
+
+    dry_run = run_module.run_frontier_research_queue_input_fill_commands(
+        input_binding_audit=audit,
+        dry_run=True,
+    )
+    executed = run_module.run_frontier_research_queue_input_fill_commands(
+        input_binding_audit=audit,
+        json_path=run_report_path,
+        artifact_manifest_path=run_manifest_path,
+        registry_path=registry_path,
+        name="frontier-input-fill-command-run",
+        version="0.1",
+        dry_run=False,
+    )
+    fill_report = json.loads(report_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-input-fill-command-run:0.1"
+    )
+
+    assert dry_run["status"] == "dry_run"
+    assert dry_run["summary"]["dry_run_count"] == 1
+    assert dry_run["entries"][0]["expected_outputs"][0]["status"] == "planned"
+    assert executed["status"] == "succeeded"
+    assert executed["summary"]["succeeded_count"] == 1
+    assert executed["summary"]["materialized_output_count"] == 2
+    assert executed["entries"][0]["expected_outputs"][0]["status"] == "exists"
+    assert fill_report["status"] == "filled"
+    assert fill_report["summary"]["filled_input_count"] == 1
+    assert fill_report["rule_inputs"][0]["subject_entity"] == "United States"
+    assert registry_module.load_and_verify_artifact_manifest(run_manifest_path).passed is True
+    assert record.metadata["workflow"] == "frontier_research_queue_input_fill_command_run_report"
+    assert record.metadata["succeeded_count"] == 1
+
+
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(
