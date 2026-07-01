@@ -33003,6 +33003,181 @@ def test_frontier_research_queue_input_binding_scaffold_can_skip_task_expansion(
     assert rows[0]["review_status"] == "needs_review"
 
 
+def test_frontier_research_queue_input_binding_audit_blocks_unreviewed_reserved_rows(
+    tmp_path,
+):
+    input_scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_input_bindings"
+    )
+    audit_module = importlib.import_module(
+        "benchmarks.audit_frontier_research_queue_input_bindings"
+    )
+    scaffold_path = tmp_path / "frontier-input-binding-scaffold.json"
+    scaffold = input_scaffold_module.scaffold_frontier_research_queue_input_bindings(
+        input_collection_plan={
+            "workflow": "frontier_research_queue_input_collection_plan",
+            "status": "ready_for_collection",
+            "collection_requests": (
+                {
+                    "request_id": "action:source-backed-numeric-bindings",
+                    "action_id": "action",
+                    "input_name": "source_backed_numeric_bindings",
+                    "collection_family": "numeric_rule_input_binding_collection",
+                    "required_binding_fields": (
+                        "request_id",
+                        "target_id",
+                        "subject_entity",
+                        "candidate_numeric_value",
+                        "source_numeric_value",
+                        "unit",
+                        "reference_time",
+                        "source_citation",
+                    ),
+                    "recommended_binding_skeleton": {
+                        "request_id": "",
+                        "target_id": "",
+                        "subject_entity": "",
+                        "candidate_numeric_value": "",
+                        "source_numeric_value": "",
+                        "unit": "",
+                        "reference_time": "",
+                        "source_citation": "",
+                    },
+                    "blocking_placeholders": (),
+                },
+            ),
+            "review_requests": (),
+        },
+        output_dir=tmp_path / "input-binding-scaffold",
+        json_path=scaffold_path,
+        expand_input_tasks=False,
+    )
+    numeric_path = Path(scaffold["paths"]["numeric_bindings"])
+    numeric_rows = [
+        json.loads(line) for line in numeric_path.read_text(encoding="utf-8").splitlines()
+    ]
+    numeric_rows[0]["model_answer"] = "reserved-leak"
+    numeric_path.write_text(json.dumps(numeric_rows[0]) + "\n", encoding="utf-8")
+
+    payload = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold=scaffold_path,
+        output_dir=tmp_path / "input-binding-audit",
+    )
+    row = payload["binding_audit_rows"][0]
+
+    assert payload["workflow"] == "frontier_research_queue_input_binding_audit"
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_binding_count"] == 1
+    assert payload["summary"]["pending_review_count"] == 1
+    assert payload["summary"]["reserved_field_count"] == 1
+    assert payload["summary"]["failure_counts"]["binding_requires_review"] == 1
+    assert payload["summary"]["failure_counts"]["reserved_fields_present"] == 1
+    assert payload["summary"]["missing_sidecar_count"] == 0
+    assert row["sidecar_key"] == "numeric_bindings"
+    assert row["status"] == "blocked"
+    assert row["reserved_fields"] == ("model_answer",)
+    assert "missing_source_citation" in row["failures"]
+    assert payload["label_usage"]["audit_executes_commands"] is False
+
+
+def test_frontier_research_queue_input_binding_audit_accepts_subject_resolution(
+    tmp_path,
+):
+    audit_module = importlib.import_module(
+        "benchmarks.audit_frontier_research_queue_input_bindings"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    numeric_path = tmp_path / "source-backed-numeric-bindings.jsonl"
+    subject_path = tmp_path / "source-backed-subject-bindings.jsonl"
+    temporal_path = tmp_path / "source-backed-temporal-bindings.jsonl"
+    mechanism_path = tmp_path / "source-backed-mechanism-bindings.jsonl"
+    numeric_path.write_text(
+        json.dumps({
+            "binding_id": "numeric:req-1",
+            "request_id": "rule:record-190:1",
+            "source_request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "subject_entity": "",
+            "candidate_numeric_value": "47",
+            "source_numeric_value": "50",
+            "unit": "people",
+            "reference_time": "2024",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "review_status": "ambiguous_subject",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    subject_path.write_text(
+        json.dumps({
+            "binding_id": "subject:req-1",
+            "request_id": "rule:record-190:1",
+            "source_request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "subject_entity": "United States",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    temporal_path.write_text("", encoding="utf-8")
+    mechanism_path.write_text("", encoding="utf-8")
+    registry_path = tmp_path / "registry.json"
+
+    payload = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold={
+            "workflow": "frontier_research_queue_input_binding_scaffold",
+            "status": "needs_binding_values",
+            "summary": {"binding_skeleton_count": 2},
+            "paths": {
+                "numeric_bindings": str(numeric_path),
+                "subject_bindings": str(subject_path),
+                "temporal_bindings": str(temporal_path),
+                "mechanism_bindings": str(mechanism_path),
+            },
+            "downstream_commands": (
+                {
+                    "request_id": "action:source-backed-numeric-bindings",
+                    "input_name": "source_backed_numeric_bindings",
+                    "sidecar_key": "numeric_bindings",
+                    "command": "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py ...",
+                },
+            ),
+        },
+        output_dir=tmp_path / "input-binding-audit",
+        registry_path=registry_path,
+        name="frontier-input-binding-audit",
+        version="0.1",
+    )
+    numeric_audit = next(
+        row for row in payload["binding_audit_rows"] if row["sidecar_key"] == "numeric_bindings"
+    )
+    subject_audit = next(
+        row for row in payload["binding_audit_rows"] if row["sidecar_key"] == "subject_bindings"
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-input-binding-audit:0.1"
+    )
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["ready_binding_count"] == 2
+    assert payload["summary"]["blocked_binding_count"] == 0
+    assert payload["summary"]["downstream_ready_command_count"] == 1
+    assert numeric_audit["status"] == "ready"
+    assert numeric_audit["subject_binding_applied"] is True
+    assert numeric_audit["failures"] == ()
+    assert subject_audit["status"] == "ready"
+    assert payload["downstream_commands"][0]["ready_for_fill"] is True
+    assert registry_module.load_and_verify_artifact_manifest(
+        tmp_path / "input-binding-audit" / "artifact-manifest.json"
+    ).passed is True
+    assert record.metadata["workflow"] == "frontier_research_queue_input_binding_audit"
+    assert record.metadata["ready_binding_count"] == 2
+
+
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(

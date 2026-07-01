@@ -1455,6 +1455,13 @@ Added the first monitor-first tool-selection audit layer:
   Replaying those empty sidecars through the existing numeric and temporal fill
   bridges remains blocked with `filled=0`, because required values, citations,
   and review approval are intentionally absent.
+- `audit_frontier_research_queue_input_bindings.py` adds the pre-fill quality
+  gate for those edited sidecars. It checks review approval, source-backed
+  value/citation presence, duplicate request ids, `not_verifier_evidence`,
+  reserved label/model-answer leakage, and numeric subject-binding resolution
+  before any fill bridge can be treated as ready. Empty scaffold rows therefore
+  remain blocked, while an `ambiguous_subject` numeric row can become ready only
+  when a matching approved subject-binding sidecar resolves the subject.
 - The binder now validates known frontier benchmark commands against required
   CLI flags. A directly filled abstention template is kept `needs_inputs` when
   `plan_frontier_abstention_evidence_reruns.py` omits the action-required

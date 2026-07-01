@@ -6807,6 +6807,28 @@ approves them, the generated downstream command hints show which existing
 `fill_world_model_rule_inputs_from_*_bindings.py` bridge can consume the
 sidecar.
 
+Before passing edited sidecars into those fill bridges, audit the sidecar set:
+
+```bash
+python benchmarks/audit_frontier_research_queue_input_bindings.py \
+  --input-binding-scaffold artifacts/frontier-research-queue-input-binding-scaffold/frontier-input-binding-scaffold.json \
+  --output-dir artifacts/frontier-research-queue-input-binding-audit \
+  --json artifacts/frontier-research-queue-input-binding-audit/frontier-input-binding-audit.json \
+  --binding-audit-rows-jsonl artifacts/frontier-research-queue-input-binding-audit/binding-audit-rows.jsonl \
+  --artifact-manifest artifacts/frontier-research-queue-input-binding-audit/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-binding-audit \
+  --version 0.1
+```
+
+The audit reports `ready` only when every edited binding row has an approved or
+ready review status, required source-backed values and citations, a
+`not_verifier_evidence=true` marker, no reserved label/model-answer fields, and
+no duplicate request ids. Numeric rows marked `ambiguous_subject` can become
+ready only when a matching approved subject-binding sidecar resolves the
+subject. The audit still executes no commands and still does not promote the
+bindings as verifier evidence; it is a pre-fill quality gate.
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash
