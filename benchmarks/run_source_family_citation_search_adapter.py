@@ -96,6 +96,7 @@ def run_source_family_citation_search_adapter(
     max_results: int = 3,
     max_query_variants: int = 3,
     min_text_overlap: float = 0.05,
+    min_request_coverage: float = 1.0,
     diversify_source_families: bool = False,
     default_source_family: str = DEFAULT_SOURCE_FAMILY,
     compact_json: bool = True,
@@ -113,6 +114,8 @@ def run_source_family_citation_search_adapter(
         raise ValueError("max_query_variants must be positive.")
     if not (0.0 <= min_text_overlap <= 1.0):
         raise ValueError("min_text_overlap must be in [0, 1].")
+    if not (0.0 <= min_request_coverage <= 1.0):
+        raise ValueError("min_request_coverage must be in [0, 1].")
 
     requests = _load_jsonl(input_path)
     catalog = _load_source_catalogs(
@@ -132,9 +135,11 @@ def run_source_family_citation_search_adapter(
     )
     _write_jsonl(output_path, rows, compact=compact_json)
     summary = _summary(rows, catalog=catalog)
+    gate = _adapter_gate(summary, min_request_coverage=float(min_request_coverage))
     payload = {
         "schema_version": 1,
         "workflow": "source_family_citation_search_adapter",
+        "status": gate["status"],
         "input_path": str(input_path),
         "output_path": str(output_path),
         "source_catalog_paths": [str(path) for path in source_catalog_paths],
@@ -142,10 +147,12 @@ def run_source_family_citation_search_adapter(
             "max_results": int(max_results),
             "max_query_variants": int(max_query_variants),
             "min_text_overlap": float(min_text_overlap),
+            "min_request_coverage": float(min_request_coverage),
             "diversify_source_families": bool(diversify_source_families),
             "default_source_family": _normalize_family(default_source_family),
         },
         "summary": summary,
+        "gate": gate,
         "metadata": dict(metadata or {}),
     }
     if report_json_path is not None:
@@ -165,6 +172,9 @@ def run_source_family_citation_search_adapter(
             root=manifest_path.parent,
             metadata={
                 "workflow": payload["workflow"],
+                "status": payload["status"],
+                "gate_passed": gate["passed"],
+                "min_request_coverage": gate["min_request_coverage"],
                 "request_count": summary["request_count"],
                 "source_document_count": summary["source_document_count"],
                 "request_with_results_count": summary["request_with_results_count"],
@@ -184,6 +194,9 @@ def run_source_family_citation_search_adapter(
             path=report_json_path or output_path,
             metadata={
                 "workflow": payload["workflow"],
+                "status": payload["status"],
+                "gate_passed": gate["passed"],
+                "min_request_coverage": gate["min_request_coverage"],
                 "request_count": summary["request_count"],
                 "source_document_count": summary["source_document_count"],
                 "request_with_results_count": summary["request_with_results_count"],
@@ -197,6 +210,44 @@ def run_source_family_citation_search_adapter(
     if fail_on_empty and summary["request_with_results_count"] == 0:
         raise SystemExit(1)
     return payload
+
+
+def _adapter_gate(summary: Mapping[str, Any], *, min_request_coverage: float) -> dict[str, Any]:
+    request_count = int(summary.get("request_count") or 0)
+    request_with_results_count = int(summary.get("request_with_results_count") or 0)
+    request_coverage = float(summary.get("request_coverage") or 0.0)
+    blocking: list[dict[str, Any]] = []
+    if request_count == 0:
+        blocking.append({
+            "gate": "adapter_requests",
+            "reason": "No citation/search requests were selected for this adapter run.",
+        })
+    if request_count > 0 and request_with_results_count == 0:
+        blocking.append({
+            "gate": "adapter_results",
+            "reason": "No source-family catalog results matched any selected citation/search request.",
+        })
+    if request_coverage < min_request_coverage:
+        blocking.append({
+            "gate": "adapter_request_coverage",
+            "reason": (
+                "Source-family citation/search adapter covered "
+                f"{request_coverage:.3f} of selected requests, "
+                f"below required {min_request_coverage:.3f}."
+            ),
+            "request_without_results_count": int(summary.get("request_without_results_count") or 0),
+        })
+    if blocking:
+        status = "empty" if request_with_results_count == 0 else "partial"
+    else:
+        status = "complete"
+    return {
+        "status": status,
+        "passed": not blocking,
+        "request_coverage": request_coverage,
+        "min_request_coverage": float(min_request_coverage),
+        "blocking_reasons": tuple(blocking),
+    }
 
 
 def _rank_request(
@@ -743,6 +794,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-results", type=int, default=3)
     parser.add_argument("--max-query-variants", type=int, default=3)
     parser.add_argument("--min-text-overlap", type=float, default=0.05)
+    parser.add_argument("--min-request-coverage", type=float, default=1.0)
     parser.add_argument("--diversify-source-families", action="store_true")
     parser.add_argument("--default-source-family", default=DEFAULT_SOURCE_FAMILY)
     parser.add_argument("--pretty-json", action="store_true")
@@ -761,6 +813,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         max_results=args.max_results,
         max_query_variants=args.max_query_variants,
         min_text_overlap=args.min_text_overlap,
+        min_request_coverage=args.min_request_coverage,
         diversify_source_families=bool(args.diversify_source_families),
         default_source_family=args.default_source_family,
         compact_json=not bool(args.pretty_json),

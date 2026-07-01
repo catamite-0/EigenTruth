@@ -871,11 +871,15 @@ Added the first monitor-first tool-selection audit layer:
 - The local source-family adapter now has a one-command evidence loop:
   `run_source_family_citation_search_workflow.py` builds sanitized requests,
   ranks local source catalogs, and runs the standard provenance/query/comparison
-  gates. Its registered synthetic smoke artifact consumes `2` unresolved
-  citation requests and returns `2` adapter results, passes provenance, and
-  remains blocked by query/comparison gates. This is the right fail-closed
-  posture for official-source catalog integration: real source catalogs can be
-  dropped in without creating a bypass around release evidence gates.
+  gates. The adapter report now exposes its own request-coverage `status`/gate,
+  and the outer workflow records that gate in manifests and registry metadata so
+  partial catalog runs cannot look promotion-ready just because a downstream
+  evidence report exists. Its registered synthetic smoke artifact consumes `2`
+  unresolved citation requests and returns `2` adapter results, passes
+  provenance, and remains blocked by query/comparison gates. This is the right
+  fail-closed posture for official-source catalog integration: real source
+  catalogs can be dropped in without creating a bypass around release evidence
+  gates.
 - Cached external source docs can now enter that loop without provenance loss:
   `build_source_family_catalog.py` lifts provider, URL, timestamps, and safe
   metadata into adapter-ready source-family catalog rows while rejecting

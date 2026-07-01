@@ -71,6 +71,7 @@ def run_source_family_citation_search_workflow(
     adapter_max_results: int = 3,
     adapter_max_query_variants: int = 3,
     adapter_min_text_overlap: float = 0.05,
+    min_adapter_request_coverage: float = 1.0,
     adapter_diversify_source_families: bool = False,
     default_source_family: str = DEFAULT_SOURCE_FAMILY,
     corpus_name: str = DEFAULT_CORPUS_NAME,
@@ -104,6 +105,8 @@ def run_source_family_citation_search_workflow(
         raise ValueError("source_catalog_paths must contain at least one path.")
     if query_mode not in QUERY_MODES:
         raise ValueError(f"query_mode must be one of: {', '.join(QUERY_MODES)}.")
+    if not (0.0 <= float(min_adapter_request_coverage) <= 1.0):
+        raise ValueError("min_adapter_request_coverage must be between 0 and 1.")
 
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -143,6 +146,7 @@ def run_source_family_citation_search_workflow(
         max_results=adapter_max_results,
         max_query_variants=adapter_max_query_variants,
         min_text_overlap=adapter_min_text_overlap,
+        min_request_coverage=min_adapter_request_coverage,
         diversify_source_families=adapter_diversify_source_families,
         default_source_family=default_source_family,
         metadata=workflow_metadata,
@@ -171,6 +175,7 @@ def run_source_family_citation_search_workflow(
         seed=seed,
         verifier_min_overlap=verifier_min_overlap,
         target_route=target_route,
+        min_adapter_request_coverage=min_adapter_request_coverage,
         max_verified_false_alarm=max_verified_false_alarm,
         min_blind_refuted_rate=min_blind_refuted_rate,
         min_controlled_blind_refuted_rate=min_controlled_blind_refuted_rate,
@@ -183,11 +188,13 @@ def run_source_family_citation_search_workflow(
         metadata=workflow_metadata,
         compact_json=compact_json,
     )
-    gate = {
+    adapter_gate = _adapter_gate(adapter, min_adapter_request_coverage=float(min_adapter_request_coverage))
+    evidence_gate = {
         "passed": bool(evidence.get("gate", {}).get("passed")),
         "promotion_ready": bool(evidence.get("gate", {}).get("promotion_ready")),
         "blocking_reasons": tuple(evidence.get("gate", {}).get("blocking_reasons", ())),
     }
+    gate = _combined_gate(adapter_gate=adapter_gate, evidence_gate=evidence_gate)
     status = "promote" if gate["promotion_ready"] else ("complete" if gate["passed"] else "blocked")
     payload: dict[str, Any] = {
         "schema_version": 1,
@@ -209,6 +216,7 @@ def run_source_family_citation_search_workflow(
             "adapter_max_results": int(adapter_max_results),
             "adapter_max_query_variants": int(adapter_max_query_variants),
             "adapter_min_text_overlap": float(adapter_min_text_overlap),
+            "min_adapter_request_coverage": float(min_adapter_request_coverage),
             "adapter_diversify_source_families": bool(adapter_diversify_source_families),
             "default_source_family": default_source_family,
             "corpus_name": corpus_name,
@@ -247,6 +255,8 @@ def run_source_family_citation_search_workflow(
         "request_summary": dict(preflight.get("summary", {})),
         "adapter_summary": dict(adapter.get("summary", {})),
         "evidence_summary": dict(evidence.get("summary", {})),
+        "adapter_gate": adapter_gate,
+        "evidence_gate": evidence_gate,
         "gate": gate,
         "metadata": dict(metadata or {}),
     }
@@ -272,6 +282,11 @@ def run_source_family_citation_search_workflow(
             "status": payload["status"],
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
+            "adapter_gate_passed": adapter_gate["passed"],
+            "adapter_gate_status": adapter_gate["status"],
+            "adapter_request_coverage": adapter_gate["request_coverage"],
+            "min_adapter_request_coverage": adapter_gate["min_request_coverage"],
+            "evidence_gate_passed": evidence_gate["passed"],
             "target_route": target_route,
             "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
             "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
@@ -295,6 +310,11 @@ def run_source_family_citation_search_workflow(
                 "status": payload["status"],
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
+                "adapter_gate_passed": adapter_gate["passed"],
+                "adapter_gate_status": adapter_gate["status"],
+                "adapter_request_coverage": adapter_gate["request_coverage"],
+                "min_adapter_request_coverage": adapter_gate["min_request_coverage"],
+                "evidence_gate_passed": evidence_gate["passed"],
                 "target_route": target_route,
                 "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
                 "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
@@ -346,6 +366,66 @@ def _manifest_artifacts(
     for index, path in enumerate(controlled_sweep_paths, start=1):
         artifacts[f"controlled_sweep_{index}"] = Path(path)
     return artifacts
+
+
+def _adapter_gate(
+    adapter_report: Mapping[str, Any],
+    *,
+    min_adapter_request_coverage: float,
+) -> dict[str, Any]:
+    raw_gate = adapter_report.get("gate")
+    if isinstance(raw_gate, Mapping):
+        gate = dict(raw_gate)
+    else:
+        summary = adapter_report.get("summary") if isinstance(adapter_report.get("summary"), Mapping) else {}
+        request_coverage = float(summary.get("request_coverage") or 0.0)
+        blocking: list[dict[str, Any]] = []
+        if request_coverage < min_adapter_request_coverage:
+            blocking.append({
+                "gate": "adapter_request_coverage",
+                "reason": (
+                    "Source-family citation/search adapter covered "
+                    f"{request_coverage:.3f} of selected requests, "
+                    f"below required {min_adapter_request_coverage:.3f}."
+                ),
+            })
+        gate = {
+            "status": "complete" if not blocking else "partial",
+            "passed": not blocking,
+            "request_coverage": request_coverage,
+            "min_request_coverage": float(min_adapter_request_coverage),
+            "blocking_reasons": tuple(blocking),
+        }
+    blocking_reasons = tuple(gate.get("blocking_reasons", ()))
+    fallback_status = "complete" if gate.get("passed") else "blocked"
+    return {
+        "status": str(gate.get("status") or adapter_report.get("status") or fallback_status),
+        "passed": bool(gate.get("passed")) and not blocking_reasons,
+        "request_coverage": float(gate.get("request_coverage") or 0.0),
+        "min_request_coverage": float(gate.get("min_request_coverage") or min_adapter_request_coverage),
+        "blocking_reasons": blocking_reasons,
+    }
+
+
+def _combined_gate(
+    *,
+    adapter_gate: Mapping[str, Any],
+    evidence_gate: Mapping[str, Any],
+) -> dict[str, Any]:
+    blocking = (
+        *tuple(adapter_gate.get("blocking_reasons", ())),
+        *tuple(evidence_gate.get("blocking_reasons", ())),
+    )
+    adapter_passed = bool(adapter_gate.get("passed"))
+    evidence_passed = bool(evidence_gate.get("passed"))
+    evidence_promotion_ready = bool(evidence_gate.get("promotion_ready"))
+    return {
+        "passed": adapter_passed and evidence_passed and not blocking,
+        "promotion_ready": adapter_passed and evidence_promotion_ready and not blocking,
+        "adapter_gate_passed": adapter_passed,
+        "evidence_gate_passed": evidence_passed,
+        "blocking_reasons": blocking,
+    }
 
 
 def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool = False) -> None:
@@ -417,6 +497,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adapter-max-results", type=int, default=3)
     parser.add_argument("--adapter-max-query-variants", type=int, default=3)
     parser.add_argument("--adapter-min-text-overlap", type=float, default=0.05)
+    parser.add_argument("--min-adapter-request-coverage", type=float, default=1.0)
     parser.add_argument("--adapter-diversify-source-families", action="store_true")
     parser.add_argument("--default-source-family", default=DEFAULT_SOURCE_FAMILY)
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
@@ -466,6 +547,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         adapter_max_results=args.adapter_max_results,
         adapter_max_query_variants=args.adapter_max_query_variants,
         adapter_min_text_overlap=args.adapter_min_text_overlap,
+        min_adapter_request_coverage=args.min_adapter_request_coverage,
         adapter_diversify_source_families=bool(args.adapter_diversify_source_families),
         default_source_family=args.default_source_family,
         corpus_name=args.corpus_name,

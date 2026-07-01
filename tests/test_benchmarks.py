@@ -50069,6 +50069,9 @@ def test_source_family_citation_search_adapter_ranks_family_matches(tmp_path):
     )
 
     assert payload["summary"]["request_with_results_count"] == 1
+    assert payload["status"] == "complete"
+    assert payload["gate"]["passed"] is True
+    assert payload["gate"]["request_coverage"] == pytest.approx(1.0)
     assert payload["summary"]["result_source_family_counts"]["official_statistics"] == 1
     assert rows[0]["results"][0]["source_family"] == "official_statistics"
     assert rows[0]["results"][0]["family_match"] is True
@@ -50077,7 +50080,77 @@ def test_source_family_citation_search_adapter_ranks_family_matches(tmp_path):
     assert rows[0]["metadata"]["preferred_source_families"][0] == "official_statistics"
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "source_family_citation_search_adapter"
+    assert record.metadata["status"] == "complete"
+    assert record.metadata["gate_passed"] is True
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_citation_search_adapter_reports_partial_coverage(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_adapter")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    requests_path = tmp_path / "requests.jsonl"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    results_path = tmp_path / "results.jsonl"
+    report_path = tmp_path / "adapter-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    requests_path.write_text(
+        "\n".join([
+            json.dumps({
+                "request_id": "cite-search-ireland-population",
+                "adapter_family": "external_citation_search",
+                "query": "Ireland population official statistics",
+                "source_family_plan": {"families": ["official_statistics"]},
+            }),
+            json.dumps({
+                "request_id": "cite-search-atlantis-climate",
+                "adapter_family": "external_citation_search",
+                "query": "Atlantis climate official statistics",
+                "source_family_plan": {"families": ["official_statistics"]},
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        json.dumps({
+            "title": "Ireland population official statistics",
+            "text": "Ireland population official statistics data are published by the national statistics office.",
+            "source": "official-statistics:ireland-population",
+            "provider": "unit-official-catalog",
+            "source_family": "official_statistics",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_citation_search_adapter(
+        input_path=requests_path,
+        output_path=results_path,
+        source_catalog_paths=(catalog_path,),
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="source-family-adapter-partial-unit",
+        version="0.1",
+        min_text_overlap=0.75,
+        min_request_coverage=1.0,
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:source-family-adapter-partial-unit:0.1"
+    )
+
+    assert payload["status"] == "partial"
+    assert payload["gate"]["passed"] is False
+    assert payload["gate"]["request_coverage"] == pytest.approx(0.5)
+    assert payload["gate"]["blocking_reasons"][0]["gate"] == "adapter_request_coverage"
+    assert report["status"] == "partial"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["status"] == "partial"
+    assert record.metadata["gate_passed"] is False
+    assert record.metadata["request_coverage"] == pytest.approx(0.5)
 
 
 def test_source_family_citation_search_adapter_can_diversify_source_families(tmp_path):
@@ -52197,6 +52270,10 @@ def test_source_family_citation_search_workflow_runs_catalog_and_gates_results(t
     assert payload["status"] == "blocked"
     assert payload["gate"]["passed"] is False
     assert payload["gate"]["promotion_ready"] is False
+    assert payload["adapter_gate"]["passed"] is True
+    assert payload["adapter_gate"]["status"] == "complete"
+    assert payload["adapter_gate"]["request_coverage"] == pytest.approx(1.0)
+    assert payload["gate"]["adapter_gate_passed"] is True
     assert payload["config"]["batch_ids"] == ("unresolved-evidence-batch-0001",)
     assert payload["request_summary"]["selected_batch_count"] == 1
     assert payload["request_summary"]["selected_batch_ids"] == ("unresolved-evidence-batch-0001",)
@@ -52216,10 +52293,39 @@ def test_source_family_citation_search_workflow_runs_catalog_and_gates_results(t
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "source_family_citation_search_workflow"
     assert record.metadata["promotion_ready"] is False
+    assert record.metadata["adapter_gate_passed"] is True
+    assert record.metadata["adapter_gate_status"] == "complete"
+    assert record.metadata["adapter_request_coverage"] == pytest.approx(1.0)
     assert record.metadata["selected_batch_count"] == 1
     assert record.metadata["selected_batch_ids"] == ["unresolved-evidence-batch-0001"]
     assert record.metadata["target_route"] == "retrieval_structured_qa"
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_citation_search_workflow_blocks_partial_adapter_gate():
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_workflow")
+
+    gate = module._combined_gate(
+        adapter_gate={
+            "passed": False,
+            "status": "partial",
+            "blocking_reasons": ({
+                "gate": "adapter_request_coverage",
+                "reason": "partial coverage",
+            },),
+        },
+        evidence_gate={
+            "passed": True,
+            "promotion_ready": True,
+            "blocking_reasons": (),
+        },
+    )
+
+    assert gate["passed"] is False
+    assert gate["promotion_ready"] is False
+    assert gate["adapter_gate_passed"] is False
+    assert gate["evidence_gate_passed"] is True
+    assert gate["blocking_reasons"][0]["gate"] == "adapter_request_coverage"
 
 
 def test_citation_search_batch_evidence_rollup_promotes_complete_batches(tmp_path):

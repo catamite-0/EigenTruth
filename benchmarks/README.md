@@ -2656,6 +2656,10 @@ selects one high-scoring document per non-fallback preferred family before
 filling the remaining top-k slots. This keeps stronger evidence families such
 as `official`, `official_statistics`, `scholarly`, and `news` from being
 crowded out by fallback `reference` / `encyclopedic` results.
+The adapter report now carries `status` plus a request-coverage gate; by default
+`--min-request-coverage 1.0` records partial or empty catalog runs as
+non-passing adapter evidence even though the command can still write results for
+inspection.
 
 ```bash
 python benchmarks/run_source_family_citation_search_adapter.py \
@@ -2688,6 +2692,9 @@ ranks caller-supplied source catalogs with
 provenance, blind-spot query-sweep, and optional controlled-vs-external gates.
 Use `--adapter-diversify-source-families` when combining heterogeneous source
 catalogs so the adapter preserves source-family coverage in top-k results.
+The outer workflow also records the adapter gate separately from the evidence
+gate and defaults `--min-adapter-request-coverage 1.0`; a partial adapter run
+blocks promotion even if a downstream report is otherwise present.
 
 ```bash
 OUT=artifacts/source-family-citation-search-workflow-smoke

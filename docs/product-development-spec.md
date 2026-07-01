@@ -636,10 +636,13 @@ For product features:
 - The local source-family path now has a one-command evidence workflow:
   `run_source_family_citation_search_workflow.py` builds the sanitized request
   handoff, runs the local source-family catalog adapter, and then invokes the
-  same provenance/query-sweep/controlled-comparison gates. The registered
-  `report:source-family-citation-search-workflow-smoke:0.1` artifact is still
-  synthetic and intentionally `blocked`: `2` requests, `2` catalog docs, `2`
-  adapter results, provenance pass, but no passing external blind-spot strategy
+  same provenance/query-sweep/controlled-comparison gates. The adapter and outer
+  workflow now preserve an explicit request-coverage gate/status in reports,
+  manifests, and registry metadata, so partial source-family catalog runs block
+  promotion before their results can be treated as source evidence. The
+  registered `report:source-family-citation-search-workflow-smoke:0.1` artifact
+  is still synthetic and intentionally `blocked`: `2` requests, `2` catalog docs,
+  `2` adapter results, provenance pass, but no passing external blind-spot strategy
   or controlled-vs-external comparison. This proves the closed local-catalog
   workflow without letting weak catalog matches bypass release gates.
 - Cached external source docs can now be normalized into source-family catalogs:
