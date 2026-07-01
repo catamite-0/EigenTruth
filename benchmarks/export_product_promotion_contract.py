@@ -231,6 +231,18 @@ def export_product_promotion_contract(
                 "performance_selected_fusion_auroc": contract.metadata.get(
                     "performance_selected_fusion_auroc"
                 ),
+                "performance_selected_fusion_release_gate_status": contract.metadata.get(
+                    "performance_selected_fusion_release_gate_status"
+                ),
+                "performance_selected_fusion_release_gate_passed": contract.metadata.get(
+                    "performance_selected_fusion_release_gate_passed"
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_rate": contract.metadata.get(
+                    "performance_selected_fusion_high_confidence_accepted_false_rate"
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_count": contract.metadata.get(
+                    "performance_selected_fusion_high_confidence_accepted_false_count"
+                ),
                 "performance_selected_fusion_false_alarm": contract.metadata.get(
                     "performance_selected_fusion_false_alarm"
                 ),

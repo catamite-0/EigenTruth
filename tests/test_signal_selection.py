@@ -181,6 +181,7 @@ def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
             "truth_proj": [0.1, 0.2, 0.8, 0.9],
             "subspace_resid": [0.2, 0.3, 0.9, 1.0],
             "trajectory_convergence": [0.1, 0.2, 0.7, 0.8],
+            "nll_answer": [0.1, 2.1, 3.0, 4.0],
         },
     }
     gpt2_scores.write_text(json.dumps(score_payload), encoding="utf-8")
@@ -193,6 +194,10 @@ def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
         output_dir=str(output_dir),
         json=str(report_path),
         alpha=None,
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        max_high_confidence_accepted_false_rate=0.0,
         created_at=None,
         commit_sha=None,
         quiet=True,
@@ -211,3 +216,15 @@ def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
     assert smollm2_artifact.calibration_size() == 2
     assert gpt2_artifact.score_dump_metadata["selection_decision"]["tracked_signal_enabled"] is True
     assert smollm2_artifact.score_dump_metadata["selection_decision"]["tracked_signal_enabled"] is False
+    assert payload["confidence_audit"] == {
+        "enabled": True,
+        "confidence_signal": "nll_answer",
+        "confidence_direction": "lower",
+        "confidence_top_fraction": 0.25,
+        "max_high_confidence_accepted_false_rate": 0.0,
+    }
+    assert payload["runs"][0]["release_gate"]["status"] == "promote"
+    assert payload["runs"][0]["release_gate"]["high_confidence_accepted_false_count"] == 0
+    assert payload["runs"][0]["confidence_error_at_artifact_threshold"][
+        "n_high_confidence_accepted_false"
+    ] == 0

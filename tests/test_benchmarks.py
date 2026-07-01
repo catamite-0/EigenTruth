@@ -25182,6 +25182,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "selected_fusion_candidate": "geometry:mean_rank",
                         "selected_fusion_signal": "selected_fusion_mean_rank",
                         "selected_fusion_auroc": 0.69,
+                        "selected_fusion_release_gate_status": "promote",
+                        "selected_fusion_release_gate_passed": True,
+                        "selected_fusion_high_confidence_accepted_false_rate": 0.0,
+                        "selected_fusion_high_confidence_accepted_false_count": 0,
                         "selected_fusion_artifact_path": (
                             "artifacts/selected/smollm2-selected-fusion-artifact.json"
                         ),
@@ -25932,6 +25936,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["performance_selected_fusion_candidate"] == "geometry:mean_rank"
     assert contract["metadata"]["performance_selected_fusion_signal"] == "selected_fusion_mean_rank"
     assert contract["metadata"]["performance_selected_fusion_auroc"] == pytest.approx(0.69)
+    assert contract["metadata"]["performance_selected_fusion_release_gate_status"] == "promote"
+    assert contract["metadata"]["performance_selected_fusion_release_gate_passed"] is True
+    assert contract["metadata"]["performance_selected_fusion_high_confidence_accepted_false_rate"] == pytest.approx(
+        0.0
+    )
+    assert contract["metadata"]["performance_selected_fusion_high_confidence_accepted_false_count"] == 0
     assert contract["metadata"]["performance_selected_fusion_false_alarm"] == pytest.approx(0.03)
     assert contract["metadata"]["performance_selected_fusion_detection"] == pytest.approx(0.22)
     assert contract["metadata"]["performance_selected_fusion_artifact_report"].endswith(
@@ -26209,6 +26219,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["performance_selected_fusion_run"] == "smollm2"
     assert record.metadata["performance_selected_fusion_signal"] == "selected_fusion_mean_rank"
     assert record.metadata["performance_selected_fusion_auroc"] == pytest.approx(0.69)
+    assert record.metadata["performance_selected_fusion_release_gate_status"] == "promote"
+    assert record.metadata["performance_selected_fusion_high_confidence_accepted_false_count"] == 0
     assert record.metadata["performance_selected_fusion_false_alarm"] == pytest.approx(0.03)
     assert record.metadata["performance_selected_fusion_detection"] == pytest.approx(0.22)
     assert record.metadata["performance_selected_fusion_artifact_path"].endswith(
@@ -26670,6 +26682,10 @@ def _write_performance_baseline_record(
     selected_fusion_candidate=None,
     selected_fusion_signal=None,
     selected_fusion_auroc=None,
+    selected_fusion_release_gate_status=None,
+    selected_fusion_release_gate_passed=None,
+    selected_fusion_high_confidence_accepted_false_rate=None,
+    selected_fusion_high_confidence_accepted_false_count=None,
     selected_fusion_artifact_path=None,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
@@ -26778,6 +26794,14 @@ def _write_performance_baseline_record(
             "selected_fusion_candidate": selected_fusion_candidate,
             "selected_fusion_signal": selected_fusion_signal,
             "selected_fusion_auroc": selected_fusion_auroc,
+            "selected_fusion_release_gate_status": selected_fusion_release_gate_status,
+            "selected_fusion_release_gate_passed": selected_fusion_release_gate_passed,
+            "selected_fusion_high_confidence_accepted_false_rate": (
+                selected_fusion_high_confidence_accepted_false_rate
+            ),
+            "selected_fusion_high_confidence_accepted_false_count": (
+                selected_fusion_high_confidence_accepted_false_count
+            ),
             "selected_fusion_artifact_path": selected_fusion_artifact_path,
         },
         "cost": {
@@ -26810,6 +26834,14 @@ def _write_performance_baseline_record(
             "selected_fusion_candidate": selected_fusion_candidate,
             "selected_fusion_signal": selected_fusion_signal,
             "selected_fusion_auroc": selected_fusion_auroc,
+            "selected_fusion_release_gate_status": selected_fusion_release_gate_status,
+            "selected_fusion_release_gate_passed": selected_fusion_release_gate_passed,
+            "selected_fusion_high_confidence_accepted_false_rate": (
+                selected_fusion_high_confidence_accepted_false_rate
+            ),
+            "selected_fusion_high_confidence_accepted_false_count": (
+                selected_fusion_high_confidence_accepted_false_count
+            ),
             "selected_fusion_artifact_path": selected_fusion_artifact_path,
         },
         "score_dump_cache": {
@@ -32784,6 +32816,16 @@ def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_
                     "detection": 0.71,
                     "coverage": 0.96,
                 },
+                "release_gate": {
+                    "status": "promote",
+                    "alpha": 0.1,
+                    "false_alarm_pass": True,
+                    "max_high_confidence_accepted_false_rate": 0.0,
+                    "high_confidence_accepted_false_rate": 0.0,
+                    "high_confidence_accepted_false_count": 0,
+                    "high_confidence_accepted_count": 2,
+                    "reasons": [],
+                },
             },
             {
                 "run_name": "smollm2",
@@ -32824,11 +32866,41 @@ def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_
     assert selected["selected_candidate"] == "geometry_trajectory:mean_rank"
     assert selected["tracked_signal_enabled"] is True
     assert selected["artifact_path"] == "gpt2-selected-fusion-artifact.json"
+    assert selected["release_gate_status"] == "promote"
+    assert selected["release_gate_passed"] is True
+    assert selected["high_confidence_accepted_false_rate"] == pytest.approx(0.0)
     assert report["evidence"]["selected_fusion_artifact_report"] == str(selected_report_path)
     assert report["evidence"]["selected_fusion_requested_run"] == "gpt2"
     assert report["evidence"]["selected_fusion_status"] == "promote"
     assert report["evidence"]["selected_fusion_signal"] == "selected_fusion_mean_rank"
     assert report["evidence"]["selected_fusion_false_alarm"] == pytest.approx(0.04)
+    assert report["evidence"]["selected_fusion_release_gate_status"] == "promote"
+
+    blocked_selected = json.loads(json.dumps(selected_fusion_artifact_report))
+    blocked_gate = blocked_selected["runs"][0]["release_gate"]
+    blocked_gate["status"] = "blocked"
+    blocked_gate["high_confidence_accepted_false_rate"] = 0.5
+    blocked_gate["high_confidence_accepted_false_count"] = 1
+    blocked_gate["reasons"] = [
+        "high-confidence accepted false rate 0.5 exceeds max 0",
+    ]
+
+    blocked = module.build_runtime_recommendation(
+        matrix_report,
+        selected_fusion_artifact_report=blocked_selected,
+        selected_fusion_artifact_report_path=selected_report_path,
+        selected_fusion_run="gpt2",
+    )
+
+    assert "selected_fusion_mean_rank" not in blocked["recommendation"]["quality_signals"]
+    assert blocked["recommendation"]["best_quality_signal"] == {
+        "name": "truth_proj",
+        "auroc": pytest.approx(0.72),
+    }
+    assert blocked["recommendation"]["selected_fusion_artifact"]["status"] == "blocked"
+    assert blocked["recommendation"]["selected_fusion_artifact"]["release_gate_status"] == "blocked"
+    assert blocked["recommendation"]["selected_fusion_artifact"]["release_gate_passed"] is False
+    assert blocked["evidence"]["selected_fusion_release_gate_status"] == "blocked"
 
 
 def test_runtime_config_recommendation_does_not_auto_select_ambiguous_selected_fusion_run():
@@ -34062,6 +34134,16 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
                         "detection": 0.71,
                         "coverage": 0.96,
                     },
+                    "release_gate": {
+                        "status": "promote",
+                        "alpha": 0.1,
+                        "false_alarm_pass": True,
+                        "max_high_confidence_accepted_false_rate": 0.0,
+                        "high_confidence_accepted_false_rate": 0.0,
+                        "high_confidence_accepted_false_count": 0,
+                        "high_confidence_accepted_count": 2,
+                        "reasons": [],
+                    },
                 },
                 {
                     "run_name": "smollm2",
@@ -34145,6 +34227,8 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     assert selected["run_name"] == "gpt2"
     assert selected["selected_candidate"] == "geometry_trajectory:mean_rank"
     assert selected["artifact_path"] == str(selected_artifact_path)
+    assert selected["release_gate_status"] == "promote"
+    assert selected["release_gate_passed"] is True
     assert payload["paths"]["selected_fusion_artifact_report"] == str(selected_report_path)
     assert payload["config"]["selected_fusion_artifact_report"] == str(selected_report_path)
     assert payload["config"]["selected_fusion_run"] == "gpt2"
@@ -34152,6 +34236,12 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     assert payload["performance_evidence_bundle"]["recommendation"]["selected_fusion_signal"] == (
         "selected_fusion_mean_rank"
     )
+    assert payload["performance_evidence_bundle"]["recommendation"][
+        "selected_fusion_release_gate_status"
+    ] == "promote"
+    assert payload["performance_evidence_bundle"]["recommendation"][
+        "selected_fusion_high_confidence_accepted_false_count"
+    ] == 0
     assert payload["performance_evidence_bundle"]["evidence"]["selected_fusion_artifact_report"] == (
         str(selected_report_path)
     )
@@ -34164,9 +34254,12 @@ def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_
     assert manifest["metadata"]["selected_fusion_run"] == "gpt2"
     assert manifest["metadata"]["recommended_selected_fusion_status"] == "promote"
     assert manifest["metadata"]["recommended_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert manifest["metadata"]["recommended_selected_fusion_release_gate_passed"] is True
     assert record.metadata["recommended_best_quality_signal"] == "selected_fusion_mean_rank"
     assert record.metadata["recommended_selected_fusion_status"] == "promote"
     assert record.metadata["recommended_selected_fusion_auroc"] == pytest.approx(0.84)
+    assert record.metadata["recommended_selected_fusion_release_gate_status"] == "promote"
+    assert record.metadata["recommended_selected_fusion_high_confidence_accepted_false_count"] == 0
     assert record.metadata["recommended_selected_fusion_artifact_path"] == str(selected_artifact_path)
 
 

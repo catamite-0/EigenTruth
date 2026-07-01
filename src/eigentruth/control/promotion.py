@@ -984,6 +984,26 @@ class ProductPromotionContract:
                     performance_evidence_recommendation.get("selected_fusion_auroc"),
                     performance_evidence.get("selected_fusion_auroc"),
                 ),
+                "performance_selected_fusion_release_gate_status": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_release_gate_status"),
+                    performance_evidence.get("selected_fusion_release_gate_status"),
+                ),
+                "performance_selected_fusion_release_gate_passed": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_release_gate_passed"),
+                    performance_evidence.get("selected_fusion_release_gate_passed"),
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_rate": _first_present(
+                    performance_evidence_recommendation.get(
+                        "selected_fusion_high_confidence_accepted_false_rate"
+                    ),
+                    performance_evidence.get("selected_fusion_high_confidence_accepted_false_rate"),
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_count": _first_present(
+                    performance_evidence_recommendation.get(
+                        "selected_fusion_high_confidence_accepted_false_count"
+                    ),
+                    performance_evidence.get("selected_fusion_high_confidence_accepted_false_count"),
+                ),
                 "performance_selected_fusion_false_alarm": (
                     performance_evidence.get("selected_fusion_false_alarm")
                 ),

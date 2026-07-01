@@ -789,7 +789,11 @@ def _selected_fusion_artifact_quality_signal(
     method = str(_first_present(selected.get("artifact_method"), selected.get("selected_method"), "fusion"))
     signal_name = f"selected_fusion_{method}"
     artifact_path = selected.get("artifact_path")
-    status = "promote" if auroc is not None and artifact_path else "blocked"
+    release_gate = _mapping(selected.get("release_gate"))
+    release_gate_configured = bool(release_gate)
+    release_gate_status = release_gate.get("status") if release_gate_configured else None
+    release_gate_passed = None if not release_gate_configured else release_gate_status == "promote"
+    status = "promote" if auroc is not None and artifact_path and release_gate_passed is not False else "blocked"
     return {
         "status": status,
         "report": _optional_path_str(selected_fusion_artifact_report_path),
@@ -806,6 +810,22 @@ def _selected_fusion_artifact_quality_signal(
         "selected_signals": _string_sequence(selected.get("selected_signals")),
         "tracked_signal": selected.get("tracked_signal"),
         "tracked_signal_enabled": selected.get("tracked_signal_enabled") is True,
+        "release_gate_configured": release_gate_configured,
+        "release_gate_status": release_gate_status,
+        "release_gate_passed": release_gate_passed,
+        "release_gate_reasons": tuple(release_gate.get("reasons", ())),
+        "max_high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("max_high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_false_count")
+        ),
+        "high_confidence_accepted_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_count")
+        ),
         "selection_status": selected_fusion_artifact_report.get("selection_status"),
         "workflow": selected_fusion_artifact_report.get("workflow"),
     }
@@ -1881,6 +1901,22 @@ def _evidence(
         "selected_fusion_detection": selected_fusion.get("detection"),
         "selected_fusion_alpha": selected_fusion.get("alpha"),
         "selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+        "selected_fusion_release_gate_configured": selected_fusion.get("release_gate_configured"),
+        "selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
+        "selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
+        "selected_fusion_release_gate_reasons": selected_fusion.get("release_gate_reasons"),
+        "selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
+            "high_confidence_accepted_false_rate"
+        ),
+        "selected_fusion_high_confidence_accepted_false_count": selected_fusion.get(
+            "high_confidence_accepted_false_count"
+        ),
+        "selected_fusion_high_confidence_accepted_count": selected_fusion.get(
+            "high_confidence_accepted_count"
+        ),
+        "selected_fusion_max_high_confidence_accepted_false_rate": selected_fusion.get(
+            "max_high_confidence_accepted_false_rate"
+        ),
         "worker_sweep_report": None if worker_sweep_report_path is None else str(worker_sweep_report_path),
         "worker_sweep_status": None if worker_sweep_report is None else worker_decision.get("status"),
         "worker_recommended_worker_count": worker_decision.get("recommended_worker_count"),

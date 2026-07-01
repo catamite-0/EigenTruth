@@ -8314,14 +8314,16 @@ cost. The selected policy is written into the runtime recommendation evidence
 and readiness/registry metadata.
 With `--score-ensemble-report`, a best fusion signal is added to
 `quality_signals` only when the selected ensemble alpha passed its conformal
-false-alarm gate; blocked or ambiguous fusion evidence is retained in
-`score_fusion` and `evidence` without changing the runtime recommendation.
+false-alarm gate and any attached high-confidence release gate. Blocked or
+ambiguous fusion evidence is retained in `score_fusion` and `evidence` without
+changing the runtime recommendation.
 With `--selected-fusion-artifact-report`, selected fusion artifacts produced by
 `build_selected_fusion_artifacts.py` can likewise contribute a
-`selected_fusion_*` quality signal. If the report has multiple runs, pass
-`--selected-fusion-run <run_name>`; otherwise the recommendation keeps the
-selected-fusion evidence as `ambiguous_matching_runs` and does not change the
-best quality signal.
+`selected_fusion_*` quality signal, but only when the artifact path is present
+and the report's per-run `release_gate` is either absent or promoted. If the
+report has multiple runs, pass `--selected-fusion-run <run_name>`; otherwise the
+recommendation keeps the selected-fusion evidence as `ambiguous_matching_runs`
+and does not change the best quality signal.
 When the matrix report and worker-sweep child matrix are separate files, the
 recommendation still treats them as compatible if they select the same promoted
 runtime cell and matching quality/cache-only evidence; this lets a serial matrix
@@ -8369,8 +8371,9 @@ When reusing selected fusion artifacts, add
 `--selected-fusion-artifact-report <build-report.json>` and pass
 `--selected-fusion-run <run_name>` for multi-run reports. The workflow records
 the selected report, selected artifact path, selected run, selected candidate,
-and promoted `selected_fusion_*` signal in the runtime recommendation,
-performance evidence bundle, artifact manifest metadata, and registry record.
+selected-artifact release-gate status, and promoted `selected_fusion_*` signal
+in the runtime recommendation, performance evidence bundle, artifact manifest
+metadata, and registry record.
 The current local SmolLM2 l8 selected-fusion handoff uses:
 
 ```bash
@@ -9681,6 +9684,8 @@ python benchmarks/build_selected_fusion_artifacts.py \
   --scores gpt2=artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.json \
   --scores smollm2=artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json \
   --output-dir artifacts/e7-truthfulqa-trajectory-multimodel \
+  --confidence-signal nll_answer \
+  --max-high-confidence-accepted-false-rate 0.0 \
   --json artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json \
   --quiet
 ```
@@ -9688,9 +9693,12 @@ python benchmarks/build_selected_fusion_artifacts.py \
 The committed build report writes `gpt2-selected-fusion-artifact.json` with
 `truth_proj,subspace_resid,eigenscore,maha_last,trajectory_convergence` and
 `smollm2-selected-fusion-artifact.json` with the geometry-only bundle. Both use
-`mean_rank` and alpha 0.1. A runtime recommendation can consume this build
-report with `--selected-fusion-artifact-report`; because this report has one
-artifact per trajectory source run, provide `--selected-fusion-run gpt2` or
+`mean_rank` and alpha 0.1. When a confidence signal is provided, the build report
+also stores a selected-artifact release gate so runtime recommendation and
+performance workflows can block promotion if the artifact accepts high-confidence
+false answers. A runtime recommendation can consume this build report with
+`--selected-fusion-artifact-report`; because this report has one artifact per
+trajectory source run, provide `--selected-fusion-run gpt2` or
 `--selected-fusion-run smollm2` explicitly.
 
 ## `compare_transfer.py`

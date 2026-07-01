@@ -714,6 +714,14 @@ def _write_artifact_manifest(
             "recommended_selected_fusion_signal": selected_fusion.get("signal_name"),
             "recommended_selected_fusion_auroc": selected_fusion.get("auroc"),
             "recommended_selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+            "recommended_selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
+            "recommended_selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
+            "recommended_selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "recommended_selected_fusion_high_confidence_accepted_false_count": selected_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
             "recommended_cell": dict(report.get("decision") or {}).get("recommended_cell"),
             "recommended_layer": dict(report.get("decision") or {}).get("recommended_layer"),
@@ -876,6 +884,14 @@ def _performance_evidence_bundle_summary(
             "selected_fusion_signal": selected_fusion.get("signal_name"),
             "selected_fusion_auroc": selected_fusion.get("auroc"),
             "selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+            "selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
+            "selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
+            "selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "selected_fusion_high_confidence_accepted_false_count": selected_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "cache_tuning_status": cache_tuning.get("status"),
             "inside_sampling_run": inside_sampling.get("recommended_run"),
             "inside_trigger_budget_id": inside_trigger_budget.get("recommended_budget_id"),
@@ -930,6 +946,14 @@ def _performance_evidence_bundle_summary(
             "selected_fusion_detection": evidence.get("selected_fusion_detection"),
             "selected_fusion_alpha": evidence.get("selected_fusion_alpha"),
             "selected_fusion_artifact_path": evidence.get("selected_fusion_artifact_path"),
+            "selected_fusion_release_gate_status": evidence.get("selected_fusion_release_gate_status"),
+            "selected_fusion_release_gate_passed": evidence.get("selected_fusion_release_gate_passed"),
+            "selected_fusion_high_confidence_accepted_false_rate": evidence.get(
+                "selected_fusion_high_confidence_accepted_false_rate"
+            ),
+            "selected_fusion_high_confidence_accepted_false_count": evidence.get(
+                "selected_fusion_high_confidence_accepted_false_count"
+            ),
         },
         "score_dump_cache": dict(score_dump_cache_evidence),
         "artifacts": {
@@ -990,6 +1014,14 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "recommended_selected_fusion_signal": selected_fusion.get("signal_name"),
             "recommended_selected_fusion_auroc": selected_fusion.get("auroc"),
             "recommended_selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+            "recommended_selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
+            "recommended_selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
+            "recommended_selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
+                "high_confidence_accepted_false_rate"
+            ),
+            "recommended_selected_fusion_high_confidence_accepted_false_count": selected_fusion.get(
+                "high_confidence_accepted_false_count"
+            ),
             "performance_evidence_bundle_status": _nested(
                 report,
                 "performance_evidence_bundle",
