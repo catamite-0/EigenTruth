@@ -3462,6 +3462,66 @@ def test_frontier_abstention_evidence_rerun_rollup_promotes_best_candidate(tmp_p
     assert record.metadata["suite"] == "unit"
 
 
+def test_frontier_abstention_rerun_rollup_reports_candidate_gate_diagnostics(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    rollup_path = tmp_path / "abstention-rerun-rollup.json"
+    report_path.write_text(
+        json.dumps(_abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+    queue = build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("baseline",),
+        signal_groups=("recommended",),
+        seeds="0,1",
+        python_executable="python",
+    )
+    entry = queue["entries"][0]
+    child_report = _abstention_rerun_report(entry)
+    child_report["runs"][0]["stability"]["candidate_gate_summary"] = {
+        "seed_with_any_passing_candidate_count": 2,
+        "seed_without_passing_candidate_count": 0,
+        "all_seeds_have_passing_candidate": True,
+        "recommended_pass_seed_count": 0,
+        "recommended_block_seed_count": 2,
+        "recommended_missed_passing_candidate_count": 2,
+        "recommended_blocking_reason_counts": {"empirical_abstention_rate": 2},
+        "candidate_blocking_reason_counts": {
+            "conditional_correctness_lower_bound": 4,
+        },
+        "best_passing_score_name_counts": {"fusion@budget=0.48": 2},
+    }
+    output_path = _queue_entry_report_path(entry)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(child_report), encoding="utf-8")
+
+    payload = rollup_frontier_abstention_evidence_reruns(
+        queue_path=queue_path,
+        report_json_path=rollup_path,
+    )
+    candidate = payload["candidates"][0]
+    diagnostics = candidate["metrics"]["candidate_gate_diagnostics"]
+    summary = payload["summary"]["candidate_gate_diagnostics"]
+
+    assert candidate["candidate_status"] == "blocked"
+    assert diagnostics["seed_with_any_passing_candidate_rate"] == 1.0
+    assert diagnostics["recommended_missed_passing_candidate_count"] == 2
+    assert diagnostics["best_passing_score_name_counts"] == {"fusion@budget=0.48": 2}
+    assert summary["reports_with_candidate_gate_diagnostics_count"] == 1
+    assert summary["reports_with_recommended_missed_passing_candidate_count"] == 1
+    assert summary["recommended_missed_passing_candidate_seed_count"] == 2
+    assert summary["seed_without_passing_candidate_count"] == 0
+    assert summary["best_passing_score_name_counts"] == {"fusion@budget=0.48": 2}
+
+
 def test_frontier_abstention_evidence_rerun_rollup_blocks_missing_required_report(tmp_path):
     report_path = tmp_path / "abstention-stability.json"
     source = tmp_path / "frontier-release-evidence.json"

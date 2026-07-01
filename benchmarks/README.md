@@ -5939,6 +5939,11 @@ additional completed reports via repeatable `--report`, ranks candidates by
 conservative conditional correctness, seed pass rate, and abstention cost, then
 emits `status=promote` only when a promotion-eligible profile satisfies the
 configured correctness, abstention-rate, and seed-stability thresholds.
+When child `eval_abstention_stability.py` reports include `candidate_gate_summary`,
+the rollup also carries `candidate_gate_diagnostics` per candidate and in the
+top-level summary. These fields separate "no candidate can pass" from
+"the recommended candidate missed another passing candidate" without changing
+the release gate verdict.
 
 For releases blocked by the detectability-taxonomy track, the same planner can
 emit row-level blind-spot audit commands from the comparator's

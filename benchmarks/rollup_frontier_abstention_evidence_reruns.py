@@ -147,6 +147,7 @@ def rollup_frontier_abstention_evidence_reruns(
                 "promotion_eligible_passing_candidate_count": (
                     summary["promotion_eligible_passing_candidate_count"]
                 ),
+                "candidate_gate_diagnostics": summary.get("candidate_gate_diagnostics"),
                 "missing_report_count": summary["missing_report_count"],
                 "best_profile": None if recommended is None else recommended.get("profile"),
                 "best_signal_group": None if recommended is None else recommended.get("signal_group"),
@@ -259,6 +260,7 @@ def _candidate_metrics(report: Mapping[str, Any], run: Mapping[str, Any] | None)
     pass_seed_rate = None
     if seed_count and pass_count is not None:
         pass_seed_rate = pass_count / seed_count
+    candidate_gate_diagnostics = _candidate_gate_diagnostics(stability)
     return {
         "seed_count": seed_count,
         "release_gate_pass_seed_count": pass_count,
@@ -277,6 +279,7 @@ def _candidate_metrics(report: Mapping[str, Any], run: Mapping[str, Any] | None)
         ),
         "stable_recommended_score_name": stability.get("stable_recommended_score_name"),
         "recommended_score_name_counts": _mapping(stability.get("recommended_score_name_counts")),
+        "candidate_gate_diagnostics": candidate_gate_diagnostics,
         "supervised_feasibility_target_passed": feasibility.get("target_passed"),
         "supervised_feasibility_score_name": feasible_best.get("score_name"),
         "supervised_feasibility_conditional_correctness_lower_bound": _optional_float(
@@ -287,6 +290,50 @@ def _candidate_metrics(report: Mapping[str, Any], run: Mapping[str, Any] | None)
         ),
         "supervised_feasibility_empirical_selective_accuracy": _optional_float(
             feasible_best.get("empirical_selective_accuracy")
+        ),
+    }
+
+
+def _candidate_gate_diagnostics(stability: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _mapping(stability.get("candidate_gate_summary"))
+    if not summary:
+        return {}
+    seed_count = _optional_int(stability.get("seed_count"))
+    if seed_count is None:
+        pass_count = _optional_int(stability.get("release_gate_pass_seed_count"))
+        block_count = _optional_int(stability.get("release_gate_block_seed_count"))
+        if pass_count is not None and block_count is not None:
+            seed_count = pass_count + block_count
+    seed_with_any_passing_count = _optional_int(
+        summary.get("seed_with_any_passing_candidate_count")
+    )
+    seed_without_passing_count = _optional_int(
+        summary.get("seed_without_passing_candidate_count")
+    )
+    missed_count = _optional_int(summary.get("recommended_missed_passing_candidate_count"))
+    recommended_pass_count = _optional_int(summary.get("recommended_pass_seed_count"))
+    recommended_block_count = _optional_int(summary.get("recommended_block_seed_count"))
+    return {
+        "seed_count": seed_count,
+        "seed_with_any_passing_candidate_count": seed_with_any_passing_count,
+        "seed_without_passing_candidate_count": seed_without_passing_count,
+        "seed_with_any_passing_candidate_rate": _rate(
+            seed_with_any_passing_count,
+            seed_count,
+        ),
+        "all_seeds_have_passing_candidate": summary.get("all_seeds_have_passing_candidate"),
+        "recommended_pass_seed_count": recommended_pass_count,
+        "recommended_block_seed_count": recommended_block_count,
+        "recommended_missed_passing_candidate_count": missed_count,
+        "recommended_missed_passing_candidate_seed_rate": _rate(missed_count, seed_count),
+        "recommended_blocking_reason_counts": _mapping(
+            summary.get("recommended_blocking_reason_counts")
+        ),
+        "candidate_blocking_reason_counts": _mapping(
+            summary.get("candidate_blocking_reason_counts")
+        ),
+        "best_passing_score_name_counts": _mapping(
+            summary.get("best_passing_score_name_counts")
         ),
     }
 
@@ -402,7 +449,83 @@ def _summary(
         "signal_groups": tuple(sorted(
             {str(entry.get("signal_group") or "") for entry in entries if entry.get("signal_group")}
         )),
+        "candidate_gate_diagnostics": _candidate_gate_rollup_summary(candidates),
     }
+
+
+def _candidate_gate_rollup_summary(
+    candidates: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    reports_with_diagnostics = 0
+    reports_with_any_seed_passing_candidate = 0
+    reports_with_all_seeds_passing_candidate = 0
+    reports_with_recommended_miss = 0
+    missed_seed_count = 0
+    without_passing_seed_count = 0
+    best_passing_counts: dict[str, int] = {}
+    recommended_reason_counts: dict[str, int] = {}
+    candidate_reason_counts: dict[str, int] = {}
+    for candidate in candidates:
+        diagnostics = _mapping(_mapping(candidate.get("metrics")).get("candidate_gate_diagnostics"))
+        if not diagnostics:
+            continue
+        reports_with_diagnostics += 1
+        if _optional_int(diagnostics.get("seed_with_any_passing_candidate_count")):
+            reports_with_any_seed_passing_candidate += 1
+        if diagnostics.get("all_seeds_have_passing_candidate") is True:
+            reports_with_all_seeds_passing_candidate += 1
+        missed_count = _optional_int(
+            diagnostics.get("recommended_missed_passing_candidate_count")
+        ) or 0
+        if missed_count > 0:
+            reports_with_recommended_miss += 1
+            missed_seed_count += missed_count
+        without_passing_seed_count += (
+            _optional_int(diagnostics.get("seed_without_passing_candidate_count")) or 0
+        )
+        _merge_int_counts(
+            best_passing_counts,
+            diagnostics.get("best_passing_score_name_counts"),
+        )
+        _merge_int_counts(
+            recommended_reason_counts,
+            diagnostics.get("recommended_blocking_reason_counts"),
+        )
+        _merge_int_counts(
+            candidate_reason_counts,
+            diagnostics.get("candidate_blocking_reason_counts"),
+        )
+    return {
+        "reports_with_candidate_gate_diagnostics_count": reports_with_diagnostics,
+        "reports_without_candidate_gate_diagnostics_count": (
+            len(candidates) - reports_with_diagnostics
+        ),
+        "reports_with_any_seed_passing_candidate_count": (
+            reports_with_any_seed_passing_candidate
+        ),
+        "reports_with_all_seeds_passing_candidate_count": (
+            reports_with_all_seeds_passing_candidate
+        ),
+        "reports_with_recommended_missed_passing_candidate_count": (
+            reports_with_recommended_miss
+        ),
+        "recommended_missed_passing_candidate_seed_count": missed_seed_count,
+        "seed_without_passing_candidate_count": without_passing_seed_count,
+        "best_passing_score_name_counts": dict(sorted(best_passing_counts.items())),
+        "recommended_blocking_reason_counts": dict(
+            sorted(recommended_reason_counts.items())
+        ),
+        "candidate_blocking_reason_counts": dict(sorted(candidate_reason_counts.items())),
+    }
+
+
+def _merge_int_counts(target: dict[str, int], value: Any) -> None:
+    if not isinstance(value, Mapping):
+        return
+    for name, count in value.items():
+        parsed_count = _optional_int(count)
+        if parsed_count is not None:
+            target[str(name)] = target.get(str(name), 0) + parsed_count
 
 
 def _gate(
@@ -650,6 +773,7 @@ def _write_artifact_manifest(
             "candidate_count": summary.get("candidate_count"),
             "passing_candidate_count": summary.get("passing_candidate_count"),
             "missing_report_count": summary.get("missing_report_count"),
+            "candidate_gate_diagnostics": summary.get("candidate_gate_diagnostics"),
             **dict(metadata),
         },
     )
@@ -730,6 +854,12 @@ def _optional_int(value: Any) -> int | None:
 def _rank_float(value: Any, *, missing: float = 0.0) -> float:
     parsed = _optional_float(value)
     return missing if parsed is None else parsed
+
+
+def _rate(count: int | None, total: int | None) -> float | None:
+    if count is None or total is None or total <= 0:
+        return None
+    return count / total
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
