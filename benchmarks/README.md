@@ -5871,6 +5871,32 @@ root-cause/research-axis tags, and prioritized next actions. The output is a
 planning artifact only; it does not satisfy a release gate or promote verifier
 evidence.
 
+For product-runtime drift blockers, the same pass can also emit a runtime-drift
+completion plan. This derived artifact collects each relevant action's command
+templates, required inputs, missing metrics, closure outputs, and scripts into a
+single reviewable JSON file. Entries stay `needs_inputs` while templates still
+contain placeholders, so the artifact is useful for handoff and batching but
+does not claim any runtime evidence:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-audit-release-candidate-v4/frontier-audit-comparison.json \
+  --json artifacts/frontier-audit-release-candidate-v4/evidence-gap-plan.json \
+  --runtime-drift-completion-json artifacts/frontier-audit-release-candidate-v4/runtime-drift-completion-plan.json \
+  --runtime-drift-completion-artifact-manifest artifacts/frontier-audit-release-candidate-v4/runtime-drift-completion-manifest.json \
+  --runtime-drift-completion-output-dir artifacts/frontier-audit-runtime-drift-completion \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-evidence-gap-plan \
+  --version 0.1 \
+  --runtime-drift-completion-name frontier-audit-runtime-drift-completion \
+  --runtime-drift-completion-version 0.1
+```
+
+The saved gap plan records the derived runtime-drift completion path under
+`derived_artifacts.runtime_drift_evidence_completion_plan`. Use that plan to
+bind concrete trace, promotion-contract, child-report, and baseline paths before
+running the underlying product-trace replay/runtime-baseline workflows.
+
 If the same source includes frontier multiple-testing blocked cells and points
 back to the originating `truthfulqa_frontier_workflow` report, the gap planner
 can also emit the executable per-cell rerun queue in the same pass:

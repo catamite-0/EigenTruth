@@ -1215,6 +1215,14 @@ Added the first monitor-first tool-selection audit layer:
   so release failures can point back to the specific product-trace replay,
   runtime-baseline, and baseline-comparison commands needed to close verifier
   stability gaps.
+- `benchmarks/plan_release_evidence_gaps.py` can now emit a
+  `runtime_drift_evidence_completion_plan` alongside the root-cause gap plan.
+  The derived artifact collects product-runtime drift and promotion-handoff
+  action templates, required inputs, missing metrics, closure outputs, and
+  script names into one reviewable handoff queue. Entries remain
+  `needs_inputs` until concrete trace, contract, child-report, and baseline
+  paths are bound, preserving the fail-closed distinction between a work plan
+  and completed runtime evidence.
 - `ProductPromotionEvidenceAudit` now audits a deployable promotion contract
   before runtime-drift replay. `benchmarks/audit_product_promotion_contract_evidence.py`
   checks the exact `frontier_audit` evidence groups expected by drift gates:

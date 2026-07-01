@@ -35,6 +35,7 @@ from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 FRONTIER_RERUN_ROLLUP_COMPLETION_WORKFLOW = "frontier_rerun_rollup_completion_plan"
+RUNTIME_DRIFT_COMPLETION_WORKFLOW = "runtime_drift_evidence_completion_plan"
 FRONTIER_RERUN_ROLLUP_WORKFLOW_TO_TRACK = {
     "frontier_stability_evidence_rerun_rollup": "stability",
     "frontier_abstention_evidence_rerun_rollup": "abstention",
@@ -58,6 +59,37 @@ FRONTIER_RERUN_ROLLUP_TRACKS = {
         "workflow": "frontier_multiple_testing_rerun_rollup",
         "script": "benchmarks/rollup_frontier_multiple_testing_reruns.py",
     },
+}
+RUNTIME_DRIFT_COMPLETION_ROUTES = {
+    "product_runtime_baseline",
+    "product_runtime_drift",
+    "product_trace_replay",
+    "product_trace_runtime_evidence",
+    "product_promotion_evidence_handoff",
+    "evidence_handoff_audit",
+    "evidence_handoff_evidence",
+    "world_model_evidence",
+    "context_sensitivity_evidence",
+    "counterfactual_robustness_evidence",
+    "provenance_evidence",
+    "citation_integrity_evidence",
+    "trajectory_audit_evidence",
+    "frontier_release_evidence_promotion_metrics",
+    "triple_audit_evidence",
+    "covered_fact_property",
+}
+RUNTIME_DRIFT_COMPLETION_METADATA_KEYS = {
+    "runtime_baseline_script",
+    "runtime_drift_script",
+    "trace_replay_script",
+    "trace_enrichment_script",
+    "evidence_handoff_script",
+    "signal_workflow_script",
+    "context_workflow_script",
+    "counterfactual_eval_script",
+    "frontier_release_evidence_script",
+    "triple_extraction_matrix_script",
+    "structured_route_script",
 }
 
 
@@ -129,6 +161,11 @@ def build_release_evidence_gap_plan(
     frontier_rerun_rollup_completion_name: str | None = None,
     frontier_rerun_rollup_completion_version: str | None = None,
     frontier_rerun_rollup_queue_paths: Sequence[str | Path] = (),
+    runtime_drift_completion_json_path: str | Path | None = None,
+    runtime_drift_completion_artifact_manifest_path: str | Path | None = None,
+    runtime_drift_completion_output_dir: str | Path | None = None,
+    runtime_drift_completion_name: str | None = None,
+    runtime_drift_completion_version: str | None = None,
     python_executable: str = sys.executable,
 ) -> dict[str, Any]:
     """Load a release report and optionally write/register its evidence-gap plan."""
@@ -183,6 +220,21 @@ def build_release_evidence_gap_plan(
             "frontier_rerun_rollup_completion_name and "
             "frontier_rerun_rollup_completion_version must be provided together."
         )
+    if (
+        runtime_drift_completion_artifact_manifest_path is not None
+        and runtime_drift_completion_json_path is None
+    ):
+        raise ValueError(
+            "runtime_drift_completion_artifact_manifest_path requires "
+            "runtime_drift_completion_json_path."
+        )
+    if (runtime_drift_completion_name or runtime_drift_completion_version) and registry_path is None:
+        raise ValueError("runtime_drift_completion_name/version require registry_path.")
+    if (runtime_drift_completion_name is None) != (runtime_drift_completion_version is None):
+        raise ValueError(
+            "runtime_drift_completion_name and runtime_drift_completion_version must "
+            "be provided together."
+        )
     source_path = Path(source)
     payload = _load_json_object(source_path)
     plan = plan_evidence_gaps_from_release_candidate(
@@ -193,6 +245,7 @@ def build_release_evidence_gap_plan(
     output = plan.to_dict()
     derived_artifacts = _build_derived_artifacts(
         source_path=source_path,
+        gap_plan=output,
         registry_path=registry_path,
         multiple_testing_rerun_json_path=multiple_testing_rerun_json_path,
         multiple_testing_rerun_artifact_manifest_path=multiple_testing_rerun_artifact_manifest_path,
@@ -262,6 +315,13 @@ def build_release_evidence_gap_plan(
             frontier_rerun_rollup_completion_version
         ),
         frontier_rerun_rollup_queue_paths=frontier_rerun_rollup_queue_paths,
+        runtime_drift_completion_json_path=runtime_drift_completion_json_path,
+        runtime_drift_completion_artifact_manifest_path=(
+            runtime_drift_completion_artifact_manifest_path
+        ),
+        runtime_drift_completion_output_dir=runtime_drift_completion_output_dir,
+        runtime_drift_completion_name=runtime_drift_completion_name,
+        runtime_drift_completion_version=runtime_drift_completion_version,
         python_executable=python_executable,
     )
     if derived_artifacts:
@@ -367,6 +427,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             args.frontier_rerun_rollup_completion_version
         ),
         frontier_rerun_rollup_queue_paths=tuple(args.frontier_rerun_rollup_queue or ()),
+        runtime_drift_completion_json_path=args.runtime_drift_completion_json,
+        runtime_drift_completion_artifact_manifest_path=(
+            args.runtime_drift_completion_artifact_manifest
+        ),
+        runtime_drift_completion_output_dir=args.runtime_drift_completion_output_dir,
+        runtime_drift_completion_name=args.runtime_drift_completion_name,
+        runtime_drift_completion_version=args.runtime_drift_completion_version,
         python_executable=args.python,
     )
     summary = payload["summary"]
@@ -581,6 +648,31 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=[],
         help="TRACK=PATH queue mapping for rollup commands; repeatable",
     )
+    parser.add_argument(
+        "--runtime-drift-completion-json",
+        default=None,
+        help="optional output JSON path for a runtime-drift evidence completion plan",
+    )
+    parser.add_argument(
+        "--runtime-drift-completion-artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the runtime-drift completion plan",
+    )
+    parser.add_argument(
+        "--runtime-drift-completion-output-dir",
+        default=None,
+        help="optional root directory for bound runtime-drift completion outputs",
+    )
+    parser.add_argument(
+        "--runtime-drift-completion-name",
+        default=None,
+        help="optional registry name for the runtime-drift completion plan",
+    )
+    parser.add_argument(
+        "--runtime-drift-completion-version",
+        default=None,
+        help="optional registry version for the runtime-drift completion plan",
+    )
     parser.add_argument("--python", default=sys.executable, help="Python executable for generated rerun commands")
     run(parser.parse_args(argv))
 
@@ -588,6 +680,7 @@ def main(argv: Sequence[str] | None = None) -> None:
 def _build_derived_artifacts(
     *,
     source_path: Path,
+    gap_plan: Mapping[str, Any],
     registry_path: str | Path | None,
     multiple_testing_rerun_json_path: str | Path | None,
     multiple_testing_rerun_artifact_manifest_path: str | Path | None,
@@ -649,6 +742,11 @@ def _build_derived_artifacts(
     frontier_rerun_rollup_completion_name: str | None,
     frontier_rerun_rollup_completion_version: str | None,
     frontier_rerun_rollup_queue_paths: Sequence[str | Path],
+    runtime_drift_completion_json_path: str | Path | None,
+    runtime_drift_completion_artifact_manifest_path: str | Path | None,
+    runtime_drift_completion_output_dir: str | Path | None,
+    runtime_drift_completion_name: str | None,
+    runtime_drift_completion_version: str | None,
     python_executable: str,
 ) -> dict[str, Any]:
     derived: dict[str, Any] = {}
@@ -843,7 +941,380 @@ def _build_derived_artifacts(
             "missing_queue_count": summary["missing_queue_count"],
             "unsupported_workflow_count": summary["unsupported_workflow_count"],
         }
+    if runtime_drift_completion_json_path is not None:
+        runtime_payload = build_runtime_drift_evidence_completion_plan(
+            source=gap_plan,
+            json_path=runtime_drift_completion_json_path,
+            artifact_manifest_path=runtime_drift_completion_artifact_manifest_path,
+            registry_path=None
+            if runtime_drift_completion_name is None or runtime_drift_completion_version is None
+            else registry_path,
+            name=runtime_drift_completion_name,
+            version=runtime_drift_completion_version,
+            output_dir=runtime_drift_completion_output_dir,
+            python_executable=python_executable,
+            metadata={"release_evidence_gap_plan_source": str(source_path)},
+        )
+        summary = runtime_payload["summary"]
+        derived["runtime_drift_evidence_completion_plan"] = {
+            "path": str(runtime_drift_completion_json_path),
+            "artifact_manifest": None
+            if runtime_drift_completion_artifact_manifest_path is None
+            else str(runtime_drift_completion_artifact_manifest_path),
+            "status": runtime_payload["status"],
+            "entry_count": summary["entry_count"],
+            "command_template_count": summary["command_template_count"],
+            "missing_input_count": summary["missing_input_count"],
+        }
     return derived
+
+
+def build_runtime_drift_evidence_completion_plan(
+    *,
+    source: str | Path | Mapping[str, Any],
+    json_path: str | Path | None = None,
+    artifact_manifest_path: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    name: str | None = None,
+    version: str | None = None,
+    output_dir: str | Path | None = None,
+    python_executable: str = sys.executable,
+    metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a command-template plan for closing runtime-drift evidence blockers."""
+    if artifact_manifest_path is not None and json_path is None:
+        raise ValueError("artifact_manifest_path requires json_path.")
+    if registry_path is not None and (not name or not version):
+        raise ValueError("registry_path requires name and version.")
+    source_path: Path | None = None
+    if isinstance(source, Mapping):
+        payload: Mapping[str, Any] = dict(source)
+    else:
+        source_path = Path(source)
+        payload = _load_json_object(source_path)
+    if not _mapping_sequence(payload.get("actions", ())):
+        plan = plan_evidence_gaps_from_release_candidate(
+            payload,
+            source_path=source_path,
+            metadata=metadata,
+        )
+        payload = plan.to_dict()
+    output_path = None if json_path is None else Path(json_path)
+    manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
+    completion_root = _runtime_drift_completion_root(
+        source_path=source_path,
+        output_path=output_path,
+        output_dir=output_dir,
+    )
+    missing_metrics_by_action = _runtime_drift_missing_metrics_by_action(payload)
+    entries = tuple(
+        _runtime_drift_completion_entry(
+            action,
+            index=index,
+            completion_root=completion_root,
+            missing_metrics=missing_metrics_by_action.get(
+                str(action.get("action_id", "")),
+                (),
+            ),
+        )
+        for index, action in enumerate(_runtime_drift_completion_actions(payload), start=1)
+    )
+    summary = _runtime_drift_completion_summary(entries)
+    status = _runtime_drift_completion_status(summary)
+    output = {
+        "schema_version": 1,
+        "workflow": RUNTIME_DRIFT_COMPLETION_WORKFLOW,
+        "status": status,
+        "source": {
+            "path": None if source_path is None else str(source_path),
+            "workflow": payload.get("workflow"),
+            "status": payload.get("status"),
+            "summary": _mapping(payload.get("summary")),
+        },
+        "summary": summary,
+        "paths": {
+            "completion_plan": None if output_path is None else str(output_path),
+            "artifact_manifest": None if manifest_path is None else str(manifest_path),
+            "completion_output_dir": str(completion_root),
+        },
+        "config": {
+            "python_executable": python_executable,
+            "command_binding": "templates_require_input_binding",
+        },
+        "entries": entries,
+        "metadata": dict(metadata or {}),
+    }
+    if output_path is not None:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            strict_json_dumps(output, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    manifest = None
+    if manifest_path is not None:
+        manifest = _write_runtime_drift_completion_manifest(
+            source_path=source_path,
+            output_path=output_path,
+            manifest_path=manifest_path,
+            payload=output,
+            metadata=metadata or {},
+        )
+    if registry_path is not None:
+        assert name is not None and version is not None
+        ArtifactRegistry.load_json(registry_path).record_report(
+            name=name,
+            version=version,
+            path=output_path if output_path is not None else source_path,
+            metadata={
+                "workflow": RUNTIME_DRIFT_COMPLETION_WORKFLOW,
+                "status": status,
+                "source": None if source_path is None else str(source_path),
+                "artifact_manifest": None if manifest_path is None else str(manifest_path),
+                "entry_count": summary["entry_count"],
+                "command_template_count": summary["command_template_count"],
+                "missing_input_count": summary["missing_input_count"],
+                "routes": summary["routes"],
+                "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
+                **dict(metadata or {}),
+            },
+        ).save_json()
+    return output
+
+
+def _runtime_drift_completion_root(
+    *,
+    source_path: Path | None,
+    output_path: Path | None,
+    output_dir: str | Path | None,
+) -> Path:
+    if output_dir is not None:
+        return Path(output_dir)
+    if output_path is not None:
+        return output_path.parent / "runtime-drift-completion"
+    if source_path is not None:
+        return source_path.parent / "runtime-drift-completion"
+    return Path("runtime-drift-completion")
+
+
+def _runtime_drift_completion_actions(
+    payload: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    actions = tuple(
+        action
+        for action in _mapping_sequence(payload.get("actions", ()))
+        if _is_runtime_drift_completion_action(action)
+    )
+    return tuple(
+        sorted(
+            actions,
+            key=lambda action: (
+                -int(action.get("priority", 0)),
+                str(action.get("action_id", "")),
+            ),
+        )
+    )
+
+
+def _is_runtime_drift_completion_action(action: Mapping[str, Any]) -> bool:
+    routes = set(_string_tuple(action.get("evidence_routes", ())))
+    metadata = _mapping(action.get("metadata"))
+    if routes & RUNTIME_DRIFT_COMPLETION_ROUTES:
+        return True
+    if any(key in metadata for key in RUNTIME_DRIFT_COMPLETION_METADATA_KEYS):
+        return True
+    if any(str(value).startswith("product_runtime_") for value in metadata.values()):
+        return True
+    return any(
+        "product_runtime" in command or "product_trace" in command
+        for command in _string_tuple(action.get("suggested_commands", ()))
+    )
+
+
+def _runtime_drift_completion_entry(
+    action: Mapping[str, Any],
+    *,
+    index: int,
+    completion_root: Path,
+    missing_metrics: Sequence[str],
+) -> dict[str, Any]:
+    metadata = _mapping(action.get("metadata"))
+    action_id = str(action.get("action_id") or f"runtime-drift-action-{index:04d}")
+    command_templates = _string_tuple(action.get("suggested_commands", ()))
+    required_inputs = _string_tuple(metadata.get("required_inputs", ()))
+    missing_inputs = _runtime_drift_missing_inputs(
+        required_inputs=required_inputs,
+        command_templates=command_templates,
+    )
+    command_status = "needs_inputs" if missing_inputs else "ready"
+    if not command_templates:
+        command_status = "missing_command_templates"
+    required_metrics = _runtime_drift_required_metrics(metadata)
+    closure_outputs = _string_tuple(metadata.get("closure_outputs", ()))
+    routes = _string_tuple(action.get("evidence_routes", ()))
+    return {
+        "entry_id": f"runtime-drift-{index:04d}",
+        "action_id": action_id,
+        "title": str(action.get("title") or action_id),
+        "action_type": str(action.get("action_type") or "workflow"),
+        "priority": int(action.get("priority", 0)),
+        "command_status": command_status,
+        "evidence_routes": routes,
+        "source_gap_ids": _string_tuple(action.get("source_gap_ids", ())),
+        "missing_metrics": tuple(dict.fromkeys(str(item) for item in missing_metrics if str(item))),
+        "required_inputs": required_inputs,
+        "missing_inputs": missing_inputs,
+        "required_metrics": required_metrics,
+        "closure_outputs": closure_outputs,
+        "scripts": _runtime_drift_scripts(metadata, command_templates),
+        "command_templates": command_templates,
+        "bound_output_dir": str(completion_root / _slug(action_id)),
+        "metadata": {
+            "risk_control_method": metadata.get("risk_control_method"),
+            "default_gate_thresholds": metadata.get("default_gate_thresholds", {}),
+            "workflow_keys": _runtime_drift_workflow_keys(metadata),
+        },
+    }
+
+
+def _runtime_drift_missing_inputs(
+    *,
+    required_inputs: Sequence[str],
+    command_templates: Sequence[str],
+) -> tuple[str, ...]:
+    missing = list(required_inputs)
+    if any("..." in command for command in command_templates):
+        missing.append("bound_command_template_values")
+    return tuple(dict.fromkeys(str(item) for item in missing if str(item)))
+
+
+def _runtime_drift_required_metrics(metadata: Mapping[str, Any]) -> tuple[str, ...]:
+    metrics: list[str] = []
+    for key in (
+        "required_trace_metrics",
+        "required_runtime_metrics",
+        "required_route_metrics",
+        "observed_track_metrics",
+    ):
+        metrics.extend(_string_tuple(metadata.get(key, ())))
+    return tuple(dict.fromkeys(metrics))
+
+
+def _runtime_drift_workflow_keys(metadata: Mapping[str, Any]) -> dict[str, str]:
+    return {
+        key: str(value)
+        for key, value in metadata.items()
+        if key.endswith("_workflow") and isinstance(value, str) and value
+    }
+
+
+def _runtime_drift_scripts(
+    metadata: Mapping[str, Any],
+    command_templates: Sequence[str],
+) -> tuple[str, ...]:
+    scripts: list[str] = []
+    for key in sorted(metadata):
+        value = metadata.get(key)
+        if key.endswith("_script") and isinstance(value, str) and value:
+            scripts.append(value)
+    for command in command_templates:
+        first = command.strip().split(" ", 1)[0]
+        if first.endswith(".py"):
+            scripts.append(first)
+    return tuple(dict.fromkeys(scripts))
+
+
+def _runtime_drift_missing_metrics_by_action(
+    payload: Mapping[str, Any],
+) -> dict[str, tuple[str, ...]]:
+    metrics_by_action: dict[str, list[str]] = {}
+    for gap in _mapping_sequence(payload.get("gaps", ())):
+        missing_metrics = _string_tuple(gap.get("missing_metrics", ()))
+        if not missing_metrics:
+            continue
+        for action_id in _string_tuple(gap.get("recommended_action_ids", ())):
+            metrics_by_action.setdefault(action_id, []).extend(missing_metrics)
+    return {
+        action_id: tuple(dict.fromkeys(metrics))
+        for action_id, metrics in metrics_by_action.items()
+    }
+
+
+def _runtime_drift_completion_summary(
+    entries: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    status_counts: dict[str, int] = {}
+    route_counts: dict[str, int] = {}
+    for entry in entries:
+        status = str(entry.get("command_status", "unknown"))
+        status_counts[status] = status_counts.get(status, 0) + 1
+        for route in _string_tuple(entry.get("evidence_routes", ())):
+            route_counts[route] = route_counts.get(route, 0) + 1
+    return {
+        "entry_count": len(entries),
+        "command_template_count": sum(
+            len(_string_tuple(entry.get("command_templates", ()))) for entry in entries
+        ),
+        "missing_input_count": sum(
+            len(_string_tuple(entry.get("missing_inputs", ()))) for entry in entries
+        ),
+        "missing_command_template_count": status_counts.get("missing_command_templates", 0),
+        "command_status_counts": dict(sorted(status_counts.items())),
+        "routes": tuple(sorted(route_counts)),
+        "route_counts": dict(sorted(route_counts.items())),
+        "missing_metric_count": sum(
+            len(_string_tuple(entry.get("missing_metrics", ()))) for entry in entries
+        ),
+    }
+
+
+def _runtime_drift_completion_status(summary: Mapping[str, Any]) -> str:
+    if summary["entry_count"] == 0:
+        return "empty"
+    if summary["missing_input_count"] or summary["missing_command_template_count"]:
+        return "needs_inputs"
+    return "ready"
+
+
+def _write_runtime_drift_completion_manifest(
+    *,
+    source_path: Path | None,
+    output_path: Path | None,
+    manifest_path: Path,
+    payload: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    artifacts: dict[str, str | Path | None] = {
+        "runtime_drift_evidence_completion_plan": output_path,
+    }
+    if source_path is not None:
+        artifacts["source"] = source_path
+    manifest = build_artifact_manifest(
+        artifacts,
+        root=manifest_path.parent,
+        metadata={
+            "runner": "plan_release_evidence_gaps",
+            "workflow": RUNTIME_DRIFT_COMPLETION_WORKFLOW,
+            "status": payload.get("status"),
+            "entry_count": _nested_value(payload, "summary", "entry_count"),
+            "command_template_count": _nested_value(
+                payload,
+                "summary",
+                "command_template_count",
+            ),
+            "missing_input_count": _nested_value(payload, "summary", "missing_input_count"),
+            **dict(metadata),
+        },
+    )
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        strict_json_dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
+def _slug(value: str) -> str:
+    return "".join(char if char.isalnum() else "-" for char in value.lower()).strip("-") or "item"
 
 
 def build_frontier_rerun_rollup_completion_plan(

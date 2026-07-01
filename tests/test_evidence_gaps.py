@@ -2253,6 +2253,93 @@ def test_plan_release_evidence_gaps_can_emit_frontier_rerun_rollup_completion_pl
     assert completion_record.metadata["tracks"] == ["abstention"]
 
 
+def test_plan_release_evidence_gaps_can_emit_runtime_drift_completion_plan(
+    tmp_path,
+):
+    source = tmp_path / "release-candidate-comparison.json"
+    output = tmp_path / "evidence-gap-plan.json"
+    completion_path = tmp_path / "runtime-drift-completion.json"
+    manifest_path = tmp_path / "runtime-drift-completion-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "release_candidate_comparison",
+            "decision": {
+                "status": "blocked",
+                "blocking_reasons": [
+                    {
+                        "gate": "product_runtime_drift",
+                        "status": "blocked",
+                        "reasons": (
+                            "product runtime drift world-model evidence metrics are incomplete: "
+                            "world_model.participating_trace_rate, world_model.trace_gap_rate",
+                            "product runtime drift evidence-handoff evidence metrics are incomplete: "
+                            "promotion_contract.evidence_handoff.coverage_rate, "
+                            "promotion_contract.evidence_handoff.promoted_group_rate.mean",
+                        ),
+                    }
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = build_release_evidence_gap_plan(
+        source=source,
+        json_path=output,
+        registry_path=registry_path,
+        name="runtime-gap-plan",
+        version="0.1",
+        runtime_drift_completion_json_path=completion_path,
+        runtime_drift_completion_artifact_manifest_path=manifest_path,
+        runtime_drift_completion_output_dir=tmp_path / "runtime-drift-completion",
+        runtime_drift_completion_name="runtime-drift-completion",
+        runtime_drift_completion_version="0.1",
+        python_executable="python",
+    )
+
+    saved = json.loads(output.read_text(encoding="utf-8"))
+    completion = json.loads(completion_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+    completion_record = registry.get("report:runtime-drift-completion:0.1")
+    derived = payload["derived_artifacts"]["runtime_drift_evidence_completion_plan"]
+    entries = {entry["action_id"]: entry for entry in completion["entries"]}
+    world_model_entry = entries["rerun_product_trace_world_model_evidence"]
+    handoff_entry = entries["refresh_product_promotion_evidence_handoff"]
+
+    assert saved["derived_artifacts"] == payload["derived_artifacts"]
+    assert derived["path"] == str(completion_path)
+    assert derived["artifact_manifest"] == str(manifest_path)
+    assert derived["status"] == "needs_inputs"
+    assert derived["entry_count"] == 2
+    assert derived["command_template_count"] == (
+        len(_WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS)
+        + len(_EVIDENCE_HANDOFF_RUNTIME_EVIDENCE_COMMANDS)
+    )
+    assert completion["workflow"] == "runtime_drift_evidence_completion_plan"
+    assert completion["status"] == "needs_inputs"
+    assert completion["summary"]["command_status_counts"] == {"needs_inputs": 2}
+    assert tuple(world_model_entry["command_templates"]) == _WORLD_MODEL_RUNTIME_EVIDENCE_COMMANDS
+    assert tuple(handoff_entry["command_templates"]) == _EVIDENCE_HANDOFF_RUNTIME_EVIDENCE_COMMANDS
+    assert world_model_entry["command_status"] == "needs_inputs"
+    assert handoff_entry["command_status"] == "needs_inputs"
+    assert "bound_command_template_values" in world_model_entry["missing_inputs"]
+    assert "baseline_product_runtime_report" in handoff_entry["missing_inputs"]
+    assert "world_model.participating_trace_rate" in world_model_entry["missing_metrics"]
+    assert "promotion_contract.evidence_handoff.coverage_rate" in handoff_entry["missing_metrics"]
+    assert "benchmarks/run_product_runtime_baseline.py" in world_model_entry["scripts"]
+    assert "benchmarks/export_product_promotion_contract_evidence_handoff.py" in (
+        handoff_entry["scripts"]
+    )
+    assert manifest["artifacts"]["runtime_drift_evidence_completion_plan"]["exists"] is True
+    assert completion_record.metadata["workflow"] == "runtime_drift_evidence_completion_plan"
+    assert completion_record.metadata["entry_count"] == 2
+    assert completion_record.metadata["command_template_count"] == derived["command_template_count"]
+    assert "product_runtime_drift" in completion_record.metadata["routes"]
+
+
 def test_evidence_gap_plan_maps_product_runtime_world_model_blockers():
     plan = plan_evidence_gaps_from_release_candidate({
         "workflow": "release_candidate_comparison",
