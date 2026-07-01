@@ -41401,7 +41401,7 @@ def _write_citation_product_runtime_trace(
     request_id: str,
     faulty: bool = True,
 ) -> None:
-    from eigentruth.control import ProductTrace, RuntimeTrace
+    from eigentruth.control import ControlAction, ProductTrace, RiskDecision, RiskLevel, RuntimeTrace
     from eigentruth.verify import CitationRecord, CitationVerifier, Claim
 
     verifier = CitationVerifier(
@@ -41459,6 +41459,12 @@ def _write_citation_product_runtime_trace(
         request_id=request_id,
         claims=claims,
         verification_results=verifier.verify_many(claims),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.95,
+            reason="citation fixture accepted",
+        ),
         runtime_trace=RuntimeTrace(total_seconds=0.01, phases=()),
         metadata={"cache": {"verifier": {"hits": 1, "misses": 0}}},
     )
@@ -44509,6 +44515,118 @@ def test_product_trace_replay_workflow_applies_provenance_runtime_drift_gate(tmp
     assert manifest["metadata"]["runtime_drift_product_trace_provenance_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_product_trace_provenance_metric_count"] == 6
     assert record.metadata["runtime_drift_product_trace_provenance_blocked_metric_count"] == 0
+
+
+def test_product_trace_replay_workflow_applies_citation_integrity_runtime_drift_gate(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-product-runtime-baseline.json"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    baseline_trace = tmp_path / "baseline-citation.json"
+    current_trace = traces_dir / "current-citation.json"
+    _write_citation_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline-citation",
+        faulty=False,
+    )
+    _write_citation_product_runtime_trace(
+        current_trace,
+        request_id="current-citation",
+        faulty=False,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(current_trace,),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_product_trace_citation_integrity_participating_trace_rate=1.0,
+            min_runtime_drift_product_trace_citation_integrity_coverage_rate=1.0,
+            max_runtime_drift_product_trace_citation_integrity_mismatch_rate_increase=0.0,
+            max_runtime_drift_product_trace_citation_integrity_unresolved_rate_increase=0.0,
+            max_runtime_drift_product_trace_citation_integrity_issue_rate_increase=0.0,
+            max_runtime_drift_product_trace_citation_integrity_trace_gap_rate_increase=0.0,
+            registry_path=registry_path,
+            name="trace-replay-citation-integrity-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    drift_report = json.loads(
+        Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8")
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-citation-integrity-drift:0.1")
+    drift_record = registry.get(
+        "product_runtime_drift_report:trace-replay-citation-integrity-drift-runtime-drift:0.1"
+    )
+    citation_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("citation_integrity.")
+    }
+
+    assert payload["runtime_drift"]["status"] == "promote"
+    assert payload["runtime_drift"]["product_trace_citation_integrity_metric_count"] == 6
+    assert (
+        payload["runtime_drift"]["product_trace_citation_integrity_blocked_metric_count"]
+        == 0
+    )
+    assert payload["config"]["runtime_drift_gates"][
+        "min_product_trace_citation_integrity_coverage_rate"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_product_trace_citation_integrity_issue_rate_increase"
+    ] == pytest.approx(0.0)
+    assert drift_report["config"][
+        "min_product_trace_citation_integrity_participating_trace_rate"
+    ] == pytest.approx(1.0)
+    assert drift_report["config"][
+        "max_product_trace_citation_integrity_trace_gap_rate_increase"
+    ] == pytest.approx(0.0)
+    assert len(citation_statuses) == 6
+    assert set(citation_statuses.values()) == {"pass"}
+    assert (
+        manifest["metadata"]["runtime_drift_product_trace_citation_integrity_metric_count"]
+        == 6
+    )
+    assert (
+        manifest["metadata"][
+            "runtime_drift_product_trace_citation_integrity_blocked_metric_count"
+        ]
+        == 0
+    )
+    assert record.metadata["runtime_drift_product_trace_citation_integrity_metric_count"] == 6
+    assert (
+        record.metadata[
+            "runtime_drift_product_trace_citation_integrity_blocked_metric_count"
+        ]
+        == 0
+    )
+    assert drift_record.metadata["product_trace_citation_integrity_blocked_metric_count"] == 0
+    assert drift_record.metadata[
+        "product_trace_citation_integrity_issue_rate_status"
+    ] == "pass"
 
 
 def test_product_trace_replay_workflow_applies_world_model_runtime_drift_gate(tmp_path):
