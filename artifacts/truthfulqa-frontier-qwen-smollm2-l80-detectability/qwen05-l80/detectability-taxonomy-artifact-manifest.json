@@ -1,0 +1,42 @@
+{
+  "artifacts": {
+    "detectability_taxonomy_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "detectability-taxonomy-report.json",
+      "sha256": "f5a2a11d3ee8b8cc0fb02385c6bdeb4c3ebbbf320129dffd1b3da2b28dbdff44",
+      "size_bytes": 8335
+    },
+    "input_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.json",
+      "sha256": "68767b83a06d66c2932e64935b1603fac835f9ddad6663c8856f187771a27439",
+      "size_bytes": 3236
+    },
+    "input_score_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.records.jsonl",
+      "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+      "size_bytes": 861209
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "confidence_signal": "nll_answer",
+    "consistency_signal": "eigenscore",
+    "runner": "eval_detectability_taxonomy",
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

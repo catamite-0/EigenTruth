@@ -13,8 +13,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "qwen05-l80/detectability-taxonomy-report.json",
-      "sha256": "7067f0d1547109a835018f3259692673c2092d7b5749dadeba58fff72441bb60",
-      "size_bytes": 12447
+      "sha256": "f5a2a11d3ee8b8cc0fb02385c6bdeb4c3ebbbf320129dffd1b3da2b28dbdff44",
+      "size_bytes": 8335
     },
     "cells.qwen05-l80.score_dump": {
       "exists": true,
@@ -45,8 +45,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "smollm2-l80/detectability-taxonomy-report.json",
-      "sha256": "d4acd8d350cbaeba986376adf10592924e4c4acd416042f9e02a5ee647104cb6",
-      "size_bytes": 12718
+      "sha256": "860e074025bcda515f76c1dac616993c870434a571c286be9a467e0f73190981",
+      "size_bytes": 8608
     },
     "cells.smollm2-l80.score_dump": {
       "exists": true,
@@ -83,35 +83,10 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "detectability_confidence_direction": "lower",
-    "detectability_confidence_signal": "nll_answer",
-    "detectability_consistency_direction": "lower",
-    "detectability_consistency_signal": "eigenscore",
-    "dry_run": false,
-    "ensemble_methods": [
-      "max_rank",
-      "mean_rank"
-    ],
-    "models": [
-      "qwen05",
-      "smollm2"
-    ],
+    "model_count": 2,
+    "refreshed_for": "detectability_taxonomy_input_manifests",
     "runner": "run_truthfulqa_frontier_workflow",
-    "scales": [
-      "l80"
-    ],
-    "signals": [
-      "truth_proj",
-      "maha_last",
-      "subspace_resid",
-      "resid_update_norm",
-      "eigenscore"
-    ],
-    "status": "complete",
-    "sweep_band_expand_radius": 0,
-    "sweep_band_scales": [],
-    "sweep_band_target_layer": null,
-    "sweep_layers_from_band_report": null
+    "status": "complete"
   },
   "schema_version": 1,
   "summary": {

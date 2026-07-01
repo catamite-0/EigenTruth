@@ -4475,7 +4475,19 @@ def test_truthfulqa_frontier_workflow_reuses_score_dumps_and_writes_ensemble(tmp
     assert all(Path(cell["multiple_testing"]["calibration"]).exists() for cell in payload["cells"])
     assert payload["detectability_taxonomy"]["report_count"] == 2
     assert all(Path(report["path"]).exists() for report in payload["detectability_taxonomy"]["reports"])
+    assert all(
+        Path(report["artifact_manifest"]).exists()
+        for report in payload["detectability_taxonomy"]["reports"]
+    )
     assert payload["cells"][0]["detectability_taxonomy"]["status"] == "complete"
+    detectability_manifest = json.loads(
+        Path(payload["cells"][0]["detectability_taxonomy"]["artifact_manifest"]).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert payload["cells"][0]["detectability_taxonomy"]["artifact_manifest_summary"]["missing_count"] == 0
+    assert detectability_manifest["artifacts"]["detectability_taxonomy_report"]["exists"] is True
+    assert detectability_manifest["artifacts"]["input_score_dump"]["exists"] is True
     assert ensemble_report["runs"][0]["signals"] == ["truth_proj", "subspace_resid"]
     assert manifest["metadata"]["runner"] == "run_truthfulqa_frontier_workflow"
     assert manifest["metadata"]["multiple_testing_enabled"] is True
@@ -4488,6 +4500,7 @@ def test_truthfulqa_frontier_workflow_reuses_score_dumps_and_writes_ensemble(tmp
     assert manifest["artifacts"]["cells.a-l2.multiple_testing_report"]["exists"] is True
     assert manifest["artifacts"]["cells.a-l2.multiple_testing_calibration"]["exists"] is True
     assert manifest["artifacts"]["cells.a-l2.detectability_taxonomy_report"]["exists"] is True
+    assert manifest["artifacts"]["cells.a-l2.detectability_taxonomy_artifact_manifest"]["exists"] is True
     assert manifest["summary"]["missing_count"] == 0
     assert record.metadata["workflow"] == "run_truthfulqa_frontier_workflow"
     assert record.metadata["signals"] == ["truth_proj", "subspace_resid"]
@@ -30605,7 +30618,7 @@ def test_frontier_release_evidence_smoke_verifies_promoted_contract_report():
     }
     assert payload["run_count"] >= 2
     assert payload["manifest_checked"] >= 4
-    assert payload["report"].endswith("frontier-release-evidence-budget-target-sweep-v4.json")
+    assert payload["report"].endswith("frontier-release-evidence-budget-target-sweep-v5.json")
 
 
 def test_frontier_release_evidence_smoke_fails_closed_on_blocked_report(tmp_path):
@@ -44918,6 +44931,7 @@ def test_eval_detectability_taxonomy_reads_score_dump_and_writes_report(tmp_path
     module = importlib.import_module("benchmarks.eval_detectability_taxonomy")
     scores_path = tmp_path / "scores.json"
     output_path = tmp_path / "detectability-taxonomy.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
     scores_path.write_text(
         json.dumps({
             "config": {"model": "synthetic", "layer": -1},
@@ -44952,12 +44966,19 @@ def test_eval_detectability_taxonomy_reads_score_dump_and_writes_report(tmp_path
         "suite=unit",
         "--json",
         str(output_path),
+        "--artifact-manifest",
+        str(manifest_path),
     ])
 
     saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert payload["report"]["assignments"] == saved["report"]["assignments"]
     assert saved["workflow"] == "detectability_taxonomy"
     assert saved["metadata"]["suite"] == "unit"
+    assert saved["paths"]["artifact_manifest"] == str(manifest_path)
+    assert saved["artifact_manifest_summary"]["missing_count"] == 0
+    assert manifest["artifacts"]["detectability_taxonomy_report"]["exists"] is True
+    assert manifest["artifacts"]["input_score_dump"]["exists"] is True
     assert saved["source"]["score_dump_summary"]["n_total"] == 8
     assert saved["report"]["false_distribution"]["drift"]["count"] == 1
     assert saved["report"]["false_distribution"]["entrenched"]["count"] == 1

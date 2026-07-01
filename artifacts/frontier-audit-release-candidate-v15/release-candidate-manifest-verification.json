@@ -1,0 +1,279 @@
+{
+  "checked": 17,
+  "failures": [],
+  "manifest_path": "artifacts/frontier-audit-release-candidate-v15/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 15,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/artifact-manifest-budget-target-sweep-v5.json",
+      "nested": [
+        {
+          "checked": 5,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 4,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 5,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 10,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 9,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 4,
+                  "failures": [],
+                  "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/conformal-artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            },
+            {
+              "checked": 9,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 4,
+                  "failures": [],
+                  "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/conformal-artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "checked": 6,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 7,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 4,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "checked": 3,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 4,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 11,
+                  "failures": [],
+                  "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                },
+                {
+                  "checked": 11,
+                  "failures": [],
+                  "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                },
+                {
+                  "checked": 11,
+                  "failures": [],
+                  "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 3,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_product_runtime_drift_v1_16_receipts_frontier_v5/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 28,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_product_trace_replay_workflow_action_gated_v0/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 16,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_product_trace_replay_workflow_action_gated_v0/corpus/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 14,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 19,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 8,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_inside_readiness/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 4,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_inside_readiness/../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_inside_readiness/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_inside_readiness/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            {
+              "checked": 11,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_l8_read_cache_worker_sweep_score_fusion_inside_readiness/../smollm2_l8_read_cache_worker_sweep/workers_2/layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 5,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../wikidata-country-core-facts-structured-fact-route/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 5,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../wikidata-country-core-facts-structured-fact-paraphrase-route/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 2,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 19,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 9,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 9,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/country-core/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 9,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-audit-release-candidate-v15/../wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/organization-product/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        }
+      ],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

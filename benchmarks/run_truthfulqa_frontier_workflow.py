@@ -27,7 +27,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
-from benchmarks.eval_detectability_taxonomy import build_detectability_taxonomy_report  # noqa: E402
+from benchmarks.eval_detectability_taxonomy import (  # noqa: E402
+    build_detectability_taxonomy_report,
+    write_detectability_artifact_manifest,
+)
 from benchmarks.eval_score_ensemble import build_ensemble_report  # noqa: E402
 from benchmarks.run_calibrated_observability_workflow import (  # noqa: E402
     CalibratedObservabilityWorkflowConfig,
@@ -561,8 +564,10 @@ def _build_detectability_reports(
     for cell in cell_reports:
         cell_name = str(cell["name"])
         output_path = _detectability_report_path(config, cell_name=cell_name)
+        manifest_path = _detectability_manifest_path(config, cell_name=cell_name)
         summary: dict[str, Any] = {
             "path": str(output_path),
+            "artifact_manifest": str(manifest_path),
             "consistency_signal": config.detectability_consistency_signal,
             "confidence_signal": config.detectability_confidence_signal,
             "consistency_direction": config.detectability_consistency_direction,
@@ -579,7 +584,28 @@ def _build_detectability_reports(
                 confidence_direction=config.detectability_confidence_direction,
                 metadata={"run_name": cell_name},
             )
+            score_dump_path = Path(str(_nested(cell, "score_dump", "path")))
+            payload["paths"] = {
+                "detectability_taxonomy_report": str(output_path),
+                "artifact_manifest": str(manifest_path),
+            }
             output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            initial_manifest = write_detectability_artifact_manifest(
+                manifest_path=manifest_path,
+                output_path=output_path,
+                score_dump_path=score_dump_path,
+                payload=payload,
+            )
+            payload["artifact_manifest_summary"] = initial_manifest["summary"]
+            output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            manifest = write_detectability_artifact_manifest(
+                manifest_path=manifest_path,
+                output_path=output_path,
+                score_dump_path=score_dump_path,
+                payload=payload,
+            )
+            payload["artifact_manifest_summary"] = manifest["summary"]
             output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             false_distribution = _mapping(payload.get("report", {}).get("false_distribution"))
             entrenched = _mapping(false_distribution.get("entrenched"))
@@ -589,6 +615,7 @@ def _build_detectability_reports(
                 "n_false": _nested(payload, "report", "n_false"),
                 "entrenched_false_count": entrenched.get("count"),
                 "entrenched_false_rate": entrenched.get("rate"),
+                "artifact_manifest_summary": manifest["summary"],
             })
         cell["detectability_taxonomy"] = summary
         reports.append({"cell": cell_name, **summary})
@@ -601,6 +628,10 @@ def _detectability_enabled(config: TruthfulQAFrontierWorkflowConfig) -> bool:
 
 def _detectability_report_path(config: TruthfulQAFrontierWorkflowConfig, *, cell_name: str) -> Path:
     return config.output_dir / cell_name / "detectability-taxonomy-report.json"
+
+
+def _detectability_manifest_path(config: TruthfulQAFrontierWorkflowConfig, *, cell_name: str) -> Path:
+    return config.output_dir / cell_name / "detectability-taxonomy-artifact-manifest.json"
 
 
 def _detectability_summary(reports: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
@@ -693,6 +724,11 @@ def _artifact_paths(
             cell,
             "detectability_taxonomy",
             "path",
+        )
+        artifacts[f"cells.{name}.detectability_taxonomy_artifact_manifest"] = _nested(
+            cell,
+            "detectability_taxonomy",
+            "artifact_manifest",
         )
         if config.multiple_testing_enabled:
             artifacts[f"cells.{name}.multiple_testing_report"] = _nested(

@@ -341,6 +341,12 @@ verdict provenance plus receipt-backed product-trace evidence in the default
 `frontier_audit` handoff groups, so a complete new export carries `77/77`
 promoted evidence fields when `--frontier-release-evidence` and a
 receipt-backed `--runtime-baseline` are supplied.
+The current local frontier-audit release is
+`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.15` at
+`artifacts/frontier-audit-release-candidate-v15/`; it consumes v5 frontier
+release evidence with required input manifests, the v1.9/v7 evidence handoff,
+and v1.16 product-runtime drift with action-receipt and receipt-claim-support
+gates.
 The `frontier_audit` release policy also now requires product-runtime drift
 reports to carry trace-level context-sensitivity participation, coverage,
 flagged-rate, trace-gap, max-flagged-rate, and max-ratio evidence beside the

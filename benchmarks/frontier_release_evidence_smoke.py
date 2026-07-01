@@ -18,8 +18,8 @@ from eigentruth.registry import load_and_verify_artifact_manifest  # noqa: E402
 DEFAULT_CONTRACT_PATH = (
     REPO_ROOT
     / "artifacts"
-    / "smollm2_product_promotion_contract_v1_9"
-    / "product-promotion-contract.json"
+    / "smollm2_product_promotion_evidence_handoff_v1_9_frontier_v7"
+    / "product-promotion-contract-evidence-handoff.json"
 )
 REQUIRED_TRACK_STATUSES = {
     "verifier_track_status": "promote",

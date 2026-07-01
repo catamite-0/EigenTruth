@@ -6363,20 +6363,21 @@ python benchmarks/export_product_promotion_contract.py \
 Current frontier-audit handoff status:
 
 The latest local strict frontier-audit replay is promoted:
-`artifacts/frontier-audit-release-candidate-v13/frontier-audit-registry-workflow.json`
+`artifacts/frontier-audit-release-candidate-v15/frontier-audit-registry-workflow.json`
 registers
-`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13`
+`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.15`
 after recursive manifest verification. The promoted chain uses
-`artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json`
-for frontier evidence, the refreshed v1.6 handoff at
-`artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/`,
-and `artifacts/smollm2_product_runtime_drift_v1_14_frontier_budget_target/`,
-whose drift report promotes with `107` compared metrics and `0` blockers.
-The handoff exporter now prefers complete `product_trace_triple_audit_enrichment`
-coverage when an older runtime baseline only carries partial triple-audit
-metadata. That v13/v1.6 handoff promoted under the earlier `65/65`
-frontier boundary; refreshed frontier-audit handoffs now require `77/77`
-receipt-aware metrics.
+`artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v5.json`
+for frontier evidence with `--require-input-manifests`, the refreshed v1.9/v7
+handoff at
+`artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v7/`,
+and
+`artifacts/smollm2_product_runtime_drift_v1_16_receipts_frontier_v5/product-runtime-drift.json`,
+whose drift report promotes with `119` compared metrics and `0` blockers.
+The v1.9/v7 handoff audit promotes all `77/77` required metrics, including
+action-receipt and receipt-claim-support groups, and the v15 manifest verifies
+recursively. The older v13/v1.6 chain remains useful as the `65/65` pre-receipt
+boundary regression artifact.
 
 Active v1.9 product contract export:
 
@@ -8781,8 +8782,8 @@ fingerprint-mismatch/unsigned receipt rates are all `0.0`, receipt claim
 support is `1.0`, and unsupported/missing/unreceipted/failed/fingerprint-
 mismatch/unsigned reference rates are all `0.0`. Passing that runtime baseline
 into `export_product_promotion_contract_evidence_handoff.py --runtime-baseline`
-alongside the verifier-fusion abstention frontier release evidence produces the
-current v1.9/v6 frontier handoff with `77/77` required metrics present:
+alongside the input-manifest-verified v5 frontier release evidence produces the
+current v1.9/v7 frontier handoff with `77/77` required metrics present:
 
 ```bash
 TRACE_ARGS=$(find artifacts/smollm2_product_trace_action_receipts_v1/traces -name '*.json' | sort | sed 's#^#--trace #')
@@ -8802,6 +8803,13 @@ python benchmarks/run_product_runtime_baseline.py $TRACE_ARGS \
   --metadata evidence_scope=action_receipts_receipt_claim_support \
   --compact-json
 ```
+
+The promoted release-candidate runtime drift refresh is
+`artifacts/smollm2_product_runtime_drift_v1_16_receipts_frontier_v5/product-runtime-drift.json`.
+It compares receipt-enriched baseline/current reports built with the v1.9/v7
+handoff, promotes with `119` compared metrics and `0` blockers, and carries
+both `action_receipts.*` and `receipt_claim_support.*` metrics for the final
+`frontier_audit` gate.
 
 Replay the enriched traces through `run_product_runtime_baseline.py` with
 `--trace-scan-workers` when the trace set is large enough to benefit from

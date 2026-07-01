@@ -25,6 +25,7 @@ from eigentruth.eval.score_dump import (  # noqa: E402
     score_dump_cache_summary,
     score_dump_file_metadata,
 )
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
 def build_detectability_taxonomy_report(
@@ -101,6 +102,67 @@ def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool =
     output.write_text(text, encoding="utf-8")
 
 
+def _artifact_paths(
+    *,
+    output_path: Path,
+    score_dump_path: Path,
+    payload: Mapping[str, Any],
+) -> dict[str, Path]:
+    artifacts = {
+        "detectability_taxonomy_report": output_path,
+        "input_score_dump": score_dump_path,
+    }
+    source = payload.get("source")
+    if isinstance(source, Mapping):
+        metadata = source.get("score_dump_file")
+        if isinstance(metadata, Mapping):
+            records = metadata.get("records")
+            if isinstance(records, Mapping) and records.get("path") is not None:
+                artifacts["input_score_records"] = Path(str(records["path"]))
+    return artifacts
+
+
+def write_detectability_artifact_manifest(
+    *,
+    manifest_path: Path,
+    output_path: Path,
+    score_dump_path: Path,
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    manifest = build_artifact_manifest(
+        _artifact_paths(
+            output_path=output_path,
+            score_dump_path=score_dump_path,
+            payload=payload,
+        ),
+        root=manifest_path.parent,
+        metadata={
+            "runner": "eval_detectability_taxonomy",
+            "status": payload.get("status"),
+            "consistency_signal": payload.get("config", {}).get("consistency_signal"),
+            "confidence_signal": payload.get("config", {}).get("confidence_signal"),
+        },
+    )
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(manifest_path, manifest)
+    return manifest
+
+
+def _write_artifact_manifest(
+    *,
+    manifest_path: Path,
+    output_path: Path,
+    score_dump_path: Path,
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    return write_detectability_artifact_manifest(
+        manifest_path=manifest_path,
+        output_path=output_path,
+        score_dump_path=score_dump_path,
+        payload=payload,
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scores", required=True, help="Score dump JSON or JSONL manifest path.")
@@ -111,6 +173,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--include-assignments", action="store_true")
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--json", required=True, help="Output report path.")
+    parser.add_argument("--artifact-manifest", default=None, help="Optional artifact manifest path.")
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -125,7 +188,30 @@ def main(argv: Sequence[str] | None = None) -> None:
         metadata=_parse_metadata(args.metadata or ()),
         cache=cache,
     )
-    _write_json(args.json, payload, compact=bool(args.compact_json))
+    output_path = Path(args.json)
+    score_dump_path = Path(args.scores)
+    payload["paths"] = {"detectability_taxonomy_report": str(output_path)}
+    manifest_path = None if args.artifact_manifest is None else Path(args.artifact_manifest)
+    if manifest_path is not None:
+        payload["paths"]["artifact_manifest"] = str(manifest_path)
+    _write_json(output_path, payload, compact=bool(args.compact_json))
+    if manifest_path is not None:
+        initial_manifest = _write_artifact_manifest(
+            manifest_path=manifest_path,
+            output_path=output_path,
+            score_dump_path=score_dump_path,
+            payload=payload,
+        )
+        payload["artifact_manifest_summary"] = initial_manifest["summary"]
+        _write_json(output_path, payload, compact=bool(args.compact_json))
+        manifest = _write_artifact_manifest(
+            manifest_path=manifest_path,
+            output_path=output_path,
+            score_dump_path=score_dump_path,
+            payload=payload,
+        )
+        payload["artifact_manifest_summary"] = manifest["summary"]
+        _write_json(output_path, payload, compact=bool(args.compact_json))
     report = payload["report"]
     blind_spot = report["blind_spot"]
     print(
