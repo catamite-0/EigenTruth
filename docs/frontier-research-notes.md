@@ -105,6 +105,7 @@ Added GLU-style global-local uncertainty fusion:
 - `global_local_uncertainty_scores(...)` exposes a dependency-free score helper that rank-calibrates hidden-state/global geometry signals and token-level/local uncertainty signals against normal calibration records, then applies a multiplicative gate by default.
 - `eval_score_ensemble.py` now evaluates `product` geometry fusion by default alongside the existing interaction score, and reports it with `fusion_style=global_local_uncertainty`.
 - This maps the GLU direction into EigenTruth's existing score-dump/conformal artifact path without adding a new mandatory dependency or claiming that entropy alone is sufficient. The intended use is to compare single-pass global geometry plus local token uncertainty against verifier, retrieval, selfcheck, and world-model correction signals before promotion.
+- `eval_score_ensemble.py --confidence-signal ...` now adds a release-facing high-confidence miss audit for candidate single, ensemble, interaction, and GLU/product routes. The route gate keeps the conformal false-alarm check and blocks candidates whose high-confidence region still contains accepted false answers above the configured threshold, making semantic-energy or local-uncertainty fusion an auditable route candidate rather than a default product claim.
 
 Added HIVE-style budgeted hidden-evidence selection:
 

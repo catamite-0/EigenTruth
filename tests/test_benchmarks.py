@@ -49119,6 +49119,63 @@ def test_eval_score_ensemble_reports_geometry_calibrated_fusion(tmp_path):
     assert run["best_geometry_fusion_at_alpha"]["name"] == "interaction"
 
 
+def test_eval_score_ensemble_route_gate_blocks_high_confidence_fusion_miss(tmp_path):
+    module = importlib.import_module("benchmarks.eval_score_ensemble")
+    scores_path = tmp_path / "scores.json"
+    labels = [0] * 20 + [1] * 4
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": labels,
+            "scores": {
+                "truth_proj": [0.0] * len(labels),
+                "subspace_resid": list(range(20)) + [1, 50, 51, 52],
+                "inside_semantic_energy": list(range(20)) + [1, 50, 51, 52],
+                "nll_answer": [10 + value for value in range(20)] + [0.05, 30, 31, 32],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_ensemble_report(
+        [("synthetic", scores_path)],
+        signals=("truth_proj",),
+        methods=("mean_rank",),
+        geometry_signals=("subspace_resid",),
+        uncertainty_signals=("inside_semantic_energy",),
+        geometry_fusion_methods=("interaction",),
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        best_alpha=0.2,
+        confidence_signal="nll_answer",
+        confidence_top_fraction=0.25,
+        max_high_confidence_accepted_false_rate=0.0,
+    )
+
+    run = payload["runs"][0]
+    candidate = run["geometry_fusion_results"]["interaction"]
+    gate = run["fusion_release_gate_at_alpha"]
+
+    assert run["confidence_audit"]["enabled"] is True
+    assert run["confidence_audit"]["confidence_direction"] == "lower"
+    assert candidate["confidence_error_at_best_alpha"][
+        "n_high_confidence_accepted_false"
+    ] == 1
+    assert candidate["release_gate_at_best_alpha"]["status"] == "blocked"
+    assert gate["status"] == "blocked"
+    geometry_gate = next(
+        item
+        for item in gate["candidates"]
+        if item["candidate_group"] == "geometry_fusion" and item["candidate_name"] == "interaction"
+    )
+    assert geometry_gate["status"] == "blocked"
+    assert any(
+        "high-confidence accepted false rate" in reason
+        for reason in geometry_gate["reasons"]
+    )
+
+
 def test_eval_score_ensemble_saves_best_geometry_fusion_artifact(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

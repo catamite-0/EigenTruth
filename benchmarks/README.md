@@ -7604,9 +7604,22 @@ python benchmarks/eval_score_ensemble.py \
   --uncertainty-signals nll_answer,inside_semantic_energy \
   --geometry-fusion-methods interaction,product \
   --best-alpha 0.10 \
+  --confidence-signal nll_answer \
+  --max-high-confidence-accepted-false-rate 0.0 \
   --save-best-geometry-fusion-artifact artifacts/qwen05_geometry_fusion_artifact.json \
   --json artifacts/qwen05_score_ensemble_report.json
 ```
+
+When `--confidence-signal` is supplied, the report adds a
+`fusion_release_gate_at_alpha` block and per-candidate
+`confidence_error_at_best_alpha` / `release_gate_at_best_alpha` payloads. This
+is the release-facing check for global-local or semantic-energy fusion: the
+candidate may have good AUROC and conformal false-alarm behavior, but it is
+blocked if the configured high-confidence region still contains accepted false
+answers above `--max-high-confidence-accepted-false-rate`. Uncertainty-style
+signals such as `nll_answer`, `first_token_entropy`, and
+`inside_semantic_energy` default to `--confidence-direction lower` because lower
+values mean higher model confidence.
 
 Verifier outputs can be converted into the same score-dump interface before
 running the geometry-fusion comparison:
