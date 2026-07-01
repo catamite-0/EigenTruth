@@ -517,6 +517,9 @@ For product features:
   unresolved `record-190` population task, the registered artifact is correctly
   `blocked` with `binding_requires_review` and `missing_subject_entity` because
   the question says only "the country" and no subject entity is bound.
+  `plan_world_model_rule_numeric_subject_bindings.py` now turns that class of
+  blocked report into a non-evidence subject-binding worklist that can be
+  reviewed before rerunning the numeric fill with `--subject-bindings`.
   `run_world_model_rule_authoring_adapter.py` now also executes explicit
   `temporal_consistency` inputs. The registered `record-326` temporal replay
   supplies `claim_time`, `source_time`, `retrieved_at`, and `source_citation`,

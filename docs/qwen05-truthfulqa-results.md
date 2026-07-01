@@ -1688,7 +1688,10 @@ is deliberately `blocked`: `0/1` tasks fill, with
 says "the country" and the binding does not prove which country the candidate
 claim refers to. This keeps the World Bank population value as source-backed
 context, not as an executable calculator input, until subject binding is
-resolved.
+resolved. `benchmarks/plan_world_model_rule_numeric_subject_bindings.py` now
+converts that blocked fill report shape into a non-evidence subject-binding
+collection request, so the next pass is explicit review plus
+`--subject-bindings`, not relaxed inference.
 
 `benchmarks/run_world_model_rule_authoring_adapter.py` now also executes the
 unresolved temporal rule lane when explicit timestamp inputs are supplied. The

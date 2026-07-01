@@ -3528,6 +3528,131 @@ def test_world_model_rule_numeric_binding_fill_blocks_review_required_binding():
     }
 
 
+def test_world_model_rule_numeric_subject_binding_plan_builds_collection_request(tmp_path):
+    module = importlib.import_module("benchmarks.plan_world_model_rule_numeric_subject_bindings")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    fill_report_path = tmp_path / "rule-input-numeric-binding-fill.json"
+    numeric_bindings_path = tmp_path / "source-backed-numeric-bindings.jsonl"
+    output_dir = tmp_path / "plan"
+    fill_report_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "world_model_rule_input_numeric_binding_fill",
+            "status": "blocked",
+            "unfilled_tasks": [
+                {
+                    "task_id": "rule-input-task-0001",
+                    "source_request_id": "rule:record-190:1",
+                    "target_id": "record-190",
+                    "rule_family": "quantity_or_arithmetic",
+                    "collection_family": "numeric_rule_input_collection",
+                    "question": "What is the population of the country?",
+                    "reason": "invalid_numeric_binding",
+                    "failures": ["binding_requires_review", "missing_subject_entity"],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    numeric_bindings_path.write_text(
+        json.dumps({
+            "binding_id": "numeric-binding-record-190",
+            "request_id": "rule:record-190:1",
+            "target_id": "record-190",
+            "candidate_numeric_value": 330000000,
+            "source_numeric_value": 340110988,
+            "unit": "persons",
+            "reference_time": "2024",
+            "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+            "source_url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=US",
+            "source_title": "World Bank official statistics: Population, total for United States (2024)",
+            "source_family": "official_statistics",
+            "provider": "worldbank",
+            "review_status": "ambiguous_subject",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        fill_report_path=fill_report_path,
+        numeric_bindings_path=numeric_bindings_path,
+        output_dir=output_dir,
+        registry_path=tmp_path / "registry.json",
+        name="numeric-subject-binding-plan-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    requests = [
+        json.loads(line)
+        for line in (output_dir / "subject-binding-requests.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["request_count"] == 1
+    assert payload["summary"]["fully_unblocking_request_count"] == 1
+    assert payload["label_usage"]["requests_are_verifier_evidence"] is False
+    assert requests[0]["collection_family"] == "numeric_subject_binding_collection"
+    assert requests[0]["source_request_id"] == "rule:record-190:1"
+    assert requests[0]["numeric_binding_source"]["source_family"] == "official_statistics"
+    assert requests[0]["recommended_subject_binding_skeleton"] == {
+        "request_id": "rule:record-190:1",
+        "target_id": "record-190",
+        "subject_entity": "",
+        "source_citation": "",
+        "review_status": "approved",
+        "not_verifier_evidence": True,
+    }
+    assert registry_module.load_and_verify_artifact_manifest(output_dir / "artifact-manifest.json").passed is True
+
+
+def test_world_model_rule_numeric_subject_binding_plan_skips_nonresolvable_review_status():
+    module = importlib.import_module("benchmarks.plan_world_model_rule_numeric_subject_bindings")
+
+    payload = module.build_world_model_rule_numeric_subject_binding_plan(
+        fill_report={
+            "workflow": "world_model_rule_input_numeric_binding_fill",
+            "status": "blocked",
+            "unfilled_tasks": [
+                {
+                    "task_id": "rule-input-task-0001",
+                    "source_request_id": "rule:record-190:1",
+                    "target_id": "record-190",
+                    "question": "What is the population of the country?",
+                    "reason": "invalid_numeric_binding",
+                    "failures": ["binding_requires_review", "missing_subject_entity"],
+                    "not_verifier_evidence": True,
+                }
+            ],
+        },
+        numeric_bindings=[
+            {
+                "binding_id": "numeric-binding-record-190",
+                "request_id": "rule:record-190:1",
+                "target_id": "record-190",
+                "candidate_numeric_value": 330000000,
+                "source_numeric_value": 340110988,
+                "unit": "persons",
+                "reference_time": "2024",
+                "source_citation": "worldbank:SP.POP.TOTL:USA:2024",
+                "review_status": "needs_human_numeric_review",
+                "not_verifier_evidence": True,
+            }
+        ],
+    )
+
+    assert payload["status"] == "empty"
+    assert payload["summary"]["request_count"] == 0
+    assert payload["summary"]["skipped_reason_counts"] == {
+        "numeric_review_status_not_subject_resolvable": 1,
+    }
+    assert payload["skipped_tasks"][0]["numeric_binding_review_status"] == "needs_human_numeric_review"
+
+
 def test_world_model_rule_mechanism_binding_fill_executes_and_promotes_candidate(tmp_path):
     fill_module = importlib.import_module("benchmarks.fill_world_model_rule_inputs_from_mechanism_bindings")
     adapter_module = importlib.import_module("benchmarks.run_world_model_rule_authoring_adapter")

@@ -1086,11 +1086,14 @@ Added the first monitor-first tool-selection audit layer:
   `candidate_numeric_value`, unit, reference time, calculation, and
   `source_citation`, then the deterministic calculator candidate can be observed
   and promoted. It now also accepts an optional source-backed subject-binding
-  sidecar that can resolve only `ambiguous_subject` rows after review. The real
-  unresolved `record-190` population artifact remains intentionally blocked
-  because no such subject sidecar is registered; even a source-backed World Bank
-  USA population value is not enough to fill "the country" without that explicit
-  subject binding.
+  sidecar that can resolve only `ambiguous_subject` rows after review.
+  `plan_world_model_rule_numeric_subject_bindings.py` closes the planning gap by
+  turning blocked `missing_subject_entity` reports into non-evidence
+  subject-binding collection requests carrying the numeric source context. The
+  real unresolved `record-190` population artifact remains intentionally blocked
+  because no reviewed subject sidecar is registered; even a source-backed World
+  Bank USA population value is not enough to fill "the country" without that
+  explicit subject binding.
 - `run_world_model_rule_authoring_adapter.py` now also executes
   `temporal_consistency` rules when explicit `claim_time`, `source_time`,
   `retrieved_at`, and `source_citation` inputs are supplied. The registered
@@ -1333,8 +1336,10 @@ Added the first monitor-first tool-selection audit layer:
    mapping, citation evidence, entity disambiguation, and deterministic
    world-model/calculator rules before entering ProductTrace or release gates.
 2. Populate the completed rule-input fill family with more real source-backed rows:
-   the remaining numeric work is subject-binding resolution for ambiguous
-   questions such as `record-190`; temporal work needs richer content/citation
+   the numeric subject-binding bridge is now executable as
+   blocked-fill-report -> subject-binding plan -> reviewed sidecar -> numeric
+   fill; the remaining work is materializing reviewed sidecars for ambiguous
+   questions such as `record-190`. Temporal work needs richer content/citation
    mapping or source-backed temporal fills. The causal/procedural mechanism
    queue is now fully filled, promoted, aggregated into a release-gate bundle,
    and manifest-verified (`9/9`), so the next mechanism work is full

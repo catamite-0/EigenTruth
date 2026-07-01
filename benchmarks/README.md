@@ -3859,6 +3859,18 @@ python benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py \
 
 When an approved sidecar exists, pass
 `--subject-bindings "$NUMERIC_FILL/source-backed-subject-bindings.jsonl"`.
+When a blocked fill report needs such a sidecar, generate the non-evidence
+collection worklist first:
+
+```bash
+python benchmarks/plan_world_model_rule_numeric_subject_bindings.py \
+  --fill-report "$NUMERIC_FILL/rule-input-numeric-binding-fill.json" \
+  --numeric-bindings "$NUMERIC_FILL/source-backed-numeric-bindings.jsonl" \
+  --output-dir "$NUMERIC_FILL/subject-binding-plan" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-subject-binding-plan \
+  --version 0.1
+```
 
 The registered numeric-binding fill artifact remains `blocked`: `0/1` numeric
 tasks are filled, the single `record-190` population task remains unfilled, and
@@ -3869,8 +3881,9 @@ therefore refuses to turn that source value into a calculator input without an
 explicit reviewed subject binding. Focused tests now cover both positive paths:
 a valid source/candidate numeric binding executes through the calculator adapter
 and promotes once `source_citation` appears in deterministic candidate evidence,
-and an approved subject-binding sidecar can resolve `ambiguous_subject` without
-allowing conflicting subjects.
+the subject-binding planner turns that blocked report into a source-context
+worklist, and an approved subject-binding sidecar can resolve
+`ambiguous_subject` without allowing conflicting subjects.
 
 The unresolved temporal lane now has a minimal source-timestamp consistency
 adapter and promotion gate:
