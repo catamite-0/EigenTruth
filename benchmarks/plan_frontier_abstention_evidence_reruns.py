@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -21,10 +22,26 @@ from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noq
 
 WORKFLOW = "frontier_abstention_evidence_rerun_queue"
 
-DEFAULT_PROFILES = ("baseline", "alpha_0p05", "alpha_0p2", "selective_accuracy", "retention")
+DEFAULT_PROFILES = (
+    "baseline",
+    "alpha_0p05",
+    "alpha_0p2",
+    "selective_accuracy",
+    "retention",
+    "budget",
+    "budget_0p48",
+)
 DEFAULT_SIGNAL_GROUPS = ("recommended", "all", "geometry", "uncertainty")
 GEOMETRY_SIGNALS = ("maha_last", "truth_proj", "subspace_resid")
 UNCERTAINTY_SIGNALS = ("disp_euclid", "disp_hse", "nll_answer", "eigenscore", "resid_update_norm")
+_RANK_FUSION_SIGNAL_RE = re.compile(
+    r"^rank_fusion:(?P<method>[^\[]+)\[(?P<signals>[^\]]+)\]$"
+)
+_GEOMETRY_FUSION_SIGNAL_RE = re.compile(
+    r"^geometry_uncertainty_fusion:(?P<fusion_method>[^\[]+)"
+    r"\[geometry=(?P<geometry_method>[^:;\]]+):(?P<geometry_signals>[^;\]]+);"
+    r"uncertainty=(?P<uncertainty_method>[^:;\]]+):(?P<uncertainty_signals>[^\]]+)\]$"
+)
 
 
 def build_frontier_abstention_evidence_rerun_queue(
@@ -270,6 +287,7 @@ def _entries_for_run(
                 "profile_config": profile_config,
                 "command": command,
                 "dry_run_command": None,
+                "derived_signal_config": _derived_signal_config(signals),
             })
     return tuple(entries)
 
@@ -288,11 +306,13 @@ def _command_for_experiment(
     python_executable: str,
 ) -> tuple[tuple[str, ...] | None, tuple[str, ...]]:
     scores = _score_args_for_run(run_name, run=run, report=report, score_paths=score_paths)
+    signal_config = _resolve_signal_config(signals)
     missing_inputs = []
     if not scores:
         missing_inputs.append("scores")
-    if not signals:
+    if not signal_config["base_signals"]:
         missing_inputs.append("signals")
+    missing_inputs.extend(signal_config["unsupported_signals"])
     if missing_inputs:
         return None, tuple(missing_inputs)
     command: list[str] = [
@@ -303,7 +323,7 @@ def _command_for_experiment(
         command.extend(("--scores", score))
     command.extend((
         "--signals",
-        ",".join(signals),
+        ",".join(signal_config["base_signals"]),
         "--alpha",
         str(profile_config["alpha"]),
         "--best-by",
@@ -319,9 +339,150 @@ def _command_for_experiment(
         "--artifact-manifest",
         str(output_dir / "artifact-manifest.json"),
     ))
+    if profile_config.get("enforce_abstention_budget") is True:
+        command.append("--enforce-abstention-budget")
+        budget_target = profile_config.get("abstention_budget_target_rate")
+        if budget_target is not None:
+            command.extend(("--abstention-budget-target-rate", str(budget_target)))
+    rank_fusion = _mapping(signal_config.get("rank_fusion"))
+    if rank_fusion:
+        command.extend((
+            "--rank-fusion-signals",
+            ",".join(_string_tuple(rank_fusion.get("signals"))),
+            "--rank-fusion-methods",
+            ",".join(_string_tuple(rank_fusion.get("methods"))),
+        ))
+    geometry_fusion = _mapping(signal_config.get("geometry_uncertainty"))
+    if geometry_fusion:
+        command.extend((
+            "--geometry-signals",
+            ",".join(_string_tuple(geometry_fusion.get("geometry_signals"))),
+            "--uncertainty-signals",
+            ",".join(_string_tuple(geometry_fusion.get("uncertainty_signals"))),
+            "--geometry-method",
+            str(geometry_fusion["geometry_method"]),
+            "--uncertainty-method",
+            str(geometry_fusion["uncertainty_method"]),
+            "--geometry-fusion-methods",
+            ",".join(_string_tuple(geometry_fusion.get("fusion_methods"))),
+        ))
     if direction is not None:
         command.extend(("--direction", direction))
     return tuple(command), ()
+
+
+def _resolve_signal_config(signals: Sequence[str]) -> dict[str, Any]:
+    base_signals: list[str] = []
+    rank_signals: tuple[str, ...] | None = None
+    rank_methods: list[str] = []
+    geometry_signals: tuple[str, ...] | None = None
+    uncertainty_signals: tuple[str, ...] | None = None
+    geometry_method: str | None = None
+    uncertainty_method: str | None = None
+    geometry_fusion_methods: list[str] = []
+    unsupported: list[str] = []
+
+    def add_base(values: Sequence[str]) -> None:
+        for value in values:
+            if value and value not in base_signals:
+                base_signals.append(value)
+
+    for signal in _unique_strings(signals):
+        rank_match = _RANK_FUSION_SIGNAL_RE.match(signal)
+        if rank_match is not None:
+            parsed_signals = _split_signal_list(rank_match.group("signals"))
+            method = rank_match.group("method").strip()
+            if not parsed_signals or not method:
+                unsupported.append(signal)
+                continue
+            if rank_signals is not None and rank_signals != parsed_signals:
+                unsupported.append(signal)
+                continue
+            rank_signals = parsed_signals
+            if method not in rank_methods:
+                rank_methods.append(method)
+            add_base(parsed_signals)
+            continue
+
+        geometry_match = _GEOMETRY_FUSION_SIGNAL_RE.match(signal)
+        if geometry_match is not None:
+            parsed_geometry = _split_signal_list(geometry_match.group("geometry_signals"))
+            parsed_uncertainty = _split_signal_list(geometry_match.group("uncertainty_signals"))
+            parsed_geometry_method = geometry_match.group("geometry_method").strip()
+            parsed_uncertainty_method = geometry_match.group("uncertainty_method").strip()
+            parsed_fusion_method = geometry_match.group("fusion_method").strip()
+            if (
+                not parsed_geometry
+                or not parsed_uncertainty
+                or not parsed_geometry_method
+                or not parsed_uncertainty_method
+                or not parsed_fusion_method
+            ):
+                unsupported.append(signal)
+                continue
+            if (
+                geometry_signals is not None
+                and (
+                    geometry_signals != parsed_geometry
+                    or uncertainty_signals != parsed_uncertainty
+                    or geometry_method != parsed_geometry_method
+                    or uncertainty_method != parsed_uncertainty_method
+                )
+            ):
+                unsupported.append(signal)
+                continue
+            geometry_signals = parsed_geometry
+            uncertainty_signals = parsed_uncertainty
+            geometry_method = parsed_geometry_method
+            uncertainty_method = parsed_uncertainty_method
+            if parsed_fusion_method not in geometry_fusion_methods:
+                geometry_fusion_methods.append(parsed_fusion_method)
+            add_base((*parsed_geometry, *parsed_uncertainty))
+            continue
+
+        add_base((signal,))
+
+    output: dict[str, Any] = {
+        "base_signals": tuple(base_signals),
+        "unsupported_signals": tuple(unsupported),
+    }
+    if rank_signals is not None and rank_methods:
+        output["rank_fusion"] = {
+            "signals": rank_signals,
+            "methods": tuple(rank_methods),
+        }
+    if (
+        geometry_signals is not None
+        and uncertainty_signals is not None
+        and geometry_method is not None
+        and uncertainty_method is not None
+        and geometry_fusion_methods
+    ):
+        output["geometry_uncertainty"] = {
+            "geometry_signals": geometry_signals,
+            "uncertainty_signals": uncertainty_signals,
+            "geometry_method": geometry_method,
+            "uncertainty_method": uncertainty_method,
+            "fusion_methods": tuple(geometry_fusion_methods),
+        }
+    return output
+
+
+def _derived_signal_config(signals: Sequence[str]) -> dict[str, Any]:
+    config = _resolve_signal_config(signals)
+    derived = {
+        key: value
+        for key, value in config.items()
+        if key in {"rank_fusion", "geometry_uncertainty", "unsupported_signals"}
+        and value
+    }
+    if derived:
+        derived["base_signals"] = config["base_signals"]
+    return derived
+
+
+def _split_signal_list(value: str) -> tuple[str, ...]:
+    return tuple(part.strip() for part in value.split("+") if part.strip())
 
 
 def _profile_config(
@@ -345,6 +506,8 @@ def _profile_config(
     profile = str(profile)
     alpha = base_alpha
     best_by = base_best_by
+    enforce_budget = False
+    budget_target_rate: float | None = None
     if profile == "baseline":
         pass
     elif profile == "alpha_0p05":
@@ -355,21 +518,42 @@ def _profile_config(
         best_by = "empirical_selective_accuracy"
     elif profile == "retention":
         best_by = "correct_retention_lower_bound"
+    elif profile == "budget":
+        enforce_budget = True
+        budget_target_rate = base_max_abstention
+    elif profile.startswith("budget_"):
+        enforce_budget = True
+        budget_target_rate = _budget_profile_target(profile)
     else:
         raise ValueError(f"unknown abstention experiment profile: {profile!r}")
     if best_by not in ABSTENTION_COMPARISON_METRICS:
         raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
+    if budget_target_rate is not None and not (0.0 <= budget_target_rate <= 1.0):
+        raise ValueError("budget profile target must be in [0, 1].")
+    release_max_abstention = _finite_float_or(
+        release_gate.get("max_abstention_rate"),
+        base_max_abstention,
+    )
     return {
         "profile": profile,
         "alpha": alpha,
         "best_by": best_by,
         "min_conditional_correctness_lower_bound": base_min_correct,
         "max_abstention_rate": base_max_abstention,
-        "promotion_eligible": base_max_abstention <= _finite_float_or(
-            release_gate.get("max_abstention_rate"),
-            base_max_abstention,
-        ),
+        "enforce_abstention_budget": enforce_budget,
+        "abstention_budget_target_rate": budget_target_rate,
+        "promotion_eligible": base_max_abstention <= release_max_abstention
+        and (budget_target_rate is None or budget_target_rate <= release_max_abstention),
     }
+
+
+def _budget_profile_target(profile: str) -> float:
+    raw = profile.removeprefix("budget_").replace("p", ".")
+    try:
+        target = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"invalid abstention budget profile: {profile!r}") from exc
+    return target
 
 
 def _signal_group_signals(

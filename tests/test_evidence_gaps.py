@@ -3216,6 +3216,113 @@ def test_frontier_abstention_evidence_rerun_queue_builds_profile_matrix(tmp_path
     assert record.metadata["command_count"] == 4
 
 
+def test_frontier_abstention_rerun_queue_translates_recommended_geometry_fusion(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    fusion_signal = (
+        "geometry_uncertainty_fusion:noisy_or"
+        "[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;"
+        "uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]"
+    )
+    report = _abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")
+    report["config"]["signals"] = (
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "verifier_refuted",
+        "verifier_refute_confidence",
+        "verifier_not_supported",
+    )
+    report["runs"][0]["stability"]["stable_recommended_score_name"] = fusion_signal
+    report["runs"][0]["stability"]["recommended_score_name_counts"] = {fusion_signal: 2}
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("baseline",),
+        signal_groups=("recommended",),
+        python_executable="python",
+    )
+    entry = payload["entries"][0]
+    command = tuple(entry["command"])
+
+    assert entry["signals"] == (fusion_signal,)
+    assert entry["derived_signal_config"]["base_signals"] == (
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "verifier_refuted",
+        "verifier_refute_confidence",
+        "verifier_not_supported",
+    )
+    assert entry["derived_signal_config"]["geometry_uncertainty"] == {
+        "geometry_signals": ("truth_proj", "subspace_resid", "eigenscore"),
+        "uncertainty_signals": (
+            "verifier_refuted",
+            "verifier_refute_confidence",
+            "verifier_not_supported",
+        ),
+        "geometry_method": "mean_rank",
+        "uncertainty_method": "mean_rank",
+        "fusion_methods": ("noisy_or",),
+    }
+    assert command[command.index("--signals") + 1] == (
+        "truth_proj,subspace_resid,eigenscore,"
+        "verifier_refuted,verifier_refute_confidence,verifier_not_supported"
+    )
+    assert fusion_signal not in command
+    assert command[command.index("--geometry-signals") + 1] == (
+        "truth_proj,subspace_resid,eigenscore"
+    )
+    assert command[command.index("--uncertainty-signals") + 1] == (
+        "verifier_refuted,verifier_refute_confidence,verifier_not_supported"
+    )
+    assert command[command.index("--geometry-fusion-methods") + 1] == "noisy_or"
+
+
+def test_frontier_abstention_rerun_queue_emits_budget_profile_flags(tmp_path):
+    report_path = tmp_path / "abstention-stability.json"
+    source = tmp_path / "frontier-release-evidence.json"
+    queue_path = tmp_path / "abstention-rerun-queue.json"
+    report_path.write_text(
+        json.dumps(_abstention_stability_payload(tmp_path / "qwen-scores.manifest.json")),
+        encoding="utf-8",
+    )
+    source.write_text(
+        json.dumps(_frontier_release_abstention_payload(report_path)),
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_abstention_evidence_rerun_queue(
+        source=source,
+        json_path=queue_path,
+        output_dir=tmp_path / "abstention-reruns",
+        profiles=("budget", "budget_0p48"),
+        signal_groups=("recommended",),
+        python_executable="python",
+    )
+    budget = next(entry for entry in payload["entries"] if entry["profile"] == "budget")
+    budget_0p48 = next(entry for entry in payload["entries"] if entry["profile"] == "budget_0p48")
+
+    assert budget["profile_config"]["enforce_abstention_budget"] is True
+    assert budget["profile_config"]["abstention_budget_target_rate"] == 0.5
+    assert budget["profile_config"]["promotion_eligible"] is True
+    assert "--enforce-abstention-budget" in budget["command"]
+    assert budget["command"][budget["command"].index("--abstention-budget-target-rate") + 1] == "0.5"
+    assert budget_0p48["profile_config"]["abstention_budget_target_rate"] == 0.48
+    assert (
+        budget_0p48["command"][budget_0p48["command"].index("--abstention-budget-target-rate") + 1]
+        == "0.48"
+    )
+
+
 def test_frontier_abstention_evidence_rerun_rollup_promotes_best_candidate(tmp_path):
     report_path = tmp_path / "abstention-stability.json"
     source = tmp_path / "frontier-release-evidence.json"
