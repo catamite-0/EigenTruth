@@ -32490,6 +32490,7 @@ def test_frontier_research_queue_binding_suggestion_stager_partially_binds_safe_
     assert staged["inputs"] == {}
     assert staged["staging_summary"]["placeholder_count"] == 14
     assert staged["staging_summary"]["staged_placeholder_count"] == 13
+    assert staged["staging_summary"]["staged_upstream_output_count"] == 0
     assert staged["staging_summary"]["remaining_placeholder_count"] == 1
     assert staged["staging_summary"]["review_required_placeholder_count"] == 1
     assert binding["review_status"] == "needs_review"
@@ -32517,6 +32518,100 @@ def test_frontier_research_queue_binding_suggestion_stager_partially_binds_safe_
         "frontier_research_queue_binding_suggestion_staging"
     )
     assert record.metadata["staged_placeholder_count"] == 13
+
+
+def test_frontier_research_queue_binding_suggestion_stager_can_stage_upstream_outputs(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    scaffold_path = tmp_path / "frontier-research-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "frontier-research-staged-bindings.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "stage_upstream_rule_outputs",
+                    "suggested_commands": (
+                        "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py "
+                        "--input-tasks artifacts/rule-input-tasks.jsonl "
+                        "--numeric-bindings ... --output-dir ... --json ... "
+                        "--rule-inputs-jsonl ... --artifact-manifest ... "
+                        "--registry ... --name ... --version ...",
+                        "benchmarks/run_world_model_rule_authoring_adapter.py "
+                        "--rule-stubs artifacts/rule-input-requests.jsonl "
+                        "--rule-inputs ... --output-dir ... --json ... "
+                        "--rule-results-jsonl ... --artifact-manifest ... "
+                        "--registry ... --name ... --version ...",
+                        "benchmarks/promote_world_model_rule_candidates.py "
+                        "--rule-results ... --rule-inputs ... --adapter-report ... "
+                        "--output-dir ... --json ... --artifact-manifest ... "
+                        "--registry ... --name ... --version ...",
+                    ),
+                    "metadata": {
+                        "required_inputs": ("source_backed_numeric_bindings",),
+                        "closure_outputs": (
+                            "numeric_rule_fill_report",
+                            "numeric_rule_adapter_report",
+                            "numeric_rule_promotion_report",
+                        ),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "review-registry.json",
+    )
+
+    staged = stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+        stage_upstream_outputs=True,
+    )
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=staged_bindings_path,
+    )
+
+    binding = staged["bindings"]["stage_upstream_rule_outputs"]
+    assert staged["config"]["stage_upstream_outputs"] is True
+    assert staged["staging_summary"]["placeholder_count"] == 25
+    assert staged["staging_summary"]["staged_placeholder_count"] == 24
+    assert staged["staging_summary"]["staged_upstream_output_count"] == 4
+    assert staged["staging_summary"]["remaining_placeholder_count"] == 1
+    assert staged["staging_summary"]["review_required_placeholder_count"] == 1
+    assert "--numeric-bindings ..." in binding["bound_commands"][0]
+    assert "--rule-inputs ..." not in binding["bound_commands"][1]
+    assert "--rule-results ..." not in binding["bound_commands"][2]
+    assert "--adapter-report ..." not in binding["bound_commands"][2]
+    assert "numeric-rule-fill-report-rule-inputs.jsonl" in binding["bound_commands"][1]
+    assert "numeric-rule-adapter-report-rule-results.jsonl" in binding["bound_commands"][2]
+    assert "numeric-rule-adapter-report.json" in binding["bound_commands"][2]
+    assert {
+        item["stage_status"]
+        for item in binding["placeholder_reviews"]
+        if item["stage_status"] == "staged_upstream_output"
+    } == {"staged_upstream_output"}
+    assert bound["status"] == "needs_inputs"
+    assert bound["summary"]["unbound_placeholder_count"] == 1
+    assert bound["entries"][0]["unbound_inputs"] == (
+        "source_backed_numeric_bindings",
+        "bound_command_template_values",
+    )
 
 
 def test_frontier_research_queue_bound_plan_requires_runtime_baseline_flag(tmp_path):

@@ -1418,10 +1418,13 @@ Added the first monitor-first tool-selection audit layer:
 - `stage_frontier_research_queue_binding_suggestions.py` adds an optional
   review-prep step after scaffold generation: it copies only safe path/name/
   version/report suggestions into partial `bound_commands`, preserves
-  source-backed inputs and upstream child-output links as `...`, and keeps every
-  action at `review_status=needs_review`. This removes mechanical copy/paste
-  from unresolved citation/world-model runs without turning scaffold guesses
-  into approved evidence or executable bindings.
+  source-backed inputs as `...`, and keeps every action at
+  `review_status=needs_review`. When called with `--stage-upstream-outputs`, it
+  can also bind same-action rule sidecars/reports that earlier staged commands
+  already produced, while still leaving source-backed numeric/temporal inputs
+  unfilled. This removes mechanical copy/paste from unresolved citation/
+  world-model runs without turning scaffold guesses into approved evidence or
+  executable bindings.
 - `bind_frontier_research_queue_command_plan.py` and
   `run_frontier_research_queue_bound_command_plan.py` add the next handoff
   layer: reviewed bindings can turn that queue into a ready bound plan, and the

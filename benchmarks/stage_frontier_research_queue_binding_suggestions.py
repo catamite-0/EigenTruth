@@ -38,6 +38,7 @@ def stage_frontier_research_queue_binding_suggestions(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    stage_upstream_outputs: bool = False,
     compact_json: bool = False,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -56,7 +57,8 @@ def stage_frontier_research_queue_binding_suggestions(
     output_path = None if bindings_json_path is None else Path(bindings_json_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
     entries = tuple(
-        _stage_entry(entry) for entry in _mapping_sequence(scaffold_payload.get("entries", ()))
+        _stage_entry(entry, stage_upstream_outputs=stage_upstream_outputs)
+        for entry in _mapping_sequence(scaffold_payload.get("entries", ()))
     )
     summary = _summary(entries)
     status = "empty" if summary["entry_count"] == 0 else "needs_review"
@@ -69,12 +71,18 @@ def stage_frontier_research_queue_binding_suggestions(
             "binding_scaffold_workflow": scaffold_payload.get("workflow"),
             "command_plan": _nested(scaffold_payload, "source", "command_plan"),
         },
+        "config": {
+            "stage_upstream_outputs": bool(stage_upstream_outputs),
+            "auto_approves_review": False,
+            "auto_binds_source_backed_inputs": False,
+        },
         "generated_by": WORKFLOW,
         "review_summary": {
             "entry_count": summary["entry_count"],
             "required_input_count": summary["required_input_count"],
             "placeholder_count": summary["placeholder_count"],
             "staged_placeholder_count": summary["staged_placeholder_count"],
+            "staged_upstream_output_count": summary["staged_upstream_output_count"],
             "remaining_placeholder_count": summary["remaining_placeholder_count"],
             "review_required_placeholder_count": summary["review_required_placeholder_count"],
             "missing_suggestion_placeholder_count": summary[
@@ -93,6 +101,7 @@ def stage_frontier_research_queue_binding_suggestions(
                 "command_requirement_issue_count": entry["command_requirement_issue_count"],
                 "placeholder_count": entry["placeholder_count"],
                 "staged_placeholder_count": entry["staged_placeholder_count"],
+                "staged_upstream_output_count": entry["staged_upstream_output_count"],
                 "remaining_placeholder_count": entry["remaining_placeholder_count"],
                 "input_reviews": entry["input_reviews"],
                 "placeholder_reviews": entry["placeholder_reviews"],
@@ -129,6 +138,7 @@ def stage_frontier_research_queue_binding_suggestions(
                 "entry_count": summary["entry_count"],
                 "placeholder_count": summary["placeholder_count"],
                 "staged_placeholder_count": summary["staged_placeholder_count"],
+                "staged_upstream_output_count": summary["staged_upstream_output_count"],
                 "remaining_placeholder_count": summary["remaining_placeholder_count"],
                 "review_required_placeholder_count": summary[
                     "review_required_placeholder_count"
@@ -140,7 +150,11 @@ def stage_frontier_research_queue_binding_suggestions(
     return payload
 
 
-def _stage_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
+def _stage_entry(
+    entry: Mapping[str, Any],
+    *,
+    stage_upstream_outputs: bool,
+) -> dict[str, Any]:
     action_id = str(entry.get("action_id") or entry.get("entry_id") or "frontier-action")
     templates = _string_tuple(entry.get("command_templates", ()))
     placeholder_records = tuple(
@@ -157,18 +171,32 @@ def _stage_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
         records_by_command.setdefault(_int_or_zero(record.get("command_index")), []).append(record)
 
     staged_count = 0
+    staged_upstream_count = 0
     review_required_count = 0
     missing_suggestion_count = 0
     bound_commands = []
     staged_placeholder_reviews = []
+    available_outputs: dict[str, str] = {}
     for command_index, template in enumerate(templates, start=1):
         command = str(template)
+        script = _command_script(command)
         for record in records_by_command.get(command_index, []):
+            flag = str(record.get("flag") or "")
+            normalized_flag = _normalized_flag(flag)
             suggestion = _mapping(record.get("suggested_binding"))
             placeholder_index = _int_or_zero(record.get("placeholder_index"))
             replacement = _placeholder_sentinel(command_index, placeholder_index)
             stage_status = "needs_review"
-            if suggestion.get("review_required") is True:
+            if (
+                stage_upstream_outputs
+                and suggestion.get("reason") == "upstream_command_output"
+                and str(suggestion.get("input_name_hint") or "") in available_outputs
+            ):
+                replacement = available_outputs[str(suggestion.get("input_name_hint") or "")]
+                staged_count += 1
+                staged_upstream_count += 1
+                stage_status = "staged_upstream_output"
+            elif suggestion.get("review_required") is True:
                 review_required_count += 1
             else:
                 rendered = _render_suggestion(suggestion)
@@ -179,6 +207,12 @@ def _stage_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
                     staged_count += 1
                     stage_status = "staged"
             command = command.replace("...", replacement, 1)
+            _remember_output(
+                available_outputs,
+                flag=normalized_flag,
+                script=script,
+                replacement=replacement,
+            )
             staged_placeholder_reviews.append({
                 **dict(record),
                 "stage_status": stage_status,
@@ -203,6 +237,7 @@ def _stage_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
         "placeholder_reviews": tuple(staged_placeholder_reviews),
         "placeholder_count": placeholder_count,
         "staged_placeholder_count": staged_count,
+        "staged_upstream_output_count": staged_upstream_count,
         "remaining_placeholder_count": remaining_count,
         "review_required_placeholder_count": review_required_count,
         "missing_suggestion_placeholder_count": missing_suggestion_count,
@@ -221,6 +256,9 @@ def _summary(entries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "placeholder_count": sum(_int_or_zero(entry.get("placeholder_count")) for entry in entries),
         "staged_placeholder_count": sum(
             _int_or_zero(entry.get("staged_placeholder_count")) for entry in entries
+        ),
+        "staged_upstream_output_count": sum(
+            _int_or_zero(entry.get("staged_upstream_output_count")) for entry in entries
         ),
         "remaining_placeholder_count": sum(
             _int_or_zero(entry.get("remaining_placeholder_count")) for entry in entries
@@ -247,6 +285,47 @@ def _render_suggestion(suggestion: Mapping[str, Any]) -> str | None:
     if "value" in suggestion:
         return shlex.quote(str(suggestion["value"]))
     return None
+
+
+def _remember_output(
+    available_outputs: dict[str, str],
+    *,
+    flag: str,
+    script: str | None,
+    replacement: str,
+) -> None:
+    if replacement.startswith("__EIGENTRUTH_UNBOUND_PLACEHOLDER_"):
+        return
+    if flag == "rule_inputs_jsonl":
+        available_outputs["rule_inputs"] = replacement
+    elif flag == "rule_results_jsonl":
+        available_outputs["rule_results"] = replacement
+    elif flag == "json" and script == "benchmarks/run_world_model_rule_authoring_adapter.py":
+        available_outputs["adapter_report"] = replacement
+
+
+def _command_script(command: str) -> str | None:
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        argv = str(command).split()
+    for item in argv:
+        if str(item).endswith(".py"):
+            return _normalize_script_path(str(item))
+    return None
+
+
+def _normalize_script_path(path: str) -> str:
+    text = str(path).replace("\\", "/")
+    if "/benchmarks/" in text:
+        return "benchmarks/" + text.rsplit("/benchmarks/", 1)[1]
+    while text.startswith("./"):
+        text = text[2:]
+    return text
+
+
+def _normalized_flag(flag: str | None) -> str:
+    return "" if flag is None else str(flag).lstrip("-").replace("-", "_")
 
 
 def _placeholder_sentinel(command_index: int, placeholder_index: int) -> str:
@@ -298,6 +377,11 @@ def _write_manifest(
                 payload,
                 "staging_summary",
                 "staged_placeholder_count",
+            ),
+            "staged_upstream_output_count": _nested(
+                payload,
+                "staging_summary",
+                "staged_upstream_output_count",
             ),
             "remaining_placeholder_count": _nested(
                 payload,
@@ -377,6 +461,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--registry", default=None, help="optional local artifact registry JSON")
     parser.add_argument("--name", default=None, help="registry record name")
     parser.add_argument("--version", default=None, help="registry record version")
+    parser.add_argument(
+        "--stage-upstream-outputs",
+        action="store_true",
+        help="also bind upstream child-output placeholders when the same staged action produced them",
+    )
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON")
     return parser
 
@@ -389,6 +478,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        stage_upstream_outputs=bool(args.stage_upstream_outputs),
         compact_json=bool(args.compact_json),
     )
     if args.bindings_json is None:

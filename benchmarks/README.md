@@ -6741,6 +6741,12 @@ remain as `...`, and every entry keeps `review_status=needs_review`; the binder
 still reports remaining input/placeholder gaps where present, and the runner
 still blocks real execution until a reviewer supplies the remaining values and
 marks the entry reviewed or approved.
+Add `--stage-upstream-outputs` when you also want to bind intra-action child
+outputs that the same staged plan already produced, such as a rule fill
+command's `--rule-inputs-jsonl` feeding the following adapter's `--rule-inputs`
+or an adapter's `--rule-results-jsonl`/report feeding promotion. This still
+does not fill source-backed numeric/temporal inputs and still leaves
+`review_status=needs_review`.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 
