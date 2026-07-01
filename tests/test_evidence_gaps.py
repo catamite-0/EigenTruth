@@ -128,6 +128,40 @@ _CONTEXT_SENSITIVITY_RUNTIME_EVIDENCE_COMMANDS = (
     "--json ... --artifact-manifest ...",
 )
 
+_COUNTERFACTUAL_ROBUSTNESS_RUNTIME_EVIDENCE_COMMANDS = (
+    "benchmarks/eval_counterfactual_verification.py "
+    "--verified-records ... --verifier ... --fact-corpus ... "
+    "--json ... --artifact-manifest ... --registry ... "
+    "--register-name ... --register-version ...",
+    "benchmarks/enrich_product_trace_runtime_evidence.py "
+    "--trace-glob ... --output-dir ... --report ... --artifact-manifest ... "
+    "--min-counterfactual-robustness-participating-trace-rate ... "
+    "--min-counterfactual-robustness-coverage-rate ... "
+    "--min-counterfactual-robustness-pass-rate ... "
+    "--min-counterfactual-robustness-flip-success-rate ... "
+    "--max-counterfactual-robustness-false-invariance-rate ... "
+    "--max-counterfactual-robustness-trace-gap-rate ...",
+    "benchmarks/run_product_trace_replay_workflow.py "
+    "--trace-glob ... --promotion-contract ... "
+    "--min-runtime-drift-counterfactual-robustness-participating-trace-rate ... "
+    "--min-runtime-drift-counterfactual-robustness-coverage-rate ... "
+    "--min-runtime-drift-counterfactual-robustness-pass-rate ... "
+    "--min-runtime-drift-counterfactual-robustness-flip-success-rate ... "
+    "--max-runtime-drift-counterfactual-robustness-false-invariance-rate-increase ... "
+    "--max-runtime-drift-counterfactual-robustness-trace-gap-rate-increase ...",
+    "benchmarks/run_product_runtime_baseline.py "
+    "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+    "benchmarks/compare_product_runtime_baselines.py "
+    "--current ... --baseline ... "
+    "--min-counterfactual-robustness-participating-trace-rate ... "
+    "--min-counterfactual-robustness-coverage-rate ... "
+    "--min-counterfactual-robustness-pass-rate ... "
+    "--min-counterfactual-robustness-flip-success-rate ... "
+    "--max-counterfactual-robustness-false-invariance-rate-increase ... "
+    "--max-counterfactual-robustness-trace-gap-rate-increase ... "
+    "--json ... --artifact-manifest ...",
+)
+
 
 def _assert_multiple_testing_rerun_rollup_action(action):
     assert action["evidence_routes"] == (
@@ -478,6 +512,75 @@ def _assert_context_sensitivity_runtime_evidence_action(action):
     )
     assert action["metadata"]["closure_outputs"] == (
         "context_sensitivity_workflow",
+        "product_trace_runtime_evidence_enrichment",
+        "product_trace_replay_workflow",
+        "product_runtime_baseline",
+        "product_runtime_drift_comparison",
+    )
+
+
+def _assert_counterfactual_robustness_runtime_evidence_action(action):
+    assert action["evidence_routes"] == (
+        "counterfactual_verification_eval",
+        "product_trace_runtime_evidence",
+        "product_trace_replay",
+        "product_runtime_baseline",
+        "product_runtime_drift",
+        "counterfactual_robustness_evidence",
+    )
+    assert action["suggested_commands"] == (
+        _COUNTERFACTUAL_ROBUSTNESS_RUNTIME_EVIDENCE_COMMANDS
+    )
+    assert action["metadata"]["counterfactual_eval_script"] == (
+        "benchmarks/eval_counterfactual_verification.py"
+    )
+    assert action["metadata"]["trace_enrichment_script"] == (
+        "benchmarks/enrich_product_trace_runtime_evidence.py"
+    )
+    assert action["metadata"]["trace_replay_script"] == (
+        "benchmarks/run_product_trace_replay_workflow.py"
+    )
+    assert action["metadata"]["runtime_baseline_script"] == (
+        "benchmarks/run_product_runtime_baseline.py"
+    )
+    assert action["metadata"]["runtime_drift_script"] == (
+        "benchmarks/compare_product_runtime_baselines.py"
+    )
+    assert action["metadata"]["counterfactual_eval_workflow"] == (
+        "counterfactual_verification_eval"
+    )
+    assert action["metadata"]["trace_enrichment_workflow"] == (
+        "product_trace_runtime_evidence_enrichment"
+    )
+    assert action["metadata"]["trace_replay_workflow"] == "product_trace_replay_workflow"
+    assert action["metadata"]["runtime_baseline_workflow"] == "product_runtime_baseline"
+    assert action["metadata"]["runtime_drift_workflow"] == "product_runtime_drift_comparison"
+    assert action["metadata"]["risk_control_method"] == "counterfactual_probe_robustness"
+    assert action["metadata"]["required_trace_metrics"] == (
+        "counterfactual_robustness.participating_trace_rate",
+        "counterfactual_robustness.coverage_rate",
+        "counterfactual_robustness.pass_rate",
+        "counterfactual_robustness.flip_success_rate",
+        "counterfactual_robustness.false_invariance_rate",
+        "counterfactual_robustness.trace_gap_rate",
+    )
+    assert action["metadata"]["default_gate_thresholds"] == {
+        "min_counterfactual_robustness_participating_trace_rate": 1.0,
+        "min_counterfactual_robustness_coverage_rate": 1.0,
+        "min_counterfactual_robustness_pass_rate": 1.0,
+        "min_counterfactual_robustness_flip_success_rate": 1.0,
+        "max_counterfactual_robustness_false_invariance_rate_increase": 0.0,
+        "max_counterfactual_robustness_trace_gap_rate_increase": 0.0,
+    }
+    assert action["metadata"]["required_inputs"] == (
+        "verified_records_jsonl_or_counterfactual_probe_records",
+        "counterfactual_verifier_or_fact_corpus",
+        "product_trace_corpus",
+        "promotion_contract_or_release_candidate",
+        "baseline_product_runtime_report",
+    )
+    assert action["metadata"]["closure_outputs"] == (
+        "counterfactual_verification_eval",
         "product_trace_runtime_evidence_enrichment",
         "product_trace_replay_workflow",
         "product_runtime_baseline",
@@ -1038,12 +1141,8 @@ def test_evidence_gap_plan_maps_product_runtime_trace_robustness_blockers():
     _assert_context_sensitivity_runtime_evidence_action(
         actions["rerun_product_trace_context_sensitivity_evidence"]
     )
-    assert actions[
-        "rerun_product_trace_counterfactual_robustness_evidence"
-    ]["evidence_routes"] == (
-        "product_trace_replay",
-        "product_runtime_drift",
-        "counterfactual_robustness_evidence",
+    _assert_counterfactual_robustness_runtime_evidence_action(
+        actions["rerun_product_trace_counterfactual_robustness_evidence"]
     )
 
 

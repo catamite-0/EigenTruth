@@ -1618,15 +1618,89 @@ def _action_template(kind: Mapping[str, str], *, gate: str, reason: str) -> Evid
                 "trace-gap evidence before verifier behavior is treated as stable."
             ),
             evidence_routes=(
+                "counterfactual_verification_eval",
+                "product_trace_runtime_evidence",
                 "product_trace_replay",
+                "product_runtime_baseline",
                 "product_runtime_drift",
                 "counterfactual_robustness_evidence",
             ),
             suggested_commands=(
-                "benchmarks/run_product_trace_replay_workflow.py",
-                "benchmarks/run_product_runtime_baseline.py",
-                "benchmarks/compare_product_runtime_baselines.py",
+                "benchmarks/eval_counterfactual_verification.py "
+                "--verified-records ... --verifier ... --fact-corpus ... "
+                "--json ... --artifact-manifest ... --registry ... "
+                "--register-name ... --register-version ...",
+                "benchmarks/enrich_product_trace_runtime_evidence.py "
+                "--trace-glob ... --output-dir ... --report ... --artifact-manifest ... "
+                "--min-counterfactual-robustness-participating-trace-rate ... "
+                "--min-counterfactual-robustness-coverage-rate ... "
+                "--min-counterfactual-robustness-pass-rate ... "
+                "--min-counterfactual-robustness-flip-success-rate ... "
+                "--max-counterfactual-robustness-false-invariance-rate ... "
+                "--max-counterfactual-robustness-trace-gap-rate ...",
+                "benchmarks/run_product_trace_replay_workflow.py "
+                "--trace-glob ... --promotion-contract ... "
+                "--min-runtime-drift-counterfactual-robustness-participating-trace-rate ... "
+                "--min-runtime-drift-counterfactual-robustness-coverage-rate ... "
+                "--min-runtime-drift-counterfactual-robustness-pass-rate ... "
+                "--min-runtime-drift-counterfactual-robustness-flip-success-rate ... "
+                "--max-runtime-drift-counterfactual-robustness-false-invariance-rate-increase ... "
+                "--max-runtime-drift-counterfactual-robustness-trace-gap-rate-increase ...",
+                "benchmarks/run_product_runtime_baseline.py "
+                "--trace ... --promotion-contract ... --json ... --artifact-manifest ...",
+                "benchmarks/compare_product_runtime_baselines.py "
+                "--current ... --baseline ... "
+                "--min-counterfactual-robustness-participating-trace-rate ... "
+                "--min-counterfactual-robustness-coverage-rate ... "
+                "--min-counterfactual-robustness-pass-rate ... "
+                "--min-counterfactual-robustness-flip-success-rate ... "
+                "--max-counterfactual-robustness-false-invariance-rate-increase ... "
+                "--max-counterfactual-robustness-trace-gap-rate-increase ... "
+                "--json ... --artifact-manifest ...",
             ),
+            metadata={
+                "counterfactual_eval_script": "benchmarks/eval_counterfactual_verification.py",
+                "trace_enrichment_script": "benchmarks/enrich_product_trace_runtime_evidence.py",
+                "trace_replay_script": "benchmarks/run_product_trace_replay_workflow.py",
+                "runtime_baseline_script": "benchmarks/run_product_runtime_baseline.py",
+                "runtime_drift_script": "benchmarks/compare_product_runtime_baselines.py",
+                "counterfactual_eval_workflow": "counterfactual_verification_eval",
+                "trace_enrichment_workflow": "product_trace_runtime_evidence_enrichment",
+                "trace_replay_workflow": "product_trace_replay_workflow",
+                "runtime_baseline_workflow": "product_runtime_baseline",
+                "runtime_drift_workflow": "product_runtime_drift_comparison",
+                "risk_control_method": "counterfactual_probe_robustness",
+                "required_trace_metrics": (
+                    "counterfactual_robustness.participating_trace_rate",
+                    "counterfactual_robustness.coverage_rate",
+                    "counterfactual_robustness.pass_rate",
+                    "counterfactual_robustness.flip_success_rate",
+                    "counterfactual_robustness.false_invariance_rate",
+                    "counterfactual_robustness.trace_gap_rate",
+                ),
+                "default_gate_thresholds": {
+                    "min_counterfactual_robustness_participating_trace_rate": 1.0,
+                    "min_counterfactual_robustness_coverage_rate": 1.0,
+                    "min_counterfactual_robustness_pass_rate": 1.0,
+                    "min_counterfactual_robustness_flip_success_rate": 1.0,
+                    "max_counterfactual_robustness_false_invariance_rate_increase": 0.0,
+                    "max_counterfactual_robustness_trace_gap_rate_increase": 0.0,
+                },
+                "required_inputs": (
+                    "verified_records_jsonl_or_counterfactual_probe_records",
+                    "counterfactual_verifier_or_fact_corpus",
+                    "product_trace_corpus",
+                    "promotion_contract_or_release_candidate",
+                    "baseline_product_runtime_report",
+                ),
+                "closure_outputs": (
+                    "counterfactual_verification_eval",
+                    "product_trace_runtime_evidence_enrichment",
+                    "product_trace_replay_workflow",
+                    "product_runtime_baseline",
+                    "product_runtime_drift_comparison",
+                ),
+            },
         )
     if evidence_kind == "product_runtime_trajectory_audit_evidence":
         return EvidenceGapAction(
