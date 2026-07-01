@@ -9256,6 +9256,9 @@ consistency, numeric drift, cross-claim retrieval-hit drift, and error-rate
 drift. When ProductTrace retrieval action results include evidence-quality
 summaries, the comparison can gate trace/result coverage, pass rate, failure
 rate, stale evidence, untrusted sources, and missing-source or timestamp drift.
+Release candidates can require that evidence explicitly with
+`compare_release_candidates.py --require-product-runtime-drift-evidence-quality-evidence`
+or the matching `run_release_candidate_registry_workflow.py` flag.
 When ProductTrace
 action results carry action receipts, the
 same comparison can gate receipt coverage plus missing, invalid,
@@ -9661,8 +9664,8 @@ summaries for local performance tuning, lifts the runtime baseline
 report and registry metadata, can save the runtime baseline's recommended
 `ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
 runtime baseline through action-audit, action-execution alignment, or
-product-runtime drift/policy gates, including evidence-graph consistency gates
-when configured, and registers one workflow report.
+product-runtime drift/policy gates, including evidence-graph consistency and
+evidence-quality gates when configured, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,

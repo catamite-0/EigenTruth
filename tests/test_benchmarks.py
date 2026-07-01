@@ -18910,6 +18910,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         citation_integrity_evidence=True,
     )
+    evidence_quality_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "evidence-quality-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        evidence_quality_evidence=True,
+    )
     evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "evidence-handoff-runtime-drift",
         status="promote",
@@ -18974,6 +18980,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         citation_integrity_evidence=True,
         citation_integrity_blocked=True,
+    )
+    blocked_evidence_quality_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-evidence-quality-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        evidence_quality_evidence=True,
+        evidence_quality_blocked=True,
     )
     blocked_evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-evidence-handoff-runtime-drift",
@@ -19397,6 +19410,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_citation_integrity_drift_report,
         require_product_runtime_drift_citation_integrity_evidence=True,
+    )
+    evidence_quality = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=evidence_quality_drift_report,
+        require_product_runtime_drift_evidence_quality_evidence=True,
+    )
+    missing_evidence_quality = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_evidence_quality_evidence=True,
+    )
+    blocked_evidence_quality = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_evidence_quality_drift_report,
+        require_product_runtime_drift_evidence_quality_evidence=True,
     )
     evidence_handoff = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -20037,6 +20083,52 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "citation-integrity evidence blocked 4 metric" in reason
         for reason in blocked_citation_integrity["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert evidence_quality["decision"]["status"] == "promote"
+    assert evidence_quality["config"][
+        "require_product_runtime_drift_evidence_quality_evidence"
+    ] is True
+    evidence_quality_summary = evidence_quality["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert evidence_quality_summary["evidence_quality_evidence_required"] is True
+    assert evidence_quality_summary["evidence_quality_evidence_metric_count"] == 9
+    assert evidence_quality_summary["evidence_quality_evidence_blocked_metric_count"] == 0
+    assert evidence_quality_summary[
+        "product_trace_evidence_quality_coverage_rate_current"
+    ] == pytest.approx(1.0)
+    assert evidence_quality_summary[
+        "product_trace_evidence_quality_failure_rate_status"
+    ] == "pass"
+    assert missing_evidence_quality["decision"]["status"] == "blocked"
+    assert missing_evidence_quality["product_runtime_drift_gate"]["summary"][
+        "evidence_quality_evidence_missing_metrics"
+    ] == (
+        "evidence_quality.trace_coverage_rate",
+        "evidence_quality.coverage_rate",
+        "evidence_quality.pass_rate",
+        "evidence_quality.failure_rate",
+        "evidence_quality.failed_result_rate",
+        "evidence_quality.stale_evidence_rate",
+        "evidence_quality.untrusted_source_rate",
+        "evidence_quality.missing_source_rate",
+        "evidence_quality.missing_timestamp_rate",
+    )
+    assert any(
+        "evidence-quality evidence metrics are incomplete" in reason
+        for reason in missing_evidence_quality["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_evidence_quality["decision"]["status"] == "blocked"
+    assert blocked_evidence_quality["product_runtime_drift_gate"]["summary"][
+        "evidence_quality_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "evidence-quality evidence blocked 1 metric" in reason
+        for reason in blocked_evidence_quality["decision"]["blocking_reasons"][0][
             "reasons"
         ]
     )
@@ -24395,6 +24487,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         trajectory_audit_evidence=True,
         provenance_evidence=True,
         citation_integrity_evidence=True,
+        evidence_quality_evidence=True,
         evidence_handoff_evidence=True,
     )
     release_efficiency_report = _write_release_efficiency_report(
@@ -24526,6 +24619,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_runtime_drift_trajectory_audit_evidence=True,
         require_product_runtime_drift_provenance_evidence=True,
         require_product_runtime_drift_citation_integrity_evidence=True,
+        require_product_runtime_drift_evidence_quality_evidence=True,
         require_product_runtime_drift_evidence_handoff_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
@@ -24755,8 +24849,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_provenance_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_evidence_quality_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 83
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 92
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -24785,6 +24880,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_metric_count"] == 6
     assert (
         manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_blocked_metric_count"]
+        == 0
+    )
+    assert manifest["metadata"]["product_runtime_drift_evidence_quality_evidence_metric_count"] == 9
+    assert (
+        manifest["metadata"]["product_runtime_drift_evidence_quality_evidence_blocked_metric_count"]
         == 0
     )
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
@@ -25235,6 +25335,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_provenance_evidence_required"] is True
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_evidence_quality_evidence_required"] is True
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
@@ -25253,6 +25354,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_provenance_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_metric_count"] == 6
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_evidence_quality_evidence_metric_count"] == 9
+    assert record.metadata["product_runtime_drift_evidence_quality_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
@@ -28262,6 +28365,8 @@ def _write_product_runtime_drift_report(
     provenance_blocked=False,
     citation_integrity_evidence=False,
     citation_integrity_blocked=False,
+    evidence_quality_evidence=False,
+    evidence_quality_blocked=False,
     evidence_handoff_evidence=False,
     evidence_handoff_blocked=False,
     world_model_evidence=False,
@@ -29589,6 +29694,111 @@ def _write_product_runtime_drift_report(
                     if citation_integrity_blocked
                     else None
                 ),
+            },
+        ])
+    if evidence_quality_evidence:
+        quality_status = "blocked" if evidence_quality_blocked else "pass"
+        quality_failure_current = 0.25 if evidence_quality_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "evidence_quality.trace_coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.pass_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 0.95,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.failure_rate",
+                "status": quality_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": quality_failure_current,
+                "absolute_delta": quality_failure_current,
+                "absolute_increase": quality_failure_current,
+                "threshold": 0.05,
+                "reason": (
+                    "evidence_quality.failure_rate above gate"
+                    if evidence_quality_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "evidence_quality.failed_result_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.stale_evidence_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.untrusted_source_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.missing_source_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_quality.missing_timestamp_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
             },
         ])
     if evidence_handoff_evidence:
@@ -45092,6 +45302,8 @@ def _write_evidence_quality_product_runtime_trace(
         ActionResult,
         ControlAction,
         ProductTrace,
+        RiskDecision,
+        RiskLevel,
         RuntimePhaseTiming,
         RuntimeTrace,
     )
@@ -45101,6 +45313,12 @@ def _write_evidence_quality_product_runtime_trace(
         output["evidence_quality"] = dict(quality)
     trace = ProductTrace(
         request_id=request_id,
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.95,
+            reason="evidence quality fixture",
+        ),
         action_results=(
             ActionResult(
                 action=ControlAction.RETRIEVE,
@@ -48747,6 +48965,139 @@ def test_product_trace_replay_workflow_applies_citation_integrity_runtime_drift_
     assert drift_record.metadata[
         "product_trace_citation_integrity_issue_rate_status"
     ] == "pass"
+
+
+def test_product_trace_replay_workflow_applies_evidence_quality_runtime_drift_gate(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-product-runtime-baseline.json"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    baseline_trace = tmp_path / "baseline-quality.json"
+    current_trace = traces_dir / "current-quality.json"
+    _write_evidence_quality_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline-quality",
+        quality={
+            "status": "pass",
+            "document_count": 2,
+            "applied_count": 2,
+            "passed_count": 2,
+            "failed_count": 0,
+            "pass_rate": 1.0,
+            "failure_rate": 0.0,
+            "reason_counts": {},
+        },
+    )
+    _write_evidence_quality_product_runtime_trace(
+        current_trace,
+        request_id="current-quality",
+        quality={
+            "status": "fail",
+            "document_count": 2,
+            "applied_count": 2,
+            "passed_count": 0,
+            "failed_count": 2,
+            "pass_rate": 0.0,
+            "failure_rate": 1.0,
+            "reason_counts": {
+                "missing_source": 1,
+                "missing_timestamp": 1,
+                "stale_evidence": 1,
+                "untrusted_source": 1,
+            },
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=prior_baseline_path,
+        )
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(current_trace,),
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            min_runtime_drift_product_trace_evidence_quality_trace_coverage_rate=1.0,
+            min_runtime_drift_product_trace_evidence_quality_coverage_rate=1.0,
+            min_runtime_drift_product_trace_evidence_quality_pass_rate=0.9,
+            max_runtime_drift_product_trace_evidence_quality_failure_rate_increase=0.0,
+            max_runtime_drift_product_trace_evidence_quality_stale_evidence_rate_increase=0.0,
+            max_runtime_drift_product_trace_evidence_quality_untrusted_source_rate_increase=0.0,
+            max_runtime_drift_product_trace_evidence_quality_missing_source_rate_increase=0.0,
+            max_runtime_drift_product_trace_evidence_quality_missing_timestamp_rate_increase=0.0,
+            registry_path=registry_path,
+            name="trace-replay-evidence-quality-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    drift_report = json.loads(
+        Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8")
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-evidence-quality-drift:0.1")
+    drift_record = registry.get(
+        "product_runtime_drift_report:trace-replay-evidence-quality-drift-runtime-drift:0.1"
+    )
+    evidence_quality_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("evidence_quality.")
+    }
+
+    assert payload["runtime_drift"]["status"] == "blocked"
+    assert payload["runtime_drift"]["product_trace_evidence_quality_metric_count"] == 9
+    assert (
+        payload["runtime_drift"]["product_trace_evidence_quality_blocked_metric_count"]
+        == 6
+    )
+    assert payload["config"]["runtime_drift_gates"][
+        "min_product_trace_evidence_quality_pass_rate"
+    ] == pytest.approx(0.9)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_product_trace_evidence_quality_missing_timestamp_rate_increase"
+    ] == pytest.approx(0.0)
+    assert len(evidence_quality_statuses) == 9
+    assert evidence_quality_statuses["evidence_quality.coverage_rate"] == "pass"
+    assert evidence_quality_statuses["evidence_quality.pass_rate"] == "blocked"
+    assert evidence_quality_statuses["evidence_quality.failure_rate"] == "blocked"
+    assert (
+        manifest["metadata"]["runtime_drift_product_trace_evidence_quality_metric_count"]
+        == 9
+    )
+    assert (
+        manifest["metadata"][
+            "runtime_drift_product_trace_evidence_quality_blocked_metric_count"
+        ]
+        == 6
+    )
+    assert record.metadata["runtime_drift_product_trace_evidence_quality_metric_count"] == 9
+    assert (
+        record.metadata[
+            "runtime_drift_product_trace_evidence_quality_blocked_metric_count"
+        ]
+        == 6
+    )
+    assert drift_record.metadata["product_trace_evidence_quality_blocked_metric_count"] == 6
+    assert drift_record.metadata[
+        "product_trace_evidence_quality_missing_source_rate_status"
+    ] == "blocked"
 
 
 def test_product_trace_replay_workflow_applies_world_model_runtime_drift_gate(tmp_path):

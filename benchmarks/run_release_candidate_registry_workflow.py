@@ -76,6 +76,17 @@ _PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_PREFIXES = (
+    "product_trace_evidence_quality_trace_coverage_rate",
+    "product_trace_evidence_quality_coverage_rate",
+    "product_trace_evidence_quality_pass_rate",
+    "product_trace_evidence_quality_failure_rate",
+    "product_trace_evidence_quality_failed_result_rate",
+    "product_trace_evidence_quality_stale_evidence_rate",
+    "product_trace_evidence_quality_untrusted_source_rate",
+    "product_trace_evidence_quality_missing_source_rate",
+    "product_trace_evidence_quality_missing_timestamp_rate",
+)
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
 )
@@ -205,6 +216,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_citation_integrity_evidence": (
                 config.require_product_runtime_drift_citation_integrity_evidence
             ),
+            "require_product_runtime_drift_evidence_quality_evidence": (
+                config.require_product_runtime_drift_evidence_quality_evidence
+            ),
             "require_product_runtime_drift_evidence_handoff_evidence": (
                 config.require_product_runtime_drift_evidence_handoff_evidence
             ),
@@ -299,6 +313,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_trajectory_audit_evidence: bool = False
     require_product_runtime_drift_provenance_evidence: bool = False
     require_product_runtime_drift_citation_integrity_evidence: bool = False
+    require_product_runtime_drift_evidence_quality_evidence: bool = False
     require_product_runtime_drift_evidence_handoff_evidence: bool = False
     require_product_runtime_drift_world_model_evidence: bool = False
     require_product_runtime_drift_context_sensitivity_evidence: bool = False
@@ -866,6 +881,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_citation_integrity_evidence=(
             config.require_product_runtime_drift_citation_integrity_evidence
         ),
+        require_product_runtime_drift_evidence_quality_evidence=(
+            config.require_product_runtime_drift_evidence_quality_evidence
+        ),
         require_product_runtime_drift_evidence_handoff_evidence=(
             config.require_product_runtime_drift_evidence_handoff_evidence
         ),
@@ -1211,6 +1229,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_citation_integrity_evidence": (
                 config.require_product_runtime_drift_citation_integrity_evidence
+            ),
+            "require_product_runtime_drift_evidence_quality_evidence": (
+                config.require_product_runtime_drift_evidence_quality_evidence
             ),
             "require_product_runtime_drift_evidence_handoff_evidence": (
                 config.require_product_runtime_drift_evidence_handoff_evidence
@@ -2470,6 +2491,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_citation_integrity_evidence_required": config.get(
             "require_product_runtime_drift_citation_integrity_evidence"
         ),
+        "product_runtime_drift_evidence_quality_evidence_required": config.get(
+            "require_product_runtime_drift_evidence_quality_evidence"
+        ),
         "product_runtime_drift_evidence_handoff_evidence_required": config.get(
             "require_product_runtime_drift_evidence_handoff_evidence"
         ),
@@ -3258,6 +3282,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_citation_integrity_evidence_blocked_metric_count": (
             summary.get("citation_integrity_evidence_blocked_metric_count")
         ),
+        "product_runtime_drift_evidence_quality_evidence_metric_count": summary.get(
+            "evidence_quality_evidence_metric_count"
+        ),
+        "product_runtime_drift_evidence_quality_evidence_blocked_metric_count": (
+            summary.get("evidence_quality_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_evidence_handoff_evidence_metric_count": summary.get(
             "evidence_handoff_evidence_metric_count"
         ),
@@ -3323,6 +3353,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
@@ -3564,6 +3597,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_citation_integrity_evidence=bool(
             args.require_product_runtime_drift_citation_integrity_evidence
+        ),
+        require_product_runtime_drift_evidence_quality_evidence=bool(
+            args.require_product_runtime_drift_evidence_quality_evidence
         ),
         require_product_runtime_drift_evidence_handoff_evidence=bool(
             args.require_product_runtime_drift_evidence_handoff_evidence
@@ -4022,6 +4058,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         action="store_true",
                         help="require the product runtime drift report to include citation-integrity "
                              "participation, coverage, mismatch, unresolved, issue, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-quality-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include retrieval evidence-quality "
+                             "coverage, pass/failure, source, freshness, and timestamp metrics")
     parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
                         help="require the product runtime drift report to include promotion-contract "
                              "evidence handoff coverage, manifest, metric completeness, and promoted-group "
