@@ -273,6 +273,35 @@ def test_product_promotion_evidence_handoff_export_fills_explicit_sources():
     assert contract["metadata"]["evidence_handoff_promoted_group_rate"] == 1.0
 
 
+def test_product_promotion_evidence_handoff_uses_separate_runtime_receipt_summaries():
+    product_trace = json.loads(json.dumps(_product_trace_replay_workflow()))
+    product_trace.pop("runtime_baseline")
+    result = enrich_product_promotion_contract_evidence(
+        {
+            "workflow": "product_promotion_contract",
+            "source_status": "promote",
+            "model_id": "tiny",
+        },
+        pre_generation_probe_comparison=_pre_generation_comparison_report(),
+        triple_extraction_fixture_matrix=_triple_matrix_report(),
+        counterfactual_verification=_counterfactual_report(),
+        product_trace_replay_workflow=product_trace,
+        frontier_release_evidence=_frontier_release_evidence_report(),
+        runtime_baseline=_runtime_baseline_with_triple_and_receipt_evidence(),
+        covered_fact_property_metrics=_covered_fact_property_rollup(),
+    )
+    payload = result.to_dict()
+    contract = payload["contract"]
+
+    assert payload["after_audit"]["status"] == "promote"
+    assert "action_receipts" in payload["filled_groups"]
+    assert "receipt_claim_support" in payload["filled_groups"]
+    assert contract["product_trace_replay_workflow"]["action_receipts"]["source"] == "runtime_baseline"
+    assert contract["product_trace_replay_workflow"]["receipt_claim_support"]["source"] == "runtime_baseline"
+    assert contract["metadata"]["product_trace_action_receipts_coverage_rate"] == 1.0
+    assert contract["metadata"]["product_trace_receipt_claim_support_reference_support_rate"] == 1.0
+
+
 def test_product_promotion_evidence_handoff_accepts_triple_audit_enrichment_report():
     result = enrich_product_promotion_contract_evidence(
         {
@@ -913,6 +942,27 @@ def _runtime_baseline_with_triple_audit():
             }
         },
     }
+
+
+def _runtime_baseline_with_triple_and_receipt_evidence():
+    payload = _runtime_baseline_with_triple_audit()
+    payload["summary"]["action_receipts"] = {
+        "coverage_rate": 1.0,
+        "missing_receipt_rate": 0.0,
+        "invalid_receipt_rate": 0.0,
+        "fingerprint_mismatch_rate": 0.0,
+        "unsigned_receipt_rate": 0.0,
+    }
+    payload["summary"]["receipt_claim_support"] = {
+        "reference_support_rate": 1.0,
+        "unsupported_reference_rate": 0.0,
+        "missing_reference_rate": 0.0,
+        "unreceipted_reference_rate": 0.0,
+        "failed_result_reference_rate": 0.0,
+        "fingerprint_mismatch_reference_rate": 0.0,
+        "unsigned_reference_rate": 0.0,
+    }
+    return payload
 
 
 def _triple_audit_enrichment_report():

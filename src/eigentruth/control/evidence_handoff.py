@@ -330,6 +330,12 @@ def enrich_product_promotion_contract_evidence(
         product_trace_replay_workflow,
         path=product_trace_replay_workflow_path,
     )
+    runtime_receipts = _product_trace_receipt_handoff_from_runtime_baseline(
+        runtime_baseline,
+        path=runtime_baseline_path,
+    )
+    if runtime_receipts:
+        product_trace = _merge_product_trace_receipt_handoff(product_trace, runtime_receipts)
     if product_trace:
         _merge_nested(payload, "product_trace_replay_workflow", product_trace)
         _merge_metadata(payload, _action_gate_flat_metadata(product_trace))
@@ -869,6 +875,93 @@ def _product_trace_replay_handoff_from_report(
             "receipt_claim_support": dict(receipt_claim_support),
         }
     )
+
+
+def _product_trace_receipt_handoff_from_runtime_baseline(
+    report: Mapping[str, Any] | None,
+    *,
+    path: str | None,
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    action_receipts = _mapping(_nested(report, "summary", "action_receipts"))
+    receipt_claim_support = _mapping(_nested(report, "summary", "receipt_claim_support"))
+    if not action_receipts and not receipt_claim_support:
+        return {}
+    action_receipts_handoff = (
+        _drop_none_values(
+            {
+                "coverage_rate": _float_or_none(action_receipts.get("coverage_rate")),
+                "missing_receipt_rate": _float_or_none(action_receipts.get("missing_receipt_rate")),
+                "invalid_receipt_rate": _float_or_none(action_receipts.get("invalid_receipt_rate")),
+                "fingerprint_mismatch_rate": _float_or_none(
+                    action_receipts.get("fingerprint_mismatch_rate")
+                ),
+                "unsigned_receipt_rate": _float_or_none(action_receipts.get("unsigned_receipt_rate")),
+                "source": "runtime_baseline",
+                "report_path": path,
+            }
+        )
+        if action_receipts
+        else {}
+    )
+    receipt_claim_support_handoff = (
+        _drop_none_values(
+            {
+                "reference_support_rate": _float_or_none(
+                    receipt_claim_support.get("reference_support_rate")
+                ),
+                "unsupported_reference_rate": _float_or_none(
+                    receipt_claim_support.get("unsupported_reference_rate")
+                ),
+                "missing_reference_rate": _float_or_none(
+                    receipt_claim_support.get("missing_reference_rate")
+                ),
+                "unreceipted_reference_rate": _float_or_none(
+                    receipt_claim_support.get("unreceipted_reference_rate")
+                ),
+                "failed_result_reference_rate": _float_or_none(
+                    receipt_claim_support.get("failed_result_reference_rate")
+                ),
+                "fingerprint_mismatch_reference_rate": _float_or_none(
+                    receipt_claim_support.get("fingerprint_mismatch_reference_rate")
+                ),
+                "unsigned_reference_rate": _float_or_none(
+                    receipt_claim_support.get("unsigned_reference_rate")
+                ),
+                "source": "runtime_baseline",
+                "report_path": path,
+            }
+        )
+        if receipt_claim_support
+        else {}
+    )
+    return _drop_none_values(
+        {
+            "runtime_baseline_report_path": path,
+            "runtime_baseline_workflow": report.get("workflow"),
+            "action_receipts": action_receipts_handoff or None,
+            "receipt_claim_support": receipt_claim_support_handoff or None,
+        }
+    )
+
+
+def _merge_product_trace_receipt_handoff(
+    product_trace: Mapping[str, Any],
+    runtime_receipts: Mapping[str, Any],
+) -> dict[str, Any]:
+    merged = dict(product_trace)
+    if not _mapping(merged.get("action_receipts")) and _mapping(runtime_receipts.get("action_receipts")):
+        merged["action_receipts"] = dict(_mapping(runtime_receipts.get("action_receipts")))
+    if (
+        not _mapping(merged.get("receipt_claim_support"))
+        and _mapping(runtime_receipts.get("receipt_claim_support"))
+    ):
+        merged["receipt_claim_support"] = dict(_mapping(runtime_receipts.get("receipt_claim_support")))
+    for key in ("runtime_baseline_report_path", "runtime_baseline_workflow"):
+        if runtime_receipts.get(key) is not None:
+            merged.setdefault(key, runtime_receipts.get(key))
+    return merged
 
 
 def _action_gate_flat_metadata(workflow: Mapping[str, Any]) -> dict[str, Any]:

@@ -8739,6 +8739,54 @@ rows passing. The refreshed frontier audit v11 remains fail-closed on
 readiness/performance/frontier-release evidence, but its gap plan drops to
 `9` gaps, `4` actions, and `0` missing metrics.
 
+Use `enrich_product_trace_action_receipts.py` when replay traces have dry-run
+action results but lack stable request ids, signed receipts, or explicit
+claim-to-receipt references. The workflow keeps `status="dry_run"` on replayed
+action results, records a receipt-support policy that accepts dry-run replay
+evidence, and signs each action result with a local HMAC receipt so runtime
+baselines can fill action-receipt and receipt-claim-support handoff rows:
+
+```bash
+python benchmarks/enrich_product_trace_action_receipts.py \
+  --trace-glob 'artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1/traces/*.json' \
+  --output-dir artifacts/smollm2_product_trace_action_receipts_v1 \
+  --report artifacts/smollm2_product_trace_action_receipts_v1/product-trace-action-receipt-enrichment.json \
+  --artifact-manifest artifacts/smollm2_product_trace_action_receipts_v1/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-action-receipts \
+  --version 0.1 \
+  --created-at 2026-06-30T00:00:00Z \
+  --compact-json
+```
+
+The v1.15 action-receipt replay over receipt-enriched traces promotes both
+receipt evidence groups: action receipt coverage is `1.0`, invalid/missing/
+fingerprint-mismatch/unsigned receipt rates are all `0.0`, receipt claim
+support is `1.0`, and unsupported/missing/unreceipted/failed/fingerprint-
+mismatch/unsigned reference rates are all `0.0`. Passing that runtime baseline
+into `export_product_promotion_contract_evidence_handoff.py --runtime-baseline`
+alongside the verifier-fusion abstention frontier release evidence produces the
+current v1.9/v6 frontier handoff with `77/77` required metrics present:
+
+```bash
+TRACE_ARGS=$(find artifacts/smollm2_product_trace_action_receipts_v1/traces -name '*.json' | sort | sed 's#^#--trace #')
+
+python benchmarks/run_product_runtime_baseline.py $TRACE_ARGS \
+  --json artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/product-runtime-baseline.json \
+  --trace-records-jsonl artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/trace-records.jsonl \
+  --trace-records-cache-json artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/trace-record-cache.json \
+  --refresh-trace-records-cache \
+  --trace-scan-workers 4 \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-runtime-baseline-action-receipts \
+  --version 0.1 \
+  --metadata release=smollm2-v1.9 \
+  --metadata evidence_scope=action_receipts_receipt_claim_support \
+  --compact-json
+```
+
 Replay the enriched traces through `run_product_runtime_baseline.py` with
 `--trace-scan-workers` when the trace set is large enough to benefit from
 bounded parallel scanning, then compare baseline/current with the same

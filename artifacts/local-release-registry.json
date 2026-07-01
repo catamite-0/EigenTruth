@@ -2737,7 +2737,7 @@
         "recommended_candidate": "default",
         "recommended_observed_runtime_coverage_rate": 1.0,
         "recommended_observed_runtime_delta_coverage_rate": 1.0,
-        "recommended_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "recommended_observed_selected_minus_original_seconds_mean": -0.00002203840025079747,
         "recommended_observed_selected_to_original_ratio_mean": 1.0965569346288282,
         "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
         "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
@@ -4104,7 +4104,7 @@
           "selector_replay_manifest": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
           "selector_replay_observed_runtime_coverage_rate": 1.0,
           "selector_replay_observed_runtime_delta_coverage_rate": 1.0,
-          "selector_replay_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+          "selector_replay_observed_selected_minus_original_seconds_mean": -0.00002203840025079747,
           "selector_replay_observed_selected_to_original_ratio_mean": 1.0965569346288282,
           "selector_replay_observed_selected_total_seconds_mean": 0.000494600758732607,
           "selector_replay_recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
@@ -4315,7 +4315,7 @@
         "selector_replay_manifest": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
         "selector_replay_observed_runtime_coverage_rate": 1.0,
         "selector_replay_observed_runtime_delta_coverage_rate": 1.0,
-        "selector_replay_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "selector_replay_observed_selected_minus_original_seconds_mean": -0.00002203840025079747,
         "selector_replay_observed_selected_to_original_ratio_mean": 1.0965569346288282,
         "selector_replay_observed_selected_total_seconds_mean": 0.000494600758732607,
         "selector_replay_recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
@@ -6259,7 +6259,7 @@
         "workflow_corpus_seconds": 0.132783,
         "workflow_phase_total_seconds": 0.434738,
         "workflow_runtime_baseline_seconds": 0.267645,
-        "workflow_runtime_drift_seconds": 4e-05,
+        "workflow_runtime_drift_seconds": 0.00004,
         "workflow_selector_replay_seconds": 0.033397,
         "workflow_total_seconds": 0.435175
       },
@@ -8954,7 +8954,7 @@
           "selector_replay_manifest": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
           "selector_replay_observed_runtime_coverage_rate": 1.0,
           "selector_replay_observed_runtime_delta_coverage_rate": 1.0,
-          "selector_replay_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+          "selector_replay_observed_selected_minus_original_seconds_mean": -0.00002203840025079747,
           "selector_replay_observed_selected_to_original_ratio_mean": 1.0965569346288282,
           "selector_replay_observed_selected_total_seconds_mean": 0.000494600758732607,
           "selector_replay_recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/policies/default.json",
@@ -9736,7 +9736,7 @@
         "selector_replay_manifest": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/artifact-manifest.json",
         "selector_replay_observed_runtime_coverage_rate": 1.0,
         "selector_replay_observed_runtime_delta_coverage_rate": 1.0,
-        "selector_replay_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "selector_replay_observed_selected_minus_original_seconds_mean": -0.00002203840025079747,
         "selector_replay_observed_selected_to_original_ratio_mean": 1.0965569346288282,
         "selector_replay_observed_selected_total_seconds_mean": 0.000494600758732607,
         "selector_replay_recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/policies/default.json",
@@ -10468,6 +10468,1011 @@
       "name": "smollm2-product-promotion-contract-v1-9-evidence-audit-enriched",
       "path": "artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-audit-enriched.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "action_receipts": {
+          "coverage_rate": 1.0,
+          "fingerprint_mismatch_count": 0.0,
+          "fingerprint_mismatch_rate": 0.0,
+          "invalid_receipt_count": 0.0,
+          "invalid_receipt_rate": 0.0,
+          "missing_receipt_count": 0.0,
+          "missing_receipt_rate": 0.0,
+          "receipt_count": 12.0,
+          "result_count": 12.0,
+          "signature_valid_count": 12,
+          "signature_valid_rate": 1.0,
+          "unsigned_receipt_count": 0.0,
+          "unsigned_receipt_rate": 0.0
+        },
+        "receipt_claim_support": {
+          "failed_result_reference_count": 0.0,
+          "failed_result_reference_rate": 0.0,
+          "fingerprint_mismatch_reference_count": 0.0,
+          "fingerprint_mismatch_reference_rate": 0.0,
+          "missing_reference_count": 0.0,
+          "missing_reference_rate": 0.0,
+          "reference_count": 32.0,
+          "reference_support_rate": 1.0,
+          "supported_reference_count": 32.0,
+          "unreceipted_reference_count": 0.0,
+          "unreceipted_reference_rate": 0.0,
+          "unsigned_reference_count": 0.0,
+          "unsigned_reference_rate": 0.0,
+          "unsupported_reference_count": 0.0,
+          "unsupported_reference_rate": 0.0
+        },
+        "status": "promote",
+        "trace_count": 12,
+        "workflow": "product_trace_action_receipt_enrichment"
+      },
+      "name": "smollm2-product-trace-action-receipts",
+      "path": "artifacts/smollm2_product_trace_action_receipts_v1/product-trace-action-receipt-enrichment.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_runtime_baseline",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/artifact-manifest.json",
+        "budget_enabled": true,
+        "budget_passed": true,
+        "compact_json": true,
+        "evidence_scope": "action_receipts_receipt_claim_support",
+        "failed_count": 0,
+        "promotion_contract_claim_factuality_probe_comparison_available_trace_count": 0,
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_layer_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_model_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_best_record_count_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_signal_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_best_run_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_coverage_rate": 0.0,
+        "promotion_contract_claim_factuality_probe_comparison_manifest_failed_count": 0,
+        "promotion_contract_claim_factuality_probe_comparison_manifest_unknown_count": 12,
+        "promotion_contract_claim_factuality_probe_comparison_manifest_verified_count": 0,
+        "promotion_contract_claim_factuality_probe_comparison_missing_trace_count": 12,
+        "promotion_contract_claim_factuality_probe_comparison_model_count_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_record_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_redline_passed_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_redline_run_count_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_report_status_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_run_count_mean": null,
+        "promotion_contract_claim_factuality_probe_comparison_source_counts": {},
+        "promotion_contract_claim_factuality_probe_comparison_status_counts": {},
+        "promotion_contract_counterfactual_verification_available_trace_count": 0,
+        "promotion_contract_counterfactual_verification_coverage_rate": 0.0,
+        "promotion_contract_counterfactual_verification_false_invariance_rate_mean": null,
+        "promotion_contract_counterfactual_verification_flip_success_count_mean": null,
+        "promotion_contract_counterfactual_verification_manifest_failed_count": 0,
+        "promotion_contract_counterfactual_verification_manifest_unknown_count": 12,
+        "promotion_contract_counterfactual_verification_manifest_verified_count": 0,
+        "promotion_contract_counterfactual_verification_missing_trace_count": 12,
+        "promotion_contract_counterfactual_verification_pass_rate_mean": null,
+        "promotion_contract_counterfactual_verification_record_count_mean": null,
+        "promotion_contract_counterfactual_verification_record_counts": {},
+        "promotion_contract_counterfactual_verification_source_counts": {},
+        "promotion_contract_counterfactual_verification_status_counts": {},
+        "promotion_contract_counterfactual_verification_workflow_counts": {},
+        "promotion_contract_evidence_handoff_after_missing_metric_count_mean": null,
+        "promotion_contract_evidence_handoff_audit_counts": {},
+        "promotion_contract_evidence_handoff_available_trace_count": 0,
+        "promotion_contract_evidence_handoff_before_missing_metric_count_mean": null,
+        "promotion_contract_evidence_handoff_blocked_group_count_mean": null,
+        "promotion_contract_evidence_handoff_contract_counts": {},
+        "promotion_contract_evidence_handoff_coverage_rate": 0.0,
+        "promotion_contract_evidence_handoff_expected_metric_count_mean": null,
+        "promotion_contract_evidence_handoff_filled_group_counts": {},
+        "promotion_contract_evidence_handoff_group_count_mean": null,
+        "promotion_contract_evidence_handoff_group_status_counts": {},
+        "promotion_contract_evidence_handoff_manifest_counts": {},
+        "promotion_contract_evidence_handoff_manifest_failed_count": 0,
+        "promotion_contract_evidence_handoff_manifest_unknown_count": 12,
+        "promotion_contract_evidence_handoff_manifest_verified_count": 0,
+        "promotion_contract_evidence_handoff_missing_metric_count_mean": null,
+        "promotion_contract_evidence_handoff_missing_metric_rate_mean": null,
+        "promotion_contract_evidence_handoff_missing_trace_count": 12,
+        "promotion_contract_evidence_handoff_present_metric_count_mean": null,
+        "promotion_contract_evidence_handoff_present_metric_rate_mean": null,
+        "promotion_contract_evidence_handoff_promoted_group_count_mean": null,
+        "promotion_contract_evidence_handoff_promoted_group_rate_mean": null,
+        "promotion_contract_evidence_handoff_resolved_missing_metric_count_mean": null,
+        "promotion_contract_evidence_handoff_status_counts": {},
+        "promotion_contract_evidence_handoff_workflow_counts": {},
+        "promotion_contract_external_evidence_baseline_comparison_available_trace_count": 12,
+        "promotion_contract_external_evidence_baseline_comparison_coverage_rate": 1.0,
+        "promotion_contract_external_evidence_baseline_comparison_decision_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_missing_trace_count": 0,
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_counts": {
+          "structured_qa": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_recommended_route_record_counts": {
+          "benchmark_manifest:truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-covered-facts-handoff-blind-spot-wikidata-structured-qa:0.1": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_record_counts": {},
+        "promotion_contract_external_evidence_baseline_comparison_route_passed_counts": {
+          "True": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_source_counts": {
+          "file": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_passed_counts": {
+          "True": 12
+        },
+        "promotion_contract_external_evidence_baseline_comparison_text_redline_run_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_abstention_track_promote_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_abstention_track_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_available_trace_count": 12,
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_base_detectability_track_status_counts": {
+          "blocked": 12
+        },
+        "promotion_contract_frontier_release_evidence_base_multiple_testing_track_status_counts": {
+          "blocked": 12
+        },
+        "promotion_contract_frontier_release_evidence_base_verifier_track_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_citation_batch_rollup_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_citation_batch_track_promote_rate": 0.0,
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status_counts": {
+          "not_required": 12
+        },
+        "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_coverage_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_decision_promote_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_decision_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count_mean": 1.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_candidate_count_mean": 5.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count_mean": 0.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": {
+          "detectability": 12,
+          "multiple_testing": 12
+        },
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_mean": 3.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count_mean": 2.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_manifest_counts": {
+          "artifacts/frontier-release-evidence/artifact-manifest-budget-target-sweep-v4.json": 12
+        },
+        "promotion_contract_frontier_release_evidence_manifest_present_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_missing_trace_count": 0,
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_promote_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_record_counts": {},
+        "promotion_contract_frontier_release_evidence_registry_counts": {},
+        "promotion_contract_frontier_release_evidence_report_counts": {
+          "artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json": 12
+        },
+        "promotion_contract_frontier_release_evidence_report_present_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_run_count_mean": 2.0,
+        "promotion_contract_frontier_release_evidence_run_names": {
+          "qwen05-l80": 12,
+          "smollm2-l80": 12
+        },
+        "promotion_contract_frontier_release_evidence_source_counts": {
+          "file": 12
+        },
+        "promotion_contract_frontier_release_evidence_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_status_promote_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_verifier_track_promote_rate": 1.0,
+        "promotion_contract_frontier_release_evidence_verifier_track_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_frontier_release_evidence_workflow_counts": {
+          "frontier_release_evidence_comparison": 12
+        },
+        "promotion_contract_pre_generation_probe_comparison_available_trace_count": 0,
+        "promotion_contract_pre_generation_probe_comparison_best_layer_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_best_model_counts": {},
+        "promotion_contract_pre_generation_probe_comparison_best_redline_auroc_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_best_redline_margin_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_best_redline_signal_counts": {},
+        "promotion_contract_pre_generation_probe_comparison_best_run_counts": {},
+        "promotion_contract_pre_generation_probe_comparison_best_test_label_auroc_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_coverage_rate": 0.0,
+        "promotion_contract_pre_generation_probe_comparison_manifest_failed_count": 0,
+        "promotion_contract_pre_generation_probe_comparison_manifest_unknown_count": 12,
+        "promotion_contract_pre_generation_probe_comparison_manifest_verified_count": 0,
+        "promotion_contract_pre_generation_probe_comparison_missing_trace_count": 12,
+        "promotion_contract_pre_generation_probe_comparison_model_count_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_record_counts": {},
+        "promotion_contract_pre_generation_probe_comparison_redline_passed_counts": {},
+        "promotion_contract_pre_generation_probe_comparison_redline_run_count_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_run_count_mean": null,
+        "promotion_contract_pre_generation_probe_comparison_source_counts": {},
+        "promotion_contract_pre_generation_probe_comparison_status_counts": {},
+        "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count_mean": 10.0,
+        "promotion_contract_product_runtime_drift_action_gate_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_blocked_metric_count_mean": null,
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count_mean": null,
+        "promotion_contract_product_runtime_drift_action_receipts_evidence_required_counts": {},
+        "promotion_contract_product_runtime_drift_available_trace_count": 12,
+        "promotion_contract_product_runtime_drift_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_redline_auroc_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_redline_margin_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_label_auroc_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_selective_accuracy_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_best_test_selective_coverage_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_coverage_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_coverage_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_coverage_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_manifest_verified_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_model_count_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_model_count_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_model_count_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_redline_pass_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_run_count_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_run_count_current_mean": null,
+        "promotion_contract_product_runtime_drift_claim_factuality_probe_comparison_run_count_status_counts": {},
+        "promotion_contract_product_runtime_drift_compared_metric_count_mean": 107.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count_mean": 6.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_context_sensitivity_flagged_result_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_flagged_result_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_flagged_result_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_flagged_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_flagged_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_flagged_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_context_sensitivity_participating_trace_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_participating_trace_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_participating_trace_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_context_sensitivity_trace_gap_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_trace_gap_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_context_sensitivity_trace_gap_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_evidence_metric_count_mean": 6.0,
+        "promotion_contract_product_runtime_drift_counterfactual_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_metric_count_mean": 6.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_false_invariance_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_false_invariance_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_false_invariance_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_flip_success_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_flip_success_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_flip_success_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_participating_trace_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_participating_trace_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_participating_trace_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_pass_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_pass_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_pass_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_trace_gap_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_trace_gap_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_trace_gap_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_verification_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_verification_false_invariance_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_false_invariance_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_false_invariance_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_verification_flip_success_count_baseline_mean": 292.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_flip_success_count_current_mean": 292.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_flip_success_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_verification_manifest_verified_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_manifest_verified_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_manifest_verified_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_verification_pass_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_pass_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_pass_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_counterfactual_verification_record_count_baseline_mean": 292.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_record_count_current_mean": 292.0,
+        "promotion_contract_product_runtime_drift_counterfactual_verification_record_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_coverage_rate": 1.0,
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_metric_count_mean": 6.0,
+        "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_max_false_supported_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_max_false_supported_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_max_false_supported_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_decision_accuracy_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_false_refuted_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_false_refuted_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_false_refuted_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_baseline_mean": 6.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current_mean": 6.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_source_documents_baseline_mean": 3.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_source_documents_current_mean": 3.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_source_documents_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_property_metric_count_baseline_mean": 10.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_property_metric_count_current_mean": 10.0,
+        "promotion_contract_product_runtime_drift_covered_fact_recommended_route_property_metric_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_blocked_group_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_blocked_group_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_blocked_group_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_metric_count_mean": 7.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_manifest_verified_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_manifest_verified_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_manifest_verified_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_missing_metric_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_missing_metric_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_missing_metric_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_missing_metric_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_missing_metric_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_missing_metric_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_present_metric_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_present_metric_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_present_metric_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_evidence_handoff_promoted_group_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_promoted_group_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_evidence_handoff_promoted_group_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_abstention_track_promote_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_abstention_track_promote_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_abstention_track_promote_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_duplicate_batch_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_duplicate_batch_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_duplicate_batch_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_expected_batch_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_expected_batch_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_expected_batch_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_missing_expected_batch_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_missing_expected_batch_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_missing_expected_batch_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_observed_batch_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_observed_batch_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_observed_batch_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_rollup_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_rollup_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_rollup_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_track_promote_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_track_promote_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_track_promote_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_unexpected_batch_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_unexpected_batch_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_citation_batch_unexpected_batch_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_decision_promote_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_decision_promote_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_decision_promote_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_candidate_count_baseline_mean": 5.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_candidate_count_current_mean": 5.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_candidate_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_missing_report_count_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_missing_report_count_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_missing_report_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_baseline_mean": 3.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_current_mean": 3.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_report_count_baseline_mean": 2.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_report_count_current_mean": 2.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_report_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_frontier_rerun_rollup_track_promote_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_manifest_present_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_manifest_present_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_manifest_present_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count_mean": 22.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_report_present_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_report_present_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_report_present_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_run_count_baseline_mean": 2.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_run_count_current_mean": 2.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_run_count_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_status_promote_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_status_promote_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_status_promote_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_verifier_track_promote_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_verifier_track_promote_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_frontier_release_evidence_verifier_track_promote_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_gate_enabled_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_missing_trace_count": 0,
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_metric_count_mean": 8.0,
+        "promotion_contract_product_runtime_drift_pre_generation_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_baseline_mean": 0.7403846153846154,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_current_mean": 0.7403846153846154,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_baseline_mean": 0.09423076923076923,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current_mean": 0.09423076923076923,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_baseline_mean": 0.8346153846153846,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_current_mean": 0.8346153846153846,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_model_count_baseline_mean": 2.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_model_count_current_mean": 2.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_model_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_redline_pass_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_run_count_baseline_mean": 2.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_run_count_current_mean": 2.0,
+        "promotion_contract_product_runtime_drift_pre_generation_probe_comparison_run_count_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_error_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_error_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_error_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_malformed_payload_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_malformed_payload_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_malformed_payload_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_missing_plan_retrieval_query_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_missing_plan_retrieval_query_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_missing_plan_retrieval_query_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_missing_retrieval_action_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_missing_retrieval_action_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_missing_retrieval_action_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_unexpected_action_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_unexpected_action_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_unexpected_action_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_unknown_claim_id_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_unknown_claim_id_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_audit_unknown_claim_id_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_alignment_failed_trace_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_alignment_failed_trace_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_alignment_failed_trace_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_missing_result_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_missing_result_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_missing_result_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_unexpected_result_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_unexpected_result_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_action_execution_unexpected_result_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_coverage_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_coverage_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_coverage_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_fingerprint_mismatch_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_fingerprint_mismatch_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_fingerprint_mismatch_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_invalid_receipt_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_invalid_receipt_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_invalid_receipt_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_missing_receipt_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_missing_receipt_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_missing_receipt_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_unsigned_receipt_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_unsigned_receipt_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_action_receipts_unsigned_receipt_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_failed_result_reference_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_fingerprint_mismatch_reference_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_missing_reference_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_reference_support_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unreceipted_reference_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unsigned_reference_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_baseline_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_current_mean": null,
+        "promotion_contract_product_runtime_drift_product_trace_receipt_claim_support_unsupported_reference_rate_status_counts": {},
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_error_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_error_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_error_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_factual_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_factual_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_factual_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_failed_trace_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_logical_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_logical_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_logical_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_procedural_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_procedural_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_procedural_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_referential_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_referential_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_referential_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_scope_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_scope_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_product_trace_trajectory_audit_scope_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_promotion_contract_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_promotion_contract_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_promotion_contract_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_promotion_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_promotion_evidence_metric_count_mean": 4.0,
+        "promotion_contract_product_runtime_drift_promotion_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count_mean": null,
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count_mean": null,
+        "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_required_counts": {},
+        "promotion_contract_product_runtime_drift_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_product_runtime_drift_trajectory_audit_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_trajectory_audit_evidence_metric_count_mean": 7.0,
+        "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_audit_claim_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_audit_claim_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_audit_claim_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_metric_count_mean": 4.0,
+        "promotion_contract_product_runtime_drift_triple_audit_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_audit_pass_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_audit_pass_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_audit_pass_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_claim_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_claim_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_claim_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_baseline_mean": 0.5999999999999999,
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_current_mean": 0.5999999999999999,
+        "promotion_contract_product_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_triple_slot_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_slot_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_triple_slot_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_world_model_conflict_rate_baseline_mean": 0.4375,
+        "promotion_contract_product_runtime_drift_world_model_conflict_rate_current_mean": 0.4375,
+        "promotion_contract_product_runtime_drift_world_model_conflict_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_world_model_coverage_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_world_model_coverage_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_world_model_coverage_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count_mean": 0.0,
+        "promotion_contract_product_runtime_drift_world_model_evidence_metric_count_mean": 5.0,
+        "promotion_contract_product_runtime_drift_world_model_evidence_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_runtime_drift_world_model_low_agreement_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_world_model_low_agreement_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_world_model_low_agreement_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_runtime_drift_world_model_participating_trace_rate_baseline_mean": 1.0,
+        "promotion_contract_product_runtime_drift_world_model_participating_trace_rate_current_mean": 1.0,
+        "promotion_contract_product_runtime_drift_world_model_participating_trace_rate_status_counts": {
+          "pass": 12
+        },
+        "promotion_contract_product_runtime_drift_world_model_trace_gap_rate_baseline_mean": 0.0,
+        "promotion_contract_product_runtime_drift_world_model_trace_gap_rate_current_mean": 0.0,
+        "promotion_contract_product_runtime_drift_world_model_trace_gap_rate_status_counts": {
+          "observed": 12
+        },
+        "promotion_contract_product_trace_action_audit_error_rate_mean": 0.0,
+        "promotion_contract_product_trace_action_audit_gate_enabled_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_trace_action_audit_gate_passed_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_trace_action_audit_gate_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_trace_action_audit_gate_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_product_trace_action_audit_missing_plan_retrieval_query_rate_mean": 0.0,
+        "promotion_contract_product_trace_action_audit_missing_retrieval_action_rate_mean": 0.0,
+        "promotion_contract_product_trace_action_execution_alignment_failed_trace_rate_mean": 0.0,
+        "promotion_contract_product_trace_action_execution_gate_enabled_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_trace_action_execution_gate_passed_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_trace_action_execution_gate_required_counts": {
+          "True": 12
+        },
+        "promotion_contract_product_trace_action_execution_gate_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_product_trace_action_execution_missing_result_rate_mean": 0.0,
+        "promotion_contract_product_trace_action_execution_request_id_mismatch_rate_mean": 0.0,
+        "promotion_contract_product_trace_action_execution_unexpected_result_rate_mean": 0.0,
+        "promotion_contract_product_trace_replay_available_trace_count": 12,
+        "promotion_contract_product_trace_replay_coverage_rate": 1.0,
+        "promotion_contract_product_trace_replay_missing_trace_count": 0,
+        "promotion_contract_product_trace_replay_workflow_report_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_product_trace_replay_workflow_status_counts": {
+          "promote": 12
+        },
+        "promotion_contract_triple_audit_evidence_available_trace_count": 0,
+        "promotion_contract_triple_audit_evidence_coverage_rate": 0.0,
+        "promotion_contract_triple_audit_evidence_missing_trace_count": 12,
+        "promotion_contract_triple_audit_evidence_report_counts": {},
+        "promotion_contract_triple_audit_evidence_source_counts": {},
+        "promotion_contract_triple_audit_evidence_status_counts": {},
+        "promotion_contract_triple_audit_evidence_workflow_counts": {},
+        "recommended_policy_enabled": null,
+        "recommended_policy_path": null,
+        "recommended_policy_threshold_count": null,
+        "recommended_policy_written": null,
+        "release": "smollm2-v1.9",
+        "status": "promote",
+        "trace_count": 12,
+        "trace_records_cache_hit": false,
+        "trace_records_cache_path": "artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/trace-record-cache.json",
+        "trace_records_cache_source": "trace_scan",
+        "trace_records_cache_written": true,
+        "trace_records_path": "artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/trace-records.jsonl",
+        "trace_records_storage": "jsonl_sidecar",
+        "trace_scan_effective_workers": 4,
+        "trace_scan_workers": 4,
+        "trajectory_audit_available_trace_count": 12,
+        "trajectory_audit_counts_by_code": {},
+        "trajectory_audit_counts_by_severity": {},
+        "trajectory_audit_counts_by_type": {},
+        "trajectory_audit_coverage_rate": 1.0,
+        "trajectory_audit_error_count": 0.0,
+        "trajectory_audit_error_rate": 0.0,
+        "trajectory_audit_factual_count": 0.0,
+        "trajectory_audit_factual_rate": 0.0,
+        "trajectory_audit_failed_trace_count": 0,
+        "trajectory_audit_failed_trace_rate": 0.0,
+        "trajectory_audit_info_count": 0.0,
+        "trajectory_audit_info_rate": 0.0,
+        "trajectory_audit_issue_count": 0.0,
+        "trajectory_audit_issue_rate": 0.0,
+        "trajectory_audit_logical_count": 0.0,
+        "trajectory_audit_logical_rate": 0.0,
+        "trajectory_audit_missing_trace_count": 0,
+        "trajectory_audit_passed_trace_count": 12,
+        "trajectory_audit_passed_trace_rate": 1.0,
+        "trajectory_audit_procedural_count": 0.0,
+        "trajectory_audit_procedural_rate": 0.0,
+        "trajectory_audit_referential_count": 0.0,
+        "trajectory_audit_referential_rate": 0.0,
+        "trajectory_audit_scope_count": 0.0,
+        "trajectory_audit_scope_rate": 0.0,
+        "trajectory_audit_warning_count": 0.0,
+        "trajectory_audit_warning_rate": 0.0,
+        "workflow": "run_product_runtime_baseline"
+      },
+      "name": "smollm2-product-runtime-baseline-action-receipts",
+      "path": "artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/product-runtime-baseline.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 0,
+        "artifact_manifest": "artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/artifact-manifest.json",
+        "before_missing_metric_count": 36,
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/product-promotion-contract-evidence-audit.json",
+        "evidence_scope": "frontier_abstention_rollup_v3_action_receipts_handoff",
+        "filled_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "action_gate",
+          "action_receipts",
+          "receipt_claim_support",
+          "frontier_release_evidence",
+          "triple_audit",
+          "covered_fact_property"
+        ],
+        "release": "smollm2-v1.9",
+        "required_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "triple_audit",
+          "covered_fact_property",
+          "action_gate",
+          "action_receipts",
+          "receipt_claim_support",
+          "frontier_release_evidence"
+        ],
+        "resolved_missing_metric_count": 36,
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+        "source_record": "benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13",
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract-v1-9-frontier-rollup-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/product-promotion-contract-evidence-handoff.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 0,
+        "enriched_contract": "artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/product-promotion-contract-evidence-handoff.json",
+        "evidence_scope": "frontier_abstention_rollup_v3_action_receipts_handoff",
+        "missing_metric_count": 0,
+        "recommended_action_ids": [],
+        "release": "smollm2-v1.9",
+        "required_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "triple_audit",
+          "covered_fact_property",
+          "action_gate",
+          "action_receipts",
+          "receipt_claim_support",
+          "frontier_release_evidence"
+        ],
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+        "source_record": "benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13",
+        "status": "promote",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-9-frontier-rollup-evidence-handoff-audit",
+      "path": "artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/product-promotion-contract-evidence-audit.json",
+      "version": "0.2"
     }
   ],
   "schema_version": 1

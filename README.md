@@ -302,18 +302,19 @@ traces and a promoted runtime-drift report comparing the trace replay baseline
 against the promoted `auto` profile baseline; all 9 drift metrics pass with zero
 blocked metrics.
 The calibrated-control demo uses the latest available local promoted product
-contract. The active frontier-audit product handoff is now
+contract. The active frontier-audit product handoff starts from
 `artifacts/smollm2_product_promotion_contract_v1_9/`, exported from promoted
 release candidate v13
 (`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13`). The raw
 contract preserves the selected cache-only runtime recommendation
-(`recommended_runtime_seconds=0.191662`), and the enriched handoff contract
-records explicit child-report evidence with `evidence_handoff_status=promote`.
-Its checked-in independent audit records the earlier `65/65` present-metric
-frontier boundary; refreshed handoff exports now require `77/77` metrics by
-also carrying action-receipt and receipt-claim-support evidence. v1.6 remains
-useful for older development smoke runs, but v1.9 is the current local
-frontier-audit handoff.
+(`recommended_runtime_seconds=0.191662`). The current receipt-aware frontier
+handoff is
+`artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v6/`:
+it records the verifier-fusion abstention release evidence plus runtime-baseline
+action-receipt and receipt-claim-support evidence, with `77/77` required
+metrics present and `evidence_handoff_status=promote`. v1.6 remains useful for
+older development smoke runs, but v1.9/v6 is the current local frontier-audit
+handoff.
 Use `benchmarks/audit_frontier_artifact_references.py` to fail-closed on the
 current docs' active frontier references when checking whether the v6 release
 candidate artifacts are actually present in the checkout. When references are
@@ -338,8 +339,8 @@ python benchmarks/audit_frontier_artifact_references.py \
 Refreshed evidence-handoff audits now require frontier release-evidence
 verdict provenance plus receipt-backed product-trace evidence in the default
 `frontier_audit` handoff groups, so a complete new export carries `77/77`
-promoted evidence fields when `--frontier-release-evidence` plus receipt-backed
-product-trace evidence are supplied.
+promoted evidence fields when `--frontier-release-evidence` and a
+receipt-backed `--runtime-baseline` are supplied.
 The `frontier_audit` release policy also now requires product-runtime drift
 reports to carry trace-level context-sensitivity participation, coverage,
 flagged-rate, trace-gap, max-flagged-rate, and max-ratio evidence beside the
@@ -748,6 +749,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_product_runtime_baseline.py` | Aggregates saved `ProductTrace` JSON files into a request-runtime baseline with phase, cache, verifier-route, route-budget exhaustion, retrieval-use, staged-verification savings, verification-plan coverage/route/tool-payload counts, action-execution planned/result alignment, action-receipt coverage/signed/unsigned/fingerprint-mismatch rates, action-audit error/missing/malformed action rates including uncovered planned retrieval queries, trajectory-audit factual/referential/logical/procedural/scope taxonomy rates, promotion-contract product-trace replay action-audit/action-execution gate metadata, external-evidence baseline-comparison coverage/status/route/text-redline handoff metadata, pre-generation probe comparison/redline handoff metadata, counterfactual verifier-audit coverage/status/pass-rate/false-invariance handoff metadata, verification-budget exhaustion summaries, claim-risk localization summaries including entity exposure and high-risk entity distributions, trace-level world-model participation/conflict/low-agreement/trace-gap summaries, trace-level context-sensitivity participation/coverage/flagged/shift/ratio summaries, trace-level counterfactual robustness participation/pass/flip/false-invariance summaries, triple/slot-audit coverage summaries, final-answer coverage/status/action summaries, promotion-contract covered-fact property scope and per-property quality rollups, runtime-profile context, an `optimization` block with phase/route/triple-audit/trajectory-audit hotspots, cache/retrieval/staging/profile recommendations, candidate control-default hints such as `max_verifier_route_attempts`, optional `ProductRuntimeBudgetPolicy` gate metrics, optional reusable recommended policy artifact, optional JSONL sidecar storage for per-trace records, optional trace-record cache reuse for repeated budget sweeps, and optional parallel trace scanning for large trace sets. |
 | `enrich_product_trace_triple_audit.py` | Offline-enriches full `ProductTrace` JSON or JSONL sidecars with rule-based or metadata-supplied `claim_triples` plus status-aware strict triple-evidence `audit_report` metadata using trace evidence and local JSON/JSONL evidence corpora; writes enriched traces, a manifest-backed report, and optional registry metadata so runtime baselines can expose trace-level triple-audit coverage without adding dependencies. |
 | `enrich_product_trace_runtime_evidence.py` | Offline-enriches full `ProductTrace` JSON or JSONL sidecars with local deterministic world-model, context-sensitivity, and counterfactual-robustness sidecars derived from existing verifier metadata; writes enriched traces, a manifest-backed report, and optional registry metadata so runtime baselines can expose trace-level frontier observability rows without network retrieval, vector stores, or LLM calls. |
+| `enrich_product_trace_action_receipts.py` | Offline-enriches full `ProductTrace` JSON or JSONL sidecars with stable action request ids, HMAC-signed action receipts, and explicit claim/final-answer receipt references; writes manifest-backed traces and a report so `run_product_runtime_baseline.py` can expose action-receipt and receipt-claim-support evidence for receipt-aware promotion handoffs while preserving dry-run status. |
 | `run_product_feedback_report.py` | Joins saved `ProductTrace` JSON payloads with `ProductFeedbackRecord` JSONL outcomes, reports accepted-but-wrong, retrieved-failure, retrieved-but-still-unsupported, abstain-false-positive, final-answer answered-but-wrong and final-answer false-block rates, matched/unmatched feedback counts, optional quality gates, manifest provenance, and optional registry metadata. |
 | `calibrate_evidence_acquisition_from_traces.py` | Converts saved `ProductTrace` JSON/JSONL plus optional `ProductFeedbackRecord` JSONL labels into post-acquisition answer/acquire/abstain calibration records, then writes an `EvidenceAcquisitionCalibrationReport`, reusable `CalibrationArtifact`, optional records JSONL, manifest, and registry metadata. |
 | `recommend_control_policy_from_feedback.py` | Turns one or more product feedback reports into a candidate `ControlPolicyConfig` plus runtime control-default recommendations, using accepted-but-wrong, retrieval-failure, abstain-false-positive, final-answer answered-but-wrong, and final-answer false-block rates to close the post-hoc feedback-to-policy loop without retraining or new dependencies. |
@@ -1012,6 +1014,7 @@ evidence rates and maximum final false-accept / false-accept-delta thresholds.
 | `run_product_runtime_baseline.py` | 聚合已保存的 `ProductTrace` JSON，输出请求级 runtime baseline：phase、cache、verifier route、route-budget exhaustion、retrieval 使用率、staged-verification 节省量、verification-plan 覆盖率/route/tool-payload 计数、action-execution planned/result 对齐情况、action-receipt 覆盖率/签名/未签名/指纹不匹配率、action-audit 错误/缺失/畸形 action 率，包括未覆盖 planned retrieval query 的指标、trajectory-audit factual/referential/logical/procedural/scope 分类率、external-evidence baseline-comparison 覆盖率/status/route/text-redline handoff metadata、pre-generation probe comparison/redline handoff metadata、promotion-contract evidence-handoff manifest/status/metric-gap/group-status metadata、verification-budget exhaustion 摘要、包含实体暴露和高风险实体分布的 claim-risk localization 摘要、triple/slot-audit 覆盖率、world-model 参与/冲突/低一致性/trace-gap 摘要、context-sensitivity 参与/覆盖/flagged/shift/ratio 摘要、trace 级 counterfactual robustness 参与/pass/flip/false-invariance 摘要、final-answer 覆盖率/status/action 汇总、promotion-contract covered-fact property scope 与 per-property quality rollups、runtime-profile context、带 phase/route/triple-audit/trajectory-audit 热点和 cache/retrieval/staging/profile 建议的 `optimization` 块、`max_verifier_route_attempts` 等候选 control-default hints、可选 `ProductRuntimeBudgetPolicy` gate、可复用推荐 policy artifact、逐 trace record 的可选 JSONL sidecar 存储、重复 budget sweep 可复用的 trace-record cache，以及大 trace 集可选并行扫描。 |
 | `enrich_product_trace_triple_audit.py` | 离线补强 full `ProductTrace` JSON 或 JSONL sidecar：使用 rule-based 或 metadata-supplied `claim_triples`、trace evidence 和本地 JSON/JSONL evidence corpus 生成 status-aware 的严格 triple-evidence `audit_report` metadata，写出 enriched traces、manifest-backed report 和可选 registry metadata，让 runtime baseline 能读取 trace-level triple-audit coverage，且不新增依赖。 |
 | `enrich_product_trace_runtime_evidence.py` | 离线补强 full `ProductTrace` JSON 或 JSONL sidecar：从已有 verifier metadata 派生本地确定性的 world-model、context-sensitivity、counterfactual-robustness sidecar，写出 enriched traces、manifest-backed report 和可选 registry metadata，让 runtime baseline 能读取 trace-level frontier observability rows；不调用网络检索、向量库或 LLM。 |
+| `enrich_product_trace_action_receipts.py` | 离线补强 full `ProductTrace` JSON 或 JSONL sidecar：补稳定 action request id、HMAC 签名 action receipt，并给 claim/final-answer 添加显式 receipt 引用；写出 manifest-backed traces 和 report，让 `run_product_runtime_baseline.py` 能为 receipt-aware promotion handoff 提供 action-receipt 与 receipt-claim-support 证据，同时保留 dry-run 状态。 |
 | `run_product_feedback_report.py` | 将已保存的 `ProductTrace` JSON 与 `ProductFeedbackRecord` JSONL 结果合并，报告 accepted-but-wrong、retrieved-failure、retrieved-but-still-unsupported、abstain-false-positive、final-answer answered-but-wrong、final-answer false-block、反馈匹配/未匹配数量、可选质量门禁、manifest provenance 和可选 registry metadata。 |
 | `recommend_control_policy_from_feedback.py` | 将一个或多个产品反馈报告转成候选 `ControlPolicyConfig` 和 runtime control-default 建议，用 accepted-but-wrong、retrieval-failure、abstain-false-positive、final-answer answered-but-wrong 和 final-answer false-block 率完成事后反馈到策略建议的闭环，不需要重训或新增依赖。 |
 | `audit_feedback_policy_replay.py` | 用历史反馈标签审计候选策略，报告 counterfactual safety coverage、claim metadata 缺口、残余安全问题和过度拦截缓解情况，并明确不等同于精确重跑 controller。 |
