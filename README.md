@@ -785,11 +785,14 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 `--require-product-runtime-drift-receipt-claim-support-evidence`, so strict
 frontier releases must preserve receipt coverage and explicit claim-to-receipt
 support evidence through the product-runtime drift handoff.
-`compare_release_candidates.py --require-product-runtime-drift-citation-integrity-evidence`
-now fails closed unless the product-runtime drift report preserves trace-level
-citation-integrity participation, coverage, mismatch, unresolved, issue, and
-trace-gap evidence, so citation metadata drift cannot disappear between replay
-and final release promotion.
+`compare_release_candidates.py --require-product-runtime-drift-provenance-evidence`
+and `--require-product-runtime-drift-citation-integrity-evidence` can fail
+closed unless the product-runtime drift report preserves trace-provenance and
+citation-integrity evidence. `run_release_candidate_registry_workflow.py`
+exposes the same opt-in final-gate flags and carries their required state,
+metric counts, and per-metric baseline/current/status metadata into the release
+manifest and registered candidate record, so graph provenance and citation
+metadata drift cannot disappear between replay and final release promotion.
 `frontier_audit` also defaults `--require-frontier-release-input-manifests`, so
 downstream release candidates only promote when the source frontier
 release-evidence report was generated with `--require-input-manifests` and all

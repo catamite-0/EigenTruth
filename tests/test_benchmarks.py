@@ -24210,6 +24210,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         action_receipts_evidence=True,
         receipt_claim_support_evidence=True,
         trajectory_audit_evidence=True,
+        provenance_evidence=True,
+        citation_integrity_evidence=True,
         evidence_handoff_evidence=True,
     )
     release_efficiency_report = _write_release_efficiency_report(
@@ -24339,6 +24341,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_runtime_drift_action_receipts_evidence=True,
         require_product_runtime_drift_receipt_claim_support_evidence=True,
         require_product_runtime_drift_trajectory_audit_evidence=True,
+        require_product_runtime_drift_provenance_evidence=True,
+        require_product_runtime_drift_citation_integrity_evidence=True,
         require_product_runtime_drift_evidence_handoff_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
@@ -24566,8 +24570,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_provenance_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 61
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 73
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -24589,6 +24595,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert (
         manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"]
+        == 0
+    )
+    assert manifest["metadata"]["product_runtime_drift_provenance_evidence_metric_count"] == 6
+    assert manifest["metadata"]["product_runtime_drift_provenance_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_metric_count"] == 6
+    assert (
+        manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_blocked_metric_count"]
         == 0
     )
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
@@ -24617,6 +24630,18 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_product_trace_trajectory_audit_scope_rate_status"] == (
         "pass"
     )
+    assert manifest["metadata"]["product_runtime_drift_product_trace_provenance_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"][
+        "product_runtime_drift_product_trace_provenance_supported_claim_evidence_coverage_status"
+    ] == "pass"
+    assert manifest["metadata"][
+        "product_runtime_drift_product_trace_citation_integrity_coverage_rate_current"
+    ] == pytest.approx(1.0)
+    assert manifest["metadata"][
+        "product_runtime_drift_product_trace_citation_integrity_mismatch_rate_status"
+    ] == "pass"
     assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_action_audit_error_rate_current"] == (
         pytest.approx(0.0)
@@ -24901,6 +24926,18 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"]["product_runtime_drift_report"] == str(
         product_runtime_drift_report
     )
+    assert (
+        payload["release_candidate_comparison"]["config"][
+            "require_product_runtime_drift_provenance_evidence"
+        ]
+        is True
+    )
+    assert (
+        payload["release_candidate_comparison"]["config"][
+            "require_product_runtime_drift_citation_integrity_evidence"
+        ]
+        is True
+    )
     assert payload["release_candidate_comparison"]["config"]["release_efficiency_report"] == str(
         release_efficiency_report
     )
@@ -25008,6 +25045,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_provenance_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_citation_integrity_evidence_required"] is True
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
@@ -25022,6 +25061,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_action_gate_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_provenance_evidence_metric_count"] == 6
+    assert record.metadata["product_runtime_drift_provenance_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_citation_integrity_evidence_metric_count"] == 6
+    assert record.metadata["product_runtime_drift_citation_integrity_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
@@ -25046,6 +25089,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     ] == pytest.approx(0.0)
     assert record.metadata[
         "product_runtime_drift_product_trace_trajectory_audit_scope_rate_status"
+    ] == "pass"
+    assert record.metadata["product_runtime_drift_product_trace_provenance_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert record.metadata[
+        "product_runtime_drift_product_trace_citation_integrity_mismatch_rate_status"
     ] == "pass"
     assert record.metadata["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
         pytest.approx(1.0)
