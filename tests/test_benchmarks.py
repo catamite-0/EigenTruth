@@ -40174,6 +40174,117 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     assert policy_record.metadata["policy_enabled"] is True
 
 
+def test_run_product_runtime_baseline_aggregates_pre_generation_risk(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_a = tmp_path / "trace-a.json"
+    trace_b = tmp_path / "trace-b.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    _write_product_runtime_trace(
+        trace_a,
+        request_id="req-a",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "runtime_profile": "audit",
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_profile_requested": "auto",
+            "pre_generation_risk_policy": {
+                "route_on_learned_risk": True,
+                "soft_risk_config": {"route_on_soft_risk": False},
+            },
+            "pre_generation_risk_assessment": {
+                "selected_profile": "audit",
+                "risk_level": "high",
+                "reason": "learned pre-generation risk estimate exceeded high threshold",
+                "triggered_features": ("question_mark", "answer_length"),
+                "triggered_metadata": ("domain",),
+                "soft_risk": {
+                    "score": -1.0,
+                    "probability": 0.20,
+                    "risk_level": "low",
+                },
+                "learned_risk": {
+                    "score": 2.0,
+                    "probability": 0.80,
+                    "risk_level": "high",
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": 0.70},
+                },
+            },
+        },
+    )
+    _write_product_runtime_trace(
+        trace_b,
+        request_id="req-b",
+        total_seconds=0.12,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "runtime_profile": "balanced",
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_profile_requested": "auto",
+            "pre_generation_risk_policy": {
+                "route_on_learned_risk": True,
+                "soft_risk_config": {"route_on_soft_risk": False},
+            },
+            "pre_generation_risk_assessment": {
+                "selected_profile": "balanced",
+                "risk_level": "medium",
+                "reason": "prompt metadata selected balanced profile",
+                "triggered_features": ("has_number",),
+                "triggered_metadata": (),
+                "soft_risk": {
+                    "score": -0.5,
+                    "probability": 0.10,
+                    "risk_level": "low",
+                },
+                "learned_risk": {
+                    "score": 0.5,
+                    "probability": 0.30,
+                    "risk_level": "medium",
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": 0.40},
+                },
+            },
+        },
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=report_path,
+        )
+    )
+
+    summary = payload["summary"]["pre_generation_risk"]
+    assert summary["available_trace_count"] == 2
+    assert summary["coverage_rate"] == pytest.approx(1.0)
+    assert summary["requested_counts"] == {"auto": 2}
+    assert summary["selected_profile_counts"] == {"audit": 1, "balanced": 1}
+    assert summary["risk_level_counts"] == {"high": 1, "medium": 1}
+    assert summary["used_for_runtime_profile_rate"] == pytest.approx(1.0)
+    assert summary["triggered_feature_count"]["mean"] == pytest.approx(1.5)
+    assert summary["soft_risk_probability"]["mean"] == pytest.approx(0.15)
+    assert summary["soft_risk_routed_rate"] == pytest.approx(0.0)
+    assert summary["learned_risk_coverage_rate"] == pytest.approx(1.0)
+    assert summary["learned_risk_probability"]["mean"] == pytest.approx(0.55)
+    assert summary["learned_risk_source_counts"] == {"unit_probe": 2}
+    assert summary["learned_risk_routed_rate"] == pytest.approx(0.5)
+    assert summary["learned_attention_max_weight"]["max"] == pytest.approx(0.70)
+    assert payload["traces"][0]["metrics"]["pre_generation_learned_risk_probability"] == pytest.approx(
+        0.80
+    )
+
+
 def test_run_product_runtime_baseline_recommends_selective_staged_verification(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"
@@ -42668,6 +42779,150 @@ def test_compare_product_runtime_baselines_gates_pre_generation_probe_drift(tmp_
     assert record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 7
     assert record.metadata["pre_generation_probe_comparison_best_test_label_auroc_current"] == pytest.approx(
         0.72
+    )
+
+
+def test_compare_product_runtime_baselines_gates_pre_generation_risk_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    common_policy = {
+        "route_on_learned_risk": True,
+        "soft_risk_config": {"route_on_soft_risk": False},
+    }
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "runtime_profile": "balanced",
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_profile_requested": "auto",
+            "pre_generation_risk_policy": common_policy,
+            "pre_generation_risk_assessment": {
+                "selected_profile": "balanced",
+                "risk_level": "low",
+                "reason": "prompt metadata selected balanced profile",
+                "triggered_features": (),
+                "triggered_metadata": (),
+                "learned_risk": {
+                    "score": -0.2,
+                    "probability": 0.20,
+                    "risk_level": "low",
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": 0.30},
+                },
+            },
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "runtime_profile": "audit",
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_profile_requested": "auto",
+            "pre_generation_risk_policy": common_policy,
+            "pre_generation_risk_assessment": {
+                "selected_profile": "audit",
+                "risk_level": "high",
+                "reason": "learned pre-generation risk estimate exceeded high threshold",
+                "triggered_features": ("answer_length",),
+                "triggered_metadata": ("domain",),
+                "learned_risk": {
+                    "score": 2.0,
+                    "probability": 0.90,
+                    "risk_level": "high",
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": 0.80},
+                },
+            },
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-pre-generation-risk",
+        version="0.1",
+        min_pre_generation_risk_coverage_rate=1.0,
+        min_pre_generation_learned_risk_coverage_rate=1.0,
+        max_pre_generation_audit_profile_rate_increase=0.10,
+        max_pre_generation_learned_risk_routed_rate_increase=0.10,
+        max_pre_generation_learned_risk_probability_mean_increase=0.20,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-pre-generation-risk:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["compared_metric_count"] == 22
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(payload, "pre_generation_risk.coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "pre_generation_risk.learned_risk_coverage_rate")[
+        "status"
+    ] == "pass"
+    audit_metric = _metric_by_name(
+        payload,
+        "pre_generation_risk.selected_profile.audit_rate",
+    )
+    routed_metric = _metric_by_name(payload, "pre_generation_risk.learned_risk_routed_rate")
+    probability_metric = _metric_by_name(
+        payload,
+        "pre_generation_risk.learned_risk_probability.mean",
+    )
+    assert audit_metric["absolute_delta"] == pytest.approx(1.0)
+    assert audit_metric["status"] == "blocked"
+    assert routed_metric["absolute_delta"] == pytest.approx(1.0)
+    assert routed_metric["status"] == "blocked"
+    assert probability_metric["absolute_delta"] == pytest.approx(0.70)
+    assert probability_metric["status"] == "blocked"
+    assert manifest["metadata"]["pre_generation_risk_blocked_metric_count"] == 3
+    assert manifest["metadata"]["pre_generation_risk_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["pre_generation_audit_profile_rate_current"] == pytest.approx(
+        1.0
+    )
+    assert manifest["metadata"]["pre_generation_learned_risk_routed_rate_status"] == "blocked"
+    assert record.metadata["pre_generation_risk_blocked_metric_count"] == 3
+    assert record.metadata["pre_generation_learned_risk_probability_mean_current"] == pytest.approx(
+        0.90
     )
 
 

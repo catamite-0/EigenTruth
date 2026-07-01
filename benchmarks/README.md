@@ -9215,7 +9215,9 @@ coverage/safety thresholds pass.
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
-retrieval-use, cache-hit-rate, verifier-skip-rate, trace-level world-model
+retrieval-use, cache-hit-rate, verifier-skip-rate, pre-generation risk
+coverage, learned-risk coverage, audit-profile rate, learned-risk routed rate,
+learned-risk probability drift, trace-level world-model
 participation/coverage/conflict/low-agreement/trace-gap drift, trace-level
 context-sensitivity participation/coverage/flagged-rate/ratio drift,
 promotion-contract coverage, covered-fact per-property rollup drift,

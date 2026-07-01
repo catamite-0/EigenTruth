@@ -40,6 +40,25 @@ _PROMOTION_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "triple_extraction_fixture_matrix_mean_f1_lift",
     ),
 )
+_PRE_GENERATION_RISK_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("pre_generation_risk.coverage_rate", "pre_generation_risk_coverage_rate"),
+    (
+        "pre_generation_risk.learned_risk_coverage_rate",
+        "pre_generation_learned_risk_coverage_rate",
+    ),
+    (
+        "pre_generation_risk.selected_profile.audit_rate",
+        "pre_generation_audit_profile_rate",
+    ),
+    (
+        "pre_generation_risk.learned_risk_routed_rate",
+        "pre_generation_learned_risk_routed_rate",
+    ),
+    (
+        "pre_generation_risk.learned_risk_probability.mean",
+        "pre_generation_learned_risk_probability_mean",
+    ),
+)
 _PRE_GENERATION_PROBE_COMPARISON_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.pre_generation_probe_comparison.coverage_rate",
@@ -1004,6 +1023,11 @@ def compare_product_runtime_baselines(
     max_retrieval_use_rate_delta: float | None = None,
     max_cache_hit_rate_drop: float | None = None,
     max_verification_skip_rate_drop: float | None = None,
+    min_pre_generation_risk_coverage_rate: float | None = None,
+    min_pre_generation_learned_risk_coverage_rate: float | None = None,
+    max_pre_generation_audit_profile_rate_increase: float | None = None,
+    max_pre_generation_learned_risk_routed_rate_increase: float | None = None,
+    max_pre_generation_learned_risk_probability_mean_increase: float | None = None,
     min_promotion_contract_coverage: float | None = None,
     min_pre_generation_probe_comparison_coverage: float | None = None,
     min_pre_generation_probe_comparison_manifest_verified_rate: float | None = None,
@@ -1236,6 +1260,21 @@ def compare_product_runtime_baselines(
         "max_retrieval_use_rate_delta": _optional_non_negative_float(max_retrieval_use_rate_delta),
         "max_cache_hit_rate_drop": _optional_non_negative_float(max_cache_hit_rate_drop),
         "max_verification_skip_rate_drop": _optional_non_negative_float(max_verification_skip_rate_drop),
+        "min_pre_generation_risk_coverage_rate": _optional_rate_float(
+            min_pre_generation_risk_coverage_rate
+        ),
+        "min_pre_generation_learned_risk_coverage_rate": _optional_rate_float(
+            min_pre_generation_learned_risk_coverage_rate
+        ),
+        "max_pre_generation_audit_profile_rate_increase": _optional_rate_float(
+            max_pre_generation_audit_profile_rate_increase
+        ),
+        "max_pre_generation_learned_risk_routed_rate_increase": _optional_rate_float(
+            max_pre_generation_learned_risk_routed_rate_increase
+        ),
+        "max_pre_generation_learned_risk_probability_mean_increase": _optional_rate_float(
+            max_pre_generation_learned_risk_probability_mean_increase
+        ),
         "min_promotion_contract_coverage": _optional_rate_float(min_promotion_contract_coverage),
         "min_pre_generation_probe_comparison_coverage": _optional_rate_float(
             min_pre_generation_probe_comparison_coverage
@@ -2012,6 +2051,7 @@ def _comparison_metrics(
     metrics.extend(_context_sensitivity_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_robustness_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_claim_risk_localization_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_pre_generation_risk_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_claim_factuality_probe_comparison_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_verification_metrics(baseline_summary, current_summary, gates=gates))
@@ -2021,6 +2061,71 @@ def _comparison_metrics(
         _frontier_release_evidence_metrics(baseline_summary, current_summary, gates=gates)
     )
     return metrics
+
+
+def _pre_generation_risk_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _pre_generation_risk_gate_enabled(gates):
+        return []
+    baseline = _mapping(_nested_value(baseline_summary, ("pre_generation_risk",)))
+    current = _mapping(_nested_value(current_summary, ("pre_generation_risk",)))
+    return [
+        _min_current_metric(
+            "pre_generation_risk.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_pre_generation_risk_coverage_rate"),
+        ),
+        _min_current_metric(
+            "pre_generation_risk.learned_risk_coverage_rate",
+            _finite_float(baseline.get("learned_risk_coverage_rate")),
+            _finite_float(current.get("learned_risk_coverage_rate")),
+            gates.get("min_pre_generation_learned_risk_coverage_rate"),
+        ),
+        _delta_metric(
+            "pre_generation_risk.selected_profile.audit_rate",
+            _pre_generation_selected_profile_rate(baseline, "audit"),
+            _pre_generation_selected_profile_rate(current, "audit"),
+            gates.get("max_pre_generation_audit_profile_rate_increase"),
+        ),
+        _delta_metric(
+            "pre_generation_risk.learned_risk_routed_rate",
+            _finite_float(baseline.get("learned_risk_routed_rate")),
+            _finite_float(current.get("learned_risk_routed_rate")),
+            gates.get("max_pre_generation_learned_risk_routed_rate_increase"),
+        ),
+        _delta_metric(
+            "pre_generation_risk.learned_risk_probability.mean",
+            _nested_float(baseline, ("learned_risk_probability", "mean")),
+            _nested_float(current, ("learned_risk_probability", "mean")),
+            gates.get("max_pre_generation_learned_risk_probability_mean_increase"),
+        ),
+    ]
+
+
+def _pre_generation_risk_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_pre_generation_risk_coverage_rate",
+            "min_pre_generation_learned_risk_coverage_rate",
+            "max_pre_generation_audit_profile_rate_increase",
+            "max_pre_generation_learned_risk_routed_rate_increase",
+            "max_pre_generation_learned_risk_probability_mean_increase",
+        )
+    )
+
+
+def _pre_generation_selected_profile_rate(
+    summary: Mapping[str, Any],
+    profile: str,
+) -> float | None:
+    counts = _mapping(summary.get("selected_profile_counts"))
+    return _count_rate(counts, (profile,))
 
 
 def _pre_generation_probe_comparison_metrics(
@@ -3844,6 +3949,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         "blocked_metric_count": summary.get("blocked_metric_count"),
         "observed_metric_count": summary.get("observed_metric_count"),
         **_promotion_evidence_metadata(report),
+        **_pre_generation_risk_metadata(report),
         **_pre_generation_probe_comparison_metadata(report),
         **_claim_factuality_probe_comparison_metadata(report),
         **_counterfactual_verification_metadata(report),
@@ -3877,6 +3983,25 @@ def _promotion_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["promotion_evidence_blocked_metric_count"] += 1
+    return metadata
+
+
+def _pre_generation_risk_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "pre_generation_risk_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRE_GENERATION_RISK_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["pre_generation_risk_blocked_metric_count"] += 1
     return metadata
 
 
@@ -4349,6 +4474,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_use_rate_delta=args.max_retrieval_use_rate_delta,
         max_cache_hit_rate_drop=args.max_cache_hit_rate_drop,
         max_verification_skip_rate_drop=args.max_verification_skip_rate_drop,
+        min_pre_generation_risk_coverage_rate=(
+            args.min_pre_generation_risk_coverage_rate
+        ),
+        min_pre_generation_learned_risk_coverage_rate=(
+            args.min_pre_generation_learned_risk_coverage_rate
+        ),
+        max_pre_generation_audit_profile_rate_increase=(
+            args.max_pre_generation_audit_profile_rate_increase
+        ),
+        max_pre_generation_learned_risk_routed_rate_increase=(
+            args.max_pre_generation_learned_risk_routed_rate_increase
+        ),
+        max_pre_generation_learned_risk_probability_mean_increase=(
+            args.max_pre_generation_learned_risk_probability_mean_increase
+        ),
         min_promotion_contract_coverage=args.min_promotion_contract_coverage,
         min_pre_generation_probe_comparison_coverage=(
             args.min_pre_generation_probe_comparison_coverage
@@ -4796,6 +4936,27 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate-delta", type=float, default=None)
     parser.add_argument("--max-cache-hit-rate-drop", type=float, default=None)
     parser.add_argument("--max-verification-skip-rate-drop", type=float, default=None)
+    parser.add_argument("--min-pre-generation-risk-coverage-rate", type=float, default=None)
+    parser.add_argument(
+        "--min-pre-generation-learned-risk-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-pre-generation-audit-profile-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-pre-generation-learned-risk-routed-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-pre-generation-learned-risk-probability-mean-increase",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-promotion-contract-coverage", type=float, default=None)
     parser.add_argument("--min-pre-generation-probe-comparison-coverage", type=float, default=None)
     parser.add_argument(

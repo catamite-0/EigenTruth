@@ -1070,6 +1070,65 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "slowest_phase": metrics.get("slowest_phase"),
         "cache_hit_rate": metrics.get("cache_hit_rate"),
         "named_cache_hit_rates": dict(_mapping(metrics.get("named_cache_hit_rates"))),
+        "pre_generation_risk_summary": dict(
+            _mapping(metrics.get("pre_generation_risk_summary"))
+        ),
+        "pre_generation_risk_available": bool(
+            metrics.get("pre_generation_risk_available")
+        ),
+        "pre_generation_risk_source": metrics.get("pre_generation_risk_source"),
+        "pre_generation_profile_requested": metrics.get("pre_generation_profile_requested"),
+        "pre_generation_selected_profile": metrics.get("pre_generation_selected_profile"),
+        "pre_generation_risk_level": metrics.get("pre_generation_risk_level"),
+        "pre_generation_runtime_profile_source": metrics.get(
+            "pre_generation_runtime_profile_source"
+        ),
+        "pre_generation_used_for_runtime_profile": metrics.get(
+            "pre_generation_used_for_runtime_profile"
+        ),
+        "pre_generation_triggered_feature_count": metrics.get(
+            "pre_generation_triggered_feature_count"
+        ),
+        "pre_generation_triggered_metadata_count": metrics.get(
+            "pre_generation_triggered_metadata_count"
+        ),
+        "pre_generation_soft_risk_available": bool(
+            metrics.get("pre_generation_soft_risk_available")
+        ),
+        "pre_generation_soft_risk_score": metrics.get("pre_generation_soft_risk_score"),
+        "pre_generation_soft_risk_probability": metrics.get(
+            "pre_generation_soft_risk_probability"
+        ),
+        "pre_generation_soft_risk_level": metrics.get("pre_generation_soft_risk_level"),
+        "pre_generation_soft_risk_routed": metrics.get("pre_generation_soft_risk_routed"),
+        "pre_generation_route_on_soft_risk": metrics.get("pre_generation_route_on_soft_risk"),
+        "pre_generation_learned_risk_available": bool(
+            metrics.get("pre_generation_learned_risk_available")
+        ),
+        "pre_generation_learned_risk_score": metrics.get(
+            "pre_generation_learned_risk_score"
+        ),
+        "pre_generation_learned_risk_probability": metrics.get(
+            "pre_generation_learned_risk_probability"
+        ),
+        "pre_generation_learned_risk_level": metrics.get(
+            "pre_generation_learned_risk_level"
+        ),
+        "pre_generation_learned_risk_source_name": metrics.get(
+            "pre_generation_learned_risk_source_name"
+        ),
+        "pre_generation_learned_risk_layer_idx": metrics.get(
+            "pre_generation_learned_risk_layer_idx"
+        ),
+        "pre_generation_learned_risk_routed": metrics.get(
+            "pre_generation_learned_risk_routed"
+        ),
+        "pre_generation_route_on_learned_risk": metrics.get(
+            "pre_generation_route_on_learned_risk"
+        ),
+        "pre_generation_learned_attention_max_weight": metrics.get(
+            "pre_generation_learned_attention_max_weight"
+        ),
         "route_cost_summary": dict(_mapping(metrics.get("route_cost_summary"))),
         "mean_route_duration_seconds": metrics.get("mean_route_duration_seconds"),
         "p95_route_duration_seconds": metrics.get("p95_route_duration_seconds"),
@@ -1790,6 +1849,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
+        "pre_generation_risk": _aggregate_pre_generation_risk(metrics),
         "action_execution": _aggregate_action_execution(metrics),
         "action_receipts": _aggregate_action_receipts(metrics),
         "receipt_claim_support": _aggregate_receipt_claim_support(metrics),
@@ -1829,6 +1889,94 @@ def _aggregate_contexts(contexts: Sequence[Mapping[str, Any]]) -> dict[str, Any]
         "risk_level_counts": _counts(context.get("risk_level") for context in contexts),
         "action_counts": _counts(context.get("action") for context in contexts),
         "staged_verification_enabled_count": sum(1 for value in staged_values if _truthy_flag(value)),
+    }
+
+
+def _aggregate_pre_generation_risk(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    available_count = sum(1 for item in metrics if bool(item.get("pre_generation_risk_available")))
+    used_for_runtime_count = sum(
+        1
+        for item in metrics
+        if _truthy_flag(item.get("pre_generation_used_for_runtime_profile"))
+    )
+    soft_available_count = sum(
+        1 for item in metrics if bool(item.get("pre_generation_soft_risk_available"))
+    )
+    soft_routed_count = sum(
+        1 for item in metrics if _truthy_flag(item.get("pre_generation_soft_risk_routed"))
+    )
+    learned_available_count = sum(
+        1 for item in metrics if bool(item.get("pre_generation_learned_risk_available"))
+    )
+    learned_routed_count = sum(
+        1
+        for item in metrics
+        if _truthy_flag(item.get("pre_generation_learned_risk_routed"))
+    )
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(item.get("pre_generation_risk_source") for item in metrics),
+        "requested_counts": _counts(
+            item.get("pre_generation_profile_requested") for item in metrics
+        ),
+        "selected_profile_counts": _counts(
+            item.get("pre_generation_selected_profile") for item in metrics
+        ),
+        "risk_level_counts": _counts(item.get("pre_generation_risk_level") for item in metrics),
+        "runtime_profile_source_counts": _counts(
+            item.get("pre_generation_runtime_profile_source") for item in metrics
+        ),
+        "used_for_runtime_profile_count": used_for_runtime_count,
+        "used_for_runtime_profile_rate": _safe_div(used_for_runtime_count, len(metrics)),
+        "triggered_feature_count": _numeric_summary(
+            item.get("pre_generation_triggered_feature_count") for item in metrics
+        ),
+        "triggered_metadata_count": _numeric_summary(
+            item.get("pre_generation_triggered_metadata_count") for item in metrics
+        ),
+        "soft_risk_available_trace_count": soft_available_count,
+        "soft_risk_coverage_rate": _safe_div(soft_available_count, len(metrics)),
+        "soft_risk_score": _numeric_summary(
+            item.get("pre_generation_soft_risk_score") for item in metrics
+        ),
+        "soft_risk_probability": _numeric_summary(
+            item.get("pre_generation_soft_risk_probability") for item in metrics
+        ),
+        "soft_risk_level_counts": _counts(
+            item.get("pre_generation_soft_risk_level") for item in metrics
+        ),
+        "soft_risk_routed_count": soft_routed_count,
+        "soft_risk_routed_rate": _safe_div(soft_routed_count, len(metrics)),
+        "route_on_soft_risk_counts": _counts(
+            item.get("pre_generation_route_on_soft_risk") for item in metrics
+        ),
+        "learned_risk_available_trace_count": learned_available_count,
+        "learned_risk_coverage_rate": _safe_div(learned_available_count, len(metrics)),
+        "learned_risk_score": _numeric_summary(
+            item.get("pre_generation_learned_risk_score") for item in metrics
+        ),
+        "learned_risk_probability": _numeric_summary(
+            item.get("pre_generation_learned_risk_probability") for item in metrics
+        ),
+        "learned_risk_level_counts": _counts(
+            item.get("pre_generation_learned_risk_level") for item in metrics
+        ),
+        "learned_risk_source_counts": _counts(
+            item.get("pre_generation_learned_risk_source_name") for item in metrics
+        ),
+        "learned_risk_layer_idx": _numeric_summary(
+            item.get("pre_generation_learned_risk_layer_idx") for item in metrics
+        ),
+        "learned_risk_routed_count": learned_routed_count,
+        "learned_risk_routed_rate": _safe_div(learned_routed_count, len(metrics)),
+        "route_on_learned_risk_counts": _counts(
+            item.get("pre_generation_route_on_learned_risk") for item in metrics
+        ),
+        "learned_attention_max_weight": _numeric_summary(
+            item.get("pre_generation_learned_attention_max_weight") for item in metrics
+        ),
     }
 
 
