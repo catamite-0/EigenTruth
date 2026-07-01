@@ -5728,6 +5728,7 @@ defaults `--max-recommended-runtime-seconds 1.0`, leaving the older
 `--max-uncached-forward-seconds` cold-start gate opt-in for callers that want it,
 and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-pre-generation-evidence`,
+`--require-product-runtime-drift-claim-factuality-evidence`,
 `--require-product-runtime-drift-counterfactual-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
@@ -5759,10 +5760,10 @@ Trajectory-audit runtime evidence now also carries cascading-evidence propagatio
 signals: `trajectory_audit_cascade_count` increments when failed upstream
 retrieval/tool actions or empty retrieval results are later treated as support
 for claims or final answered traces.
-Add `--require-product-runtime-drift-claim-factuality-evidence` when a release
-must additionally prove that claim factuality probe comparison evidence survived
-the product-runtime handoff; it is opt-in so existing `frontier_audit` checks keep
-their current default evidence boundary.
+Outside the `frontier_audit` profile, add
+`--require-product-runtime-drift-claim-factuality-evidence` when a release must
+prove that claim factuality probe comparison evidence survived the
+product-runtime handoff.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -5957,6 +5958,7 @@ support/refutation quality gates over route summary `property_metrics`.
 also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`,
 `require_product_runtime_drift_pre_generation_evidence=true`,
+`require_product_runtime_drift_claim_factuality_evidence=true`,
 `require_product_runtime_drift_counterfactual_evidence=true`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
@@ -5972,7 +5974,8 @@ matrix, and external-prediction triple-extraction minima unless explicit file
 paths are supplied. The release must carry the strict adapter-family matrix,
 rule-based state-transition world-model evidence, promotion-backed runtime-drift
 evidence, pre-generation risk-telemetry/probe-comparison runtime-drift
-evidence, counterfactual verifier-audit runtime-drift evidence, trace-level triple-audit
+evidence, claim factuality probe-comparison runtime-drift evidence,
+counterfactual verifier-audit runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
 trajectory-audit runtime-drift evidence, trace-level world-model runtime-drift
 evidence, trace-level context-sensitivity runtime-drift evidence, registered
@@ -6362,7 +6365,7 @@ python benchmarks/audit_product_promotion_contract_evidence.py \
 
 The audit writes `workflow=product_promotion_evidence_handoff_audit` with the
 same promotion, pre-generation, counterfactual, triple-audit, covered-fact,
-action-gate, and frontier-release evidence metric names used by release drift
+claim-factuality, action-gate, and frontier-release evidence metric names used by release drift
 blockers. Its default group set is kept compatible with existing promotion
 contracts; stricter runs can explicitly pass `--required-groups` entries such as
 `claim_factuality`, `claim_risk_localization`, `fact_selfcheck_gate`,

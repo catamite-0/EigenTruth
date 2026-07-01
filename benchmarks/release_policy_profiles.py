@@ -57,6 +57,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_state_transition_world_model": True,
         "require_product_runtime_drift_promotion_evidence": True,
         "require_product_runtime_drift_pre_generation_evidence": True,
+        "require_product_runtime_drift_claim_factuality_evidence": True,
         "require_product_runtime_drift_claim_risk_localization_evidence": True,
         "require_product_runtime_drift_counterfactual_evidence": True,
         "require_product_runtime_drift_triple_audit_evidence": True,
