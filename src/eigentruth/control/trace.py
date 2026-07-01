@@ -14,6 +14,7 @@ from eigentruth.control.provenance import audit_trace_provenance
 from eigentruth.control.receipt_audit import audit_receipt_claim_support
 from eigentruth.control.receipts import action_receipt_summary_from_results
 from eigentruth.json_utils import to_jsonable
+from eigentruth.verify.citations import extract_citation_references
 from eigentruth.verify.localization import localize_claim_risk_spans
 from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
 from eigentruth.verify.protocols import Claim, VerificationResult
@@ -302,6 +303,10 @@ class ProductTrace:
             "counterfactual_robustness": _counterfactual_robustness_summary_from_results(
                 prepared.verification_results,
             ),
+            "citation_integrity": _citation_integrity_summary(
+                prepared.claims,
+                prepared.verification_results,
+            ),
             "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
             "cache": _cache_summary_from_metadata(prepared.metadata),
             "verification_stage": _verification_stage_summary_from_payload(
@@ -431,6 +436,13 @@ class ProductTrace:
         """Summarize counterfactual perturbation audit signals on verifier results."""
         return _counterfactual_robustness_summary_from_results(
             tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def citation_integrity_summary(self) -> dict[str, Any]:
+        """Summarize citation-reference coverage and catalog-audit outcomes."""
+        return _citation_integrity_summary(
+            tuple(_claim_to_dict(claim) for claim in self.claims),
+            tuple(_verification_result_to_dict(result) for result in self.verification_results),
         )
 
     def runtime_summary(self) -> dict[str, Any]:
@@ -1406,6 +1418,175 @@ def _counterfactual_entity_probe_count(groups: Any) -> float | None:
         observed = True
         total += count
     return float(total) if observed else None
+
+
+def _citation_integrity_summary(
+    claims: Sequence[Mapping[str, Any]],
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    claim_reference_counts: dict[str, int] = {}
+    counts_by_status: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    counts_by_reference_source: dict[str, int] = {}
+    mismatch_fields: dict[str, int] = {}
+    matched_citation_ids: set[str] = set()
+    catalog_sizes: list[float] = []
+
+    for index, claim in enumerate(claims):
+        claim_id = _payload_claim_id(claim, fallback=f"claim:{index}")
+        references = _claim_citation_references(claim)
+        if references:
+            claim_reference_counts[claim_id] = len(references)
+        for reference in references:
+            _increment_count(counts_by_reference_source, reference.get("source"))
+
+    citation_result_total = 0
+    mismatch_count = 0
+    unresolved_count = 0
+    empty_catalog_count = 0
+    no_reference_result_count = 0
+    trace_gap_count = 0
+    covered_claim_ids: set[str] = set()
+
+    for index, result in enumerate(results):
+        metadata = _mapping(result.get("metadata"))
+        if not _is_citation_result(metadata):
+            continue
+        citation_result_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        decision_rule = metadata.get("decision_rule")
+        _increment_count(counts_by_decision_rule, decision_rule)
+        claim_id = _payload_claim_id(metadata, fallback=f"result:{index}")
+        if claim_id != f"result:{index}":
+            covered_claim_ids.add(claim_id)
+
+        catalog_size = _finite_float(metadata.get("catalog_size"))
+        if catalog_size is not None:
+            catalog_sizes.append(catalog_size)
+        for citation_id in _as_sequence(metadata.get("matched_citation_ids", ())):
+            text = str(citation_id).strip()
+            if text:
+                matched_citation_ids.add(text)
+
+        references = tuple(
+            item for item in _as_sequence(metadata.get("references", ())) if isinstance(item, Mapping)
+        )
+        audits = tuple(item for item in _as_sequence(metadata.get("audits", ())) if isinstance(item, Mapping))
+        for reference in references:
+            _increment_count(counts_by_reference_source, reference.get("source"))
+
+        explicit_mismatch_count = _non_negative_int(metadata.get("mismatch_count"))
+        explicit_unresolved_count = _non_negative_int(metadata.get("unresolved_count"))
+        audit_mismatch_count = 0
+        audit_unresolved_count = 0
+        for audit in audits:
+            if str(audit.get("status", "")).strip().lower() == "unresolved":
+                audit_unresolved_count += 1
+            mismatches = tuple(
+                item for item in _as_sequence(audit.get("mismatches", ())) if isinstance(item, Mapping)
+            )
+            audit_mismatch_count += len(mismatches)
+            for mismatch in mismatches:
+                _increment_count(mismatch_fields, mismatch.get("field"))
+
+        mismatch_count += (
+            explicit_mismatch_count
+            if explicit_mismatch_count is not None
+            else audit_mismatch_count
+        )
+        unresolved_count += (
+            explicit_unresolved_count
+            if explicit_unresolved_count is not None
+            else audit_unresolved_count
+        )
+        if decision_rule == "empty_catalog":
+            empty_catalog_count += 1
+        if decision_rule == "no_citation_reference":
+            no_reference_result_count += 1
+        if (
+            decision_rule != "no_citation_reference"
+            and not references
+            and not audits
+            and catalog_size is None
+        ):
+            trace_gap_count += 1
+
+    cited_claim_count = len(claim_reference_counts)
+    citation_reference_count = sum(claim_reference_counts.values())
+    if covered_claim_ids:
+        covered_cited_claim_count = len(covered_claim_ids & set(claim_reference_counts))
+    else:
+        covered_cited_claim_count = min(citation_result_total, cited_claim_count)
+    issue_count = mismatch_count + unresolved_count + empty_catalog_count + trace_gap_count
+    available = cited_claim_count > 0 or citation_result_total > 0
+    return {
+        "available": available,
+        "passed": (issue_count == 0) if available else None,
+        "claim_count": len(claims),
+        "verification_result_count": len(results),
+        "cited_claim_count": cited_claim_count,
+        "citation_reference_count": citation_reference_count,
+        "citation_result_total": citation_result_total,
+        "coverage_rate": _safe_div(covered_cited_claim_count, cited_claim_count) or 0.0,
+        "covered_cited_claim_count": covered_cited_claim_count,
+        "mismatch_count": mismatch_count,
+        "unresolved_count": unresolved_count,
+        "empty_catalog_count": empty_catalog_count,
+        "no_reference_result_count": no_reference_result_count,
+        "issue_count": issue_count,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, citation_result_total) or 0.0,
+        "matched_citation_count": len(matched_citation_ids),
+        "matched_citation_ids": tuple(sorted(matched_citation_ids))[:16],
+        "catalog_size_min": min(catalog_sizes) if catalog_sizes else None,
+        "catalog_size_mean": _mean_or_none(catalog_sizes),
+        "counts_by_status": counts_by_status,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "counts_by_reference_source": counts_by_reference_source,
+        "mismatch_fields": mismatch_fields,
+        "claim_reference_counts": dict(sorted(claim_reference_counts.items())),
+        "traceable": citation_result_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _claim_citation_references(claim: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    try:
+        payload = Claim(
+            text=str(claim.get("text", "")),
+            claim_id=None if claim.get("claim_id") is None else str(claim.get("claim_id")),
+            span=None,
+            metadata=_mapping(claim.get("metadata")),
+        )
+        return extract_citation_references(payload)
+    except (TypeError, ValueError):
+        return ()
+
+
+def _is_citation_result(metadata: Mapping[str, Any]) -> bool:
+    verifier = metadata.get("verifier")
+    selected_route = metadata.get("selected_route")
+    selected_verifier = metadata.get("selected_verifier")
+    decision_rule = str(metadata.get("decision_rule", "")).strip()
+    if verifier == "citation" or selected_route == "citation":
+        return True
+    if selected_verifier is not None and "citation" in str(selected_verifier).lower():
+        return True
+    if decision_rule.startswith("citation_") or decision_rule in {
+        "empty_catalog",
+        "no_citation_reference",
+    }:
+        return True
+    return any(
+        key in metadata
+        for key in (
+            "references",
+            "audits",
+            "matched_citation_ids",
+            "mismatch_count",
+            "unresolved_count",
+            "catalog_size",
+        )
+    )
 
 
 def _first_non_negative_float(*values: Any) -> float | None:

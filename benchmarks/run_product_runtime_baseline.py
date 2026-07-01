@@ -1460,6 +1460,55 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "counterfactual_robustness_counts_by_entity_source_kind": dict(
             _mapping(metrics.get("counterfactual_robustness_counts_by_entity_source_kind"))
         ),
+        "citation_integrity_summary": dict(
+            _mapping(metrics.get("citation_integrity_summary"))
+        ),
+        "citation_integrity_source": metrics.get("citation_integrity_source"),
+        "citation_integrity_available": metrics.get("citation_integrity_available"),
+        "citation_integrity_passed": metrics.get("citation_integrity_passed"),
+        "citation_integrity_cited_claim_count": metrics.get(
+            "citation_integrity_cited_claim_count"
+        ),
+        "citation_integrity_reference_count": metrics.get("citation_integrity_reference_count"),
+        "citation_integrity_result_total": metrics.get("citation_integrity_result_total"),
+        "citation_integrity_coverage_rate": metrics.get("citation_integrity_coverage_rate"),
+        "citation_integrity_covered_cited_claim_count": metrics.get(
+            "citation_integrity_covered_cited_claim_count"
+        ),
+        "citation_integrity_mismatch_count": metrics.get("citation_integrity_mismatch_count"),
+        "citation_integrity_unresolved_count": metrics.get("citation_integrity_unresolved_count"),
+        "citation_integrity_empty_catalog_count": metrics.get(
+            "citation_integrity_empty_catalog_count"
+        ),
+        "citation_integrity_no_reference_result_count": metrics.get(
+            "citation_integrity_no_reference_result_count"
+        ),
+        "citation_integrity_issue_count": metrics.get("citation_integrity_issue_count"),
+        "citation_integrity_trace_gap_count": metrics.get("citation_integrity_trace_gap_count"),
+        "citation_integrity_trace_gap_rate": metrics.get("citation_integrity_trace_gap_rate"),
+        "citation_integrity_matched_citation_count": metrics.get(
+            "citation_integrity_matched_citation_count"
+        ),
+        "citation_integrity_catalog_size_min": metrics.get("citation_integrity_catalog_size_min"),
+        "citation_integrity_catalog_size_mean": metrics.get(
+            "citation_integrity_catalog_size_mean"
+        ),
+        "citation_integrity_traceable": metrics.get("citation_integrity_traceable"),
+        "citation_integrity_counts_by_status": dict(
+            _mapping(metrics.get("citation_integrity_counts_by_status"))
+        ),
+        "citation_integrity_counts_by_decision_rule": dict(
+            _mapping(metrics.get("citation_integrity_counts_by_decision_rule"))
+        ),
+        "citation_integrity_counts_by_reference_source": dict(
+            _mapping(metrics.get("citation_integrity_counts_by_reference_source"))
+        ),
+        "citation_integrity_mismatch_fields": dict(
+            _mapping(metrics.get("citation_integrity_mismatch_fields"))
+        ),
+        "citation_integrity_claim_reference_counts": dict(
+            _mapping(metrics.get("citation_integrity_claim_reference_counts"))
+        ),
         "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
         "final_answer_available": bool(metrics.get("final_answer_available")),
         "final_answer_source": metrics.get("final_answer_source"),
@@ -1752,6 +1801,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "world_model": _aggregate_world_model(metrics),
         "context_sensitivity": _aggregate_context_sensitivity(metrics),
         "counterfactual_robustness": _aggregate_counterfactual_robustness(metrics),
+        "citation_integrity": _aggregate_citation_integrity(metrics),
         "final_answer": _aggregate_final_answer(metrics),
         "decision_sequence": _aggregate_decision_sequence(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
@@ -3432,6 +3482,109 @@ def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -
         ),
         "per_trace_trace_gap_rate": _numeric_summary(
             item.get("counterfactual_robustness_trace_gap_rate") for item in metrics
+        ),
+    }
+
+
+def _aggregate_citation_integrity(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("citation_integrity_summary")) for item in metrics]
+    cited_claim_count = _sum_float(summaries, "cited_claim_count")
+    citation_reference_count = _sum_float(summaries, "citation_reference_count")
+    citation_result_total = _sum_float(summaries, "citation_result_total")
+    covered_cited_claim_count = _sum_float(summaries, "covered_cited_claim_count")
+    mismatch_count = _sum_float(summaries, "mismatch_count")
+    unresolved_count = _sum_float(summaries, "unresolved_count")
+    empty_catalog_count = _sum_float(summaries, "empty_catalog_count")
+    no_reference_result_count = _sum_float(summaries, "no_reference_result_count")
+    issue_count = _sum_float(summaries, "issue_count")
+    trace_gap_count = _sum_float(summaries, "trace_gap_count")
+    matched_citation_count = _sum_float(summaries, "matched_citation_count")
+    counts_by_status: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    counts_by_reference_source: dict[str, int] = {}
+    mismatch_fields: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(
+            counts_by_status,
+            _mapping(item.get("citation_integrity_counts_by_status")),
+        )
+        _merge_counts(
+            counts_by_decision_rule,
+            _mapping(item.get("citation_integrity_counts_by_decision_rule")),
+        )
+        _merge_counts(
+            counts_by_reference_source,
+            _mapping(item.get("citation_integrity_counts_by_reference_source")),
+        )
+        _merge_counts(
+            mismatch_fields,
+            _mapping(item.get("citation_integrity_mismatch_fields")),
+        )
+    participating_trace_count = sum(
+        1
+        for item in metrics
+        if item.get("citation_integrity_available") is True
+    )
+    traceable_trace_count = sum(
+        1 for item in metrics if item.get("citation_integrity_traceable") is True
+    )
+    untraceable_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("citation_integrity_result_total")) or 0.0) > 0.0
+        and item.get("citation_integrity_traceable") is False
+    )
+    return {
+        "source_trace_count": len(metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "source_counts": _counts(item.get("citation_integrity_source") for item in metrics),
+        "participating_trace_count": participating_trace_count,
+        "participating_trace_rate": _safe_div(participating_trace_count, len(metrics)),
+        "cited_claim_count": cited_claim_count,
+        "citation_reference_count": citation_reference_count,
+        "citation_result_total": citation_result_total,
+        "covered_cited_claim_count": covered_cited_claim_count,
+        "coverage_rate": _safe_div(covered_cited_claim_count, cited_claim_count),
+        "mismatch_count": mismatch_count,
+        "mismatch_rate": _safe_div(mismatch_count, citation_reference_count),
+        "unresolved_count": unresolved_count,
+        "unresolved_rate": _safe_div(unresolved_count, citation_reference_count),
+        "empty_catalog_count": empty_catalog_count,
+        "no_reference_result_count": no_reference_result_count,
+        "issue_count": issue_count,
+        "issue_rate": _safe_div(issue_count, citation_reference_count),
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, citation_result_total),
+        "matched_citation_count": matched_citation_count,
+        "traceable_trace_count": traceable_trace_count,
+        "untraceable_trace_count": untraceable_trace_count,
+        "counts_by_status": counts_by_status,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "counts_by_reference_source": counts_by_reference_source,
+        "mismatch_fields": mismatch_fields,
+        "per_trace_cited_claim_count": _numeric_summary(
+            item.get("citation_integrity_cited_claim_count") for item in metrics
+        ),
+        "per_trace_reference_count": _numeric_summary(
+            item.get("citation_integrity_reference_count") for item in metrics
+        ),
+        "per_trace_result_total": _numeric_summary(
+            item.get("citation_integrity_result_total") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("citation_integrity_coverage_rate") for item in metrics
+        ),
+        "per_trace_issue_count": _numeric_summary(
+            item.get("citation_integrity_issue_count") for item in metrics
+        ),
+        "per_trace_trace_gap_rate": _numeric_summary(
+            item.get("citation_integrity_trace_gap_rate") for item in metrics
+        ),
+        "catalog_size_min": _numeric_summary(
+            item.get("citation_integrity_catalog_size_min") for item in metrics
+        ),
+        "catalog_size_mean": _numeric_summary(
+            item.get("citation_integrity_catalog_size_mean") for item in metrics
         ),
     }
 
@@ -5207,6 +5360,7 @@ def _write_artifact_manifest(
 ) -> dict[str, Any]:
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     provenance_metadata = _provenance_flat_metadata(report)
+    citation_integrity_metadata = _citation_integrity_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5268,6 +5422,7 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             **trajectory_audit_metadata,
             **provenance_metadata,
+            **citation_integrity_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -5304,6 +5459,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
         return
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     provenance_metadata = _provenance_flat_metadata(report)
+    citation_integrity_metadata = _citation_integrity_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
     promotion_contract_trace_replay_metadata = _promotion_contract_trace_replay_flat_metadata(
         report
@@ -5370,6 +5526,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "compact_json": config.compact_json,
             **trajectory_audit_metadata,
             **provenance_metadata,
+            **citation_integrity_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
             **promotion_contract_external_evidence_metadata,
@@ -5497,6 +5654,65 @@ def _provenance_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "provenance_counts_by_relation": dict(
             _mapping(provenance.get("counts_by_relation"))
+        ),
+    }
+
+
+def _citation_integrity_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    citation = _mapping(_nested(report, "summary", "citation_integrity"))
+    if not citation:
+        return {}
+    return {
+        "citation_integrity_source_trace_count": citation.get("source_trace_count"),
+        "citation_integrity_summary_observations": citation.get("summary_observations"),
+        "citation_integrity_participating_trace_count": citation.get(
+            "participating_trace_count"
+        ),
+        "citation_integrity_participating_trace_rate": citation.get(
+            "participating_trace_rate"
+        ),
+        "citation_integrity_cited_claim_count": citation.get("cited_claim_count"),
+        "citation_integrity_reference_count": citation.get("citation_reference_count"),
+        "citation_integrity_result_total": citation.get("citation_result_total"),
+        "citation_integrity_covered_cited_claim_count": citation.get(
+            "covered_cited_claim_count"
+        ),
+        "citation_integrity_coverage_rate": citation.get("coverage_rate"),
+        "citation_integrity_mismatch_count": citation.get("mismatch_count"),
+        "citation_integrity_mismatch_rate": citation.get("mismatch_rate"),
+        "citation_integrity_unresolved_count": citation.get("unresolved_count"),
+        "citation_integrity_unresolved_rate": citation.get("unresolved_rate"),
+        "citation_integrity_empty_catalog_count": citation.get("empty_catalog_count"),
+        "citation_integrity_no_reference_result_count": citation.get(
+            "no_reference_result_count"
+        ),
+        "citation_integrity_issue_count": citation.get("issue_count"),
+        "citation_integrity_issue_rate": citation.get("issue_rate"),
+        "citation_integrity_trace_gap_count": citation.get("trace_gap_count"),
+        "citation_integrity_trace_gap_rate": citation.get("trace_gap_rate"),
+        "citation_integrity_matched_citation_count": citation.get(
+            "matched_citation_count"
+        ),
+        "citation_integrity_traceable_trace_count": citation.get(
+            "traceable_trace_count"
+        ),
+        "citation_integrity_untraceable_trace_count": citation.get(
+            "untraceable_trace_count"
+        ),
+        "citation_integrity_source_counts": dict(
+            _mapping(citation.get("source_counts"))
+        ),
+        "citation_integrity_counts_by_status": dict(
+            _mapping(citation.get("counts_by_status"))
+        ),
+        "citation_integrity_counts_by_decision_rule": dict(
+            _mapping(citation.get("counts_by_decision_rule"))
+        ),
+        "citation_integrity_counts_by_reference_source": dict(
+            _mapping(citation.get("counts_by_reference_source"))
+        ),
+        "citation_integrity_mismatch_fields": dict(
+            _mapping(citation.get("mismatch_fields"))
         ),
     }
 

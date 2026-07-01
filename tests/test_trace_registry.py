@@ -54,6 +54,9 @@ from eigentruth.registry import (
     save_json_cache,
 )
 from eigentruth.verify import (
+    CitationRecord,
+    CitationVerifier,
+    Claim,
     ClaimVerificationPlanner,
     InMemoryVerifier,
     VerificationBudgetPolicy,
@@ -2305,6 +2308,78 @@ def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics()
         "AlphaCorp": 1,
         "Beta Labs": 1,
     }
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
+def test_product_trace_citation_integrity_summary_feeds_runtime_metrics():
+    catalog = (
+        CitationRecord(
+            citation_id="smith2026",
+            title="Geometry-Calibrated Conformal Abstention for Language Models",
+            authors=("Jane Smith",),
+            year=2026,
+            doi="10.1234/gcca",
+            source="unit-catalog",
+        ),
+    )
+    verifier = CitationVerifier(records=catalog)
+    claims = (
+        Claim(
+            text="The method was reported in the selective prediction literature.",
+            claim_id="c1",
+            metadata={
+                "citation": {
+                    "citation_id": "smith2026",
+                    "year": 2025,
+                    "title": "Geometry calibrated abstention",
+                },
+            },
+        ),
+        Claim(
+            text="A related result appears in [missing2026].",
+            claim_id="c2",
+        ),
+    )
+    results = tuple(verifier.verify(claim) for claim in claims)
+    trace = ProductTrace(claims=claims, verification_results=results)
+
+    summary = trace.citation_integrity_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["passed"] is False
+    assert summary["claim_count"] == 2
+    assert summary["cited_claim_count"] == 2
+    assert summary["citation_reference_count"] == 2
+    assert summary["citation_result_total"] == 2
+    assert summary["coverage_rate"] == pytest.approx(1.0)
+    assert summary["mismatch_count"] == 1
+    assert summary["unresolved_count"] == 1
+    assert summary["issue_count"] == 2
+    assert summary["trace_gap_count"] == 0
+    assert summary["counts_by_status"] == {
+        "refuted": 1,
+        "insufficient_evidence": 1,
+    }
+    assert summary["counts_by_reference_source"]["claim_metadata"] == 2
+    assert summary["counts_by_reference_source"]["claim_text.bracket"] == 2
+    assert summary["mismatch_fields"] == {"year": 1}
+    assert summary["matched_citation_count"] == 1
+    assert bounded["summaries"]["citation_integrity"]["mismatch_count"] == 1
+    assert metrics["citation_integrity_source"] == "full_trace"
+    assert metrics["citation_integrity_available"] is True
+    assert metrics["citation_integrity_passed"] is False
+    assert metrics["citation_integrity_coverage_rate"] == pytest.approx(1.0)
+    assert metrics["citation_integrity_mismatch_count"] == 1
+    assert metrics["citation_integrity_unresolved_count"] == 1
+    assert metrics["citation_integrity_counts_by_decision_rule"] == {
+        "citation_catalog_match": 2,
+    }
+    assert bounded_metrics["citation_integrity_source"] == "bounded_summary"
+    assert bounded_metrics["citation_integrity_mismatch_fields"] == {"year": 1}
     json.dumps(summary)
     json.dumps(bounded)
 

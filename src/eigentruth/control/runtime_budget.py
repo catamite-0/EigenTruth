@@ -507,6 +507,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_world_model_metrics(trace))
         metrics.update(_context_sensitivity_metrics(trace))
         metrics.update(_counterfactual_robustness_metrics(trace))
+        metrics.update(_citation_integrity_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
         metrics.update(_promotion_contract_metrics(trace))
         return metrics
@@ -554,6 +555,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_world_model_metrics(trace))
     metrics.update(_context_sensitivity_metrics(trace))
     metrics.update(_counterfactual_robustness_metrics(trace))
+    metrics.update(_citation_integrity_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
     metrics.update(_promotion_contract_metrics(trace))
     return metrics
@@ -1371,6 +1373,74 @@ def _metadata_counterfactual_robustness_summary(payload: Mapping[str, Any]) -> d
     trace_corpus = _mapping(metadata.get("trace_corpus"))
     return _mapping(trace_corpus.get("counterfactual_robustness_summary")) or _mapping(
         metadata.get("counterfactual_robustness_summary")
+    )
+
+
+def _citation_integrity_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.citation_integrity_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("citation_integrity"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = _metadata_citation_integrity_summary(payload)
+            if summary:
+                source = "metadata_summary"
+            else:
+                summary = ProductTrace(
+                    claims=tuple(_sequence(payload.get("claims", ()))),
+                    verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+                ).citation_integrity_summary()
+                source = "full_trace"
+    return {
+        "citation_integrity_summary": summary,
+        "citation_integrity_source": source,
+        "citation_integrity_available": _optional_bool(summary.get("available")),
+        "citation_integrity_passed": _optional_bool(summary.get("passed")),
+        "citation_integrity_cited_claim_count": _finite_float(summary.get("cited_claim_count")),
+        "citation_integrity_reference_count": _finite_float(summary.get("citation_reference_count")),
+        "citation_integrity_result_total": _finite_float(summary.get("citation_result_total")),
+        "citation_integrity_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "citation_integrity_covered_cited_claim_count": _finite_float(
+            summary.get("covered_cited_claim_count")
+        ),
+        "citation_integrity_mismatch_count": _finite_float(summary.get("mismatch_count")),
+        "citation_integrity_unresolved_count": _finite_float(summary.get("unresolved_count")),
+        "citation_integrity_empty_catalog_count": _finite_float(summary.get("empty_catalog_count")),
+        "citation_integrity_no_reference_result_count": _finite_float(
+            summary.get("no_reference_result_count")
+        ),
+        "citation_integrity_issue_count": _finite_float(summary.get("issue_count")),
+        "citation_integrity_trace_gap_count": _finite_float(summary.get("trace_gap_count")),
+        "citation_integrity_trace_gap_rate": _finite_float(summary.get("trace_gap_rate")),
+        "citation_integrity_matched_citation_count": _finite_float(
+            summary.get("matched_citation_count")
+        ),
+        "citation_integrity_catalog_size_min": _finite_float(summary.get("catalog_size_min")),
+        "citation_integrity_catalog_size_mean": _finite_float(summary.get("catalog_size_mean")),
+        "citation_integrity_traceable": _optional_bool(summary.get("traceable")),
+        "citation_integrity_counts_by_status": _int_mapping(summary.get("counts_by_status")),
+        "citation_integrity_counts_by_decision_rule": _int_mapping(
+            summary.get("counts_by_decision_rule")
+        ),
+        "citation_integrity_counts_by_reference_source": _int_mapping(
+            summary.get("counts_by_reference_source")
+        ),
+        "citation_integrity_mismatch_fields": _int_mapping(summary.get("mismatch_fields")),
+        "citation_integrity_claim_reference_counts": _int_mapping(
+            summary.get("claim_reference_counts")
+        ),
+    }
+
+
+def _metadata_citation_integrity_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(payload.get("metadata"))
+    trace_corpus = _mapping(metadata.get("trace_corpus"))
+    return _mapping(trace_corpus.get("citation_integrity_summary")) or _mapping(
+        metadata.get("citation_integrity_summary")
     )
 
 
