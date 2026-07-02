@@ -64,6 +64,8 @@ def summarize_unresolved_frontier_evidence(
     citation_workflows: Sequence[Mapping[str, Any]] = (),
     source_family_coverage_audits: Sequence[Mapping[str, Any]] = (),
     semantic_gap_review_workflows: Sequence[Mapping[str, Any]] = (),
+    frontier_command_binding_reviews: Sequence[Mapping[str, Any]] = (),
+    frontier_bound_command_runs: Sequence[Mapping[str, Any]] = (),
     rule_input_plan: Mapping[str, Any] | None = None,
     rule_input_audit_report: Mapping[str, Any] | None = None,
     rule_stub_requeue_report: Mapping[str, Any] | None = None,
@@ -77,6 +79,10 @@ def summarize_unresolved_frontier_evidence(
     source_lane = _source_family_coverage_lane(source_family_coverage_audits)
     citation_lane = _citation_lane(citation_workflows)
     semantic_lane = _semantic_gap_review_lane(semantic_gap_review_workflows)
+    frontier_queue_lane = _frontier_queue_execution_lane(
+        frontier_command_binding_reviews,
+        frontier_bound_command_runs,
+    )
     rule_lane = _world_model_rule_lane(
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
@@ -90,6 +96,7 @@ def summarize_unresolved_frontier_evidence(
         "source_family_acquisition": source_lane,
         "citation_evidence": citation_lane,
         "semantic_gap_review": semantic_lane,
+        "frontier_queue_execution": frontier_queue_lane,
         "world_model_rules": rule_lane,
     }
     next_actions = _next_actions(lanes)
@@ -117,6 +124,8 @@ def run(
     citation_workflow_paths: Sequence[str | Path] = (),
     source_family_coverage_audit_paths: Sequence[str | Path] = (),
     semantic_gap_review_workflow_paths: Sequence[str | Path] = (),
+    frontier_command_binding_review_paths: Sequence[str | Path] = (),
+    frontier_bound_command_run_paths: Sequence[str | Path] = (),
     rule_input_plan_path: str | Path | None = None,
     rule_input_audit_report_path: str | Path | None = None,
     rule_stub_requeue_report_path: str | Path | None = None,
@@ -143,6 +152,10 @@ def run(
     citation_workflows = tuple(_load_mapping(path) for path in citation_workflow_paths)
     coverage_audits = tuple(_load_mapping(path) for path in source_family_coverage_audit_paths)
     semantic_gap_reviews = tuple(_load_mapping(path) for path in semantic_gap_review_workflow_paths)
+    frontier_command_reviews = tuple(
+        _load_mapping(path) for path in frontier_command_binding_review_paths
+    )
+    frontier_command_runs = tuple(_load_mapping(path) for path in frontier_bound_command_run_paths)
     rule_input_plan = _load_optional_mapping(rule_input_plan_path)
     rule_input_audit_report = _load_optional_mapping(rule_input_audit_report_path)
     rule_stub_requeue_report = _load_optional_mapping(rule_stub_requeue_report_path)
@@ -155,6 +168,8 @@ def run(
         citation_workflows=citation_workflows,
         source_family_coverage_audits=coverage_audits,
         semantic_gap_review_workflows=semantic_gap_reviews,
+        frontier_command_binding_reviews=frontier_command_reviews,
+        frontier_bound_command_runs=frontier_command_runs,
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
         rule_stub_requeue_report=rule_stub_requeue_report,
@@ -176,6 +191,12 @@ def run(
         ),
         "semantic_gap_review_workflows": tuple(
             str(path) for path in semantic_gap_review_workflow_paths
+        ),
+        "frontier_command_binding_reviews": tuple(
+            str(path) for path in frontier_command_binding_review_paths
+        ),
+        "frontier_bound_command_runs": tuple(
+            str(path) for path in frontier_bound_command_run_paths
         ),
         "rule_input_plan": None if rule_input_plan_path is None else str(rule_input_plan_path),
         "rule_input_audit_report": None
@@ -206,6 +227,8 @@ def run(
             citation_workflow_paths=citation_workflow_paths,
             source_family_coverage_audit_paths=source_family_coverage_audit_paths,
             semantic_gap_review_workflow_paths=semantic_gap_review_workflow_paths,
+            frontier_command_binding_review_paths=frontier_command_binding_review_paths,
+            frontier_bound_command_run_paths=frontier_bound_command_run_paths,
             rule_input_plan_path=rule_input_plan_path,
             rule_input_audit_report_path=rule_input_audit_report_path,
             rule_stub_requeue_report_path=rule_stub_requeue_report_path,
@@ -241,6 +264,18 @@ def run(
                 "semantic_gap_review_approved_source_document_count": payload["lanes"][
                     "semantic_gap_review"
                 ]["approved_source_document_count"],
+                "frontier_queue_execution_status": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["status"],
+                "frontier_command_binding_review_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["command_binding_review_count"],
+                "frontier_bound_command_run_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["bound_command_run_count"],
+                "frontier_bound_command_succeeded_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["succeeded_count"],
                 "world_model_rule_remaining_task_count": payload["lanes"][
                     "world_model_rules"
                 ]["remaining_task_count"],
@@ -537,6 +572,172 @@ def _semantic_gap_review_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[st
     }
 
 
+def _frontier_queue_execution_lane(
+    command_binding_reviews: Sequence[Mapping[str, Any]],
+    bound_command_runs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    review_rows = []
+    review_status_counts: Counter[str] = Counter()
+    review_entry_count = 0
+    approved_entry_count = 0
+    blocked_entry_count = 0
+    pending_review_count = 0
+    approved_binding_count = 0
+    missing_binding_count = 0
+    review_failure_counts: Counter[str] = Counter()
+    for index, report in enumerate(command_binding_reviews, start=1):
+        status = str(report.get("status") or "unknown")
+        summary = _mapping(report.get("summary"))
+        review_status_counts[status] += 1
+        review_entry_count += _int(summary.get("entry_count"))
+        approved_entry_count += _int(summary.get("approved_entry_count"))
+        blocked_entry_count += _int(summary.get("blocked_entry_count"))
+        pending_review_count += _int(summary.get("pending_review_count"))
+        approved_binding_count += _int(summary.get("approved_binding_count"))
+        missing_binding_count += _int(summary.get("missing_binding_count"))
+        review_failure_counts.update(_int_mapping(summary.get("failure_counts")))
+        review_rows.append({
+            "index": index,
+            "workflow": report.get("workflow"),
+            "status": status,
+            "entry_count": _int(summary.get("entry_count")),
+            "approved_entry_count": _int(summary.get("approved_entry_count")),
+            "blocked_entry_count": _int(summary.get("blocked_entry_count")),
+            "pending_review_count": _int(summary.get("pending_review_count")),
+            "approved_binding_count": _int(summary.get("approved_binding_count")),
+            "missing_binding_count": _int(summary.get("missing_binding_count")),
+            "failure_counts": _int_mapping(summary.get("failure_counts")),
+        })
+
+    run_rows = []
+    run_status_counts: Counter[str] = Counter()
+    dry_run_report_count = 0
+    executed_report_count = 0
+    succeeded_run_report_count = 0
+    unreviewed_execution_override_count = 0
+    command_count = 0
+    dry_run_count = 0
+    executed_count = 0
+    succeeded_count = 0
+    failed_count = 0
+    timed_out_count = 0
+    skipped_count = 0
+    invalid_command_count = 0
+    binding_not_reviewed_count = 0
+    materialized_output_count = 0
+    missing_output_count = 0
+    planned_output_count = 0
+    unchecked_output_count = 0
+    for index, report in enumerate(bound_command_runs, start=1):
+        status = str(report.get("status") or "unknown")
+        summary = _mapping(report.get("summary"))
+        config = _mapping(report.get("config"))
+        dry_run = config.get("dry_run") is True
+        executes_commands = config.get("executes_commands") is True
+        require_reviewed = config.get("require_reviewed_bindings")
+        run_status_counts[status] += 1
+        if dry_run:
+            dry_run_report_count += 1
+        if executes_commands:
+            executed_report_count += 1
+            if require_reviewed is False:
+                unreviewed_execution_override_count += 1
+        if status == "succeeded":
+            succeeded_run_report_count += 1
+        command_count += _int(summary.get("command_count"))
+        dry_run_count += _int(summary.get("dry_run_count"))
+        executed_count += _int(summary.get("executed_count"))
+        succeeded_count += _int(summary.get("succeeded_count"))
+        failed_count += _int(summary.get("failed_count"))
+        timed_out_count += _int(summary.get("timed_out_count"))
+        skipped_count += _int(summary.get("skipped_count"))
+        invalid_command_count += _int(summary.get("invalid_command_count"))
+        binding_not_reviewed_count += _int(summary.get("binding_not_reviewed_count"))
+        materialized_output_count += _int(summary.get("materialized_output_count"))
+        missing_output_count += _int(summary.get("missing_output_count"))
+        planned_output_count += _int(summary.get("planned_output_count"))
+        unchecked_output_count += _int(summary.get("unchecked_output_count"))
+        run_rows.append({
+            "index": index,
+            "workflow": report.get("workflow"),
+            "status": status,
+            "dry_run": dry_run,
+            "executes_commands": executes_commands,
+            "require_reviewed_bindings": require_reviewed,
+            "entry_count": _int(summary.get("entry_count")),
+            "command_count": _int(summary.get("command_count")),
+            "dry_run_count": _int(summary.get("dry_run_count")),
+            "executed_count": _int(summary.get("executed_count")),
+            "succeeded_count": _int(summary.get("succeeded_count")),
+            "failed_count": _int(summary.get("failed_count")),
+            "timed_out_count": _int(summary.get("timed_out_count")),
+            "skipped_count": _int(summary.get("skipped_count")),
+            "invalid_command_count": _int(summary.get("invalid_command_count")),
+            "binding_not_reviewed_count": _int(summary.get("binding_not_reviewed_count")),
+            "materialized_output_count": _int(summary.get("materialized_output_count")),
+            "missing_output_count": _int(summary.get("missing_output_count")),
+            "planned_output_count": _int(summary.get("planned_output_count")),
+            "unchecked_output_count": _int(summary.get("unchecked_output_count")),
+        })
+
+    if not review_rows and not run_rows:
+        status = "not_configured"
+    elif (
+        blocked_entry_count
+        or pending_review_count
+        or missing_binding_count
+        or binding_not_reviewed_count
+        or unreviewed_execution_override_count
+        or any(row["status"] not in {"ready_for_execution"} for row in review_rows)
+    ):
+        status = "needs_review"
+    elif invalid_command_count or failed_count or timed_out_count or missing_output_count:
+        status = "blocked"
+    elif skipped_count:
+        status = "needs_inputs"
+    elif succeeded_run_report_count and executed_count and succeeded_count == executed_count:
+        status = "promote"
+    elif dry_run_report_count or any(row["status"] == "ready_for_execution" for row in review_rows):
+        status = "needs_execution"
+    else:
+        status = "needs_execution"
+
+    return {
+        "status": status,
+        "command_binding_review_count": len(review_rows),
+        "ready_review_count": review_status_counts.get("ready_for_execution", 0),
+        "review_status_counts": dict(sorted(review_status_counts.items())),
+        "review_entry_count": review_entry_count,
+        "approved_entry_count": approved_entry_count,
+        "blocked_entry_count": blocked_entry_count,
+        "pending_review_count": pending_review_count,
+        "approved_binding_count": approved_binding_count,
+        "missing_binding_count": missing_binding_count,
+        "review_failure_counts": dict(sorted(review_failure_counts.items())),
+        "bound_command_run_count": len(run_rows),
+        "run_status_counts": dict(sorted(run_status_counts.items())),
+        "dry_run_report_count": dry_run_report_count,
+        "executed_report_count": executed_report_count,
+        "succeeded_run_report_count": succeeded_run_report_count,
+        "unreviewed_execution_override_count": unreviewed_execution_override_count,
+        "command_count": command_count,
+        "dry_run_count": dry_run_count,
+        "executed_count": executed_count,
+        "succeeded_count": succeeded_count,
+        "failed_count": failed_count,
+        "timed_out_count": timed_out_count,
+        "skipped_count": skipped_count,
+        "invalid_command_count": invalid_command_count,
+        "binding_not_reviewed_count": binding_not_reviewed_count,
+        "materialized_output_count": materialized_output_count,
+        "missing_output_count": missing_output_count,
+        "planned_output_count": planned_output_count,
+        "unchecked_output_count": unchecked_output_count,
+        "command_binding_reviews": tuple(review_rows),
+        "bound_command_runs": tuple(run_rows),
+    }
+
+
 def _world_model_rule_lane(
     *,
     rule_input_plan: Mapping[str, Any] | None,
@@ -713,6 +914,7 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
     source = lanes["source_family_acquisition"]
     citation = lanes["citation_evidence"]
     semantic = lanes["semantic_gap_review"]
+    frontier_queue = lanes["frontier_queue_execution"]
     rules = lanes["world_model_rules"]
     queue = lanes["unresolved_queue"]
     if source.get("status") != "covered":
@@ -787,6 +989,58 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 "audit_adjusted_required_input_counts", {}
             ),
         })
+    if frontier_queue.get("status") == "needs_review":
+        actions.append({
+            "action_id": "review_frontier_queue_command_bindings",
+            "priority": 84,
+            "lane": "frontier_queue_execution",
+            "reason": (
+                "frontier queue command bindings or execution records need an "
+                "explicit non-evidence review before real execution can count "
+                "as closure"
+            ),
+            "command_binding_review_count": frontier_queue.get(
+                "command_binding_review_count", 0
+            ),
+            "blocked_entry_count": frontier_queue.get("blocked_entry_count", 0),
+            "pending_review_count": frontier_queue.get("pending_review_count", 0),
+            "binding_not_reviewed_count": frontier_queue.get(
+                "binding_not_reviewed_count", 0
+            ),
+            "unreviewed_execution_override_count": frontier_queue.get(
+                "unreviewed_execution_override_count", 0
+            ),
+        })
+    if frontier_queue.get("status") in {"needs_execution"}:
+        actions.append({
+            "action_id": "execute_reviewed_frontier_queue_command_plan",
+            "priority": 83,
+            "lane": "frontier_queue_execution",
+            "reason": (
+                "frontier queue command bindings are reviewed or dry-run only; "
+                "run the approved bound command plan to materialize child "
+                "control artifacts"
+            ),
+            "ready_review_count": frontier_queue.get("ready_review_count", 0),
+            "dry_run_report_count": frontier_queue.get("dry_run_report_count", 0),
+            "bound_command_run_count": frontier_queue.get("bound_command_run_count", 0),
+            "command_count": frontier_queue.get("command_count", 0),
+        })
+    if frontier_queue.get("status") in {"blocked", "needs_inputs"}:
+        actions.append({
+            "action_id": "repair_frontier_queue_command_execution",
+            "priority": 82,
+            "lane": "frontier_queue_execution",
+            "reason": (
+                "frontier queue command execution failed, skipped commands, "
+                "or missed planned outputs"
+            ),
+            "failed_count": frontier_queue.get("failed_count", 0),
+            "timed_out_count": frontier_queue.get("timed_out_count", 0),
+            "skipped_count": frontier_queue.get("skipped_count", 0),
+            "invalid_command_count": frontier_queue.get("invalid_command_count", 0),
+            "missing_output_count": frontier_queue.get("missing_output_count", 0),
+        })
     if _int(queue.get("target_count")) and not actions:
         actions.append({
             "action_id": "verify_unresolved_targets_are_closed",
@@ -837,6 +1091,27 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "semantic_gap_review_covered_fact_route_n_records": _int(
             lanes["semantic_gap_review"].get("covered_fact_route_n_records")
         ),
+        "frontier_queue_execution_status": str(
+            lanes["frontier_queue_execution"].get("status") or "unknown"
+        ),
+        "frontier_command_binding_review_count": _int(
+            lanes["frontier_queue_execution"].get("command_binding_review_count")
+        ),
+        "frontier_bound_command_run_count": _int(
+            lanes["frontier_queue_execution"].get("bound_command_run_count")
+        ),
+        "frontier_bound_command_executed_count": _int(
+            lanes["frontier_queue_execution"].get("executed_count")
+        ),
+        "frontier_bound_command_succeeded_count": _int(
+            lanes["frontier_queue_execution"].get("succeeded_count")
+        ),
+        "frontier_bound_command_dry_run_count": _int(
+            lanes["frontier_queue_execution"].get("dry_run_count")
+        ),
+        "frontier_bound_command_missing_output_count": _int(
+            lanes["frontier_queue_execution"].get("missing_output_count")
+        ),
         "mechanism_handoff_trace_count": _int(
             lanes["world_model_rules"].get("mechanism_handoff_trace_count")
         ),
@@ -844,7 +1119,14 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "blocked_lane_count": sum(
             1
             for status in lane_statuses.values()
-            if status in {"blocked", "needs_inputs", "needs_requeue", "partial"}
+            if status in {
+                "blocked",
+                "needs_execution",
+                "needs_inputs",
+                "needs_requeue",
+                "needs_review",
+                "partial",
+            }
         ),
         "missing_lane_count": sum(1 for status in lane_statuses.values() if status == "missing"),
         "covered_or_promoted_lane_count": sum(
@@ -861,6 +1143,8 @@ def _write_manifest(
     citation_workflow_paths: Sequence[str | Path],
     source_family_coverage_audit_paths: Sequence[str | Path],
     semantic_gap_review_workflow_paths: Sequence[str | Path],
+    frontier_command_binding_review_paths: Sequence[str | Path],
+    frontier_bound_command_run_paths: Sequence[str | Path],
     rule_input_plan_path: str | Path | None,
     rule_input_audit_report_path: str | Path | None,
     rule_stub_requeue_report_path: str | Path | None,
@@ -892,6 +1176,14 @@ def _write_manifest(
         for idx, path in enumerate(semantic_gap_review_workflow_paths, start=1)
     })
     artifacts.update({
+        f"frontier_command_binding_review_{idx}": path
+        for idx, path in enumerate(frontier_command_binding_review_paths, start=1)
+    })
+    artifacts.update({
+        f"frontier_bound_command_run_{idx}": path
+        for idx, path in enumerate(frontier_bound_command_run_paths, start=1)
+    })
+    artifacts.update({
         f"rule_promotion_report_{idx}": path
         for idx, path in enumerate(rule_promotion_report_paths, start=1)
     })
@@ -918,6 +1210,27 @@ def _write_manifest(
             ),
             "semantic_gap_review_approved_source_document_count": _nested(
                 payload, "lanes", "semantic_gap_review", "approved_source_document_count"
+            ),
+            "frontier_queue_execution_status": _nested(
+                payload, "lanes", "frontier_queue_execution", "status"
+            ),
+            "frontier_command_binding_review_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "command_binding_review_count",
+            ),
+            "frontier_bound_command_run_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "bound_command_run_count",
+            ),
+            "frontier_bound_command_succeeded_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "succeeded_count",
             ),
             "world_model_rule_remaining_task_count": _nested(
                 payload,
@@ -1136,6 +1449,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--citation-workflow", action="append", default=[])
     parser.add_argument("--source-family-coverage-audit", action="append", default=[])
     parser.add_argument("--semantic-gap-review-workflow", action="append", default=[])
+    parser.add_argument("--frontier-command-binding-review", action="append", default=[])
+    parser.add_argument("--frontier-bound-command-run", action="append", default=[])
     parser.add_argument("--rule-input-plan", default=None)
     parser.add_argument("--rule-input-audit-report", default=None)
     parser.add_argument("--rule-stub-requeue-report", default=None)
@@ -1159,6 +1474,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         citation_workflow_paths=tuple(args.citation_workflow or ()),
         source_family_coverage_audit_paths=tuple(args.source_family_coverage_audit or ()),
         semantic_gap_review_workflow_paths=tuple(args.semantic_gap_review_workflow or ()),
+        frontier_command_binding_review_paths=tuple(
+            args.frontier_command_binding_review or ()
+        ),
+        frontier_bound_command_run_paths=tuple(args.frontier_bound_command_run or ()),
         rule_input_plan_path=args.rule_input_plan,
         rule_input_audit_report_path=args.rule_input_audit_report,
         rule_stub_requeue_report_path=args.rule_stub_requeue_report,

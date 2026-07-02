@@ -4234,8 +4234,9 @@ Aggregates the unresolved frontier lanes into one read-only closure summary. It
 does not run adapters, promote verifier evidence, or close a release gate; it
 combines queue counts, citation/source-family gate status, source acquisition
 coverage, reviewed semantic-gap covered-fact route status,
-world-model rule-input/promotion status, mechanism handoff coverage, and the
-next concrete actions.
+frontier queue command-binding review/run status, world-model
+rule-input/promotion status, mechanism handoff coverage, and the next concrete
+actions.
 
 ```bash
 OUT=artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1
@@ -4245,6 +4246,8 @@ python benchmarks/summarize_unresolved_frontier_evidence.py \
   --source-family-coverage-audit artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json \
   --citation-workflow artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json \
   --semantic-gap-review-workflow artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1/retrieval-semantic-gap-review-workflow.json \
+  --frontier-command-binding-review artifacts/frontier-release-evidence/frontier-command-binding-review-v1/frontier-command-binding-review.json \
+  --frontier-bound-command-run artifacts/frontier-release-evidence/frontier-bound-command-run-v1/frontier-bound-command-run-report.json \
   --rule-input-plan artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json \

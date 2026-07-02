@@ -59394,6 +59394,204 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert cli_payload["metadata"] == {"model": "unit", "source": "cli"}
 
 
+def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_gate(tmp_path):
+    module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    ready_review = {
+        "workflow": "frontier_research_queue_command_binding_review",
+        "status": "ready_for_execution",
+        "summary": {
+            "entry_count": 1,
+            "approved_entry_count": 1,
+            "blocked_entry_count": 0,
+            "pending_review_count": 0,
+            "approved_binding_count": 1,
+            "missing_binding_count": 0,
+            "failure_counts": {},
+        },
+    }
+    blocked_review = {
+        "workflow": "frontier_research_queue_command_binding_review",
+        "status": "needs_review",
+        "summary": {
+            "entry_count": 1,
+            "approved_entry_count": 0,
+            "blocked_entry_count": 1,
+            "pending_review_count": 1,
+            "approved_binding_count": 0,
+            "missing_binding_count": 0,
+            "failure_counts": {"missing_review_decision": 1},
+        },
+    }
+    dry_run = {
+        "workflow": "frontier_research_queue_bound_command_run_report",
+        "status": "dry_run",
+        "summary": {
+            "entry_count": 1,
+            "command_count": 1,
+            "dry_run_count": 1,
+            "executed_count": 0,
+            "succeeded_count": 0,
+            "failed_count": 0,
+            "timed_out_count": 0,
+            "skipped_count": 0,
+            "invalid_command_count": 0,
+            "binding_not_reviewed_count": 0,
+            "materialized_output_count": 0,
+            "missing_output_count": 0,
+            "planned_output_count": 1,
+            "unchecked_output_count": 0,
+        },
+        "config": {
+            "dry_run": True,
+            "executes_commands": False,
+            "require_reviewed_bindings": False,
+        },
+    }
+    succeeded_run = {
+        "workflow": "frontier_research_queue_bound_command_run_report",
+        "status": "succeeded",
+        "summary": {
+            "entry_count": 1,
+            "command_count": 1,
+            "dry_run_count": 0,
+            "executed_count": 1,
+            "succeeded_count": 1,
+            "failed_count": 0,
+            "timed_out_count": 0,
+            "skipped_count": 0,
+            "invalid_command_count": 0,
+            "binding_not_reviewed_count": 0,
+            "materialized_output_count": 1,
+            "missing_output_count": 0,
+            "planned_output_count": 0,
+            "unchecked_output_count": 0,
+        },
+        "config": {
+            "dry_run": False,
+            "executes_commands": True,
+            "require_reviewed_bindings": True,
+        },
+    }
+    unreviewed_run = {
+        **succeeded_run,
+        "config": {
+            "dry_run": False,
+            "executes_commands": True,
+            "require_reviewed_bindings": False,
+        },
+    }
+    failed_run = {
+        **succeeded_run,
+        "status": "blocked",
+        "summary": {
+            **succeeded_run["summary"],
+            "executed_count": 1,
+            "succeeded_count": 0,
+            "failed_count": 1,
+            "materialized_output_count": 0,
+            "missing_output_count": 1,
+        },
+    }
+
+    ready_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_command_binding_reviews=(ready_review,),
+    )
+    ready_lane = ready_payload["lanes"]["frontier_queue_execution"]
+    ready_actions = {action["action_id"] for action in ready_payload["next_actions"]}
+    assert ready_lane["status"] == "needs_execution"
+    assert ready_lane["ready_review_count"] == 1
+    assert "execute_reviewed_frontier_queue_command_plan" in ready_actions
+
+    dry_run_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_command_binding_reviews=(ready_review,),
+        frontier_bound_command_runs=(dry_run,),
+    )
+    dry_run_lane = dry_run_payload["lanes"]["frontier_queue_execution"]
+    assert dry_run_lane["status"] == "needs_execution"
+    assert dry_run_lane["dry_run_report_count"] == 1
+    assert dry_run_lane["dry_run_count"] == 1
+
+    promoted_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_command_binding_reviews=(ready_review,),
+        frontier_bound_command_runs=(succeeded_run,),
+    )
+    promoted_lane = promoted_payload["lanes"]["frontier_queue_execution"]
+    promoted_actions = {action["action_id"] for action in promoted_payload["next_actions"]}
+    assert promoted_lane["status"] == "promote"
+    assert promoted_lane["succeeded_count"] == 1
+    assert "execute_reviewed_frontier_queue_command_plan" not in promoted_actions
+    assert "repair_frontier_queue_command_execution" not in promoted_actions
+
+    blocked_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_command_binding_reviews=(blocked_review,),
+    )
+    blocked_actions = {action["action_id"] for action in blocked_payload["next_actions"]}
+    assert blocked_payload["lanes"]["frontier_queue_execution"]["status"] == "needs_review"
+    assert "review_frontier_queue_command_bindings" in blocked_actions
+
+    unreviewed_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_bound_command_runs=(unreviewed_run,),
+    )
+    unreviewed_lane = unreviewed_payload["lanes"]["frontier_queue_execution"]
+    assert unreviewed_lane["status"] == "needs_review"
+    assert unreviewed_lane["unreviewed_execution_override_count"] == 1
+
+    failed_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_command_binding_reviews=(ready_review,),
+        frontier_bound_command_runs=(failed_run,),
+    )
+    failed_actions = {action["action_id"] for action in failed_payload["next_actions"]}
+    assert failed_payload["lanes"]["frontier_queue_execution"]["status"] == "blocked"
+    assert "repair_frontier_queue_command_execution" in failed_actions
+
+    review_path = tmp_path / "command-review.json"
+    run_path = tmp_path / "bound-run.json"
+    report_path = tmp_path / "summary.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    review_path.write_text(json.dumps(ready_review), encoding="utf-8")
+    run_path.write_text(json.dumps(succeeded_run), encoding="utf-8")
+    saved = module.run(
+        frontier_command_binding_review_paths=(review_path,),
+        frontier_bound_command_run_paths=(run_path,),
+        json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="frontier-queue-execution-summary-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-queue-execution-summary-unit:0.1"
+    )
+
+    assert saved["lanes"]["frontier_queue_execution"]["status"] == "promote"
+    assert manifest["metadata"]["frontier_queue_execution_status"] == "promote"
+    assert manifest["metadata"]["frontier_command_binding_review_count"] == 1
+    assert manifest["metadata"]["frontier_bound_command_run_count"] == 1
+    assert manifest["artifacts"]["frontier_command_binding_review_1"]["exists"] is True
+    assert manifest["artifacts"]["frontier_bound_command_run_1"]["exists"] is True
+    assert record.metadata["frontier_queue_execution_status"] == "promote"
+    assert record.metadata["frontier_command_binding_review_count"] == 1
+    assert record.metadata["frontier_bound_command_run_count"] == 1
+    assert record.metadata["frontier_bound_command_succeeded_count"] == 1
+
+    cli_report_path = tmp_path / "cli-summary.json"
+    module.main([
+        "--frontier-command-binding-review",
+        str(review_path),
+        "--frontier-bound-command-run",
+        str(run_path),
+        "--json",
+        str(cli_report_path),
+    ])
+    cli_payload = json.loads(cli_report_path.read_text(encoding="utf-8"))
+    assert cli_payload["lanes"]["frontier_queue_execution"]["status"] == "promote"
+
+
 def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(tmp_path):
     module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
     registry_module = importlib.import_module("eigentruth.registry")
