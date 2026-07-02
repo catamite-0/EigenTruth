@@ -18922,6 +18922,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         evidence_quality_evidence=True,
     )
+    metacognition_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "metacognition-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        metacognition_evidence=True,
+    )
     evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "evidence-handoff-runtime-drift",
         status="promote",
@@ -19000,6 +19006,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         evidence_quality_evidence=True,
         evidence_quality_blocked=True,
+    )
+    blocked_metacognition_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-metacognition-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        metacognition_evidence=True,
+        metacognition_blocked=True,
     )
     blocked_evidence_handoff_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-evidence-handoff-runtime-drift",
@@ -19468,6 +19481,17 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         product_runtime_drift_report_path=evidence_quality_drift_report,
         require_product_runtime_drift_evidence_quality_evidence=True,
     )
+    metacognition = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=metacognition_drift_report,
+        require_product_runtime_drift_metacognition_evidence=True,
+    )
     missing_evidence_quality = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -19479,6 +19503,17 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         product_runtime_drift_report_path=missing_evidence_drift_report,
         require_product_runtime_drift_evidence_quality_evidence=True,
     )
+    missing_metacognition = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_metacognition_evidence=True,
+    )
     blocked_evidence_quality = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -19489,6 +19524,17 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_evidence_quality_drift_report,
         require_product_runtime_drift_evidence_quality_evidence=True,
+    )
+    blocked_metacognition = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_metacognition_drift_report,
+        require_product_runtime_drift_metacognition_evidence=True,
     )
     evidence_handoff = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -20233,6 +20279,47 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "evidence-quality evidence blocked 1 metric" in reason
         for reason in blocked_evidence_quality["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert metacognition["decision"]["status"] == "promote"
+    assert metacognition["config"][
+        "require_product_runtime_drift_metacognition_evidence"
+    ] is True
+    metacognition_summary = metacognition["release_candidate"]["product_runtime_drift"][
+        "summary"
+    ]
+    assert metacognition_summary["metacognition_evidence_required"] is True
+    assert metacognition_summary["metacognition_evidence_metric_count"] == 4
+    assert metacognition_summary["metacognition_evidence_blocked_metric_count"] == 0
+    assert metacognition_summary[
+        "product_trace_metacognition_trace_coverage_rate_current"
+    ] == pytest.approx(1.0)
+    assert metacognition_summary[
+        "product_trace_metacognition_overconfident_risk_rate_status"
+    ] == "pass"
+    assert missing_metacognition["decision"]["status"] == "blocked"
+    assert missing_metacognition["product_runtime_drift_gate"]["summary"][
+        "metacognition_evidence_missing_metrics"
+    ] == (
+        "metacognition.trace_coverage_rate",
+        "metacognition.pass_rate",
+        "metacognition.overconfident_risk_rate",
+        "metacognition.miscalibration_score.mean",
+    )
+    assert any(
+        "metacognition evidence metrics are incomplete" in reason
+        for reason in missing_metacognition["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_metacognition["decision"]["status"] == "blocked"
+    assert blocked_metacognition["product_runtime_drift_gate"]["summary"][
+        "metacognition_evidence_blocked_metric_count"
+    ] == 3
+    assert any(
+        "metacognition evidence blocked 3 metric" in reason
+        for reason in blocked_metacognition["decision"]["blocking_reasons"][0][
             "reasons"
         ]
     )
@@ -22053,6 +22140,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         trajectory_audit_evidence=True,
         provenance_evidence=True,
         citation_integrity_evidence=True,
+        metacognition_evidence=True,
         evidence_handoff_evidence=True,
         world_model_evidence=True,
         context_sensitivity_evidence=True,
@@ -22194,6 +22282,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         frontier_payload["config"]["require_product_runtime_drift_citation_integrity_evidence"]
         is True
     )
+    assert frontier_payload["config"]["require_product_runtime_drift_metacognition_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_evidence_handoff_evidence"] is True
     assert frontier_payload["config"]["require_product_runtime_drift_world_model_evidence"] is True
     assert (
@@ -22280,6 +22369,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         is True
     )
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_metacognition_evidence"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_runtime_drift_evidence_handoff_evidence"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
@@ -22355,6 +22447,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "citation_integrity_evidence_metric_count"
     ] == 6
+    assert frontier_payload["product_runtime_drift_gate"]["summary"][
+        "metacognition_evidence_metric_count"
+    ] == 4
     assert frontier_payload["product_runtime_drift_gate"]["summary"][
         "evidence_handoff_evidence_metric_count"
     ] == 7
@@ -23771,6 +23866,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_trajectory_audit_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_provenance_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_citation_integrity_evidence is True
+    assert frontier_profile_config.require_product_runtime_drift_metacognition_evidence is True
     assert frontier_profile_config.require_product_runtime_drift_evidence_handoff_evidence is True
     assert (
         frontier_profile_config.require_product_runtime_drift_counterfactual_robustness_evidence
@@ -23841,6 +23937,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_citation_integrity_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_metacognition_evidence"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_evidence_handoff_evidence"
@@ -24593,6 +24692,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         provenance_evidence=True,
         citation_integrity_evidence=True,
         evidence_quality_evidence=True,
+        metacognition_evidence=True,
         evidence_handoff_evidence=True,
     )
     release_efficiency_report = _write_release_efficiency_report(
@@ -24726,6 +24826,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_runtime_drift_provenance_evidence=True,
         require_product_runtime_drift_citation_integrity_evidence=True,
         require_product_runtime_drift_evidence_quality_evidence=True,
+        require_product_runtime_drift_metacognition_evidence=True,
         require_product_runtime_drift_evidence_handoff_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
@@ -24962,8 +25063,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_provenance_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_citation_integrity_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_quality_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_metacognition_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 102
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 106
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -25011,6 +25113,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         manifest["metadata"]["product_runtime_drift_evidence_quality_evidence_blocked_metric_count"]
         == 0
     )
+    assert manifest["metadata"]["product_runtime_drift_metacognition_evidence_metric_count"] == 4
+    assert (
+        manifest["metadata"]["product_runtime_drift_metacognition_evidence_blocked_metric_count"]
+        == 0
+    )
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == (
@@ -25048,6 +25155,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     ] == pytest.approx(1.0)
     assert manifest["metadata"][
         "product_runtime_drift_product_trace_citation_integrity_mismatch_rate_status"
+    ] == "pass"
+    assert manifest["metadata"][
+        "product_runtime_drift_product_trace_metacognition_pass_rate_status"
     ] == "pass"
     assert manifest["metadata"]["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_action_audit_error_rate_current"] == (
@@ -25356,6 +25466,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         ]
         is True
     )
+    assert (
+        payload["release_candidate_comparison"]["config"][
+            "require_product_runtime_drift_metacognition_evidence"
+        ]
+        is True
+    )
     assert payload["release_candidate_comparison"]["config"]["release_efficiency_report"] == str(
         release_efficiency_report
     )
@@ -25472,6 +25588,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_provenance_evidence_required"] is True
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_required"] is True
     assert record.metadata["product_runtime_drift_evidence_quality_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_metacognition_evidence_required"] is True
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
@@ -25504,6 +25621,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_citation_integrity_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_evidence_quality_evidence_metric_count"] == 9
     assert record.metadata["product_runtime_drift_evidence_quality_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_metacognition_evidence_metric_count"] == 4
+    assert record.metadata["product_runtime_drift_metacognition_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
@@ -25541,6 +25660,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata[
         "product_runtime_drift_product_trace_citation_integrity_mismatch_rate_status"
     ] == "pass"
+    assert record.metadata["product_runtime_drift_product_trace_metacognition_pass_rate_status"] == "pass"
     assert record.metadata["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
         pytest.approx(1.0)
     )
@@ -28523,6 +28643,8 @@ def _write_product_runtime_drift_report(
     citation_integrity_blocked=False,
     evidence_quality_evidence=False,
     evidence_quality_blocked=False,
+    metacognition_evidence=False,
+    metacognition_blocked=False,
     evidence_handoff_evidence=False,
     evidence_handoff_blocked=False,
     world_model_evidence=False,
@@ -30072,6 +30194,65 @@ def _write_product_runtime_drift_report(
                 "absolute_increase": 0.0,
                 "threshold": 0.05,
                 "reason": None,
+            },
+        ])
+    if metacognition_evidence:
+        metacognition_status = "blocked" if metacognition_blocked else "pass"
+        metacognition_failure_current = 0.25 if metacognition_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "metacognition.trace_coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "metacognition.pass_rate",
+                "status": metacognition_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 0.75 if metacognition_blocked else 1.0,
+                "absolute_delta": -0.25 if metacognition_blocked else 0.0,
+                "threshold": 0.95,
+                "reason": (
+                    "metacognition.pass_rate below gate"
+                    if metacognition_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "metacognition.overconfident_risk_rate",
+                "status": metacognition_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": metacognition_failure_current,
+                "absolute_delta": metacognition_failure_current,
+                "absolute_increase": metacognition_failure_current,
+                "threshold": 0.05,
+                "reason": (
+                    "metacognition.overconfident_risk_rate above gate"
+                    if metacognition_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "metacognition.miscalibration_score.mean",
+                "status": metacognition_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": metacognition_failure_current,
+                "absolute_delta": metacognition_failure_current,
+                "absolute_increase": metacognition_failure_current,
+                "threshold": 0.05,
+                "reason": (
+                    "metacognition.miscalibration_score.mean above gate"
+                    if metacognition_blocked
+                    else None
+                ),
             },
         ])
     if evidence_handoff_evidence:

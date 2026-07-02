@@ -469,6 +469,21 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "product_trace_evidence_quality_missing_timestamp_rate",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "metacognition.trace_coverage_rate",
+        "product_trace_metacognition_trace_coverage_rate",
+    ),
+    ("metacognition.pass_rate", "product_trace_metacognition_pass_rate"),
+    (
+        "metacognition.overconfident_risk_rate",
+        "product_trace_metacognition_overconfident_risk_rate",
+    ),
+    (
+        "metacognition.miscalibration_score.mean",
+        "product_trace_metacognition_miscalibration_score_mean",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "promotion_contract.evidence_handoff.coverage_rate",
@@ -687,6 +702,7 @@ def compare_release_candidates(
     require_product_runtime_drift_provenance_evidence: bool = False,
     require_product_runtime_drift_citation_integrity_evidence: bool = False,
     require_product_runtime_drift_evidence_quality_evidence: bool = False,
+    require_product_runtime_drift_metacognition_evidence: bool = False,
     require_product_runtime_drift_evidence_handoff_evidence: bool = False,
     require_product_runtime_drift_world_model_evidence: bool = False,
     require_product_runtime_drift_context_sensitivity_evidence: bool = False,
@@ -959,6 +975,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_evidence_quality_evidence": (
                     require_product_runtime_drift_evidence_quality_evidence
                 ),
+                "require_product_runtime_drift_metacognition_evidence": (
+                    require_product_runtime_drift_metacognition_evidence
+                ),
                 "require_product_runtime_drift_evidence_handoff_evidence": (
                     require_product_runtime_drift_evidence_handoff_evidence
                 ),
@@ -1135,6 +1154,12 @@ def compare_release_candidates(
     require_product_runtime_drift_evidence_quality_evidence = bool(
         release_policy_values.get(
             "require_product_runtime_drift_evidence_quality_evidence",
+            False,
+        )
+    )
+    require_product_runtime_drift_metacognition_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_metacognition_evidence",
             False,
         )
     )
@@ -1752,6 +1777,9 @@ def compare_release_candidates(
         require_evidence_quality_evidence=(
             require_product_runtime_drift_evidence_quality_evidence
         ),
+        require_metacognition_evidence=(
+            require_product_runtime_drift_metacognition_evidence
+        ),
         require_evidence_handoff_evidence=(
             require_product_runtime_drift_evidence_handoff_evidence
         ),
@@ -2034,6 +2062,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_evidence_quality_evidence": bool(
                 require_product_runtime_drift_evidence_quality_evidence
+            ),
+            "require_product_runtime_drift_metacognition_evidence": bool(
+                require_product_runtime_drift_metacognition_evidence
             ),
             "require_product_runtime_drift_evidence_handoff_evidence": bool(
                 require_product_runtime_drift_evidence_handoff_evidence
@@ -7043,6 +7074,7 @@ def _product_runtime_drift_gate(
     require_provenance_evidence: bool,
     require_citation_integrity_evidence: bool,
     require_evidence_quality_evidence: bool,
+    require_metacognition_evidence: bool,
     require_evidence_handoff_evidence: bool,
     require_world_model_evidence: bool,
     require_context_sensitivity_evidence: bool,
@@ -7070,6 +7102,7 @@ def _product_runtime_drift_gate(
             or require_provenance_evidence
             or require_citation_integrity_evidence
             or require_evidence_quality_evidence
+            or require_metacognition_evidence
             or require_evidence_handoff_evidence
             or require_world_model_evidence
             or require_context_sensitivity_evidence
@@ -7250,6 +7283,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_evidence_quality_evidence else (),
                     "evidence_quality_evidence_blocked_metric_count": 0,
+                    "metacognition_evidence_required": bool(
+                        require_metacognition_evidence
+                    ),
+                    "metacognition_evidence_metric_count": 0,
+                    "metacognition_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_FIELDS
+                        )
+                    ) if require_metacognition_evidence else (),
+                    "metacognition_evidence_blocked_metric_count": 0,
                     "evidence_handoff_evidence_required": bool(
                         require_evidence_handoff_evidence
                     ),
@@ -7398,6 +7442,12 @@ def _product_runtime_drift_gate(
             required=require_evidence_quality_evidence,
         )
     )
+    metacognition_evidence_summary = (
+        _product_runtime_drift_metacognition_evidence_summary(
+            metrics,
+            required=require_metacognition_evidence,
+        )
+    )
     evidence_handoff_evidence_summary = (
         _product_runtime_drift_evidence_handoff_evidence_summary(
             metrics,
@@ -7467,6 +7517,8 @@ def _product_runtime_drift_gate(
         require_citation_integrity_evidence=require_citation_integrity_evidence,
         evidence_quality_evidence_summary=evidence_quality_evidence_summary,
         require_evidence_quality_evidence=require_evidence_quality_evidence,
+        metacognition_evidence_summary=metacognition_evidence_summary,
+        require_metacognition_evidence=require_metacognition_evidence,
         evidence_handoff_evidence_summary=evidence_handoff_evidence_summary,
         require_evidence_handoff_evidence=require_evidence_handoff_evidence,
         world_model_evidence_summary=world_model_evidence_summary,
@@ -7514,6 +7566,7 @@ def _product_runtime_drift_gate(
             **provenance_evidence_summary,
             **citation_integrity_evidence_summary,
             **evidence_quality_evidence_summary,
+            **metacognition_evidence_summary,
             **evidence_handoff_evidence_summary,
             **world_model_evidence_summary,
             **context_sensitivity_evidence_summary,
@@ -7562,6 +7615,8 @@ def _product_runtime_drift_report_gate(
     require_citation_integrity_evidence: bool,
     evidence_quality_evidence_summary: Mapping[str, Any],
     require_evidence_quality_evidence: bool,
+    metacognition_evidence_summary: Mapping[str, Any],
+    require_metacognition_evidence: bool,
     evidence_handoff_evidence_summary: Mapping[str, Any],
     require_evidence_handoff_evidence: bool,
     world_model_evidence_summary: Mapping[str, Any],
@@ -7883,6 +7938,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift evidence-quality evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_metacognition_evidence:
+        missing_metrics = tuple(
+            metacognition_evidence_summary.get(
+                "metacognition_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift metacognition evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            metacognition_evidence_summary.get(
+                "metacognition_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift metacognition evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_evidence_handoff_evidence:
@@ -8409,6 +8485,19 @@ def _product_runtime_drift_evidence_quality_evidence_summary(
         metrics,
         fields=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_FIELDS,
         evidence_prefix="evidence_quality",
+        required=required,
+    )
+
+
+def _product_runtime_drift_metacognition_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    return _product_runtime_drift_named_evidence_summary(
+        metrics,
+        fields=_PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_FIELDS,
+        evidence_prefix="metacognition",
         required=required,
     )
 
@@ -10175,6 +10264,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_evidence_quality_evidence=bool(
             args.require_product_runtime_drift_evidence_quality_evidence
         ),
+        require_product_runtime_drift_metacognition_evidence=bool(
+            args.require_product_runtime_drift_metacognition_evidence
+        ),
         require_product_runtime_drift_evidence_handoff_evidence=bool(
             args.require_product_runtime_drift_evidence_handoff_evidence
         ),
@@ -10505,6 +10597,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         action="store_true",
                         help="require the product runtime drift report to include retrieval evidence-quality "
                              "coverage, pass/failure, source, freshness, and timestamp metrics")
+    parser.add_argument("--require-product-runtime-drift-metacognition-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include metacognition "
+                             "coverage, pass-rate, overconfidence, and miscalibration metrics")
     parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
                         help="require the product runtime drift report to include promotion-contract "
                              "evidence handoff coverage, manifest, metric completeness, and promoted-group "

@@ -5742,6 +5742,7 @@ and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
 `--require-product-runtime-drift-action-gate-evidence`,
   `--require-product-runtime-drift-trajectory-audit-evidence`,
+  `--require-product-runtime-drift-metacognition-evidence`,
   `--require-product-runtime-drift-evidence-handoff-evidence`,
   `--require-product-runtime-drift-world-model-evidence`,
   `--require-product-runtime-drift-context-sensitivity-evidence`,
@@ -5759,6 +5760,7 @@ trace-level triple-audit, recommended-route covered-fact property/action-gate
 evidence, trajectory-audit evidence, promotion-contract evidence-handoff
 coverage/manifest/metric-gap evidence, trace-level world-model
 participation/coverage/conflict/low-agreement/trace-gap evidence,
+trace-level metacognition coverage/pass-rate/overconfidence/miscalibration evidence,
 trace-level context-sensitivity participation/coverage/flagged-rate/trace-gap
 and max-ratio evidence, frontier release-evidence status/decision/track rates
 plus citation-batch and rerun-rollup counts, frontier release-evidence input
@@ -5851,6 +5853,9 @@ pass-rate, and slot coverage metrics from that drift report.
 Add `--require-product-runtime-drift-world-model-evidence` when the release
 must also require trace-level world-model participation, coverage, conflict,
 low-agreement, and trace-gap metrics from that drift report.
+Add `--require-product-runtime-drift-metacognition-evidence` when the release
+must also require trace-level metacognition coverage, pass-rate,
+overconfident-risk, and miscalibration metrics from that drift report.
 Add `--require-product-runtime-drift-frontier-release-evidence` when the release
 must also require frontier release-evidence status/decision/track rates,
 citation-batch rollup counts, and rerun-rollup track/candidate counts from that
@@ -5985,8 +5990,8 @@ evidence, pre-generation risk-telemetry/probe-comparison runtime-drift
 evidence, claim factuality probe-comparison runtime-drift evidence,
 counterfactual verifier-audit runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
-trajectory-audit runtime-drift evidence, trace-level world-model runtime-drift
-evidence, trace-level context-sensitivity runtime-drift evidence, registered
+trajectory-audit runtime-drift evidence, trace-level metacognition runtime-drift
+evidence, trace-level world-model runtime-drift evidence, trace-level context-sensitivity runtime-drift evidence, registered
 frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
@@ -9274,7 +9279,8 @@ miscalibration-score mean increase using
 `--max-product-trace-metacognition-miscalibration-score-mean-increase`.
 Release candidates can require that evidence explicitly with
 `compare_release_candidates.py --require-product-runtime-drift-evidence-quality-evidence`
-or the matching `run_release_candidate_registry_workflow.py` flag.
+or `--require-product-runtime-drift-metacognition-evidence`, plus the matching
+`run_release_candidate_registry_workflow.py` flags.
 When ProductTrace
 action results carry action receipts, the
 same comparison can gate receipt coverage plus missing, invalid,

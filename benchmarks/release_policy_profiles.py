@@ -68,6 +68,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_trajectory_audit_evidence": True,
         "require_product_runtime_drift_provenance_evidence": True,
         "require_product_runtime_drift_citation_integrity_evidence": True,
+        "require_product_runtime_drift_metacognition_evidence": True,
         "require_product_runtime_drift_evidence_handoff_evidence": True,
         "require_product_runtime_drift_world_model_evidence": True,
         "require_product_runtime_drift_context_sensitivity_evidence": True,
