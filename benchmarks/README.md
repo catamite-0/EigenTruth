@@ -7966,11 +7966,12 @@ Runs the retrieval semantic-gap handoff through the existing alignment
 fact-review and promotion gates in one reproducible command. It builds the
 semantic-gap queue, converts emitted `fact_candidates` into a review-only
 alignment fact corpus, applies the deterministic Wikidata subject/property/value
-rule reviewer, and reruns the promotion gate with those explicit decisions. The
-workflow can emit approved source documents for later
-`build_source_family_qa_corpus.py` / covered-fact route audits, but it does not
-promote broad retrieval correction or treat handoff requests as verifier
-evidence.
+rule reviewer, and reruns the promotion gate with those explicit decisions. With
+`--run-covered-fact-route`, it also builds a source-family structured QA corpus
+from approved source documents and runs the covered-fact structured-QA route
+audit. The workflow can emit covered-fact route evidence for reviewed rows, but
+it does not promote broad retrieval correction or treat handoff requests as
+verifier evidence.
 
 ```bash
 OUT=artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1
@@ -7982,14 +7983,17 @@ python benchmarks/run_retrieval_semantic_gap_review_workflow.py \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
   --name source-bound-retrieval-semantic-gap-review-workflow \
-  --version 0.1
+  --version 0.1 \
+  --run-covered-fact-route
 ```
 
 The top-level report summarizes candidate counts, fact-review accepted/skipped
-rows, rule-review approvals, and approved source-document count. A
+rows, rule-review approvals, approved source-document count, source-family QA
+document count, and covered-fact route metrics when requested. A
 `ready_for_structured_qa` status means only that reviewed structured source
-documents exist; the route-quality claim still requires building a covered-fact
-QA corpus and running the structured-QA route workflow.
+documents exist. A `covered_fact_route_promote` status means the generated
+covered-fact route audit passed for the reviewed rows only; it is still not
+broad blind-spot recall.
 
 ## `build_external_retrieval_corpus.py`
 
