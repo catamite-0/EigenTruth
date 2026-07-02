@@ -65,6 +65,8 @@ def summarize_unresolved_frontier_evidence(
     source_family_coverage_audits: Sequence[Mapping[str, Any]] = (),
     rule_input_plan: Mapping[str, Any] | None = None,
     rule_input_audit_report: Mapping[str, Any] | None = None,
+    rule_stub_requeue_report: Mapping[str, Any] | None = None,
+    requeued_rule_input_plan: Mapping[str, Any] | None = None,
     rule_promotion_reports: Sequence[Mapping[str, Any]] = (),
     mechanism_handoff_bundle: Mapping[str, Any] | None = None,
     metadata: Mapping[str, Any] | None = None,
@@ -76,6 +78,8 @@ def summarize_unresolved_frontier_evidence(
     rule_lane = _world_model_rule_lane(
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
+        rule_stub_requeue_report=rule_stub_requeue_report,
+        requeued_rule_input_plan=requeued_rule_input_plan,
         rule_promotion_reports=rule_promotion_reports,
         mechanism_handoff_bundle=mechanism_handoff_bundle,
     )
@@ -111,6 +115,8 @@ def run(
     source_family_coverage_audit_paths: Sequence[str | Path] = (),
     rule_input_plan_path: str | Path | None = None,
     rule_input_audit_report_path: str | Path | None = None,
+    rule_stub_requeue_report_path: str | Path | None = None,
+    requeued_rule_input_plan_path: str | Path | None = None,
     rule_promotion_report_paths: Sequence[str | Path] = (),
     mechanism_handoff_bundle_path: str | Path | None = None,
     json_path: str | Path | None = None,
@@ -134,6 +140,8 @@ def run(
     coverage_audits = tuple(_load_mapping(path) for path in source_family_coverage_audit_paths)
     rule_input_plan = _load_optional_mapping(rule_input_plan_path)
     rule_input_audit_report = _load_optional_mapping(rule_input_audit_report_path)
+    rule_stub_requeue_report = _load_optional_mapping(rule_stub_requeue_report_path)
+    requeued_rule_input_plan = _load_optional_mapping(requeued_rule_input_plan_path)
     rule_promotion_reports = tuple(_load_mapping(path) for path in rule_promotion_report_paths)
     mechanism_bundle = _load_optional_mapping(mechanism_handoff_bundle_path)
 
@@ -143,6 +151,8 @@ def run(
         source_family_coverage_audits=coverage_audits,
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
+        rule_stub_requeue_report=rule_stub_requeue_report,
+        requeued_rule_input_plan=requeued_rule_input_plan,
         rule_promotion_reports=rule_promotion_reports,
         mechanism_handoff_bundle=mechanism_bundle,
         metadata=metadata,
@@ -162,6 +172,12 @@ def run(
         "rule_input_audit_report": None
         if rule_input_audit_report_path is None
         else str(rule_input_audit_report_path),
+        "rule_stub_requeue_report": None
+        if rule_stub_requeue_report_path is None
+        else str(rule_stub_requeue_report_path),
+        "requeued_rule_input_plan": None
+        if requeued_rule_input_plan_path is None
+        else str(requeued_rule_input_plan_path),
         "rule_promotion_reports": tuple(str(path) for path in rule_promotion_report_paths),
         "mechanism_handoff_bundle": None
         if mechanism_handoff_bundle_path is None
@@ -182,6 +198,8 @@ def run(
             source_family_coverage_audit_paths=source_family_coverage_audit_paths,
             rule_input_plan_path=rule_input_plan_path,
             rule_input_audit_report_path=rule_input_audit_report_path,
+            rule_stub_requeue_report_path=rule_stub_requeue_report_path,
+            requeued_rule_input_plan_path=requeued_rule_input_plan_path,
             rule_promotion_report_paths=rule_promotion_report_paths,
             mechanism_handoff_bundle_path=mechanism_handoff_bundle_path,
             payload=payload,
@@ -209,6 +227,9 @@ def run(
                 "world_model_rule_audit_requeue_suggestion_count": payload["lanes"][
                     "world_model_rules"
                 ]["rule_input_audit_requeue_suggestion_count"],
+                "world_model_rule_requeue_outstanding_count": payload["lanes"][
+                    "world_model_rules"
+                ]["rule_input_audit_requeue_outstanding_count"],
                 "next_action_count": len(payload["next_actions"]),
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
@@ -398,12 +419,20 @@ def _world_model_rule_lane(
     *,
     rule_input_plan: Mapping[str, Any] | None,
     rule_input_audit_report: Mapping[str, Any] | None,
+    rule_stub_requeue_report: Mapping[str, Any] | None,
+    requeued_rule_input_plan: Mapping[str, Any] | None,
     rule_promotion_reports: Sequence[Mapping[str, Any]],
     mechanism_handoff_bundle: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     plan_summary = _mapping(None if rule_input_plan is None else rule_input_plan.get("summary"))
     audit_summary = _mapping(
         None if rule_input_audit_report is None else rule_input_audit_report.get("summary")
+    )
+    requeue_summary = _mapping(
+        None if rule_stub_requeue_report is None else rule_stub_requeue_report.get("summary")
+    )
+    requeued_plan_summary = _mapping(
+        None if requeued_rule_input_plan is None else requeued_rule_input_plan.get("summary")
     )
     task_count = _int(plan_summary.get("task_count"))
     rule_family_counts = _int_mapping(plan_summary.get("rule_family_counts"))
@@ -414,6 +443,11 @@ def _world_model_rule_lane(
     audit_requeue_count = _int(audit_summary.get("requeue_suggestion_count"))
     if requeue_suggestions:
         audit_requeue_count = len(requeue_suggestions)
+    requeued_stub_count = _int(requeue_summary.get("requeued_stub_count"))
+    skipped_requeue_count = _int(requeue_summary.get("skipped_suggestion_count"))
+    requeue_outstanding_count = (
+        max(audit_requeue_count - requeued_stub_count, 0) + skipped_requeue_count
+    )
     promotion_rows = []
     promoted_count = 0
     blocked_count = 0
@@ -468,7 +502,7 @@ def _world_model_rule_lane(
     )
     if rule_input_plan is None and not promotion_rows and mechanism_handoff_bundle is None:
         status = "missing"
-    elif audit_requeue_count:
+    elif requeue_outstanding_count:
         status = "needs_requeue"
     elif remaining_task_count:
         status = "partial"
@@ -495,6 +529,28 @@ def _world_model_rule_lane(
         ),
         "rule_input_audit_recommended_action_counts": _int_mapping(
             audit_summary.get("recommended_action_counts")
+        ),
+        "rule_stub_requeue_status": None
+        if rule_stub_requeue_report is None
+        else rule_stub_requeue_report.get("status"),
+        "rule_stub_requeue_requeued_stub_count": requeued_stub_count,
+        "rule_stub_requeue_skipped_suggestion_count": skipped_requeue_count,
+        "rule_stub_requeue_rule_family_counts": _int_mapping(
+            requeue_summary.get("rule_family_counts")
+        ),
+        "rule_input_audit_requeue_outstanding_count": requeue_outstanding_count,
+        "requeued_rule_input_plan_status": None
+        if requeued_rule_input_plan is None
+        else requeued_rule_input_plan.get("status"),
+        "requeued_rule_input_task_count": _int(requeued_plan_summary.get("task_count")),
+        "requeued_rule_family_counts": _int_mapping(
+            requeued_plan_summary.get("rule_family_counts")
+        ),
+        "requeued_rule_input_execution_input_counts": _int_mapping(
+            requeued_plan_summary.get("execution_input_counts")
+        ),
+        "requeued_rule_input_missing_input_counts": _int_mapping(
+            requeued_plan_summary.get("missing_input_counts")
         ),
         "task_count": task_count,
         "rule_family_counts": rule_family_counts,
@@ -546,7 +602,7 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 "route thresholds before release use"
             ),
         })
-    if _int(rules.get("rule_input_audit_requeue_suggestion_count")):
+    if _int(rules.get("rule_input_audit_requeue_outstanding_count")):
         actions.append({
             "action_id": "requeue_misaligned_world_model_rule_inputs",
             "priority": 86,
@@ -556,6 +612,10 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 "before value collection or promotion"
             ),
             "requeue_suggestion_count": rules.get("rule_input_audit_requeue_suggestion_count", 0),
+            "requeued_stub_count": rules.get("rule_stub_requeue_requeued_stub_count", 0),
+            "requeue_outstanding_count": rules.get(
+                "rule_input_audit_requeue_outstanding_count", 0
+            ),
             "recommended_rule_family_counts": rules.get(
                 "rule_input_audit_recommended_rule_family_counts", {}
             ),
@@ -606,6 +666,9 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "world_model_rule_audit_requeue_suggestion_count": _int(
             lanes["world_model_rules"].get("rule_input_audit_requeue_suggestion_count")
         ),
+        "world_model_rule_requeue_outstanding_count": _int(
+            lanes["world_model_rules"].get("rule_input_audit_requeue_outstanding_count")
+        ),
         "world_model_rule_promoted_count": _int(
             lanes["world_model_rules"].get("promoted_count")
         ),
@@ -634,6 +697,8 @@ def _write_manifest(
     source_family_coverage_audit_paths: Sequence[str | Path],
     rule_input_plan_path: str | Path | None,
     rule_input_audit_report_path: str | Path | None,
+    rule_stub_requeue_report_path: str | Path | None,
+    requeued_rule_input_plan_path: str | Path | None,
     rule_promotion_report_paths: Sequence[str | Path],
     mechanism_handoff_bundle_path: str | Path | None,
     payload: Mapping[str, Any],
@@ -645,6 +710,8 @@ def _write_manifest(
         "unresolved_queue": unresolved_queue_path,
         "rule_input_plan": rule_input_plan_path,
         "rule_input_audit_report": rule_input_audit_report_path,
+        "rule_stub_requeue_report": rule_stub_requeue_report_path,
+        "requeued_rule_input_plan": requeued_rule_input_plan_path,
         "mechanism_handoff_bundle": mechanism_handoff_bundle_path,
     }
     artifacts.update(
@@ -681,6 +748,12 @@ def _write_manifest(
                 "lanes",
                 "world_model_rules",
                 "rule_input_audit_requeue_suggestion_count",
+            ),
+            "world_model_rule_requeue_outstanding_count": _nested(
+                payload,
+                "lanes",
+                "world_model_rules",
+                "rule_input_audit_requeue_outstanding_count",
             ),
             "next_action_count": len(_sequence(payload.get("next_actions"))),
             **dict(metadata),
@@ -848,6 +921,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-family-coverage-audit", action="append", default=[])
     parser.add_argument("--rule-input-plan", default=None)
     parser.add_argument("--rule-input-audit-report", default=None)
+    parser.add_argument("--rule-stub-requeue-report", default=None)
+    parser.add_argument("--requeued-rule-input-plan", default=None)
     parser.add_argument("--rule-promotion-report", action="append", default=[])
     parser.add_argument("--mechanism-handoff-bundle", default=None)
     parser.add_argument("--json", default=None, help="optional output JSON path")
@@ -868,6 +943,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_family_coverage_audit_paths=tuple(args.source_family_coverage_audit or ()),
         rule_input_plan_path=args.rule_input_plan,
         rule_input_audit_report_path=args.rule_input_audit_report,
+        rule_stub_requeue_report_path=args.rule_stub_requeue_report,
+        requeued_rule_input_plan_path=args.requeued_rule_input_plan,
         rule_promotion_report_paths=tuple(args.rule_promotion_report or ()),
         mechanism_handoff_bundle_path=args.mechanism_handoff_bundle,
         json_path=args.json,

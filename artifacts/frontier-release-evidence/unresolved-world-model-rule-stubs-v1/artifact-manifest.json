@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    },
+    "unresolved_world_model_rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-world-model-rule-stubs.json",
+      "sha256": "fe66afc648a730b1475dc35ba1e57c6279e80486cde8e2ca634d8fcfce9a7492",
+      "size_bytes": 48272
+    },
+    "world_model_rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-stubs.jsonl",
+      "sha256": "a7f1c7d181b8b723ee19b286b77a1d03ac40b813ee3642938cd4e307d112a68f",
+      "size_bytes": 37129
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "model": "smollm2-l80",
+    "rule_stub_count": 26,
+    "skipped_rule_request_count": 0,
+    "source": "frontier-v4",
+    "source_rule_request_count": 26,
+    "status": "ready_for_rule_authoring",
+    "workflow": "unresolved_world_model_rule_stubs"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

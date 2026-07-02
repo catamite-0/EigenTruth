@@ -1,0 +1,25 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-authoring-adapter-v1/artifact-manifest.json",
+        "executed_count": 0,
+        "input_request_count": 8,
+        "model": "smollm2-l80",
+        "needs_input_count": 8,
+        "skipped_non_rule_stub_count": 0,
+        "source": "frontier-v4",
+        "source_stub_count": 8,
+        "status": "needs_inputs",
+        "stub_count": 8,
+        "stub_result_coverage": 1.0,
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter",
+      "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-authoring-adapter-v1/world-model-rule-authoring-adapter.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

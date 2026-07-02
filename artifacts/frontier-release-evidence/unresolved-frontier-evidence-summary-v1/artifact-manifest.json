@@ -16,6 +16,14 @@
       "sha256": "e9b6d1ec7a8fa0eaf7bd99bad688177901c1d33dda03022878fecb4593c76d75",
       "size_bytes": 7016
     },
+    "requeued_rule_input_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
+      "sha256": "c32e757d27e79df6fe5b9d64fdf4cccc5f75fe4b0d7b62475ea475c40ef86892",
+      "size_bytes": 32364
+    },
     "rule_input_audit_report": {
       "exists": true,
       "file_count": 1,
@@ -56,6 +64,14 @@
       "sha256": "b39592b07744c1b10e9b52af6e58b1b043db836951da281ddbf597554ede82e3",
       "size_bytes": 10234
     },
+    "rule_stub_requeue_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
+      "sha256": "6ea01a04dd9cf8955739044fbffc10767039f8ed20b26885776c264f6ef379ed",
+      "size_bytes": 22667
+    },
     "source_family_coverage_audit_1": {
       "exists": true,
       "file_count": 1,
@@ -69,8 +85,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "304bcb4907c7b8d76b1839c25238dbe31ad850be7c639ed39f9fdad4237d2c31",
-      "size_bytes": 12632
+      "sha256": "25cb0be00ebdf548568d91278bf7a1ff1b35d48c61bfe989f1f0aa7d69dde04d",
+      "size_bytes": 13204
     },
     "unresolved_queue": {
       "exists": true,
@@ -85,7 +101,7 @@
   "metadata": {
     "citation_status": "blocked",
     "model": "smollm2-l80",
-    "next_action_count": 3,
+    "next_action_count": 2,
     "source": "frontier-v4",
     "source_family_acquisition_status": "covered",
     "status": "needs_evidence",
@@ -93,13 +109,14 @@
     "workflow": "unresolved_frontier_evidence_summary",
     "world_model_rule_audit_requeue_suggestion_count": 8,
     "world_model_rule_remaining_task_count": 17,
-    "world_model_rule_status": "needs_requeue"
+    "world_model_rule_requeue_outstanding_count": 0,
+    "world_model_rule_status": "partial"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 10,
+    "artifact_count": 12,
     "directory_count": 0,
-    "file_count": 10,
+    "file_count": 12,
     "missing_count": 0
   }
 }

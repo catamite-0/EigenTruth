@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stubs-v1/artifact-manifest.json",
+        "model": "smollm2-l80",
+        "rule_stub_count": 26,
+        "skipped_rule_request_count": 0,
+        "source": "frontier-v4",
+        "source_rule_request_count": 26,
+        "status": "ready_for_rule_authoring",
+        "workflow": "unresolved_world_model_rule_stubs"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs",
+      "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stubs-v1/unresolved-world-model-rule-stubs.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

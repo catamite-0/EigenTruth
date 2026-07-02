@@ -219,6 +219,23 @@
         "temporal_consistency": 5
       },
       "remaining_task_count": 17,
+      "requeued_rule_family_counts": {
+        "entity_disambiguation": 8
+      },
+      "requeued_rule_input_execution_input_counts": {
+        "answer_entity": 8,
+        "expected_entity": 8,
+        "requested_role": 8,
+        "source_citation": 8,
+        "subject_entity": 8
+      },
+      "requeued_rule_input_missing_input_counts": {
+        "answer_entity": 8,
+        "requested_role": 8,
+        "subject_entity": 8
+      },
+      "requeued_rule_input_plan_status": "ready_for_input_collection",
+      "requeued_rule_input_task_count": 8,
       "rule_family_counts": {
         "causal_or_procedural": 9,
         "quantity_or_arithmetic": 12,
@@ -239,11 +256,18 @@
       "rule_input_audit_recommended_rule_family_counts": {
         "entity_disambiguation": 8
       },
+      "rule_input_audit_requeue_outstanding_count": 0,
       "rule_input_audit_requeue_suggestion_count": 8,
       "rule_input_audit_status": "needs_requeue",
       "rule_input_audit_task_count": 26,
       "rule_input_plan_status": "ready_for_input_collection",
-      "status": "needs_requeue",
+      "rule_stub_requeue_requeued_stub_count": 8,
+      "rule_stub_requeue_rule_family_counts": {
+        "entity_disambiguation": 8
+      },
+      "rule_stub_requeue_skipped_suggestion_count": 0,
+      "rule_stub_requeue_status": "ready_for_rule_authoring",
+      "status": "partial",
       "task_count": 26
     }
   },
@@ -257,22 +281,6 @@
       "lane": "citation_evidence",
       "priority": 88,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use"
-    },
-    {
-      "action_id": "requeue_misaligned_world_model_rule_inputs",
-      "finding_counts": {
-        "numeric_rule_missing_candidate_claim_binding": 12,
-        "quantity_rule_for_entity_or_role_question": 6,
-        "quantity_rule_without_direct_numeric_intent": 2,
-        "temporal_rule_without_temporal_intent": 2
-      },
-      "lane": "world_model_rules",
-      "priority": 86,
-      "reason": "rule-input audit found tasks whose rule family should be rebuilt before value collection or promotion",
-      "recommended_rule_family_counts": {
-        "entity_disambiguation": 8
-      },
-      "requeue_suggestion_count": 8
     },
     {
       "action_id": "fill_and_promote_remaining_world_model_rules",
@@ -320,6 +328,7 @@
       "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json"
     ],
     "mechanism_handoff_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
+    "requeued_rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
     "rule_input_audit_report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-plan-audit-v1/world-model-rule-input-plan-audit.json",
     "rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
     "rule_promotion_reports": [
@@ -327,6 +336,7 @@
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
     ],
+    "rule_stub_requeue_report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
     "source_family_coverage_audits": [
       "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json"
     ],
@@ -346,7 +356,7 @@
       "citation_evidence": "blocked",
       "source_family_acquisition": "covered",
       "unresolved_queue": "ready_for_adapter_execution",
-      "world_model_rules": "needs_requeue"
+      "world_model_rules": "partial"
     },
     "mechanism_handoff_trace_count": 9,
     "missing_lane_count": 0,
@@ -355,6 +365,7 @@
     "world_model_rule_audit_requeue_suggestion_count": 8,
     "world_model_rule_promoted_count": 9,
     "world_model_rule_remaining_task_count": 17,
+    "world_model_rule_requeue_outstanding_count": 0,
     "world_model_rule_task_count": 26
   },
   "workflow": "unresolved_frontier_evidence_summary"

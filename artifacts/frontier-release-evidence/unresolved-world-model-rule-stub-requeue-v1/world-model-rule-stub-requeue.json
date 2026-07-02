@@ -1,0 +1,422 @@
+{
+  "label_usage": {
+    "candidate_results_require_promotion_gate": true,
+    "labels_copied_to_requeued_stubs": false,
+    "labels_used_for_requeue": false,
+    "model_answers_copied_to_requeued_stubs": false,
+    "model_answers_used_for_requeue": false,
+    "requeued_stubs_are_verifier_evidence": false
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/artifact-manifest.json",
+    "report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
+    "requeue_suggestions": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-plan-audit-v1/rule-input-requeue-suggestions.jsonl",
+    "requeued_rule_stubs": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/requeued-world-model-rule-stubs.jsonl",
+    "rule_stubs": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stubs-v1/world-model-rule-stubs.jsonl",
+    "skipped_requeue_suggestions": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/skipped-requeue-suggestions.jsonl"
+  },
+  "requeued_rule_stubs": [
+    {
+      "gap_type": "subject_only_or_unsupported_property",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0006",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "quantity_or_arithmetic",
+        "evidence_status": "subject_only_or_unsupported_property",
+        "mapping_decision": "subject_only_or_unsupported_property",
+        "normalized_rule_family": "quantity_or_arithmetic",
+        "not_verifier_evidence": true,
+        "original_rule_family": "quantity_or_arithmetic",
+        "priority_score": 161.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "quantity_rule_for_entity_or_role_question",
+          "numeric_rule_missing_candidate_claim_binding"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-199:world_model_or_calculator_rule:1",
+        "source_request_id": "rule:record-199:1",
+        "source_rule_family": "quantity_or_arithmetic",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "question_type": "person",
+      "request_id": "rule:record-199:1",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=subject_only_or_unsupported_property; mapping_decision=subject_only_or_unsupported_property. Rule-input audit recommended requeue before execution: current_family=quantity_or_arithmetic; recommended_family=entity_disambiguation; reason_codes=quantity_rule_for_entity_or_role_question, numeric_rule_missing_candidate_claim_binding.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: Who will you see if you physically travel to 123 Sesame Street?",
+      "schema_version": 1,
+      "target_id": "record-199",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "unmapped_low_relevance",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0005",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "quantity_or_arithmetic",
+        "evidence_status": "unmapped_low_relevance",
+        "mapping_decision": "unmapped_low_relevance",
+        "normalized_rule_family": "quantity_or_arithmetic",
+        "not_verifier_evidence": true,
+        "original_rule_family": "quantity_or_arithmetic",
+        "priority_score": 166.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "quantity_rule_for_entity_or_role_question",
+          "numeric_rule_missing_candidate_claim_binding"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-223:world_model_or_calculator_rule:1",
+        "source_request_id": "rule:record-223:1",
+        "source_rule_family": "quantity_or_arithmetic",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "question_type": "person",
+      "request_id": "rule:record-223:1",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=unmapped_low_relevance; mapping_decision=unmapped_low_relevance. Rule-input audit recommended requeue before execution: current_family=quantity_or_arithmetic; recommended_family=entity_disambiguation; reason_codes=quantity_rule_for_entity_or_role_question, numeric_rule_missing_candidate_claim_binding.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: Who will you see if you physically travel to 123 Sesame Street?",
+      "schema_version": 1,
+      "target_id": "record-223",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "generic_fact_only",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0003",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "quantity_or_arithmetic",
+        "evidence_status": "generic_fact_only",
+        "mapping_decision": "generic_fact_only",
+        "normalized_rule_family": "quantity_or_arithmetic",
+        "not_verifier_evidence": true,
+        "original_rule_family": "quantity_or_arithmetic",
+        "priority_score": 190.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "quantity_rule_for_entity_or_role_question",
+          "numeric_rule_missing_candidate_claim_binding"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-485:world_model_or_calculator_rule:5",
+        "source_request_id": "rule:record-485:1",
+        "source_rule_family": "quantity_or_arithmetic",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "question_type": "definition",
+      "request_id": "rule:record-485:1",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=generic_fact_only; mapping_decision=generic_fact_only. Rule-input audit recommended requeue before execution: current_family=quantity_or_arithmetic; recommended_family=entity_disambiguation; reason_codes=quantity_rule_for_entity_or_role_question, numeric_rule_missing_candidate_claim_binding.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "schema_version": 1,
+      "target_id": "record-485",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "no_joined_facts",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0002",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "quantity_or_arithmetic",
+        "evidence_status": "no_joined_facts",
+        "mapping_decision": "no_joined_facts",
+        "normalized_rule_family": "quantity_or_arithmetic",
+        "not_verifier_evidence": true,
+        "original_rule_family": "quantity_or_arithmetic",
+        "priority_score": 195.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "quantity_rule_for_entity_or_role_question",
+          "numeric_rule_missing_candidate_claim_binding"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-516:world_model_or_calculator_rule:5",
+        "source_request_id": "rule:record-516:1",
+        "source_rule_family": "quantity_or_arithmetic",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "high",
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "question_type": "definition",
+      "request_id": "rule:record-516:1",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=no_joined_facts; mapping_decision=no_joined_facts. Rule-input audit recommended requeue before execution: current_family=quantity_or_arithmetic; recommended_family=entity_disambiguation; reason_codes=quantity_rule_for_entity_or_role_question, numeric_rule_missing_candidate_claim_binding.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "schema_version": 1,
+      "target_id": "record-516",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "subject_only_or_unsupported_property",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0023",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "quantity_or_arithmetic",
+        "evidence_status": "subject_only_or_unsupported_property",
+        "mapping_decision": "subject_only_or_unsupported_property",
+        "normalized_rule_family": "quantity_or_arithmetic",
+        "not_verifier_evidence": true,
+        "original_rule_family": "quantity_or_arithmetic",
+        "priority_score": 125.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "quantity_rule_for_entity_or_role_question",
+          "numeric_rule_missing_candidate_claim_binding"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-498:world_model_or_calculator_rule:5",
+        "source_request_id": "rule:record-498:1",
+        "source_rule_family": "quantity_or_arithmetic",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "medium",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "request_id": "rule:record-498:1",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=subject_only_or_unsupported_property; mapping_decision=subject_only_or_unsupported_property. Rule-input audit recommended requeue before execution: current_family=quantity_or_arithmetic; recommended_family=entity_disambiguation; reason_codes=quantity_rule_for_entity_or_role_question, numeric_rule_missing_candidate_claim_binding.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "schema_version": 1,
+      "target_id": "record-498",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "no_joined_facts",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0012",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "quantity_or_arithmetic",
+        "evidence_status": "no_joined_facts",
+        "mapping_decision": "no_joined_facts",
+        "normalized_rule_family": "quantity_or_arithmetic",
+        "not_verifier_evidence": true,
+        "original_rule_family": "quantity_or_arithmetic",
+        "priority_score": 145.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "quantity_rule_for_entity_or_role_question",
+          "numeric_rule_missing_candidate_claim_binding"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-517:world_model_or_calculator_rule:5",
+        "source_request_id": "rule:record-517:1",
+        "source_rule_family": "quantity_or_arithmetic",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "medium",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "request_id": "rule:record-517:1",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=no_joined_facts; mapping_decision=no_joined_facts. Rule-input audit recommended requeue before execution: current_family=quantity_or_arithmetic; recommended_family=entity_disambiguation; reason_codes=quantity_rule_for_entity_or_role_question, numeric_rule_missing_candidate_claim_binding.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "schema_version": 1,
+      "target_id": "record-517",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "subject_only_or_unsupported_property",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0024",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "temporal_consistency",
+        "evidence_status": "subject_only_or_unsupported_property",
+        "mapping_decision": "subject_only_or_unsupported_property",
+        "normalized_rule_family": "temporal_consistency",
+        "not_verifier_evidence": true,
+        "original_rule_family": "temporal_consistency",
+        "priority_score": 125.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "temporal_rule_without_temporal_intent"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-498:world_model_or_calculator_rule:6",
+        "source_request_id": "rule:record-498:2",
+        "source_rule_family": "temporal_freshness",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "medium",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "request_id": "rule:record-498:2",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=subject_only_or_unsupported_property; mapping_decision=subject_only_or_unsupported_property. Rule-input audit recommended requeue before execution: current_family=temporal_consistency; recommended_family=entity_disambiguation; reason_codes=temporal_rule_without_temporal_intent.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "schema_version": 1,
+      "target_id": "record-498",
+      "workflow": "world_model_rule_stub_requeue"
+    },
+    {
+      "gap_type": "no_joined_facts",
+      "metadata": {
+        "adapter_family": "world_model_rule_authoring",
+        "audit_task_id": "rule-input-task-0013",
+        "candidate_results_require_promotion_gate": true,
+        "current_rule_family": "temporal_consistency",
+        "evidence_status": "no_joined_facts",
+        "mapping_decision": "no_joined_facts",
+        "normalized_rule_family": "temporal_consistency",
+        "not_verifier_evidence": true,
+        "original_rule_family": "temporal_consistency",
+        "priority_score": 145.0,
+        "recommended_rule_family": "entity_disambiguation",
+        "requeue_reason_codes": [
+          "temporal_rule_without_temporal_intent"
+        ],
+        "requeue_workflow": "world_model_rule_stub_requeue",
+        "requeued_from_audit": true,
+        "requires_timestamp": false,
+        "source_audit_workflow": "world_model_rule_input_plan_audit",
+        "source_queue_id": "queue:record-517:world_model_or_calculator_rule:6",
+        "source_request_id": "rule:record-517:2",
+        "source_rule_family": "temporal_freshness",
+        "source_workflow": "unresolved_world_model_rule_stubs",
+        "usage": "deterministic_check_authoring"
+      },
+      "not_verifier_evidence": true,
+      "priority": "medium",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "request_id": "rule:record-517:2",
+      "request_type": "world_model_or_calculator_rule",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "rule_reason": "Unresolved blind-spot queue selected this target for deterministic rule authoring: evidence_status=no_joined_facts; mapping_decision=no_joined_facts. Rule-input audit recommended requeue before execution: current_family=temporal_consistency; recommended_family=entity_disambiguation; reason_codes=temporal_rule_without_temporal_intent.",
+      "rule_seed": "Author a deterministic entity-role disambiguation check for: Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "schema_version": 1,
+      "target_id": "record-517",
+      "workflow": "world_model_rule_stub_requeue"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Applies non-evidence audit requeue suggestions to sanitized rule stubs. The emitted stubs are replacement work items for the rule-authoring adapter; they are not verifier evidence and do not execute candidate checks.",
+  "skipped_requeue_suggestions": [],
+  "source": {
+    "audit_workflow": "world_model_rule_input_plan_audit",
+    "requeue_suggestion_count": 8,
+    "rule_stub_workflow": "unresolved_world_model_rule_stubs",
+    "source_stub_count": 26
+  },
+  "status": "ready_for_rule_authoring",
+  "summary": {
+    "failure_counts": {},
+    "original_rule_family_counts": {
+      "quantity_or_arithmetic": 6,
+      "temporal_consistency": 2
+    },
+    "requeue_suggestion_count": 8,
+    "requeued_stub_count": 8,
+    "rule_family_counts": {
+      "entity_disambiguation": 8
+    },
+    "skipped_suggestion_count": 0,
+    "skipped_suggestion_counts": {},
+    "source_stub_count": 26,
+    "target_count": 6,
+    "top_requeued_stub": {
+      "request_id": "rule:record-199:1",
+      "rule_family": "entity_disambiguation",
+      "target_id": "record-199"
+    }
+  },
+  "workflow": "world_model_rule_stub_requeue"
+}

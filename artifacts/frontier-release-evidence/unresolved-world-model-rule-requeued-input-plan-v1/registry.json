@@ -1,0 +1,20 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/artifact-manifest.json",
+        "batch_count": 1,
+        "model": "smollm2-l80",
+        "source": "frontier-v4",
+        "status": "ready_for_input_collection",
+        "task_count": 8,
+        "workflow": "world_model_rule_input_collection_plan"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}
