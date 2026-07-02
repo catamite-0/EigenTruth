@@ -4221,6 +4221,7 @@ python benchmarks/summarize_unresolved_frontier_evidence.py \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --rule-promotion-report artifacts/frontier-release-evidence/unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json \
   --mechanism-handoff-bundle artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json \
   --json "$OUT/unresolved-frontier-evidence-summary.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
@@ -4233,10 +4234,13 @@ python benchmarks/summarize_unresolved_frontier_evidence.py \
 
 For the current frontier-v4 unresolved lane, the expected summary is
 `needs_evidence`: source-family acquisition is covered, citation evidence remains
-blocked because external query alignment still does not promote, and
-world-model rules are partial because the mechanism bundle promotes the
-`9/9` causal/procedural tasks while the broader `26`-task rule-input plan still
-contains numeric and temporal rows that need explicit source-backed inputs.
+blocked because external query alignment still does not promote, and world-model
+rules are partial because promoted rule evidence now closes the `9/9`
+causal/procedural tasks plus the `8/8` external/official entity-disambiguation
+requeue. The broader `26`-task rule-input plan still has `17` raw remaining
+numeric/temporal rows, but the audit-adjusted actionable remainder is now `9`
+tasks: `6` quantity/arithmetic and `3` temporal-consistency rows that still need
+explicit source-backed inputs.
 
 The same summary can feed the generic frontier command-plan handoff:
 

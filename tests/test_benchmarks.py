@@ -33882,6 +33882,96 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
     assert entity_citation_requirements["status"] == "ready"
 
 
+def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    summary_path = tmp_path / "unresolved-summary.json"
+    rule_dir = tmp_path / "rules"
+    requeued_dir = tmp_path / "requeued-rules"
+    rule_dir.mkdir()
+    requeued_dir.mkdir()
+    rule_plan_path = rule_dir / "rule-input-collection-plan.json"
+    requeued_plan_path = requeued_dir / "rule-input-collection-plan.json"
+    rule_plan_path.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_input_collection_plan",
+            "status": "ready_for_input_collection",
+            "summary": {
+                "task_count": 2,
+                "rule_family_counts": {
+                    "quantity_or_arithmetic": 1,
+                    "temporal_consistency": 1,
+                },
+            },
+            "paths": {
+                "input_tasks": "rule-input-tasks.jsonl",
+                "input_requests": "world-model-rule-input-requests.jsonl",
+            },
+        }),
+        encoding="utf-8",
+    )
+    requeued_plan_path.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_input_collection_plan",
+            "status": "ready_for_input_collection",
+            "summary": {
+                "task_count": 1,
+                "rule_family_counts": {"entity_disambiguation": 1},
+            },
+            "paths": {
+                "input_tasks": "rule-input-tasks.jsonl",
+                "input_requests": "world-model-rule-input-requests.jsonl",
+            },
+        }),
+        encoding="utf-8",
+    )
+    summary_path.write_text(
+        json.dumps({
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {
+                "rule_input_plan": str(rule_plan_path),
+                "requeued_rule_input_plan": str(requeued_plan_path),
+            },
+            "next_actions": [
+                {
+                    "action_id": "fill_and_promote_remaining_world_model_rules",
+                    "lane": "world_model_rules",
+                    "priority": 85,
+                    "reason": "entity requeue already promoted",
+                    "remaining_rule_family_counts": {
+                        "quantity_or_arithmetic": 1,
+                        "temporal_consistency": 1,
+                    },
+                    "missing_input_counts": {
+                        "numeric_value": 1,
+                        "source_citation": 2,
+                        "source_time": 1,
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(source=summary_path)
+    entry = payload["entries"][0]
+    command_text = "\n".join(entry["command_templates"])
+
+    assert payload["summary"]["command_count"] == 6
+    assert entry["required_inputs"] == (
+        "source_backed_numeric_bindings",
+        "source_backed_temporal_bindings",
+    )
+    assert "fill_world_model_rule_inputs_from_numeric_bindings.py" in command_text
+    assert "fill_world_model_rule_inputs_from_temporal_bindings.py" in command_text
+    assert "fill_world_model_rule_inputs_from_entity_bindings.py" not in command_text
+    assert "closure_lane=entity_role_rules" not in command_text
+    assert entry["metadata"]["remaining_rule_family_counts"] == {
+        "quantity_or_arithmetic": 1,
+        "temporal_consistency": 1,
+    }
+
+
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(
@@ -56552,6 +56642,18 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "status_counts": {"supported": 2},
         },
     }
+    entity_promotion = {
+        "workflow": "world_model_rule_candidate_promotion_gate",
+        "status": "promote",
+        "summary": {
+            "promoted_count": 1,
+            "blocked_count": 0,
+            "pending_count": 0,
+            "executed_count": 1,
+            "promoted_rule_family_counts": {"entity_disambiguation": 1},
+            "status_counts": {"refuted": 1},
+        },
+    }
     rule_audit = {
         "workflow": "world_model_rule_input_plan_audit",
         "status": "needs_requeue",
@@ -56772,6 +56874,93 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert "requeue_misaligned_world_model_rule_inputs" not in requeued_action_ids
     assert "fill_and_promote_remaining_world_model_rules" in requeued_action_ids
     assert requeued_payload["summary"]["world_model_rule_requeue_outstanding_count"] == 0
+    assert requeued_payload["summary"]["world_model_rule_audit_adjusted_remaining_task_count"] == 3
+
+    promoted_requeued_payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation, citation_rollup),
+        source_family_coverage_audits=(missing_coverage, covered_coverage),
+        rule_input_plan=rule_plan,
+        rule_input_audit_report=rule_audit,
+        rule_stub_requeue_report=requeue_report,
+        requeued_rule_input_plan=requeued_plan,
+        rule_promotion_reports=(promotion, entity_promotion),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+    promoted_requeued_rules = promoted_requeued_payload["lanes"]["world_model_rules"]
+    assert promoted_requeued_rules["status"] == "partial"
+    assert promoted_requeued_rules["remaining_task_count"] == 3
+    assert promoted_requeued_rules["audit_adjusted_remaining_task_count"] == 2
+    assert promoted_requeued_rules["promoted_rule_family_counts"] == {
+        "causal_or_procedural": 2,
+        "entity_disambiguation": 1,
+    }
+    assert promoted_requeued_rules["closed_rule_family_counts"] == {
+        "causal_or_procedural": 2,
+        "entity_disambiguation": 1,
+    }
+    assert promoted_requeued_rules["audit_adjusted_remaining_rule_family_counts"] == {
+        "quantity_or_arithmetic": 2
+    }
+    assert promoted_requeued_rules["audit_adjusted_required_input_counts"] == {
+        "calculation.expected": 2,
+        "calculation.expression": 2,
+        "numeric_value": 2,
+        "reference_time": 2,
+        "source_citation": 2,
+        "unit": 2,
+    }
+    promoted_requeued_action = next(
+        action
+        for action in promoted_requeued_payload["next_actions"]
+        if action["action_id"] == "fill_and_promote_remaining_world_model_rules"
+    )
+    assert promoted_requeued_action["remaining_rule_family_counts"] == {
+        "quantity_or_arithmetic": 2
+    }
+    assert promoted_requeued_action["audit_adjusted_required_input_counts"] == {
+        "calculation.expected": 2,
+        "calculation.expression": 2,
+        "numeric_value": 2,
+        "reference_time": 2,
+        "source_citation": 2,
+        "unit": 2,
+    }
+
+    closed_requeue_plan = {
+        "workflow": "world_model_rule_input_collection_plan",
+        "status": "ready_for_input_collection",
+        "summary": {
+            "task_count": 1,
+            "rule_family_counts": {"quantity_or_arithmetic": 1},
+            "missing_input_counts": {
+                "numeric_value": 1,
+                "source_citation": 1,
+            },
+        },
+    }
+    closed_requeue_payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation,),
+        source_family_coverage_audits=(covered_coverage,),
+        rule_input_plan=closed_requeue_plan,
+        rule_input_audit_report=rule_audit,
+        rule_stub_requeue_report=requeue_report,
+        requeued_rule_input_plan=requeued_plan,
+        rule_promotion_reports=(entity_promotion,),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+    closed_rules = closed_requeue_payload["lanes"]["world_model_rules"]
+    assert closed_rules["status"] == "promote"
+    assert closed_rules["remaining_task_count"] == 1
+    assert closed_rules["audit_adjusted_remaining_task_count"] == 0
+    assert closed_rules["audit_adjusted_remaining_rule_family_counts"] == {}
+    assert all(
+        action["action_id"] != "fill_and_promote_remaining_world_model_rules"
+        for action in closed_requeue_payload["next_actions"]
+    )
 
     queue_path = tmp_path / "queue.json"
     citation_path = tmp_path / "citation.json"
@@ -56833,6 +57022,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert manifest["metadata"]["source_family_acquisition_status"] == "covered"
     assert manifest["metadata"]["world_model_rule_status"] == "partial"
     assert manifest["metadata"]["world_model_rule_remaining_task_count"] == 3
+    assert manifest["metadata"]["world_model_rule_audit_adjusted_remaining_task_count"] == 3
     assert manifest["metadata"]["world_model_rule_audit_requeue_suggestion_count"] == 1
     assert manifest["metadata"]["world_model_rule_requeue_outstanding_count"] == 0
     assert record.metadata["workflow"] == "unresolved_frontier_evidence_summary"
@@ -56841,6 +57031,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert record.metadata["source_family_acquisition_status"] == "covered"
     assert record.metadata["world_model_rule_status"] == "partial"
     assert record.metadata["world_model_rule_remaining_task_count"] == 3
+    assert record.metadata["world_model_rule_audit_adjusted_remaining_task_count"] == 3
     assert record.metadata["world_model_rule_audit_requeue_suggestion_count"] == 1
     assert record.metadata["world_model_rule_requeue_outstanding_count"] == 0
     assert record.metadata["next_action_count"] == 2

@@ -64,6 +64,14 @@
       "sha256": "b39592b07744c1b10e9b52af6e58b1b043db836951da281ddbf597554ede82e3",
       "size_bytes": 10234
     },
+    "rule_promotion_report_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "411ef676f2d43fd36b4aaef3a7c1f68e8c54d6a0e4e84ea4d5a9eb5f8a6f0058",
+      "size_bytes": 13905
+    },
     "rule_stub_requeue_report": {
       "exists": true,
       "file_count": 1,
@@ -85,8 +93,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "25cb0be00ebdf548568d91278bf7a1ff1b35d48c61bfe989f1f0aa7d69dde04d",
-      "size_bytes": 13204
+      "sha256": "81a76164f642b20f659f3eae8b7b3eba0f36cbe423eae908e472a48712de8254",
+      "size_bytes": 13707
     },
     "unresolved_queue": {
       "exists": true,
@@ -107,6 +115,7 @@
     "status": "needs_evidence",
     "unresolved_target_count": 88,
     "workflow": "unresolved_frontier_evidence_summary",
+    "world_model_rule_audit_adjusted_remaining_task_count": 9,
     "world_model_rule_audit_requeue_suggestion_count": 8,
     "world_model_rule_remaining_task_count": 17,
     "world_model_rule_requeue_outstanding_count": 0,
@@ -114,9 +123,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 12,
+    "artifact_count": 13,
     "directory_count": 0,
-    "file_count": 12,
+    "file_count": 13,
     "missing_count": 0
   }
 }

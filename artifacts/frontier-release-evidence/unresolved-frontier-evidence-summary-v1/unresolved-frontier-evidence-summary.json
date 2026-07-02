@@ -110,28 +110,25 @@
     },
     "world_model_rules": {
       "audit_adjusted_remaining_rule_family_counts": {
-        "entity_disambiguation": 8,
         "quantity_or_arithmetic": 6,
         "temporal_consistency": 3
       },
+      "audit_adjusted_remaining_task_count": 9,
       "audit_adjusted_required_input_counts": {
-        "answer_entity": 8,
         "calculation.expected": 6,
         "calculation.expression": 6,
         "claim_time": 3,
-        "expected_entity": 8,
         "numeric_value": 6,
         "reference_time": 6,
-        "requested_role": 8,
         "retrieved_at": 3,
-        "source_citation": 17,
+        "source_citation": 9,
         "source_time": 3,
-        "subject_entity": 8,
         "unit": 6
       },
       "blocked_count": 0,
       "closed_rule_family_counts": {
-        "causal_or_procedural": 9
+        "causal_or_procedural": 9,
+        "entity_disambiguation": 8
       },
       "mechanism_handoff_bundle_status": "promote",
       "mechanism_handoff_target_count": 9,
@@ -149,11 +146,12 @@
         "unit": 12
       },
       "pending_count": 0,
-      "promoted_count": 9,
+      "promoted_count": 17,
       "promoted_rule_family_counts": {
-        "causal_or_procedural": 9
+        "causal_or_procedural": 9,
+        "entity_disambiguation": 8
       },
-      "promotion_report_count": 3,
+      "promotion_report_count": 4,
       "promotion_reports": [
         {
           "blocked_count": 0,
@@ -200,10 +198,26 @@
             "supported": 2
           },
           "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 8,
+          "index": 4,
+          "pending_count": 0,
+          "promoted_count": 8,
+          "promoted_rule_family_counts": {
+            "entity_disambiguation": 8
+          },
+          "status": "promote",
+          "status_counts": {
+            "refuted": 6,
+            "supported": 2
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
         }
       ],
       "promotion_status_counts": {
-        "promote": 3
+        "promote": 4
       },
       "remaining_missing_input_counts": {
         "claim_time": 5,
@@ -285,18 +299,14 @@
     {
       "action_id": "fill_and_promote_remaining_world_model_rules",
       "audit_adjusted_required_input_counts": {
-        "answer_entity": 8,
         "calculation.expected": 6,
         "calculation.expression": 6,
         "claim_time": 3,
-        "expected_entity": 8,
         "numeric_value": 6,
         "reference_time": 6,
-        "requested_role": 8,
         "retrieved_at": 3,
-        "source_citation": 17,
+        "source_citation": 9,
         "source_time": 3,
-        "subject_entity": 8,
         "unit": 6
       },
       "lane": "world_model_rules",
@@ -316,7 +326,6 @@
       },
       "reason": "world-model/calculator rule inputs are not fully promoted",
       "remaining_rule_family_counts": {
-        "entity_disambiguation": 8,
         "quantity_or_arithmetic": 6,
         "temporal_consistency": 3
       }
@@ -334,7 +343,8 @@
     "rule_promotion_reports": [
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
-      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json"
     ],
     "rule_stub_requeue_report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
     "source_family_coverage_audits": [
@@ -362,8 +372,9 @@
     "missing_lane_count": 0,
     "source_family_coverage_audit_count": 1,
     "unresolved_target_count": 88,
+    "world_model_rule_audit_adjusted_remaining_task_count": 9,
     "world_model_rule_audit_requeue_suggestion_count": 8,
-    "world_model_rule_promoted_count": 9,
+    "world_model_rule_promoted_count": 17,
     "world_model_rule_remaining_task_count": 17,
     "world_model_rule_requeue_outstanding_count": 0,
     "world_model_rule_task_count": 26

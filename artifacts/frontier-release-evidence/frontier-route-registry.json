@@ -1333,6 +1333,61 @@
       "name": "smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-reviewed-structured-qa-route",
       "path": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1/structured-qa-route-summary.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "citation_status": "blocked",
+        "manifest_summary": {
+          "artifact_count": 13,
+          "directory_count": 0,
+          "file_count": 13,
+          "missing_count": 0
+        },
+        "model": "smollm2-l80",
+        "next_action_count": 2,
+        "source": "frontier-v4",
+        "source_family_acquisition_status": "covered",
+        "status": "needs_evidence",
+        "unresolved_target_count": 88,
+        "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_adjusted_remaining_task_count": 9,
+        "world_model_rule_audit_requeue_suggestion_count": 8,
+        "world_model_rule_remaining_task_count": 17,
+        "world_model_rule_requeue_outstanding_count": 0,
+        "world_model_rule_status": "partial"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-frontier-evidence-summary",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "command_count": 9,
+        "entry_count": 2,
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "missing_command_template_count": 0,
+        "missing_input_count": 4,
+        "needs_input_entry_count": 2,
+        "only_active_research_queue": false,
+        "placeholder_count": 68,
+        "ready_entry_count": 0,
+        "source_path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+        "source_research_alignment_status": null,
+        "source_research_lifecycle_status": null,
+        "source_workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_inputs",
+        "workflow": "frontier_research_queue_command_plan"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-frontier-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

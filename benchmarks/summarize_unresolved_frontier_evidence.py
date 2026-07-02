@@ -224,6 +224,9 @@ def run(
                 "world_model_rule_remaining_task_count": payload["lanes"][
                     "world_model_rules"
                 ]["remaining_task_count"],
+                "world_model_rule_audit_adjusted_remaining_task_count": payload["lanes"][
+                    "world_model_rules"
+                ]["audit_adjusted_remaining_task_count"],
                 "world_model_rule_audit_requeue_suggestion_count": payload["lanes"][
                     "world_model_rules"
                 ]["rule_input_audit_requeue_suggestion_count"],
@@ -491,7 +494,10 @@ def _world_model_rule_lane(
     audit_adjusted_remaining_rule_family_counts = _audit_adjusted_remaining_rule_family_counts(
         remaining_rule_family_counts,
         requeue_suggestions=requeue_suggestions,
+        rule_family_counts=rule_family_counts,
+        promoted_rule_families=promoted_rule_families,
     )
+    audit_adjusted_remaining_task_count = sum(audit_adjusted_remaining_rule_family_counts.values())
     audit_adjusted_required_input_counts = _required_input_counts_by_rule_family(
         audit_adjusted_remaining_rule_family_counts
     )
@@ -504,7 +510,7 @@ def _world_model_rule_lane(
         status = "missing"
     elif requeue_outstanding_count:
         status = "needs_requeue"
-    elif remaining_task_count:
+    elif audit_adjusted_remaining_task_count:
         status = "partial"
     elif blocked_count:
         status = "blocked"
@@ -564,6 +570,7 @@ def _world_model_rule_lane(
             sorted(audit_adjusted_required_input_counts.items())
         ),
         "remaining_task_count": remaining_task_count,
+        "audit_adjusted_remaining_task_count": audit_adjusted_remaining_task_count,
         "remaining_missing_input_counts": dict(sorted(remaining_missing_input_counts.items())),
         "promotion_report_count": len(promotion_rows),
         "promotion_status_counts": dict(sorted(status_counts.items())),
@@ -663,6 +670,9 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "world_model_rule_remaining_task_count": _int(
             lanes["world_model_rules"].get("remaining_task_count")
         ),
+        "world_model_rule_audit_adjusted_remaining_task_count": _int(
+            lanes["world_model_rules"].get("audit_adjusted_remaining_task_count")
+        ),
         "world_model_rule_audit_requeue_suggestion_count": _int(
             lanes["world_model_rules"].get("rule_input_audit_requeue_suggestion_count")
         ),
@@ -742,6 +752,12 @@ def _write_manifest(
                 "lanes",
                 "world_model_rules",
                 "remaining_task_count",
+            ),
+            "world_model_rule_audit_adjusted_remaining_task_count": _nested(
+                payload,
+                "lanes",
+                "world_model_rules",
+                "audit_adjusted_remaining_task_count",
             ),
             "world_model_rule_audit_requeue_suggestion_count": _nested(
                 payload,
@@ -851,6 +867,8 @@ def _audit_adjusted_remaining_rule_family_counts(
     remaining_rule_family_counts: Mapping[str, int],
     *,
     requeue_suggestions: Sequence[Mapping[str, Any]],
+    rule_family_counts: Mapping[str, int],
+    promoted_rule_families: Mapping[str, int],
 ) -> dict[str, int]:
     adjusted = Counter({
         family: _int(count)
@@ -865,6 +883,10 @@ def _audit_adjusted_remaining_rule_family_counts(
         if adjusted.get(current, 0) > 0:
             adjusted[current] -= 1
         adjusted[recommended] += 1
+    for family, promoted_count in promoted_rule_families.items():
+        extra_promoted = max(_int(promoted_count) - _int(rule_family_counts.get(family)), 0)
+        if extra_promoted and adjusted.get(family, 0) > 0:
+            adjusted[family] = max(adjusted[family] - extra_promoted, 0)
     return {
         family: count
         for family, count in sorted(adjusted.items())

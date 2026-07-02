@@ -5,23 +5,23 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-research-command-plan.json",
-      "sha256": "7ea93e4aed3223ed54c86d10a5688d140379f92e321140b62d475958ff8f2d43",
-      "size_bytes": 22782
+      "sha256": "2509c603fe274f35adedefbafb2d790f3d75b827068173af6ec72a9391de38f9",
+      "size_bytes": 19708
     },
     "source": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
-      "sha256": "25cb0be00ebdf548568d91278bf7a1ff1b35d48c61bfe989f1f0aa7d69dde04d",
-      "size_bytes": 13204
+      "sha256": "81a76164f642b20f659f3eae8b7b3eba0f36cbe423eae908e472a48712de8254",
+      "size_bytes": 13707
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "command_count": 12,
+    "command_count": 9,
     "entry_count": 2,
-    "missing_input_count": 5,
+    "missing_input_count": 4,
     "runner": "plan_frontier_research_queue_commands",
     "status": "needs_inputs",
     "workflow": "frontier_research_queue_command_plan"

@@ -331,10 +331,30 @@ def _unresolved_world_model_rules_action(
         requeued_rule_paths.get("input_requests"),
         base=requeued_rule_plan_path,
     )
-    primary_commands = _world_model_rule_commands(input_tasks=input_tasks, input_requests=input_requests)
-    entity_commands = _entity_world_model_rule_commands(
-        input_tasks=requeued_input_tasks,
-        input_requests=requeued_input_requests,
+    remaining_value = action.get("remaining_rule_family_counts")
+    has_explicit_remaining = isinstance(remaining_value, Mapping)
+    remaining_families = _mapping(remaining_value)
+    include_primary_rules = (
+        not has_explicit_remaining
+        or _int_or_zero(remaining_families.get("quantity_or_arithmetic")) > 0
+        or _int_or_zero(remaining_families.get("temporal_consistency")) > 0
+    )
+    include_entity_rules = (
+        not has_explicit_remaining
+        or _int_or_zero(remaining_families.get("entity_disambiguation")) > 0
+    )
+    primary_commands = (
+        _world_model_rule_commands(input_tasks=input_tasks, input_requests=input_requests)
+        if include_primary_rules
+        else ()
+    )
+    entity_commands = (
+        _entity_world_model_rule_commands(
+            input_tasks=requeued_input_tasks,
+            input_requests=requeued_input_requests,
+        )
+        if include_entity_rules
+        else ()
     )
     required_inputs: list[str] = []
     closure_outputs: list[str] = []
@@ -375,6 +395,7 @@ def _unresolved_world_model_rules_action(
             ),
             "reason": str(action.get("reason") or ""),
             "missing_input_counts": dict(_mapping(action.get("missing_input_counts"))),
+            "remaining_rule_family_counts": dict(remaining_families),
         },
     }
 
@@ -732,6 +753,9 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             "workflow_keys": _workflow_keys(metadata),
             "required_input_count": len(required_inputs),
             "closure_output_count": len(closure_outputs),
+            "remaining_rule_family_counts": dict(
+                _mapping(metadata.get("remaining_rule_family_counts"))
+            ),
         },
     }
 
