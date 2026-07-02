@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 23
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 24
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -218,6 +218,22 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "frontier_release_evidence_citation_batch_missing_expected_batch_count",
     "frontier_release_evidence_citation_batch_duplicate_batch_count",
     "frontier_release_evidence_citation_batch_unexpected_batch_count",
+)
+_PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES: tuple[
+    str, ...
+] = (
+    "unresolved_frontier_evidence_summary_coverage_rate",
+    "unresolved_frontier_evidence_summary_report_present_rate",
+    "unresolved_frontier_evidence_summary_manifest_present_rate",
+    "unresolved_frontier_evidence_summary_status_promote_rate",
+    "unresolved_frontier_evidence_summary_report_status_promote_rate",
+    "unresolved_frontier_evidence_summary_closure_required_rate",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate",
+    "unresolved_frontier_evidence_summary_no_next_actions_rate",
+    "unresolved_frontier_evidence_summary_next_action_count",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count",
 )
 _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS: tuple[str, ...] = (
     "citation_batch_provenance_present_count",
@@ -491,6 +507,25 @@ _PROMOTION_CONTRACT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[str, ...] = (
     ),
     "promotion_contract_frontier_release_evidence_run_count",
     "promotion_contract_frontier_release_evidence_run_names",
+)
+_PROMOTION_CONTRACT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_FIELDS: tuple[str, ...] = (
+    "promotion_contract_unresolved_frontier_evidence_summary_available",
+    "promotion_contract_unresolved_frontier_evidence_summary_status",
+    "promotion_contract_unresolved_frontier_evidence_summary_report",
+    "promotion_contract_unresolved_frontier_evidence_summary_manifest",
+    "promotion_contract_unresolved_frontier_evidence_summary_source",
+    "promotion_contract_unresolved_frontier_evidence_summary_registry",
+    "promotion_contract_unresolved_frontier_evidence_summary_record",
+    "promotion_contract_unresolved_frontier_evidence_summary_workflow",
+    "promotion_contract_unresolved_frontier_evidence_summary_report_status",
+    "promotion_contract_unresolved_frontier_evidence_summary_closure_required",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required",
+    "promotion_contract_unresolved_frontier_evidence_summary_next_action_count",
+    "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count",
+    "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons",
 )
 _PROMOTION_CONTRACT_FACT_SELFCHECK_GATE_FIELDS: tuple[str, ...] = (
     "promotion_contract_fact_selfcheck_gate_available",
@@ -2134,6 +2169,18 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             compact[field_name] = list(_sequence(value))
         else:
             compact[field_name] = value
+    for field_name in _PROMOTION_CONTRACT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_FIELDS:
+        value = metrics.get(field_name)
+        if field_name == (
+            "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses"
+        ):
+            compact[field_name] = dict(_mapping(value))
+        elif field_name == (
+            "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons"
+        ):
+            compact[field_name] = list(_sequence(value))
+        else:
+            compact[field_name] = value
     for field_name in _PROMOTION_CONTRACT_FACT_SELFCHECK_GATE_FIELDS:
         value = metrics.get(field_name)
         if field_name in {
@@ -2212,6 +2259,10 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
@@ -4868,6 +4919,9 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
     frontier_release_evidence = _aggregate_promotion_contract_frontier_release_evidence(
         metrics
     )
+    unresolved_frontier_evidence_summary = (
+        _aggregate_promotion_contract_unresolved_frontier_evidence_summary(metrics)
+    )
     fact_selfcheck_gate = _aggregate_promotion_contract_fact_selfcheck_gate(metrics)
     product_trace_replay = _aggregate_promotion_contract_product_trace_replay(metrics)
     product_runtime_drift = _aggregate_promotion_contract_product_runtime_drift(metrics)
@@ -4924,6 +4978,7 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "triple_audit_evidence": triple_audit_evidence,
         "evidence_handoff": evidence_handoff,
         "frontier_release_evidence": frontier_release_evidence,
+        "unresolved_frontier_evidence_summary": unresolved_frontier_evidence_summary,
         "fact_selfcheck_gate": fact_selfcheck_gate,
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
@@ -5393,6 +5448,138 @@ def _aggregate_promotion_contract_frontier_release_evidence(
         },
         "run_names": _counts_from_sequence_items(
             item.get("promotion_contract_frontier_release_evidence_run_names")
+            for item in metrics
+        ),
+    }
+
+
+def _aggregate_promotion_contract_unresolved_frontier_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    available_count = sum(
+        1
+        for item in metrics
+        if bool(
+            item.get(
+                "promotion_contract_unresolved_frontier_evidence_summary_available"
+            )
+        )
+    )
+    report_count = sum(
+        1
+        for item in metrics
+        if (
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_report")
+            is not None
+        )
+    )
+    manifest_count = sum(
+        1
+        for item in metrics
+        if (
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_manifest")
+            is not None
+        )
+    )
+    status_values = [
+        item.get("promotion_contract_unresolved_frontier_evidence_summary_status")
+        for item in metrics
+    ]
+    report_status_values = [
+        item.get("promotion_contract_unresolved_frontier_evidence_summary_report_status")
+        for item in metrics
+    ]
+    closure_required_values = [
+        item.get(
+            "promotion_contract_unresolved_frontier_evidence_summary_closure_required"
+        )
+        for item in metrics
+    ]
+    smoke_required_values = [
+        item.get(
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required"
+        )
+        for item in metrics
+    ]
+    smoke_status_values = [
+        item.get(
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+        )
+        for item in metrics
+    ]
+    next_action_values = [
+        item.get(
+            "promotion_contract_unresolved_frontier_evidence_summary_next_action_count"
+        )
+        for item in metrics
+    ]
+    return {
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "report_present_rate": _safe_div(report_count, len(metrics)),
+        "manifest_present_rate": _safe_div(manifest_count, len(metrics)),
+        "report_counts": _counts(
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_report")
+            for item in metrics
+        ),
+        "manifest_counts": _counts(
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_manifest")
+            for item in metrics
+        ),
+        "source_counts": _counts(
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_source")
+            for item in metrics
+        ),
+        "registry_counts": _counts(
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_registry")
+            for item in metrics
+        ),
+        "record_counts": _counts(
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_record")
+            for item in metrics
+        ),
+        "workflow_counts": _counts(
+            item.get("promotion_contract_unresolved_frontier_evidence_summary_workflow")
+            for item in metrics
+        ),
+        "status_counts": _counts(status_values),
+        "report_status_counts": _counts(report_status_values),
+        "closure_required_counts": _counts(closure_required_values),
+        "queue_execution_smoke_required_counts": _counts(smoke_required_values),
+        "queue_execution_smoke_status_counts": _counts(smoke_status_values),
+        "lane_status_counts": _counts_from_group_statuses(
+            item.get(
+                "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses"
+            )
+            for item in metrics
+        ),
+        "status_promote_rate": _promote_rate(status_values),
+        "report_status_promote_rate": _promote_rate(report_status_values),
+        "closure_required_rate": _truthy_rate(closure_required_values),
+        "queue_execution_smoke_required_rate": _truthy_rate(smoke_required_values),
+        "no_next_actions_rate": _zero_rate(next_action_values),
+        "queue_execution_smoke_pass_rate": _status_rate(
+            smoke_status_values,
+            expected="pass",
+        ),
+        "next_action_count": _numeric_summary(next_action_values),
+        "queue_execution_smoke_count": _numeric_summary(
+            item.get(
+                "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count"
+            )
+            for item in metrics
+        ),
+        "queue_execution_smoke_manifest_verified_count": _numeric_summary(
+            item.get(
+                "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+            )
+            for item in metrics
+        ),
+        "blocking_reason_counts": _counts_from_sequence_items(
+            item.get(
+                "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons"
+            )
             for item in metrics
         ),
     }
@@ -6222,6 +6409,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
             )
             for item in metrics
         ),
+        "unresolved_frontier_evidence_summary_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_unresolved_frontier_evidence_summary_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "unresolved_frontier_evidence_summary_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_unresolved_frontier_evidence_summary_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
         "promotion_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
@@ -6293,6 +6492,14 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "frontier_release_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
+        ),
+        "unresolved_frontier_evidence_summary": (
+            _aggregate_product_runtime_drift_evidence(
+                metrics,
+                prefixes=(
+                    _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES
+                ),
+            )
         ),
     }
 
@@ -6599,6 +6806,9 @@ def _write_artifact_manifest(
     promotion_contract_frontier_release_evidence_metadata = (
         _promotion_contract_frontier_release_evidence_flat_metadata(report)
     )
+    promotion_contract_unresolved_frontier_evidence_summary_metadata = (
+        _promotion_contract_unresolved_frontier_evidence_summary_flat_metadata(report)
+    )
     promotion_contract_fact_selfcheck_gate_metadata = (
         _promotion_contract_fact_selfcheck_gate_flat_metadata(report)
     )
@@ -6648,6 +6858,7 @@ def _write_artifact_manifest(
             **promotion_contract_triple_audit_evidence_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **promotion_contract_frontier_release_evidence_metadata,
+            **promotion_contract_unresolved_frontier_evidence_summary_metadata,
             **promotion_contract_fact_selfcheck_gate_metadata,
             **dict(config.metadata),
         },
@@ -6704,6 +6915,9 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     promotion_contract_frontier_release_evidence_metadata = (
         _promotion_contract_frontier_release_evidence_flat_metadata(report)
     )
+    promotion_contract_unresolved_frontier_evidence_summary_metadata = (
+        _promotion_contract_unresolved_frontier_evidence_summary_flat_metadata(report)
+    )
     promotion_contract_fact_selfcheck_gate_metadata = (
         _promotion_contract_fact_selfcheck_gate_flat_metadata(report)
     )
@@ -6758,6 +6972,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **promotion_contract_triple_audit_evidence_metadata,
             **promotion_contract_evidence_handoff_metadata,
             **promotion_contract_frontier_release_evidence_metadata,
+            **promotion_contract_unresolved_frontier_evidence_summary_metadata,
             **promotion_contract_fact_selfcheck_gate_metadata,
             **dict(config.metadata),
         },
@@ -7357,6 +7572,22 @@ def _promotion_contract_runtime_drift_flat_metadata(
             "frontier_release_evidence_blocked_metric_count",
             "mean",
         ),
+        (
+            "promotion_contract_product_runtime_drift_"
+            "unresolved_frontier_evidence_summary_evidence_metric_count_mean"
+        ): _nested(
+            drift,
+            "unresolved_frontier_evidence_summary_evidence_metric_count",
+            "mean",
+        ),
+        (
+            "promotion_contract_product_runtime_drift_"
+            "unresolved_frontier_evidence_summary_evidence_blocked_metric_count_mean"
+        ): _nested(
+            drift,
+            "unresolved_frontier_evidence_summary_evidence_blocked_metric_count",
+            "mean",
+        ),
     }
     metadata.update(
         _product_runtime_drift_evidence_flat_metadata(
@@ -7464,6 +7695,14 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("frontier_release_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("unresolved_frontier_evidence_summary")),
+            prefixes=(
+                _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES
+            ),
         )
     )
     return metadata
@@ -8243,6 +8482,114 @@ def _promotion_contract_frontier_release_evidence_flat_metadata(
     }
 
 
+def _promotion_contract_unresolved_frontier_evidence_summary_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    evidence = _mapping(
+        _nested(
+            report,
+            "summary",
+            "promotion_contract",
+            "unresolved_frontier_evidence_summary",
+        )
+    )
+    if not evidence:
+        return {}
+    return {
+        "promotion_contract_unresolved_frontier_evidence_summary_available_trace_count": (
+            evidence.get("available_trace_count")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_missing_trace_count": (
+            evidence.get("missing_trace_count")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_coverage_rate": (
+            evidence.get("coverage_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_present_rate": (
+            evidence.get("report_present_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest_present_rate": (
+            evidence.get("manifest_present_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_counts": dict(
+            _mapping(evidence.get("report_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest_counts": dict(
+            _mapping(evidence.get("manifest_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_source_counts": dict(
+            _mapping(evidence.get("source_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_registry_counts": dict(
+            _mapping(evidence.get("registry_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_record_counts": dict(
+            _mapping(evidence.get("record_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_workflow_counts": dict(
+            _mapping(evidence.get("workflow_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_status_counts": dict(
+            _mapping(evidence.get("status_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_status_counts": dict(
+            _mapping(evidence.get("report_status_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_closure_required_counts": dict(
+            _mapping(evidence.get("closure_required_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required_counts": dict(
+            _mapping(evidence.get("queue_execution_smoke_required_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status_counts": dict(
+            _mapping(evidence.get("queue_execution_smoke_status_counts"))
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_lane_status_counts": {
+            str(group): dict(_mapping(counts))
+            for group, counts in _mapping(evidence.get("lane_status_counts")).items()
+        },
+        "promotion_contract_unresolved_frontier_evidence_summary_status_promote_rate": (
+            evidence.get("status_promote_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_status_promote_rate": (
+            evidence.get("report_status_promote_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_closure_required_rate": (
+            evidence.get("closure_required_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate": (
+            evidence.get("queue_execution_smoke_required_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_no_next_actions_rate": (
+            evidence.get("no_next_actions_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate": (
+            evidence.get("queue_execution_smoke_pass_rate")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count_mean": _nested(
+            evidence,
+            "next_action_count",
+            "mean",
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count_mean": _nested(
+            evidence,
+            "queue_execution_smoke_count",
+            "mean",
+        ),
+        (
+            "promotion_contract_unresolved_frontier_evidence_summary_"
+            "queue_execution_smoke_manifest_verified_count_mean"
+        ): _nested(
+            evidence,
+            "queue_execution_smoke_manifest_verified_count",
+            "mean",
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_blocking_reason_counts": dict(
+            _mapping(evidence.get("blocking_reason_counts"))
+        ),
+    }
+
+
 def _promotion_contract_fact_selfcheck_gate_flat_metadata(
     report: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -8629,6 +8976,35 @@ def _promote_rate(values: Sequence[Any] | Any) -> float | None:
     if not statuses:
         return None
     return sum(1 for status in statuses if status == "promote") / len(statuses)
+
+
+def _status_rate(values: Sequence[Any] | Any, *, expected: str) -> float | None:
+    statuses = [
+        text
+        for value in values
+        if (text := _optional_string(value)) is not None
+    ]
+    if not statuses:
+        return None
+    return sum(1 for status in statuses if status == expected) / len(statuses)
+
+
+def _truthy_rate(values: Sequence[Any] | Any) -> float | None:
+    observed = tuple(value for value in values if value is not None)
+    if not observed:
+        return None
+    return sum(1 for value in observed if _truthy_flag(value)) / len(observed)
+
+
+def _zero_rate(values: Sequence[Any] | Any) -> float | None:
+    finite_values = [
+        numeric
+        for value in values
+        if (numeric := _finite_float(value)) is not None
+    ]
+    if not finite_values:
+        return None
+    return sum(1 for value in finite_values if value == 0.0) / len(finite_values)
 
 
 def _count_rate(counts: Mapping[str, Any], key: str) -> float | None:

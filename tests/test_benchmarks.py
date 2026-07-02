@@ -47743,7 +47743,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 23
+    assert cache_payload["schema_version"] == 24
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -50192,6 +50192,146 @@ def test_compare_product_runtime_baselines_gates_frontier_release_evidence_drift
     assert record.metadata[
         "frontier_release_evidence_citation_batch_comparison_failed_count_current"
     ] == pytest.approx(1.0)
+
+
+def test_compare_product_runtime_baselines_gates_unresolved_frontier_summary_drift(
+    tmp_path,
+):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata=_promotion_unresolved_frontier_evidence_summary_metadata(
+            status="promote",
+            report_status="promote",
+            next_action_count=0,
+            queue_execution_smoke_status="pass",
+            queue_execution_smoke_count=1,
+            queue_execution_smoke_manifest_verified_count=1,
+        ),
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata=_promotion_unresolved_frontier_evidence_summary_metadata(
+            status="blocked",
+            report_status="blocked",
+            next_action_count=2,
+            queue_execution_smoke_status="blocked",
+            queue_execution_smoke_count=0,
+            queue_execution_smoke_manifest_verified_count=0,
+            manifest_present=False,
+            closure_required=False,
+            queue_execution_smoke_required=False,
+            lane_statuses={"detectability": "blocked"},
+            blocking_reasons=("next_actions_remaining",),
+        ),
+    )
+    baseline_payload = baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    current_payload = baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-unresolved-frontier-summary",
+        version="0.1",
+        min_unresolved_frontier_evidence_summary_coverage=1.0,
+        min_unresolved_frontier_evidence_summary_report_present_rate=1.0,
+        min_unresolved_frontier_evidence_summary_manifest_present_rate=1.0,
+        min_unresolved_frontier_evidence_summary_status_promote_rate=1.0,
+        min_unresolved_frontier_evidence_summary_report_status_promote_rate=1.0,
+        min_unresolved_frontier_evidence_summary_closure_required_rate=1.0,
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate=1.0,
+        min_unresolved_frontier_evidence_summary_no_next_actions_rate=1.0,
+        max_unresolved_frontier_evidence_summary_next_action_count=0,
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate=1.0,
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_count=1,
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count=1,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get(
+        "product_runtime_drift_report:runtime-drift-unresolved-frontier-summary:0.1"
+    )
+    baseline_summary = baseline_payload["summary"]["promotion_contract"][
+        "unresolved_frontier_evidence_summary"
+    ]
+    current_summary = current_payload["summary"]["promotion_contract"][
+        "unresolved_frontier_evidence_summary"
+    ]
+
+    assert baseline_summary["coverage_rate"] == pytest.approx(1.0)
+    assert baseline_summary["no_next_actions_rate"] == pytest.approx(1.0)
+    assert baseline_summary["queue_execution_smoke_pass_rate"] == pytest.approx(1.0)
+    assert current_summary["manifest_present_rate"] == pytest.approx(0.0)
+    assert current_summary["blocking_reason_counts"] == {"next_actions_remaining": 1}
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 10
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.unresolved_frontier_evidence_summary.coverage_rate",
+    )["status"] == "pass"
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.unresolved_frontier_evidence_summary.manifest_present_rate",
+    )["current"] == pytest.approx(0.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.unresolved_frontier_evidence_summary.next_action_count.mean",
+    )["current"] == pytest.approx(2.0)
+    assert _metric_by_name(
+        payload,
+        "promotion_contract.unresolved_frontier_evidence_summary.queue_execution_smoke_pass_rate",
+    )["status"] == "blocked"
+    assert manifest["metadata"][
+        "unresolved_frontier_evidence_summary_blocked_metric_count"
+    ] == 10
+    assert manifest["metadata"][
+        "unresolved_frontier_evidence_summary_report_present_rate_status"
+    ] == "pass"
+    assert manifest["metadata"][
+        "unresolved_frontier_evidence_summary_manifest_present_rate_current"
+    ] == pytest.approx(0.0)
+    assert record.metadata[
+        "unresolved_frontier_evidence_summary_next_action_count_current"
+    ] == pytest.approx(2.0)
+    assert record.metadata[
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count_status"
+    ] == "blocked"
 
 
 def test_compare_product_runtime_baselines_gates_fact_selfcheck_gate_drift(tmp_path):
@@ -52647,6 +52787,71 @@ def _promotion_frontier_release_evidence_metadata(
         ),
         "promotion_contract_frontier_release_evidence_run_count": len(run_names),
         "promotion_contract_frontier_release_evidence_run_names": tuple(run_names),
+    }
+
+
+def _promotion_unresolved_frontier_evidence_summary_metadata(
+    *,
+    status: str,
+    report_status: str,
+    next_action_count: int,
+    queue_execution_smoke_status: str,
+    queue_execution_smoke_count: int,
+    queue_execution_smoke_manifest_verified_count: int,
+    manifest_present: bool = True,
+    closure_required: bool = True,
+    queue_execution_smoke_required: bool = True,
+    lane_statuses: Mapping[str, str] | None = None,
+    blocking_reasons: Sequence[str] = (),
+) -> dict[str, Any]:
+    return {
+        "promotion_contract_unresolved_frontier_evidence_summary_available": True,
+        "promotion_contract_unresolved_frontier_evidence_summary_status": status,
+        "promotion_contract_unresolved_frontier_evidence_summary_report": (
+            "artifacts/unresolved-frontier-evidence-summary/summary.json"
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest": (
+            "artifacts/unresolved-frontier-evidence-summary/artifact-manifest.json"
+            if manifest_present
+            else None
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_source": "registry",
+        "promotion_contract_unresolved_frontier_evidence_summary_registry": (
+            "artifacts/release-registry.json"
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_record": (
+            "report:unresolved-frontier-evidence-summary:0.1"
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_workflow": (
+            "unresolved_frontier_evidence_summary"
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_status": (
+            report_status
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_closure_required": (
+            closure_required
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            queue_execution_smoke_required
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count": (
+            next_action_count
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses": dict(
+            lane_statuses or {"detectability": "promote", "multiple_testing": "promote"}
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            queue_execution_smoke_status
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            queue_execution_smoke_count
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            queue_execution_smoke_manifest_verified_count
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons": tuple(
+            blocking_reasons
+        ),
     }
 
 

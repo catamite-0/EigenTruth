@@ -742,6 +742,74 @@ _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_FIELDS: tuple[tuple[str, str], 
         "frontier_release_evidence_citation_batch_unexpected_batch_count",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.coverage_rate",
+        "unresolved_frontier_evidence_summary_coverage_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.report_present_rate",
+        "unresolved_frontier_evidence_summary_report_present_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.manifest_present_rate",
+        "unresolved_frontier_evidence_summary_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.status_promote_rate",
+        "unresolved_frontier_evidence_summary_status_promote_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.report_status_promote_rate",
+        "unresolved_frontier_evidence_summary_report_status_promote_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.closure_required_rate",
+        "unresolved_frontier_evidence_summary_closure_required_rate",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_required_rate"
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.no_next_actions_rate",
+        "unresolved_frontier_evidence_summary_no_next_actions_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.next_action_count.mean",
+        "unresolved_frontier_evidence_summary_next_action_count",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_pass_rate"
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_count.mean"
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_manifest_verified_count.mean"
+        ),
+        (
+            "unresolved_frontier_evidence_summary_"
+            "queue_execution_smoke_manifest_verified_count"
+        ),
+    ),
+)
 
 
 def compare_release_candidates(
@@ -793,6 +861,9 @@ def compare_release_candidates(
     require_product_runtime_drift_evidence_alignment_evidence: bool = False,
     require_product_runtime_drift_counterfactual_robustness_evidence: bool = False,
     require_product_runtime_drift_frontier_release_evidence: bool = False,
+    require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence: (
+        bool
+    ) = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
     external_evidence_baseline_comparison_registry_path: str | Path | None = None,
@@ -1094,6 +1165,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_frontier_release_evidence": (
                     require_product_runtime_drift_frontier_release_evidence
                 ),
+                "require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence": (
+                    require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
+                ),
                 "require_frontier_release_input_manifests": (
                     require_frontier_release_input_manifests
                 ),
@@ -1312,6 +1386,15 @@ def compare_release_candidates(
     require_product_runtime_drift_frontier_release_evidence = bool(
         release_policy_values.get(
             "require_product_runtime_drift_frontier_release_evidence",
+            False,
+        )
+    )
+    require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence = bool(
+        release_policy_values.get(
+            (
+                "require_product_runtime_drift_"
+                "unresolved_frontier_evidence_summary_evidence"
+            ),
             False,
         )
     )
@@ -1939,6 +2022,9 @@ def compare_release_candidates(
         require_frontier_release_evidence=(
             require_product_runtime_drift_frontier_release_evidence
         ),
+        require_unresolved_frontier_evidence_summary_evidence=(
+            require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
+        ),
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -2264,6 +2350,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_frontier_release_evidence": bool(
                 require_product_runtime_drift_frontier_release_evidence
+            ),
+            "require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence": bool(
+                require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
             ),
             "require_frontier_release_input_manifests": bool(
                 require_frontier_release_input_manifests
@@ -7620,6 +7709,7 @@ def _product_runtime_drift_gate(
     require_evidence_alignment_evidence: bool,
     require_counterfactual_robustness_evidence: bool,
     require_frontier_release_evidence: bool,
+    require_unresolved_frontier_evidence_summary_evidence: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
@@ -7651,6 +7741,7 @@ def _product_runtime_drift_gate(
             or require_evidence_alignment_evidence
             or require_counterfactual_robustness_evidence
             or require_frontier_release_evidence
+            or require_unresolved_frontier_evidence_summary_evidence
         ):
             gate = {
                 "passed": False,
@@ -7923,6 +8014,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_frontier_release_evidence else (),
                     "frontier_release_evidence_blocked_metric_count": 0,
+                    "unresolved_frontier_evidence_summary_evidence_required": bool(
+                        require_unresolved_frontier_evidence_summary_evidence
+                    ),
+                    "unresolved_frontier_evidence_summary_evidence_metric_count": 0,
+                    "unresolved_frontier_evidence_summary_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_FIELDS
+                        )
+                    ) if require_unresolved_frontier_evidence_summary_evidence else (),
+                    "unresolved_frontier_evidence_summary_evidence_blocked_metric_count": 0,
                 },
                 "metrics": (),
                 "verification": {"passed": False, "reason": "missing product runtime drift report"},
@@ -8048,6 +8150,12 @@ def _product_runtime_drift_gate(
             required=require_frontier_release_evidence,
         )
     )
+    unresolved_frontier_evidence_summary_evidence_summary = (
+        _product_runtime_drift_unresolved_frontier_evidence_summary_evidence_summary(
+            metrics,
+            required=require_unresolved_frontier_evidence_summary_evidence,
+        )
+    )
     world_model_evidence_summary = _product_runtime_drift_world_model_evidence_summary(
         metrics,
         required=require_world_model_evidence,
@@ -8133,6 +8241,12 @@ def _product_runtime_drift_gate(
         ),
         frontier_release_evidence_summary=frontier_release_evidence_summary,
         require_frontier_release_evidence=require_frontier_release_evidence,
+        unresolved_frontier_evidence_summary_evidence_summary=(
+            unresolved_frontier_evidence_summary_evidence_summary
+        ),
+        require_unresolved_frontier_evidence_summary_evidence=(
+            require_unresolved_frontier_evidence_summary_evidence
+        ),
         allow_unverified=allow_unverified,
     )
     summary = _mapping(report.get("summary"))
@@ -8175,6 +8289,7 @@ def _product_runtime_drift_gate(
             **evidence_alignment_evidence_summary,
             **counterfactual_robustness_evidence_summary,
             **frontier_release_evidence_summary,
+            **unresolved_frontier_evidence_summary_evidence_summary,
         },
         "metrics": metrics,
         "verification": verification,
@@ -8236,6 +8351,8 @@ def _product_runtime_drift_report_gate(
     require_counterfactual_robustness_evidence: bool,
     frontier_release_evidence_summary: Mapping[str, Any],
     require_frontier_release_evidence: bool,
+    unresolved_frontier_evidence_summary_evidence_summary: Mapping[str, Any],
+    require_unresolved_frontier_evidence_summary_evidence: bool,
     allow_unverified: bool,
 ) -> dict[str, Any]:
     failures = []
@@ -8733,6 +8850,28 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift frontier release evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_unresolved_frontier_evidence_summary_evidence:
+        missing_metrics = tuple(
+            unresolved_frontier_evidence_summary_evidence_summary.get(
+                "unresolved_frontier_evidence_summary_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift unresolved frontier evidence summary "
+                "metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            unresolved_frontier_evidence_summary_evidence_summary.get(
+                "unresolved_frontier_evidence_summary_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift unresolved frontier evidence summary blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     return {
@@ -9436,6 +9575,55 @@ def _product_runtime_drift_frontier_release_evidence_summary(
             summary["frontier_release_evidence_blocked_metric_count"] += 1
     summary["frontier_release_evidence_metric_count"] = metric_count
     summary["frontier_release_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_unresolved_frontier_evidence_summary_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "unresolved_frontier_evidence_summary_evidence_required": bool(required),
+        "unresolved_frontier_evidence_summary_evidence_metric_count": 0,
+        "unresolved_frontier_evidence_summary_evidence_missing_metrics": (),
+        "unresolved_frontier_evidence_summary_evidence_blocked_metric_count": 0,
+    }
+    for (
+        metric_name,
+        prefix,
+    ) in _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = (
+            None if metric is None else metric.get("baseline")
+        )
+        summary[f"{prefix}_current"] = (
+            None if metric is None else metric.get("current")
+        )
+        summary[f"{prefix}_status"] = (
+            None if metric is None else metric.get("status")
+        )
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary[
+                "unresolved_frontier_evidence_summary_evidence_blocked_metric_count"
+            ] += 1
+    summary["unresolved_frontier_evidence_summary_evidence_metric_count"] = (
+        metric_count
+    )
+    summary["unresolved_frontier_evidence_summary_evidence_missing_metrics"] = (
+        tuple(missing_metrics)
+    )
     return summary
 
 
@@ -11064,6 +11252,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_frontier_release_evidence=bool(
             args.require_product_runtime_drift_frontier_release_evidence
         ),
+        require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence=bool(
+            args.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
+        ),
         release_efficiency_report_path=args.release_efficiency_report,
         external_evidence_baseline_comparison_path=args.external_evidence_baseline_comparison,
         external_evidence_baseline_comparison_registry_path=(
@@ -11431,6 +11622,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
                         help="require the product runtime drift report to include frontier release "
                              "evidence coverage, artifact presence, promote-rate, and run-count metrics")
+    parser.add_argument(
+        "--require-product-runtime-drift-unresolved-frontier-evidence-summary-evidence",
+        action="store_true",
+        help="require the product runtime drift report to include unresolved frontier "
+        "closure and queue-smoke evidence coverage, status, and completion metrics",
+    )
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,

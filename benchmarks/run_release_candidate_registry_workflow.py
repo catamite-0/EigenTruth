@@ -114,6 +114,9 @@ _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS
+)
 
 
 def _apply_release_policy_profile_to_config(
@@ -258,6 +261,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_frontier_release_evidence": (
                 config.require_product_runtime_drift_frontier_release_evidence
             ),
+            "require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence": (
+                config.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
+            ),
             "require_frontier_release_input_manifests": (
                 config.require_frontier_release_input_manifests
             ),
@@ -356,6 +362,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_context_sensitivity_evidence: bool = False
     require_product_runtime_drift_counterfactual_robustness_evidence: bool = False
     require_product_runtime_drift_frontier_release_evidence: bool = False
+    require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence: (
+        bool
+    ) = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
     external_evidence_baseline_comparison_registry_path: Path | None = None
@@ -964,6 +973,9 @@ def run_release_candidate_registry_workflow(
         ),
         require_product_runtime_drift_frontier_release_evidence=(
             config.require_product_runtime_drift_frontier_release_evidence
+        ),
+        require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence=(
+            config.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
         ),
         release_efficiency_report_path=config.release_efficiency_report_path,
         external_evidence_baseline_comparison_path=(
@@ -2671,6 +2683,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_frontier_release_evidence_required": config.get(
             "require_product_runtime_drift_frontier_release_evidence"
         ),
+        "product_runtime_drift_unresolved_frontier_evidence_summary_evidence_required": config.get(
+            "require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence"
+        ),
         "product_runtime_drift_compared_metric_count": product_runtime_drift_summary.get(
             "compared_metric_count"
         ),
@@ -3617,6 +3632,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
     for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
 
 
@@ -3871,6 +3889,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_frontier_release_evidence=bool(
             args.require_product_runtime_drift_frontier_release_evidence
+        ),
+        require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence=bool(
+            args.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
         ),
         release_efficiency_report_path=(
             None
@@ -4371,6 +4392,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
                         help="require the product runtime drift report to include frontier release "
                              "evidence coverage, artifact presence, promote-rate, and run-count metrics")
+    parser.add_argument(
+        "--require-product-runtime-drift-unresolved-frontier-evidence-summary-evidence",
+        action="store_true",
+        help="require the product runtime drift report to include unresolved frontier "
+        "closure and queue-smoke evidence coverage, status, and completion metrics",
+    )
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,

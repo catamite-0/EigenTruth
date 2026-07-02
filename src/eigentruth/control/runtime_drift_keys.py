@@ -247,6 +247,20 @@ PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS: tuple[str, ...] = (
     "frontier_release_evidence_citation_batch_duplicate_batch_count",
     "frontier_release_evidence_citation_batch_unexpected_batch_count",
 )
+PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS: tuple[str, ...] = (
+    "unresolved_frontier_evidence_summary_coverage_rate",
+    "unresolved_frontier_evidence_summary_report_present_rate",
+    "unresolved_frontier_evidence_summary_manifest_present_rate",
+    "unresolved_frontier_evidence_summary_status_promote_rate",
+    "unresolved_frontier_evidence_summary_report_status_promote_rate",
+    "unresolved_frontier_evidence_summary_closure_required_rate",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate",
+    "unresolved_frontier_evidence_summary_no_next_actions_rate",
+    "unresolved_frontier_evidence_summary_next_action_count",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+    "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count",
+)
 
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
     "promotion": PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS,
@@ -279,6 +293,9 @@ PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS: dict[str, tuple[str, ...]] = {
         PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
     ),
     "frontier_release_evidence": PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS,
+    "unresolved_frontier_evidence_summary": (
+        PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS
+    ),
 }
 
 PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS: tuple[str, ...] = tuple(

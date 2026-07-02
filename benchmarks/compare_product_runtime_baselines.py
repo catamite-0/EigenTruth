@@ -359,6 +359,72 @@ _FRONTIER_RELEASE_EVIDENCE_METADATA_FIELDS = (
     *_FRONTIER_RELEASE_CITATION_BATCH_METADATA_FIELDS,
 )
 
+_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.coverage_rate",
+        "unresolved_frontier_evidence_summary_coverage_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.report_present_rate",
+        "unresolved_frontier_evidence_summary_report_present_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.manifest_present_rate",
+        "unresolved_frontier_evidence_summary_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.status_promote_rate",
+        "unresolved_frontier_evidence_summary_status_promote_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.report_status_promote_rate",
+        "unresolved_frontier_evidence_summary_report_status_promote_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.closure_required_rate",
+        "unresolved_frontier_evidence_summary_closure_required_rate",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_required_rate"
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.no_next_actions_rate",
+        "unresolved_frontier_evidence_summary_no_next_actions_rate",
+    ),
+    (
+        "promotion_contract.unresolved_frontier_evidence_summary.next_action_count.mean",
+        "unresolved_frontier_evidence_summary_next_action_count",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_pass_rate"
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_count.mean"
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+    ),
+    (
+        (
+            "promotion_contract.unresolved_frontier_evidence_summary."
+            "queue_execution_smoke_manifest_verified_count.mean"
+        ),
+        (
+            "unresolved_frontier_evidence_summary_"
+            "queue_execution_smoke_manifest_verified_count"
+        ),
+    ),
+)
+
 _TRIPLE_COVERAGE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
     ("triple_coverage.audit_claim_coverage_rate", "triple_audit_claim_coverage_rate"),
@@ -1536,6 +1602,28 @@ def compare_product_runtime_baselines(
     max_frontier_release_evidence_citation_batch_unexpected_batch_count: (
         float | None
     ) = None,
+    min_unresolved_frontier_evidence_summary_coverage: float | None = None,
+    min_unresolved_frontier_evidence_summary_report_present_rate: float | None = None,
+    min_unresolved_frontier_evidence_summary_manifest_present_rate: float | None = None,
+    min_unresolved_frontier_evidence_summary_status_promote_rate: float | None = None,
+    min_unresolved_frontier_evidence_summary_report_status_promote_rate: (
+        float | None
+    ) = None,
+    min_unresolved_frontier_evidence_summary_closure_required_rate: float | None = None,
+    min_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate: (
+        float | None
+    ) = None,
+    min_unresolved_frontier_evidence_summary_no_next_actions_rate: float | None = None,
+    max_unresolved_frontier_evidence_summary_next_action_count: float | None = None,
+    min_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate: (
+        float | None
+    ) = None,
+    min_unresolved_frontier_evidence_summary_queue_execution_smoke_count: (
+        float | None
+    ) = None,
+    min_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count: (
+        float | None
+    ) = None,
     min_triple_extraction_fixture_matrix_coverage: float | None = None,
     max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
     max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
@@ -1966,6 +2054,67 @@ def compare_product_runtime_baselines(
             _optional_non_negative_float(
                 max_frontier_release_evidence_citation_batch_unexpected_batch_count
             )
+        ),
+        "min_unresolved_frontier_evidence_summary_coverage": _optional_rate_float(
+            min_unresolved_frontier_evidence_summary_coverage
+        ),
+        "min_unresolved_frontier_evidence_summary_report_present_rate": (
+            _optional_rate_float(
+                min_unresolved_frontier_evidence_summary_report_present_rate
+            )
+        ),
+        "min_unresolved_frontier_evidence_summary_manifest_present_rate": (
+            _optional_rate_float(
+                min_unresolved_frontier_evidence_summary_manifest_present_rate
+            )
+        ),
+        "min_unresolved_frontier_evidence_summary_status_promote_rate": (
+            _optional_rate_float(
+                min_unresolved_frontier_evidence_summary_status_promote_rate
+            )
+        ),
+        "min_unresolved_frontier_evidence_summary_report_status_promote_rate": (
+            _optional_rate_float(
+                min_unresolved_frontier_evidence_summary_report_status_promote_rate
+            )
+        ),
+        "min_unresolved_frontier_evidence_summary_closure_required_rate": (
+            _optional_rate_float(
+                min_unresolved_frontier_evidence_summary_closure_required_rate
+            )
+        ),
+        (
+            "min_unresolved_frontier_evidence_summary_"
+            "queue_execution_smoke_required_rate"
+        ): _optional_rate_float(
+            min_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate
+        ),
+        "min_unresolved_frontier_evidence_summary_no_next_actions_rate": (
+            _optional_rate_float(
+                min_unresolved_frontier_evidence_summary_no_next_actions_rate
+            )
+        ),
+        "max_unresolved_frontier_evidence_summary_next_action_count": (
+            _optional_non_negative_float(
+                max_unresolved_frontier_evidence_summary_next_action_count
+            )
+        ),
+        (
+            "min_unresolved_frontier_evidence_summary_"
+            "queue_execution_smoke_pass_rate"
+        ): _optional_rate_float(
+            min_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate
+        ),
+        "min_unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            _optional_non_negative_float(
+                min_unresolved_frontier_evidence_summary_queue_execution_smoke_count
+            )
+        ),
+        (
+            "min_unresolved_frontier_evidence_summary_"
+            "queue_execution_smoke_manifest_verified_count"
+        ): _optional_non_negative_float(
+            min_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count
         ),
         "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
             min_triple_extraction_fixture_matrix_coverage
@@ -2703,6 +2852,13 @@ def _comparison_metrics(
     metrics.extend(_fact_selfcheck_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(
         _frontier_release_evidence_metrics(baseline_summary, current_summary, gates=gates)
+    )
+    metrics.extend(
+        _unresolved_frontier_evidence_summary_metrics(
+            baseline_summary,
+            current_summary,
+            gates=gates,
+        )
     )
     return metrics
 
@@ -3475,6 +3631,165 @@ def _frontier_release_evidence_gate_enabled(gates: Mapping[str, Any]) -> bool:
             "max_frontier_release_evidence_citation_batch_missing_expected_batch_count",
             "max_frontier_release_evidence_citation_batch_duplicate_batch_count",
             "max_frontier_release_evidence_citation_batch_unexpected_batch_count",
+        )
+    )
+
+
+def _unresolved_frontier_evidence_summary_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _unresolved_frontier_evidence_summary_gate_enabled(gates):
+        return []
+    baseline = _mapping(
+        _nested_value(
+            baseline_summary,
+            ("promotion_contract", "unresolved_frontier_evidence_summary"),
+        )
+    )
+    current = _mapping(
+        _nested_value(
+            current_summary,
+            ("promotion_contract", "unresolved_frontier_evidence_summary"),
+        )
+    )
+    return [
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.coverage_rate",
+            _finite_float(baseline.get("coverage_rate")),
+            _finite_float(current.get("coverage_rate")),
+            gates.get("min_unresolved_frontier_evidence_summary_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.report_present_rate",
+            _finite_float(baseline.get("report_present_rate")),
+            _finite_float(current.get("report_present_rate")),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_report_present_rate"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.manifest_present_rate",
+            _finite_float(baseline.get("manifest_present_rate")),
+            _finite_float(current.get("manifest_present_rate")),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_manifest_present_rate"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.status_promote_rate",
+            _finite_float(baseline.get("status_promote_rate")),
+            _finite_float(current.get("status_promote_rate")),
+            gates.get("min_unresolved_frontier_evidence_summary_status_promote_rate"),
+        ),
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.report_status_promote_rate",
+            _finite_float(baseline.get("report_status_promote_rate")),
+            _finite_float(current.get("report_status_promote_rate")),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_report_status_promote_rate"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.closure_required_rate",
+            _finite_float(baseline.get("closure_required_rate")),
+            _finite_float(current.get("closure_required_rate")),
+            gates.get("min_unresolved_frontier_evidence_summary_closure_required_rate"),
+        ),
+        _min_current_metric(
+            (
+                "promotion_contract.unresolved_frontier_evidence_summary."
+                "queue_execution_smoke_required_rate"
+            ),
+            _finite_float(baseline.get("queue_execution_smoke_required_rate")),
+            _finite_float(current.get("queue_execution_smoke_required_rate")),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate"
+            ),
+        ),
+        _min_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.no_next_actions_rate",
+            _finite_float(baseline.get("no_next_actions_rate")),
+            _finite_float(current.get("no_next_actions_rate")),
+            gates.get("min_unresolved_frontier_evidence_summary_no_next_actions_rate"),
+        ),
+        _max_current_metric(
+            "promotion_contract.unresolved_frontier_evidence_summary.next_action_count.mean",
+            _nested_float(baseline, ("next_action_count", "mean")),
+            _nested_float(current, ("next_action_count", "mean")),
+            gates.get("max_unresolved_frontier_evidence_summary_next_action_count"),
+        ),
+        _min_current_metric(
+            (
+                "promotion_contract.unresolved_frontier_evidence_summary."
+                "queue_execution_smoke_pass_rate"
+            ),
+            _finite_float(baseline.get("queue_execution_smoke_pass_rate")),
+            _finite_float(current.get("queue_execution_smoke_pass_rate")),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate"
+            ),
+        ),
+        _min_current_metric(
+            (
+                "promotion_contract.unresolved_frontier_evidence_summary."
+                "queue_execution_smoke_count.mean"
+            ),
+            _nested_float(baseline, ("queue_execution_smoke_count", "mean")),
+            _nested_float(current, ("queue_execution_smoke_count", "mean")),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_queue_execution_smoke_count"
+            ),
+        ),
+        _min_current_metric(
+            (
+                "promotion_contract.unresolved_frontier_evidence_summary."
+                "queue_execution_smoke_manifest_verified_count.mean"
+            ),
+            _nested_float(
+                baseline,
+                ("queue_execution_smoke_manifest_verified_count", "mean"),
+            ),
+            _nested_float(
+                current,
+                ("queue_execution_smoke_manifest_verified_count", "mean"),
+            ),
+            gates.get(
+                "min_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+            ),
+        ),
+    ]
+
+
+def _unresolved_frontier_evidence_summary_gate_enabled(
+    gates: Mapping[str, Any],
+) -> bool:
+    return any(
+        gates.get(key) is not None
+        for key in (
+            "min_unresolved_frontier_evidence_summary_coverage",
+            "min_unresolved_frontier_evidence_summary_report_present_rate",
+            "min_unresolved_frontier_evidence_summary_manifest_present_rate",
+            "min_unresolved_frontier_evidence_summary_status_promote_rate",
+            "min_unresolved_frontier_evidence_summary_report_status_promote_rate",
+            "min_unresolved_frontier_evidence_summary_closure_required_rate",
+            (
+                "min_unresolved_frontier_evidence_summary_"
+                "queue_execution_smoke_required_rate"
+            ),
+            "min_unresolved_frontier_evidence_summary_no_next_actions_rate",
+            "max_unresolved_frontier_evidence_summary_next_action_count",
+            (
+                "min_unresolved_frontier_evidence_summary_"
+                "queue_execution_smoke_pass_rate"
+            ),
+            "min_unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+            (
+                "min_unresolved_frontier_evidence_summary_"
+                "queue_execution_smoke_manifest_verified_count"
+            ),
         )
     )
 
@@ -4823,6 +5138,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_evidence_handoff_metadata(report),
         **_fact_selfcheck_gate_metadata(report),
         **_frontier_release_evidence_metadata(report),
+        **_unresolved_frontier_evidence_summary_metadata(report),
         **_covered_fact_property_metadata(report),
         **_triple_coverage_metadata(report),
         **_world_model_metadata(report),
@@ -4972,6 +5288,29 @@ def _frontier_release_evidence_metadata(report: Mapping[str, Any]) -> dict[str, 
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["frontier_release_evidence_blocked_metric_count"] += 1
+    return metadata
+
+
+def _unresolved_frontier_evidence_summary_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "unresolved_frontier_evidence_summary_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = (
+            None if metric is None else metric.get("status")
+        )
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["unresolved_frontier_evidence_summary_blocked_metric_count"] += 1
     return metadata
 
 
@@ -5641,6 +5980,42 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_frontier_release_evidence_citation_batch_unexpected_batch_count=(
             args.max_frontier_release_evidence_citation_batch_unexpected_batch_count
         ),
+        min_unresolved_frontier_evidence_summary_coverage=(
+            args.min_unresolved_frontier_evidence_summary_coverage
+        ),
+        min_unresolved_frontier_evidence_summary_report_present_rate=(
+            args.min_unresolved_frontier_evidence_summary_report_present_rate
+        ),
+        min_unresolved_frontier_evidence_summary_manifest_present_rate=(
+            args.min_unresolved_frontier_evidence_summary_manifest_present_rate
+        ),
+        min_unresolved_frontier_evidence_summary_status_promote_rate=(
+            args.min_unresolved_frontier_evidence_summary_status_promote_rate
+        ),
+        min_unresolved_frontier_evidence_summary_report_status_promote_rate=(
+            args.min_unresolved_frontier_evidence_summary_report_status_promote_rate
+        ),
+        min_unresolved_frontier_evidence_summary_closure_required_rate=(
+            args.min_unresolved_frontier_evidence_summary_closure_required_rate
+        ),
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate=(
+            args.min_unresolved_frontier_evidence_summary_queue_execution_smoke_required_rate
+        ),
+        min_unresolved_frontier_evidence_summary_no_next_actions_rate=(
+            args.min_unresolved_frontier_evidence_summary_no_next_actions_rate
+        ),
+        max_unresolved_frontier_evidence_summary_next_action_count=(
+            args.max_unresolved_frontier_evidence_summary_next_action_count
+        ),
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate=(
+            args.min_unresolved_frontier_evidence_summary_queue_execution_smoke_pass_rate
+        ),
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_count=(
+            args.min_unresolved_frontier_evidence_summary_queue_execution_smoke_count
+        ),
+        min_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count=(
+            args.min_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count
+        ),
         min_triple_extraction_fixture_matrix_coverage=(
             args.min_triple_extraction_fixture_matrix_coverage
         ),
@@ -6238,6 +6613,66 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-frontier-release-evidence-citation-batch-unexpected-batch-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-coverage",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-report-present-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-manifest-present-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-status-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-report-status-promote-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-closure-required-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-queue-execution-smoke-required-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-no-next-actions-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-unresolved-frontier-evidence-summary-next-action-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-queue-execution-smoke-pass-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-queue-execution-smoke-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-unresolved-frontier-evidence-summary-queue-execution-smoke-manifest-verified-count",
         type=float,
         default=None,
     )
