@@ -3865,6 +3865,7 @@ from explicit source-backed bindings and pass the same adapter/promotion gate:
 REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
 REQUEUED_STUBS=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
 ENTITY_BINDING_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-plan
+ENTITY_BINDING_GATE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-gate
 ENTITY_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill
 ENTITY_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter
 ENTITY_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate
@@ -3874,9 +3875,14 @@ python benchmarks/plan_world_model_rule_entity_bindings.py \
   --alignment-records artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/alignment-records.jsonl \
   --output-dir "$ENTITY_BINDING_PLAN"
 
+python benchmarks/promote_world_model_rule_entity_binding_candidates.py \
+  --entity-binding-plan "$ENTITY_BINDING_PLAN/entity-binding-plan.json" \
+  --review-decisions "$ENTITY_BINDING_GATE/review-decisions.jsonl" \
+  --output-dir "$ENTITY_BINDING_GATE"
+
 python benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py \
   --input-tasks "$REQUEUED_PLAN/rule-input-tasks.jsonl" \
-  --entity-bindings "$ENTITY_FILL/source-backed-entity-role-bindings.jsonl" \
+  --entity-bindings "$ENTITY_BINDING_GATE/approved-entity-bindings.jsonl" \
   --output-dir "$ENTITY_FILL"
 
 python benchmarks/run_world_model_rule_authoring_adapter.py \
@@ -3901,8 +3907,10 @@ source citations in the deterministic candidate evidence.
 
 The entity-binding planner can use source-alignment records to draft
 `candidate-entity-bindings.jsonl`, but these rows stay `needs_review` and
-`not_verifier_evidence=true`; only reviewed bindings should be copied into the
-fill-sidecar path used by the downstream command.
+`not_verifier_evidence=true`. The promotion gate writes a review-decision
+template and only materializes `approved-entity-bindings.jsonl` after explicit
+review decisions; only that approved sidecar should be passed to the fill
+command.
 
 The unresolved numeric/calculator lane now has the same explicit fill boundary.
 It can accept an optional source-backed subject-binding sidecar to resolve only

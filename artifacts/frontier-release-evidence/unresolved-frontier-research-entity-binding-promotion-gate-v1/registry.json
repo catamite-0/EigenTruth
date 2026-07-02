@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_binding_count": 0,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-promotion-gate-v1/artifact-manifest.json",
+        "candidate_count": 8,
+        "closure_action": "gate_entity_role_binding_candidates",
+        "pending_review_count": 8,
+        "promotes_verifier_evidence": false,
+        "status": "needs_review",
+        "workflow": "world_model_rule_entity_binding_promotion_gate"
+      },
+      "name": "unresolved-frontier-research-entity-binding-promotion-gate",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-promotion-gate-v1/entity-binding-promotion-gate.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

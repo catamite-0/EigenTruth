@@ -45,6 +45,10 @@ REQUIRED_COMMAND_FLAGS = {
         "--entity-bindings",
         "--output-dir",
     ),
+    "benchmarks/promote_world_model_rule_entity_binding_candidates.py": (
+        "--entity-binding-plan",
+        "--output-dir",
+    ),
     "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py": (
         "--input-tasks",
         "--entity-bindings",

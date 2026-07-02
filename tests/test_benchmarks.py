@@ -33818,6 +33818,14 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         index=2,
         required_inputs=entry["required_inputs"],
     )
+    entity_gate_requirements = requirements_module.frontier_command_requirement_summary(
+        (
+            "benchmarks/promote_world_model_rule_entity_binding_candidates.py "
+            "--entity-binding-plan ... --output-dir ..."
+        ),
+        index=3,
+        required_inputs=entry["required_inputs"],
+    )
 
     assert payload["status"] == "needs_inputs"
     assert payload["summary"]["command_count"] == 3
@@ -33844,6 +33852,10 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         "benchmarks/plan_world_model_rule_entity_bindings.py"
     )
     assert entity_planner_requirements["status"] == "ready"
+    assert entity_gate_requirements["script"] == (
+        "benchmarks/promote_world_model_rule_entity_binding_candidates.py"
+    )
+    assert entity_gate_requirements["status"] == "ready"
 
 
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
@@ -34768,6 +34780,9 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
         "benchmarks/plan_world_model_rule_entity_bindings.py"
     )
     assert entity_request["recommended_next_tools"][1] == (
+        "benchmarks/promote_world_model_rule_entity_binding_candidates.py"
+    )
+    assert entity_request["recommended_next_tools"][2] == (
         "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py"
     )
     assert "source_citation" in numeric_request["required_binding_fields"]
@@ -35000,6 +35015,253 @@ def test_world_model_rule_entity_binding_plan_run_writes_manifest_and_registry(t
     assert record.metadata["workflow"] == "world_model_rule_entity_binding_plan"
     assert record.metadata["ready_for_review_candidate_count"] == 1
     assert record.metadata["closure_action"] == "plan_entity_role_binding_candidates"
+
+
+def test_world_model_rule_entity_binding_promotion_gate_blocks_pending_review():
+    module = importlib.import_module(
+        "benchmarks.promote_world_model_rule_entity_binding_candidates"
+    )
+    plan = {
+        "workflow": "world_model_rule_entity_binding_plan",
+        "status": "ready_for_review",
+        "candidate_entity_bindings": (
+            {
+                "binding_id": "candidate:entity:req-1",
+                "request_id": "rule:record-517:1",
+                "source_request_id": "rule:record-517:1",
+                "target_id": "record-517",
+                "task_id": "rule-input-task-1",
+                "collection_family": "entity_role_rule_input_collection",
+                "question": "Name the team nicknamed the Pilgrims.",
+                "rule_family": "entity_disambiguation",
+                "subject_entity": "Pilgrims",
+                "answer_entity": "New England Patriots",
+                "expected_entity": "New England Patriots",
+                "requested_role": "team_name",
+                "source_citation": "seeded_url:news:82c8ebb5d518",
+                "source_url": "https://example.test/patriots",
+                "source_title": "New England Patriots naming history",
+                "source_family": "news",
+                "provider": "cbs_sports",
+                "candidate_status": "ready_for_review",
+                "review_status": "needs_review",
+                "not_verifier_evidence": True,
+            },
+        ),
+    }
+
+    payload = module.promote_world_model_rule_entity_binding_candidates(plan)
+    template = payload["review_template"][0]
+    record = payload["records"][0]
+
+    assert payload["workflow"] == "world_model_rule_entity_binding_promotion_gate"
+    assert payload["status"] == "needs_review"
+    assert payload["summary"]["approved_binding_count"] == 0
+    assert payload["summary"]["pending_review_count"] == 1
+    assert payload["approved_entity_bindings"] == ()
+    assert template["eligible_for_approval"] is True
+    assert template["decision"] == "pending"
+    assert record["decision"] == "pending"
+    assert record["skip_reason"] == "pending_review"
+
+
+def test_world_model_rule_entity_binding_promotion_gate_approves_reviewed_candidate():
+    gate_module = importlib.import_module(
+        "benchmarks.promote_world_model_rule_entity_binding_candidates"
+    )
+    fill_module = importlib.import_module(
+        "benchmarks.fill_world_model_rule_inputs_from_entity_bindings"
+    )
+    candidate = {
+        "binding_id": "candidate:entity:req-1",
+        "request_id": "rule:record-517:1",
+        "source_request_id": "rule:record-517:1",
+        "target_id": "record-517",
+        "task_id": "rule-input-task-1",
+        "collection_family": "entity_role_rule_input_collection",
+        "question": "Name the team nicknamed the Pilgrims.",
+        "rule_family": "entity_disambiguation",
+        "subject_entity": "Pilgrims",
+        "answer_entity": "New England Patriots",
+        "expected_entity": "New England Patriots",
+        "requested_role": "team_name",
+        "source_citation": "seeded_url:news:82c8ebb5d518",
+        "source_url": "https://example.test/patriots",
+        "source_title": "New England Patriots naming history",
+        "source_family": "news",
+        "provider": "cbs_sports",
+        "candidate_answer_source": "alignment_model_answer",
+        "expected_entity_source": "alignment_model_answer_value_matched",
+        "candidate_status": "ready_for_review",
+        "review_status": "needs_review",
+        "not_verifier_evidence": True,
+    }
+    payload = gate_module.promote_world_model_rule_entity_binding_candidates(
+        {
+            "workflow": "world_model_rule_entity_binding_plan",
+            "status": "ready_for_review",
+            "candidate_entity_bindings": (candidate,),
+        },
+        review_decisions=(
+            {
+                "candidate_binding_id": "candidate:entity:req-1",
+                "decision": "approved",
+                "reviewer": "unit-reviewer",
+                "reviewed_at": "2026-07-01T00:00:00Z",
+                "notes": "source span confirms team name",
+            },
+        ),
+    )
+    binding = payload["approved_entity_bindings"][0]
+    fill_payload = fill_module.fill_world_model_rule_inputs_from_entity_bindings(
+        input_tasks=(
+            {
+                "task_id": "rule-input-task-1",
+                "source_request_id": "rule:record-517:1",
+                "target_id": "record-517",
+                "collection_family": "entity_role_rule_input_collection",
+                "rule_family": "entity_disambiguation",
+                "question": "Name the team nicknamed the Pilgrims.",
+            },
+        ),
+        entity_bindings=payload["approved_entity_bindings"],
+    )
+
+    assert payload["status"] == "ready_for_fill"
+    assert payload["summary"]["approved_binding_count"] == 1
+    assert binding["request_id"] == "rule:record-517:1"
+    assert binding["subject_entity"] == "Pilgrims"
+    assert binding["answer_entity"] == "New England Patriots"
+    assert binding["expected_entity"] == "New England Patriots"
+    assert binding["review_status"] == "approved"
+    assert binding["reviewer"] == "unit-reviewer"
+    assert binding["not_verifier_evidence"] is True
+    assert fill_payload["status"] == "filled"
+    assert fill_payload["summary"]["filled_input_count"] == 1
+    assert fill_payload["rule_inputs"][0]["expected_entity"] == "New England Patriots"
+
+
+def test_world_model_rule_entity_binding_promotion_gate_blocks_not_ready_candidate():
+    module = importlib.import_module(
+        "benchmarks.promote_world_model_rule_entity_binding_candidates"
+    )
+    payload = module.promote_world_model_rule_entity_binding_candidates(
+        {
+            "workflow": "world_model_rule_entity_binding_plan",
+            "status": "needs_collection",
+            "candidate_entity_bindings": (
+                {
+                    "binding_id": "candidate:entity:req-weak",
+                    "request_id": "rule:record-199:1",
+                    "target_id": "record-199",
+                    "subject_entity": "Sesame Street",
+                    "answer_entity": "Big Bird",
+                    "expected_entity": "",
+                    "requested_role": "physical_location_expected_entity",
+                    "source_citation": "",
+                    "candidate_status": "needs_source_evidence",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                },
+            ),
+        },
+        review_decisions=(
+            {
+                "candidate_binding_id": "candidate:entity:req-weak",
+                "decision": "approved",
+                "reviewer": "unit-reviewer",
+            },
+        ),
+    )
+
+    assert payload["status"] == "needs_review"
+    assert payload["summary"]["approved_binding_count"] == 0
+    assert payload["summary"]["skip_counts"]["candidate_not_ready"] == 1
+    assert payload["records"][0]["skip_reason"] == "candidate_not_ready"
+    assert payload["approved_entity_bindings"] == ()
+
+
+def test_world_model_rule_entity_binding_promotion_gate_run_writes_manifest_and_registry(
+    tmp_path,
+):
+    module = importlib.import_module(
+        "benchmarks.promote_world_model_rule_entity_binding_candidates"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    plan_path = tmp_path / "entity-binding-plan.json"
+    decisions_path = tmp_path / "review-decisions.jsonl"
+    output_dir = tmp_path / "entity-binding-gate"
+    report_path = output_dir / "entity-binding-promotion-gate.json"
+    approved_path = output_dir / "approved-entity-bindings.jsonl"
+    template_path = output_dir / "review-decision-template.jsonl"
+    records_path = output_dir / "promotion-gate-records.jsonl"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = output_dir / "registry.json"
+    plan_path.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_entity_binding_plan",
+            "status": "ready_for_review",
+            "candidate_entity_bindings": (
+                {
+                    "binding_id": "candidate:entity:req-1",
+                    "request_id": "rule:record-517:1",
+                    "source_request_id": "rule:record-517:1",
+                    "target_id": "record-517",
+                    "subject_entity": "Pilgrims",
+                    "answer_entity": "New England Patriots",
+                    "expected_entity": "New England Patriots",
+                    "requested_role": "team_name",
+                    "source_citation": "seeded_url:news:82c8ebb5d518",
+                    "candidate_status": "ready_for_review",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                },
+            ),
+        }),
+        encoding="utf-8",
+    )
+    decisions_path.write_text(
+        json.dumps({
+            "candidate_binding_id": "candidate:entity:req-1",
+            "decision": "approved",
+            "reviewer": "unit-reviewer",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        entity_binding_plan_path=plan_path,
+        review_decisions_path=decisions_path,
+        output_dir=output_dir,
+        report_json_path=report_path,
+        approved_bindings_path=approved_path,
+        template_jsonl_path=template_path,
+        records_jsonl_path=records_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="entity-binding-gate",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:entity-binding-gate:0.1"
+    )
+    approved_rows = [
+        json.loads(line)
+        for line in approved_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["status"] == "ready_for_fill"
+    assert report_path.exists()
+    assert template_path.exists()
+    assert records_path.exists()
+    assert approved_rows[0]["review_status"] == "approved"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "world_model_rule_entity_binding_promotion_gate"
+    assert record.metadata["approved_binding_count"] == 1
+    assert record.metadata["suite"] == "unit"
 
 
 def test_frontier_research_queue_input_collection_plan_surfaces_unmapped_placeholders():

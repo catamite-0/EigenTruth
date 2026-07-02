@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "approved_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "approved-entity-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-plan-v1/entity-binding-plan.json",
+      "sha256": "95ce156924bfc92d24be3640bb91b914865a02fd12de5f6a0baa2241facaf8b2",
+      "size_bytes": 52122
+    },
+    "entity_binding_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-promotion-gate.json",
+      "sha256": "25188de35fcc1362a519dd4d7fabe9839e69e0a71c56d5a6cb271d7bca465fde",
+      "size_bytes": 15610
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-records.jsonl",
+      "sha256": "b801d14f77c7490135ec5f00504cd38cbe85c35e6f36ace4f3cf75a88845453a",
+      "size_bytes": 3622
+    },
+    "review_decision_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decision-template.jsonl",
+      "sha256": "1127dbd21fff02735ea65cd6d5a490881e90ee839d928506ffbf3baeb549e3ec",
+      "size_bytes": 7171
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_binding_count": 0,
+    "candidate_count": 8,
+    "closure_action": "gate_entity_role_binding_candidates",
+    "pending_review_count": 8,
+    "promotes_verifier_evidence": false,
+    "status": "needs_review",
+    "workflow": "world_model_rule_entity_binding_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}
