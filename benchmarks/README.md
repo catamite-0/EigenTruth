@@ -7004,6 +7004,30 @@ still lack command templates are surfaced as missing-template review requests.
 It does not approve bindings, execute commands, fetch evidence, or satisfy
 release gates.
 
+To stage reviewed local artifact requests back into command bindings, write an
+artifact binding JSONL from the generated review template and run:
+
+```bash
+python benchmarks/bind_frontier_research_queue_artifact_inputs.py \
+  --input-collection-plan artifacts/frontier-research-queue-input-collection-plan.json \
+  --base-bindings artifacts/frontier-research-queue-staged-bindings.json \
+  --artifact-bindings artifacts/frontier-research-queue-artifact-input-bindings.jsonl \
+  --output-dir artifacts/frontier-research-queue-artifact-input-stage \
+  --json artifacts/frontier-research-queue-artifact-input-stage/artifact-input-binding-staging.json \
+  --bindings-json artifacts/frontier-research-queue-artifact-input-stage/frontier-research-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-artifact-input-stage/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-artifact-input-binding-stage \
+  --version 0.1
+```
+
+This is the semantic-gap bridge for local artifacts such as
+`source_bound_verified_records_jsonl` and
+`detectability_blind_spot_record_indices_json`: only rows with approved review
+status, explicit allowed-label-use provenance, `not_verifier_evidence=true`,
+and materialized local artifact paths are inserted into the command bindings.
+The output still leaves the command binding review gate intact.
+
 To prepare editable source-backed binding sidecars from that preflight:
 
 ```bash
