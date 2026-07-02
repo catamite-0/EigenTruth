@@ -7218,6 +7218,10 @@ command is syntactically filled but still misses required CLI flags, such as an
 `eval_abstention_stability.py --json ...` template without `--scores` and
 `--signals`, or an abstention rerun planner command that does not bind the
 action's required score dumps and signal groups.
+The same known-command validator covers the frontier queue control-plane
+scripts for command binding, local artifact input staging, command-binding
+review, and bound-plan dry-run/execution, so review gates cannot silently omit
+their required input/output flags.
 
 Active v1.9 product contract export:
 

@@ -35553,6 +35553,60 @@ def test_frontier_research_queue_command_plan_templates_semantic_gap_without_pri
     assert requirements["status"] == "ready"
 
 
+def test_frontier_research_queue_requirement_checks_cover_control_plane_commands():
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    commands = {
+        "bind": (
+            "python benchmarks/bind_frontier_research_queue_command_plan.py "
+            "--command-plan plan.json --bindings bindings.json --json bound.json "
+            "--artifact-manifest manifest.json"
+        ),
+        "artifact_bind": (
+            "python benchmarks/bind_frontier_research_queue_artifact_inputs.py "
+            "--input-collection-plan collection.json --base-bindings staged.json "
+            "--artifact-bindings artifact-inputs.jsonl --output-dir out "
+            "--json report.json --bindings-json bindings.json "
+            "--artifact-manifest manifest.json"
+        ),
+        "review": (
+            "python benchmarks/review_frontier_research_queue_command_bindings.py "
+            "--bound-command-plan bound.json --base-bindings bindings.json "
+            "--review-decisions decisions.jsonl --output-dir out --json review.json "
+            "--approved-bindings approved-bindings.json --artifact-manifest manifest.json"
+        ),
+        "run": (
+            "python benchmarks/run_frontier_research_queue_bound_command_plan.py "
+            "--bound-command-plan approved-bound.json --json run.json "
+            "--artifact-manifest manifest.json"
+        ),
+    }
+
+    summaries = {
+        name: requirements_module.frontier_command_requirement_summary(command, index=index)
+        for index, (name, command) in enumerate(commands.items(), start=1)
+    }
+    missing_review = requirements_module.frontier_command_requirement_summary(
+        (
+            "python benchmarks/review_frontier_research_queue_command_bindings.py "
+            "--bound-command-plan bound.json --base-bindings bindings.json "
+            "--output-dir out --json review.json --artifact-manifest manifest.json"
+        ),
+        index=5,
+    )
+
+    assert {name: summary["status"] for name, summary in summaries.items()} == {
+        "bind": "ready",
+        "artifact_bind": "ready",
+        "review": "ready",
+        "run": "ready",
+    }
+    assert summaries["review"]["script"] == (
+        "benchmarks/review_frontier_research_queue_command_bindings.py"
+    )
+    assert missing_review["status"] == "needs_review"
+    assert missing_review["missing_required_flags"] == ("--approved-bindings",)
+
+
 def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     summary_path = tmp_path / "unresolved-summary.json"
