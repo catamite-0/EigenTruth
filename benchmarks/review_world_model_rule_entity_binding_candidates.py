@@ -5,8 +5,10 @@ This reviewer consumes the candidate rows emitted by
 decisions compatible with
 ``promote_world_model_rule_entity_binding_candidates.py``. It is deliberately
 conservative: approval requires a complete ready-for-review candidate, an
-answer/expected entity match, source metadata, and source text/candidate
-evidence that mentions both the expected entity and queried subject.
+answer entity, a source-backed expected entity, source metadata, and source
+text/candidate evidence that mentions both the expected entity and queried
+subject. The answer and expected entity may differ; those reviewed rows become
+refutation-capable deterministic rule inputs downstream.
 
 The reviewer does not use labels and does not make approved rows verifier
 evidence. Approved decisions only allow the downstream promotion gate to
@@ -239,7 +241,8 @@ def _review_candidate(candidate: Mapping[str, Any]) -> tuple[str, tuple[str, ...
         "candidate_ready_for_review": _clean(candidate.get("candidate_status")) == "ready_for_review",
         "not_verifier_evidence": candidate.get("not_verifier_evidence") is True,
         "complete_required_fields": not _missing_required_fields(candidate),
-        "answer_matches_expected": bool(answer and _entity_key(answer) == _entity_key(expected)),
+        "answer_entity_present": bool(answer),
+        "expected_entity_present": bool(expected),
         "has_source_citation": bool(_clean(candidate.get("source_citation"))),
         "source_family_supported": source_family in SUPPORTED_SOURCE_FAMILIES,
         "source_mentions_expected_entity": _contains_entity(source_text, expected),

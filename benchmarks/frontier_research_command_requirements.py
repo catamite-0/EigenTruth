@@ -45,6 +45,11 @@ REQUIRED_COMMAND_FLAGS = {
         "--entity-bindings",
         "--output-dir",
     ),
+    "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py": (
+        "--entity-binding-plan",
+        "--citation-corpus",
+        "--output-dir",
+    ),
     "benchmarks/review_world_model_rule_entity_binding_candidates.py": (
         "--entity-binding-plan",
         "--output-dir",

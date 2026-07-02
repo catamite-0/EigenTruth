@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-citation-collection-v1/artifact-manifest.json",
+        "candidate_count": 8,
+        "closure_action": "collect_entity_role_bindings_from_citation_corpus",
+        "enriched_candidate_count": 2,
+        "output_workflow": "world_model_rule_entity_binding_plan",
+        "ready_for_review_candidate_count": 4,
+        "status": "ready_for_review",
+        "workflow": "world_model_rule_entity_binding_citation_corpus_collection"
+      },
+      "name": "unresolved-frontier-research-entity-binding-citation-collection",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-citation-collection-v1/entity-binding-plan.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

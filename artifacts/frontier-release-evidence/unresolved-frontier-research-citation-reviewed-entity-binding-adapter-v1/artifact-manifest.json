@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "c4854cf34a82275c555f0060f22f9970b5fdcc2dd0c02f9c6493841a5bd50768",
+      "size_bytes": 2360
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "a88161ee0fa4342c0834937713db781270f7485218d6ba2a24ceeb4280202797",
+      "size_bytes": 2540
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-citation-reviewed-entity-binding-fill-v1/rule-inputs.jsonl",
+      "sha256": "a0b7ed3ad0331e2840bc5202c94b538674ffb1a9d8f402875acc50df47463fdd",
+      "size_bytes": 5583
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "5ec9db8d4d9049ee09630249d625ba3018369afa05296aaec3aadc45035c52be",
+      "size_bytes": 15607
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-stub-requeue-v1/requeued-world-model-rule-stubs.jsonl",
+      "sha256": "0d6ff021fb1e4b05f549d267dddb22410cb2335dbd77a2166303f3fbf8eb9f08",
+      "size_bytes": 17552
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_action": "run_citation_reviewed_entity_role_rule_adapter",
+    "executed_count": 4,
+    "input_request_count": 4,
+    "needs_input_count": 4,
+    "skipped_non_rule_stub_count": 0,
+    "source_stub_count": 8,
+    "status": "partial",
+    "stub_count": 8,
+    "stub_result_coverage": 1.0,
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

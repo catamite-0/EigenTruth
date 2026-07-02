@@ -154,6 +154,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
         "collection_family": "entity_role_rule_input_binding_collection",
         "recommended_next_tools": (
             "benchmarks/plan_world_model_rule_entity_bindings.py",
+            "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py",
             "benchmarks/review_world_model_rule_entity_binding_candidates.py",
             "benchmarks/promote_world_model_rule_entity_binding_candidates.py",
             "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",

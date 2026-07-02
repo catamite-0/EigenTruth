@@ -1,0 +1,260 @@
+{
+  "blocked_candidates": [],
+  "config": {
+    "min_confidence": 0.9,
+    "promotable_statuses": [
+      "refuted",
+      "supported"
+    ]
+  },
+  "label_usage": {
+    "labels_copied_to_promoted_candidates": false,
+    "labels_used_for_promotion": false,
+    "pending_rows_are_verifier_evidence": false,
+    "requires_explicit_rule_inputs": true,
+    "requires_source_citation": true
+  },
+  "metadata": {
+    "closure_action": "promote_citation_reviewed_entity_role_rule_candidates"
+  },
+  "paths": {
+    "adapter_report": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-adapter-v1/world-model-rule-authoring-adapter.json",
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/artifact-manifest.json",
+    "blocked_candidates": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/blocked-rule-candidates.jsonl",
+    "pending_inputs": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/pending-rule-inputs.jsonl",
+    "promoted_candidates": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/promoted-rule-candidates.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json",
+    "rule_inputs": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-fill-v1/rule-inputs.jsonl",
+    "rule_results": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-adapter-v1/world-model-rule-results.jsonl"
+  },
+  "pending_inputs": [
+    {
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-485:1",
+      "rule_family": "entity_disambiguation",
+      "target_id": "record-485"
+    },
+    {
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-516:1",
+      "rule_family": "entity_disambiguation",
+      "target_id": "record-516"
+    },
+    {
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:1",
+      "rule_family": "entity_disambiguation",
+      "target_id": "record-498"
+    },
+    {
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:2",
+      "rule_family": "entity_disambiguation",
+      "target_id": "record-498"
+    }
+  ],
+  "promoted_candidates": [
+    {
+      "adapter": "entity_role_disambiguation",
+      "confidence": 0.95,
+      "evidence": [
+        "entity_role: requested_role=physical_location_expected_entity; answer_entity=Big Bird; expected_entity=American children's television program; source_citation=wikidata:Q155629:description"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "request_id": "rule:record-199:1",
+      "rule_family": "entity_disambiguation",
+      "rule_input": {
+        "answer_entity": "Big Bird",
+        "expected_entity": "American children's television program",
+        "provider": "source_family_catalog",
+        "requested_role": "physical_location_expected_entity",
+        "source_family": "reference",
+        "subject_entity": "Sesame Street"
+      },
+      "schema_version": 1,
+      "source_citation": "wikidata:Q155629:description",
+      "source_url": "https://www.wikidata.org/wiki/Q155629",
+      "status": "refuted",
+      "target_id": "record-199",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "confidence": 0.95,
+      "evidence": [
+        "entity_role: requested_role=physical_location_expected_entity; answer_entity=the Muppets; expected_entity=American children's television program; source_citation=wikidata:Q155629:description"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "request_id": "rule:record-223:1",
+      "rule_family": "entity_disambiguation",
+      "rule_input": {
+        "answer_entity": "the Muppets",
+        "expected_entity": "American children's television program",
+        "provider": "source_family_catalog",
+        "requested_role": "physical_location_expected_entity",
+        "source_family": "reference",
+        "subject_entity": "Sesame Street"
+      },
+      "schema_version": 1,
+      "source_citation": "wikidata:Q155629:description",
+      "source_url": "https://www.wikidata.org/wiki/Q155629",
+      "status": "refuted",
+      "target_id": "record-223",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "confidence": 0.95,
+      "evidence": [
+        "entity_role: requested_role=team_name; answer_entity=New England Patriots; expected_entity=New England Patriots; source_citation=seeded_url:news:82c8ebb5d518"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "rule:record-517:1",
+      "rule_family": "entity_disambiguation",
+      "rule_input": {
+        "answer_entity": "New England Patriots",
+        "expected_entity": "New England Patriots",
+        "provider": "cbs_sports",
+        "requested_role": "team_name",
+        "source_family": "news",
+        "subject_entity": "Pilgrims"
+      },
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "status": "supported",
+      "target_id": "record-517",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "confidence": 0.95,
+      "evidence": [
+        "entity_role: requested_role=team_name; answer_entity=New England Patriots; expected_entity=New England Patriots; source_citation=seeded_url:news:82c8ebb5d518"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "rule:record-517:2",
+      "rule_family": "entity_disambiguation",
+      "rule_input": {
+        "answer_entity": "New England Patriots",
+        "expected_entity": "New England Patriots",
+        "provider": "cbs_sports",
+        "requested_role": "team_name",
+        "source_family": "news",
+        "subject_entity": "Pilgrims"
+      },
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "status": "supported",
+      "target_id": "record-517",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Promotion gate for deterministic rule candidate results. Promoted rows are provenance-backed rule candidates for downstream product handoff; pending input rows remain non-evidence work items.",
+  "source": {
+    "adapter_status": "partial",
+    "adapter_summary": {
+      "adapter_counts": {
+        "entity_role_disambiguation": 8
+      },
+      "candidate_error_count": 0,
+      "candidate_insufficient_evidence_count": 0,
+      "candidate_refuted_count": 2,
+      "candidate_supported_count": 2,
+      "executed_count": 4,
+      "input_request_count": 4,
+      "missing_input_counts": {
+        "answer_entity": 4,
+        "requested_role": 4,
+        "subject_entity": 4
+      },
+      "needs_input_count": 4,
+      "result_count": 8,
+      "rule_family_counts": {
+        "entity_disambiguation": 8
+      },
+      "skipped_non_rule_stub_count": 0,
+      "skipped_source_stub_ids": [],
+      "source_stub_count": 8,
+      "status_counts": {
+        "needs_inputs": 4,
+        "refuted": 2,
+        "supported": 2
+      },
+      "stub_count": 8,
+      "stub_result_coverage": 1.0
+    },
+    "adapter_workflow": "world_model_rule_authoring_adapter",
+    "rule_input_count": 4,
+    "rule_result_count": 8
+  },
+  "status": "promote",
+  "summary": {
+    "adapter_report_failures": [],
+    "adapter_report_gate": "pass",
+    "adapter_report_status": "partial",
+    "blocked_count": 0,
+    "blocked_reason_counts": {},
+    "executed_count": 4,
+    "pending_count": 4,
+    "promoted_count": 4,
+    "promoted_request_ids": [
+      "rule:record-199:1",
+      "rule:record-223:1",
+      "rule:record-517:1",
+      "rule:record-517:2"
+    ],
+    "promoted_rule_family_counts": {
+      "entity_disambiguation": 4
+    },
+    "rule_result_count": 8,
+    "status_counts": {
+      "needs_inputs": 4,
+      "refuted": 2,
+      "supported": 2
+    }
+  },
+  "workflow": "world_model_rule_candidate_promotion_gate"
+}

@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-citation-collection-v1/entity-binding-plan.json",
+      "sha256": "905931f723500dca23b1aafc02a4ba013b9aa3fe641fcf76c93ff8b63cd37d46",
+      "size_bytes": 58096
+    },
+    "entity_binding_rule_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-review-report.json",
+      "sha256": "87bd75e611a36c7e3ab2e7082e6e56c4063fc618f395a78ce006e46544063b98",
+      "size_bytes": 17752
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decisions.jsonl",
+      "sha256": "71a74b5cad90a70617585bfc5e098924861bf2fb03cdc720a1525e75640473e7",
+      "size_bytes": 3366
+    },
+    "review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-records.jsonl",
+      "sha256": "1d92824ff6f3047f8aa6ebe517761f30c389edbff4c5716bda102606b56624b6",
+      "size_bytes": 9657
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_count": 4,
+    "candidate_count": 8,
+    "closure_action": "review_citation_collected_entity_role_binding_candidates",
+    "needs_more_evidence_count": 4,
+    "reviewer": "rule_based_entity_binding_reviewer_v1",
+    "status": "ready_for_promotion_gate",
+    "workflow": "world_model_rule_entity_binding_rule_review"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

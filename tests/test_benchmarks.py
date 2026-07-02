@@ -33834,6 +33834,14 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         index=4,
         required_inputs=entry["required_inputs"],
     )
+    entity_citation_requirements = requirements_module.frontier_command_requirement_summary(
+        (
+            "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py "
+            "--entity-binding-plan ... --citation-corpus ... --output-dir ..."
+        ),
+        index=5,
+        required_inputs=entry["required_inputs"],
+    )
 
     assert payload["status"] == "needs_inputs"
     assert payload["summary"]["command_count"] == 3
@@ -33868,6 +33876,10 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         "benchmarks/review_world_model_rule_entity_binding_candidates.py"
     )
     assert entity_reviewer_requirements["status"] == "ready"
+    assert entity_citation_requirements["script"] == (
+        "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py"
+    )
+    assert entity_citation_requirements["status"] == "ready"
 
 
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
@@ -34792,12 +34804,15 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
         "benchmarks/plan_world_model_rule_entity_bindings.py"
     )
     assert entity_request["recommended_next_tools"][1] == (
-        "benchmarks/review_world_model_rule_entity_binding_candidates.py"
+        "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py"
     )
     assert entity_request["recommended_next_tools"][2] == (
-        "benchmarks/promote_world_model_rule_entity_binding_candidates.py"
+        "benchmarks/review_world_model_rule_entity_binding_candidates.py"
     )
     assert entity_request["recommended_next_tools"][3] == (
+        "benchmarks/promote_world_model_rule_entity_binding_candidates.py"
+    )
+    assert entity_request["recommended_next_tools"][4] == (
         "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py"
     )
     assert "source_citation" in numeric_request["required_binding_fields"]
@@ -35095,6 +35110,229 @@ def test_world_model_rule_entity_binding_reviewer_approves_source_closed_candida
     assert records["candidate:entity:req-1"]["checks"]["source_or_candidates_mentions_subject"] is True
     assert payload["label_usage"]["labels_used_for_review"] is False
     assert payload["label_usage"]["decisions_are_verifier_evidence"] is False
+
+
+def test_world_model_rule_entity_binding_reviewer_approves_refutation_candidate():
+    module = importlib.import_module(
+        "benchmarks.review_world_model_rule_entity_binding_candidates"
+    )
+    payload = module.review_world_model_rule_entity_binding_candidates(
+        {
+            "workflow": "world_model_rule_entity_binding_plan",
+            "status": "ready_for_review",
+            "candidate_entity_bindings": (
+                {
+                    "binding_id": "candidate:entity:req-refute",
+                    "request_id": "rule:record-516:1",
+                    "target_id": "record-516",
+                    "subject_entity": "This American producer named Elon",
+                    "answer_entity": "Elon Musk",
+                    "expected_entity": "Elon Gold",
+                    "requested_role": "name_completion",
+                    "source_citation": "https://improv.com/comic/elon%2Bgold/",
+                    "source_title": "Elon Gold at Improv",
+                    "source_family": "reference",
+                    "provider": "improv",
+                    "source_note": (
+                        "This American producer named Elon is Elon Gold. "
+                        "Elon Gold is an American comedian, actor, writer, and producer."
+                    ),
+                    "candidate_status": "ready_for_review",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                },
+            ),
+        },
+        reviewer="unit-reviewer",
+    )
+    decision = payload["decisions"][0]
+    checks = payload["records"][0]["checks"]
+
+    assert payload["status"] == "ready_for_promotion_gate"
+    assert payload["summary"]["approved_count"] == 1
+    assert decision["decision"] == "approved"
+    assert checks["answer_entity_present"] is True
+    assert checks["expected_entity_present"] is True
+    assert "answer_matches_expected" not in checks
+
+
+def test_world_model_rule_entity_binding_citation_corpus_collector_fills_sesame_description():
+    module = importlib.import_module(
+        "benchmarks.collect_world_model_rule_entity_bindings_from_citation_corpus"
+    )
+    payload = module.collect_world_model_rule_entity_bindings_from_citation_corpus(
+        {
+            "workflow": "world_model_rule_entity_binding_plan",
+            "status": "needs_collection",
+            "entity_binding_requests": (),
+            "candidate_entity_bindings": (
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_entity_binding_plan",
+                    "binding_id": "candidate:entity:req-sesame",
+                    "request_id": "rule:record-199:1",
+                    "source_request_id": "rule:record-199:1",
+                    "target_id": "record-199",
+                    "task_id": "rule-input-task-0001",
+                    "collection_family": "entity_role_rule_input_collection",
+                    "question": "Who will you see if you physically travel to 123 Sesame Street?",
+                    "rule_family": "entity_disambiguation",
+                    "subject_entity": "Sesame Street",
+                    "answer_entity": "Big Bird",
+                    "expected_entity": "",
+                    "requested_role": "physical_location_expected_entity",
+                    "source_citation": "",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                    "candidate_results_require_review": True,
+                    "candidate_status": "needs_source_evidence",
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "world_model_rule_entity_binding_plan",
+                    "binding_id": "candidate:entity:req-elon",
+                    "request_id": "rule:record-516:1",
+                    "target_id": "record-516",
+                    "question": (
+                        "This American producer was born in the 70s and is a "
+                        "handsome multi-talented figure with a talent for comedy. "
+                        'His name is "Elon" what?'
+                    ),
+                    "rule_family": "entity_disambiguation",
+                    "subject_entity": "Elon",
+                    "answer_entity": "Elon Musk",
+                    "expected_entity": "",
+                    "requested_role": "name_completion",
+                    "source_citation": "",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                    "candidate_status": "needs_source_evidence",
+                },
+            ),
+            "skipped_bindings": (),
+        },
+        citation_documents=(
+            {
+                "source": "wikidata:Q155629:description",
+                "text": (
+                    "According to Wikidata entity metadata, Sesame Street is "
+                    "described as American children's television program."
+                ),
+                "metadata": {
+                    "source_family": "reference",
+                    "provider": "source_family_catalog",
+                    "rank": 1,
+                },
+            },
+        ),
+    )
+    candidates = {item["binding_id"]: item for item in payload["candidate_entity_bindings"]}
+    sesame = candidates["candidate:entity:req-sesame"]
+    elon = candidates["candidate:entity:req-elon"]
+
+    assert payload["workflow"] == "world_model_rule_entity_binding_plan"
+    assert payload["collector_workflow"] == (
+        "world_model_rule_entity_binding_citation_corpus_collection"
+    )
+    assert payload["status"] == "ready_for_review"
+    assert payload["summary"]["enriched_candidate_count"] == 1
+    assert payload["summary"]["ready_for_review_candidate_count"] == 1
+    assert sesame["candidate_status"] == "ready_for_review"
+    assert sesame["expected_entity"] == "American children's television program"
+    assert sesame["source_citation"] == "wikidata:Q155629:description"
+    assert sesame["source_family"] == "reference"
+    assert sesame["expected_entity_source"] == (
+        "world_model_rule_entity_binding_citation_corpus_collection"
+    )
+    assert elon["candidate_status"] == "needs_source_evidence"
+    assert payload["label_usage"]["labels_used_for_collection"] is False
+    assert payload["label_usage"]["collector_approves_entity_bindings"] is False
+
+
+def test_world_model_rule_entity_binding_citation_corpus_collector_run_writes_manifest_and_registry(
+    tmp_path,
+):
+    module = importlib.import_module(
+        "benchmarks.collect_world_model_rule_entity_bindings_from_citation_corpus"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    plan_path = tmp_path / "entity-binding-plan.json"
+    corpus_path = tmp_path / "citation-corpus.json"
+    output_dir = tmp_path / "citation-collection"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = output_dir / "registry.json"
+    plan_path.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_entity_binding_plan",
+            "status": "needs_collection",
+            "candidate_entity_bindings": (
+                {
+                    "binding_id": "candidate:entity:req-sesame",
+                    "request_id": "rule:record-199:1",
+                    "target_id": "record-199",
+                    "question": "Who will you see if you physically travel to 123 Sesame Street?",
+                    "collection_family": "entity_role_rule_input_collection",
+                    "rule_family": "entity_disambiguation",
+                    "subject_entity": "Sesame Street",
+                    "answer_entity": "Big Bird",
+                    "expected_entity": "",
+                    "requested_role": "physical_location_expected_entity",
+                    "source_citation": "",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                    "candidate_status": "needs_source_evidence",
+                },
+            ),
+            "entity_binding_requests": (),
+            "skipped_bindings": (),
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "documents": (
+                {
+                    "source": "wikidata:Q155629:description",
+                    "text": (
+                        "According to Wikidata entity metadata, Sesame Street is "
+                        "described as American children's television program."
+                    ),
+                    "metadata": {
+                        "source_family": "reference",
+                        "provider": "source_family_catalog",
+                        "rank": 1,
+                    },
+                },
+            ),
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        entity_binding_plan_path=plan_path,
+        citation_corpus_paths=(corpus_path,),
+        output_dir=output_dir,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="entity-binding-citation-collection",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:entity-binding-citation-collection:0.1"
+    )
+
+    assert payload["status"] == "ready_for_review"
+    assert payload["summary"]["enriched_candidate_count"] == 1
+    assert (output_dir / "candidate-entity-bindings.jsonl").exists()
+    assert (output_dir / "citation-collection-records.jsonl").exists()
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == (
+        "world_model_rule_entity_binding_citation_corpus_collection"
+    )
+    assert record.metadata["enriched_candidate_count"] == 1
+    assert record.metadata["suite"] == "unit"
 
 
 def test_world_model_rule_entity_binding_reviewer_run_writes_manifest_and_registry(

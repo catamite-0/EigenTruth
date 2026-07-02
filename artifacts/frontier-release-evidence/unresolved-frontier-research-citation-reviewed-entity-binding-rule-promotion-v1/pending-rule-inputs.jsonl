@@ -1,0 +1,4 @@
+{"missing_inputs": ["subject_entity", "answer_entity", "requested_role"], "not_verifier_evidence": true, "request_id": "rule:record-485:1", "rule_family": "entity_disambiguation", "target_id": "record-485"}
+{"missing_inputs": ["subject_entity", "answer_entity", "requested_role"], "not_verifier_evidence": true, "request_id": "rule:record-516:1", "rule_family": "entity_disambiguation", "target_id": "record-516"}
+{"missing_inputs": ["subject_entity", "answer_entity", "requested_role"], "not_verifier_evidence": true, "request_id": "rule:record-498:1", "rule_family": "entity_disambiguation", "target_id": "record-498"}
+{"missing_inputs": ["subject_entity", "answer_entity", "requested_role"], "not_verifier_evidence": true, "request_id": "rule:record-498:2", "rule_family": "entity_disambiguation", "target_id": "record-498"}

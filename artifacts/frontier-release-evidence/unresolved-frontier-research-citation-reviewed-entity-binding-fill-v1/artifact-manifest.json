@@ -1,0 +1,67 @@
+{
+  "artifacts": {
+    "entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-citation-reviewed-promotion-gate-v1/approved-entity-bindings.jsonl",
+      "sha256": "fd1cb4a05e08d844b990ee21436081f3db40be1db4abd3b1b28301d5e796f97b",
+      "size_bytes": 7227
+    },
+    "rule_input_entity_binding_fill": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-entity-binding-fill.json",
+      "sha256": "35be26c23fe3b532af90534ef96a86a87d442f5541ba6dc3b4ba8bc010f069b8",
+      "size_bytes": 11078
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl",
+      "sha256": "85f8f9757c29fe6ee0173b6cf565d593a61fac25dc0a3b1fc36f3abb0c1c1658",
+      "size_bytes": 21716
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-inputs.jsonl",
+      "sha256": "a0b7ed3ad0331e2840bc5202c94b538674ffb1a9d8f402875acc50df47463fdd",
+      "size_bytes": 5583
+    },
+    "skipped_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-entity-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unfilled_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unfilled-rule-input-tasks.jsonl",
+      "sha256": "7615ffd7ad6525b7b12ceca14386e656a5d5a424d5d6469371acbd57c30b3ced",
+      "size_bytes": 1746
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_action": "fill_citation_reviewed_entity_role_rule_inputs",
+    "filled_input_count": 4,
+    "status": "partial",
+    "unfilled_task_count": 4,
+    "workflow": "world_model_rule_input_entity_binding_fill"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

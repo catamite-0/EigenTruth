@@ -3865,6 +3865,7 @@ from explicit source-backed bindings and pass the same adapter/promotion gate:
 REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
 REQUEUED_STUBS=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
 ENTITY_BINDING_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-plan
+ENTITY_BINDING_CITATION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-citation-collection
 ENTITY_BINDING_REVIEW=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-review
 ENTITY_BINDING_GATE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-gate
 ENTITY_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill
@@ -3876,8 +3877,13 @@ python benchmarks/plan_world_model_rule_entity_bindings.py \
   --alignment-records artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/alignment-records.jsonl \
   --output-dir "$ENTITY_BINDING_PLAN"
 
-python benchmarks/review_world_model_rule_entity_binding_candidates.py \
+python benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py \
   --entity-binding-plan "$ENTITY_BINDING_PLAN/entity-binding-plan.json" \
+  --citation-corpus artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json \
+  --output-dir "$ENTITY_BINDING_CITATION"
+
+python benchmarks/review_world_model_rule_entity_binding_candidates.py \
+  --entity-binding-plan "$ENTITY_BINDING_CITATION/entity-binding-plan.json" \
   --output-dir "$ENTITY_BINDING_REVIEW"
 
 python benchmarks/promote_world_model_rule_entity_binding_candidates.py \
@@ -3912,20 +3918,27 @@ source citations in the deterministic candidate evidence.
 
 The entity-binding planner can use source-alignment records to draft
 `candidate-entity-bindings.jsonl`, but these rows stay `needs_review` and
-`not_verifier_evidence=true`. The rule reviewer can produce explicit
-`approved` or `needs_more_evidence` decisions from conservative source/text
-closure checks. The promotion gate writes a review-decision template and only
-materializes `approved-entity-bindings.jsonl` after explicit approved review
-decisions; only that approved sidecar should be passed to the fill command.
+`not_verifier_evidence=true`. The citation-corpus collector can enrich draft
+candidates with source-backed expected entities from already-materialized local
+citation corpora, but it still does not approve or execute anything. The rule
+reviewer can produce explicit `approved` or `needs_more_evidence` decisions
+from conservative source/text closure checks, including refutation candidates
+where `answer_entity` and `expected_entity` differ. The promotion gate writes a
+review-decision template and only materializes `approved-entity-bindings.jsonl`
+after explicit approved review decisions; only that approved sidecar should be
+passed to the fill command.
 
-The current `frontier-release-evidence` entity-binding run records that
-reviewed boundary explicitly:
-`unresolved-frontier-research-entity-binding-rule-review-v1` approves `2/8`
-candidates and marks `6/8` as `needs_more_evidence`; the reviewed promotion
-gate materializes `2` approved sidecar rows; the fill/adapter/promotion chain
-then ends at `filled=2`, `executed=2`, `promoted=2`, `blocked=0`, and
-`pending=6`. The six pending rows remain non-evidence input work items until
-additional reviewed source bindings are supplied.
+The current `frontier-release-evidence` citation-collection entity-binding run
+records that reviewed boundary explicitly:
+`unresolved-frontier-research-entity-binding-citation-collection-v1` enriches
+`2/8` candidates from local Wikidata citation-corpus snippets, raising
+ready-for-review candidates to `4/8`. Its rule review approves `4/8` and marks
+`4/8` as `needs_more_evidence`; the reviewed promotion gate materializes `4`
+approved sidecar rows; the fill/adapter/promotion chain then ends at
+`filled=4`, `executed=4`, `promoted=4`, `blocked=0`, and `pending=4`. The two
+newly promoted Sesame Street rows are `refuted` entity-role candidates, while
+the remaining four pending rows still need stronger external bindings for the
+Elon Gold and Boston United cases.
 
 The unresolved numeric/calculator lane now has the same explicit fill boundary.
 It can accept an optional source-backed subject-binding sidecar to resolve only
