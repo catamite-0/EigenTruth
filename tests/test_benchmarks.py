@@ -33810,6 +33810,14 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         index=1,
         required_inputs=entry["required_inputs"],
     )
+    entity_planner_requirements = requirements_module.frontier_command_requirement_summary(
+        (
+            "benchmarks/plan_world_model_rule_entity_bindings.py "
+            "--entity-bindings ... --output-dir ..."
+        ),
+        index=2,
+        required_inputs=entry["required_inputs"],
+    )
 
     assert payload["status"] == "needs_inputs"
     assert payload["summary"]["command_count"] == 3
@@ -33832,6 +33840,10 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py"
     )
     assert entity_requirements["status"] == "ready"
+    assert entity_planner_requirements["script"] == (
+        "benchmarks/plan_world_model_rule_entity_bindings.py"
+    )
+    assert entity_planner_requirements["status"] == "ready"
 
 
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
@@ -34752,6 +34764,12 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
     assert numeric_request["blocking_placeholders"][0]["flag"] == "--numeric-bindings"
     assert temporal_request["blocking_placeholders"][0]["flag"] == "--temporal-bindings"
     assert entity_request["blocking_placeholders"][0]["flag"] == "--entity-bindings"
+    assert entity_request["recommended_next_tools"][0] == (
+        "benchmarks/plan_world_model_rule_entity_bindings.py"
+    )
+    assert entity_request["recommended_next_tools"][1] == (
+        "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py"
+    )
     assert "source_citation" in numeric_request["required_binding_fields"]
     assert "expected_entity" in entity_request["required_binding_fields"]
     assert numeric_request["not_verifier_evidence"] is True
@@ -34760,6 +34778,228 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "frontier_research_queue_input_collection_plan"
     assert record.metadata["collection_request_count"] == 3
+
+
+def test_world_model_rule_entity_binding_plan_drafts_review_candidate():
+    module = importlib.import_module("benchmarks.plan_world_model_rule_entity_bindings")
+    payload = module.build_world_model_rule_entity_binding_plan(
+        entity_bindings=(
+            {
+                "binding_id": "entity:req-1",
+                "request_id": "rule:record-517:1",
+                "source_request_id": "rule:record-517:1",
+                "target_id": "record-517",
+                "task_id": "rule-input-task-1",
+                "sidecar_key": "entity_bindings",
+                "collection_family": "entity_role_rule_input_collection",
+                "question": (
+                    "Nicknamed the 'Pilgrims', this football team based in "
+                    "Boston plays in a national league and had a notable year "
+                    "in 2001. Name the team."
+                ),
+                "review_status": "needs_review",
+                "not_verifier_evidence": True,
+            },
+        ),
+        alignment_records=(
+            {
+                "target_id": "record-517",
+                "alignment_status": "needs_property_or_subject_alignment",
+                "gap_reason": "subject_only_alignment",
+                "model_answer": "New England Patriots.",
+                "entity_candidates": (
+                    "Nicknamed",
+                    "Pilgrims",
+                    "Boston",
+                    "New England Patriots",
+                ),
+                "query_refinement_suggestions": ("Pilgrims instance of sports team",),
+                "top_evidence_hits": (
+                    {
+                        "alignment_score": 0.537143,
+                        "query_overlap": 0.357143,
+                        "matched_entity": "Pilgrims",
+                        "model_answer_value_matched": True,
+                        "source": "seeded_url:news:82c8ebb5d518",
+                        "source_family": "news",
+                        "provider": "cbs_sports",
+                        "title": (
+                            "How did New England Patriots get their name? "
+                            "Other nicknames that were considered"
+                        ),
+                        "url": (
+                            "https://www.cbssports.com/nfl/news/"
+                            "fourth-of-july-2024-how-did-new-england-"
+                            "patriots-get-their-name-other-nicknames-that-"
+                            "were-considered/"
+                        ),
+                        "evidence_span": (
+                            "CBS Sports coverage explains the Boston-area "
+                            "football team's naming history, including the "
+                            "New England Patriots name and other proposed "
+                            "nicknames such as Pilgrims for the National "
+                            "Football League franchise."
+                        ),
+                    },
+                ),
+            },
+        ),
+    )
+    request = payload["entity_binding_requests"][0]
+    candidate = payload["candidate_entity_bindings"][0]
+
+    assert payload["workflow"] == "world_model_rule_entity_binding_plan"
+    assert payload["status"] == "ready_for_review"
+    assert payload["summary"]["ready_for_review_candidate_count"] == 1
+    assert candidate["candidate_status"] == "ready_for_review"
+    assert candidate["subject_entity"] == "Pilgrims"
+    assert candidate["answer_entity"] == "New England Patriots"
+    assert candidate["expected_entity"] == "New England Patriots"
+    assert candidate["requested_role"] == "team_name"
+    assert candidate["source_citation"] == "seeded_url:news:82c8ebb5d518"
+    assert candidate["review_status"] == "needs_review"
+    assert candidate["not_verifier_evidence"] is True
+    assert candidate["candidate_results_require_review"] is True
+    assert request["candidate_missing_fields"] == ()
+    assert "binding_requires_review" in request["blocking_failures"]
+
+
+def test_world_model_rule_entity_binding_plan_keeps_weak_alignment_for_collection():
+    module = importlib.import_module("benchmarks.plan_world_model_rule_entity_bindings")
+    payload = module.build_world_model_rule_entity_binding_plan(
+        entity_bindings=(
+            {
+                "binding_id": "entity:req-weak",
+                "request_id": "rule:record-199:1",
+                "source_request_id": "rule:record-199:1",
+                "target_id": "record-199",
+                "task_id": "rule-input-task-weak",
+                "sidecar_key": "entity_bindings",
+                "collection_family": "entity_role_rule_input_binding_collection",
+                "question": (
+                    "Who will you see if you physically travel to "
+                    "123 Sesame Street?"
+                ),
+                "review_status": "needs_review",
+                "not_verifier_evidence": True,
+            },
+        ),
+        alignment_records=(
+            {
+                "target_id": "record-199",
+                "alignment_status": "low_relevance",
+                "gap_reason": "unmapped_low_relevance",
+                "model_answer": "You will see Big Bird.",
+                "entity_candidates": ("123 Sesame Street", "Big Bird"),
+                "top_evidence_hits": (
+                    {
+                        "alignment_score": 0.35,
+                        "query_overlap": 0.10,
+                        "matched_entity": "OpenAlex",
+                        "model_answer_value_matched": False,
+                        "source": "openalex:irrelevant",
+                        "source_family": "openalex",
+                        "provider": "openalex",
+                        "title": "A low relevance paper",
+                    },
+                ),
+            },
+        ),
+        min_alignment_score=0.45,
+    )
+    request = payload["entity_binding_requests"][0]
+    candidate = payload["candidate_entity_bindings"][0]
+
+    assert payload["status"] == "needs_collection"
+    assert payload["summary"]["ready_for_review_candidate_count"] == 0
+    assert candidate["candidate_status"] == "needs_source_evidence"
+    assert candidate["answer_entity"] == "Big Bird"
+    assert candidate["expected_entity"] == ""
+    assert candidate["source_citation"] == ""
+    assert request["candidate_missing_fields"] == ("expected_entity", "source_citation")
+    assert candidate["not_verifier_evidence"] is True
+
+
+def test_world_model_rule_entity_binding_plan_run_writes_manifest_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.plan_world_model_rule_entity_bindings")
+    registry_module = importlib.import_module("eigentruth.registry")
+    entity_bindings_path = tmp_path / "source-backed-entity-bindings.jsonl"
+    alignment_records_path = tmp_path / "alignment-records.jsonl"
+    output_dir = tmp_path / "entity-binding-plan"
+    report_path = output_dir / "entity-binding-plan.json"
+    requests_path = output_dir / "entity-binding-requests.jsonl"
+    candidates_path = output_dir / "candidate-entity-bindings.jsonl"
+    skipped_path = output_dir / "skipped-entity-bindings.jsonl"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = output_dir / "registry.json"
+    entity_bindings_path.write_text(
+        json.dumps({
+            "binding_id": "entity:req-1",
+            "request_id": "rule:record-517:1",
+            "source_request_id": "rule:record-517:1",
+            "target_id": "record-517",
+            "task_id": "rule-input-task-1",
+            "sidecar_key": "entity_bindings",
+            "question": (
+                "Nicknamed the 'Pilgrims', this football team based in Boston "
+                "plays in a national league and had a notable year in 2001. "
+                "Name the team."
+            ),
+            "review_status": "needs_review",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    alignment_records_path.write_text(
+        json.dumps({
+            "target_id": "record-517",
+            "model_answer": "New England Patriots.",
+            "entity_candidates": ("Pilgrims", "New England Patriots"),
+            "top_evidence_hits": (
+                {
+                    "alignment_score": 0.55,
+                    "query_overlap": 0.35,
+                    "matched_entity": "Pilgrims",
+                    "model_answer_value_matched": True,
+                    "source": "seeded_url:news:patriots",
+                    "source_family": "news",
+                    "provider": "cbs_sports",
+                    "title": "New England Patriots naming history",
+                },
+            ),
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        entity_bindings_path=entity_bindings_path,
+        alignment_records_paths=(alignment_records_path,),
+        output_dir=output_dir,
+        report_json_path=report_path,
+        requests_path=requests_path,
+        candidate_bindings_path=candidates_path,
+        skipped_bindings_path=skipped_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="entity-binding-plan",
+        version="0.1",
+        metadata={"closure_action": "plan_entity_role_binding_candidates"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:entity-binding-plan:0.1"
+    )
+
+    assert payload["status"] == "ready_for_review"
+    assert report_path.exists()
+    assert requests_path.exists()
+    assert candidates_path.exists()
+    assert skipped_path.exists()
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "world_model_rule_entity_binding_plan"
+    assert record.metadata["ready_for_review_candidate_count"] == 1
+    assert record.metadata["closure_action"] == "plan_entity_role_binding_candidates"
 
 
 def test_frontier_research_queue_input_collection_plan_surfaces_unmapped_placeholders():

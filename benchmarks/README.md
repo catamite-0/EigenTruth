@@ -3864,9 +3864,15 @@ from explicit source-backed bindings and pass the same adapter/promotion gate:
 ```bash
 REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
 REQUEUED_STUBS=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
+ENTITY_BINDING_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-plan
 ENTITY_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill
 ENTITY_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter
 ENTITY_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate
+
+python benchmarks/plan_world_model_rule_entity_bindings.py \
+  --entity-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl \
+  --alignment-records artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/alignment-records.jsonl \
+  --output-dir "$ENTITY_BINDING_PLAN"
 
 python benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py \
   --input-tasks "$REQUEUED_PLAN/rule-input-tasks.jsonl" \
@@ -3892,6 +3898,11 @@ blocked and `0` pending. The two Sesame Street rows use the fictional-location
 citation, and the two Elon rows use the Elon Gold citation; both citation paths
 remain non-evidence adapter inputs until the promotion gate verifies matching
 source citations in the deterministic candidate evidence.
+
+The entity-binding planner can use source-alignment records to draft
+`candidate-entity-bindings.jsonl`, but these rows stay `needs_review` and
+`not_verifier_evidence=true`; only reviewed bindings should be copied into the
+fill-sidecar path used by the downstream command.
 
 The unresolved numeric/calculator lane now has the same explicit fill boundary.
 It can accept an optional source-backed subject-binding sidecar to resolve only

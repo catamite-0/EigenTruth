@@ -153,6 +153,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
         "lane": "world_model_rules",
         "collection_family": "entity_role_rule_input_binding_collection",
         "recommended_next_tools": (
+            "benchmarks/plan_world_model_rule_entity_bindings.py",
             "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
         ),
         "target_flag": "--entity-bindings",
