@@ -13,8 +13,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "bound-command-run-report.json",
-      "sha256": "cffe70b337d07033483a71ea28f3b1b93468d17a330c0592871b00858b86f0de",
-      "size_bytes": 22496
+      "sha256": "83169811d6392ee73f49b13ce8d184b103cef2439f48c88cc79e0f2dcc28d089",
+      "size_bytes": 22495
     }
   },
   "digest_algorithm": "sha256",

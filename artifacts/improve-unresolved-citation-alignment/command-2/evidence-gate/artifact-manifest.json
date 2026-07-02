@@ -69,23 +69,23 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "559180545c3b364b8cf64565e421f04c944c35e75fe362620cd15e395e294985",
-      "size_bytes": 383391
+      "sha256": "6c24af1976e3171b5bfb1ec6b2e70b01ef0e4a572419d200b6bb390ec3d4917a",
+      "size_bytes": 471150
     },
     "query_sweep_comparison": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-comparison.json",
-      "sha256": "f59fd6747136a9343b82d2fb43fb45665078732e39e32897541bc57b33799bab",
-      "size_bytes": 17758
+      "sha256": "3451f65858898c68645fc2c0ec9642c1e9c73ac6ef24a096f6e65a300da020f5",
+      "size_bytes": 17848
     },
     "query_sweep_comparison_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-comparison-manifest.json",
-      "sha256": "688fa61628703e9bdec109a8bfcfbf5ea9a08a2b72618a9e0895b39f5f2d8408",
+      "sha256": "c61643b629f464ca0f3c3eaa9599c7c8551ed083b7c10a90aa682873a4cb0c80",
       "size_bytes": 1390
     },
     "query_sweep_manifest": {
@@ -93,8 +93,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-manifest.json",
-      "sha256": "477a0adabca37d4c5ed11fd03b0f30a701e63553e1a03b14b3f128d436149db7",
-      "size_bytes": 1649
+      "sha256": "c54c7ec00abe65395f0a12bd9d9ea337f4cece1d315f366c210da50342006ff8",
+      "size_bytes": 1986
     },
     "queue_report": {
       "exists": true,
@@ -125,8 +125,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-evidence-workflow.json",
-      "sha256": "de6a4fbcb0878b8942ee7d359b4493e390f399c9cfc9f51478b061271bfb89bb",
-      "size_bytes": 5254
+      "sha256": "971dde2946efbe2b2cbceee34ddb8b5c1e72439b2bb198f650b2407f3ddba294",
+      "size_bytes": 6422
     }
   },
   "digest_algorithm": "sha256",
@@ -139,6 +139,17 @@
     "corpus_document_count": 741,
     "passed": false,
     "promotion_ready": false,
+    "query_sweep_best_observed_failure_reasons": [
+      "blind_refuted_rate_below_min",
+      "verified_false_alarm_above_max"
+    ],
+    "query_sweep_best_observed_strategy": "question_overlap_0p5",
+    "query_sweep_failure_reason_counts": {
+      "blind_refuted_rate_below_min": 8,
+      "verified_false_alarm_above_max": 8
+    },
+    "query_sweep_no_hit_strategy_count": 0,
+    "query_sweep_target_route_not_selected_strategy_count": 0,
     "selected_batch_count": 0,
     "selected_batch_ids": [],
     "source_document_count": 741,

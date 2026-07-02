@@ -305,7 +305,7 @@
     "blocking_reasons": [
       {
         "best_rate": 0.02247191011235955,
-        "best_verified_false_alarm": 0.112,
+        "best_verified_false_alarm": 0.088,
         "gate": "external_query_sweep",
         "min_blind_refuted_rate": 0.5,
         "reason": "no external or structured-evidence sweep has a passing strategy"
@@ -327,8 +327,8 @@
       "best_observed": {
         "blind_refuted_count": 2,
         "blind_refuted_rate": 0.02247191011235955,
-        "strategy": "question_answer_overlap_0p65",
-        "verified_false_alarm": 0.112
+        "strategy": "question_answer_overlap_0p8",
+        "verified_false_alarm": 0.088
       },
       "blind_spot_count": 89,
       "controlled_corpus_warning": null,
@@ -351,7 +351,7 @@
         "best_blind_refuted_count": 2,
         "best_passing_blind_refuted_count": null,
         "best_passing_strategy": null,
-        "best_strategy": "question_answer_overlap_0p65",
+        "best_strategy": "question_answer_overlap_0p8",
         "blind_spot_count": 89,
         "controlled_corpus_warning": null,
         "strategy_count": 8
@@ -360,9 +360,9 @@
       "status": "complete",
       "strategies": [
         {
-          "blind_refuted_count": 0,
-          "blind_refuted_rate": 0.0,
-          "decision_accuracy": null,
+          "blind_refuted_count": 2,
+          "blind_refuted_rate": 0.02247191011235955,
+          "decision_accuracy": 0.6923076923076923,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -376,9 +376,9 @@
           "verified_false_alarm": 0.088
         },
         {
-          "blind_refuted_count": 0,
-          "blind_refuted_rate": 0.0,
-          "decision_accuracy": null,
+          "blind_refuted_count": 2,
+          "blind_refuted_rate": 0.02247191011235955,
+          "decision_accuracy": 0.6923076923076923,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -394,7 +394,7 @@
         {
           "blind_refuted_count": 2,
           "blind_refuted_rate": 0.02247191011235955,
-          "decision_accuracy": 0.5416666666666666,
+          "decision_accuracy": 0.7058823529411765,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -405,12 +405,12 @@
           "records_with_hits": 365,
           "retriever_min_overlap": 0.65,
           "total_hits": 1095,
-          "verified_false_alarm": 0.12
+          "verified_false_alarm": 0.088
         },
         {
           "blind_refuted_count": 2,
           "blind_refuted_rate": 0.02247191011235955,
-          "decision_accuracy": 0.5,
+          "decision_accuracy": 0.7058823529411765,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -421,7 +421,7 @@
           "records_with_hits": 521,
           "retriever_min_overlap": 0.5,
           "total_hits": 1563,
-          "verified_false_alarm": 0.12
+          "verified_false_alarm": 0.088
         },
         {
           "blind_refuted_count": 0,
@@ -440,9 +440,9 @@
           "verified_false_alarm": 0.088
         },
         {
-          "blind_refuted_count": 0,
-          "blind_refuted_rate": 0.0,
-          "decision_accuracy": 0.3333333333333333,
+          "blind_refuted_count": 2,
+          "blind_refuted_rate": 0.02247191011235955,
+          "decision_accuracy": 0.8888888888888888,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -458,7 +458,7 @@
         {
           "blind_refuted_count": 2,
           "blind_refuted_rate": 0.02247191011235955,
-          "decision_accuracy": 0.5333333333333333,
+          "decision_accuracy": 0.6923076923076923,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -469,12 +469,12 @@
           "records_with_hits": 290,
           "retriever_min_overlap": 0.65,
           "total_hits": 870,
-          "verified_false_alarm": 0.112
+          "verified_false_alarm": 0.088
         },
         {
           "blind_refuted_count": 2,
           "blind_refuted_rate": 0.02247191011235955,
-          "decision_accuracy": 0.5333333333333333,
+          "decision_accuracy": 0.7037037037037037,
           "gate": {
             "max_verified_false_alarm": 0.05,
             "min_blind_refuted_rate": 0.5,
@@ -485,7 +485,7 @@
           "records_with_hits": 483,
           "retriever_min_overlap": 0.5,
           "total_hits": 1449,
-          "verified_false_alarm": 0.112
+          "verified_false_alarm": 0.088
         }
       ]
     }
@@ -507,7 +507,7 @@
     "controlled_sweep_count": 1,
     "external_best_blind_refuted_rate": 0.02247191011235955,
     "external_best_source": "artifacts/improve-unresolved-citation-alignment/command-3/evidence-gate/citation-search-query-sweep.json",
-    "external_best_strategy": "question_answer_overlap_0p65",
+    "external_best_strategy": "question_answer_overlap_0p8",
     "external_passing_count": 0,
     "external_sweep_count": 1,
     "generalization_gap": 0.9775280898876404,

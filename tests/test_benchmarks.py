@@ -60378,7 +60378,9 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
                 "question_answer_overlap_0p5": 1
             },
             "query_sweep_best_observed_records_with_hits_sum": 2,
+            "query_sweep_best_observed_records_with_hits_max": 2,
             "query_sweep_best_observed_total_hits_sum": 4,
+            "query_sweep_best_observed_total_hits_max": 4,
             "query_sweep_best_strategy": "question_overlap_0p65",
             "query_sweep_best_passing_strategy": None,
             "query_sweep_best_passing_blind_refuted_count": 0,
@@ -60562,6 +60564,14 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "expand_or_retarget_source_corpus": 1,
         "improve_claim_intent_alignment_or_query_construction": 2,
     }
+    assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_strategy_counts"] == {
+        "question_answer_overlap_0p5": 1,
+        "question_overlap_0p65": 1,
+    }
+    assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_records_with_hits_sum"] == 2
+    assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_records_with_hits_max"] == 2
+    assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_total_hits_sum"] == 4
+    assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_total_hits_max"] == 4
     assert payload["summary"]["citation_query_sweep_no_hit_strategy_count"] == 1
     assert (
         payload["summary"]["citation_query_sweep_target_route_not_selected_strategy_count"]
@@ -60628,6 +60638,10 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "blind_refuted_rate_below_min": 3,
         "no_retrieval_hits": 1,
         "target_route_not_selected": 1,
+    }
+    assert citation_action["query_sweep_best_observed_strategy_counts"] == {
+        "question_answer_overlap_0p5": 1,
+        "question_overlap_0p65": 1,
     }
     assert citation_action["query_sweep_no_hit_strategy_count"] == 1
     requeue_action = next(

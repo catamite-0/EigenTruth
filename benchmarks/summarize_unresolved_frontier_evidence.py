@@ -478,8 +478,10 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     query_sweep_target_route_not_selected_strategy_count = 0
     query_sweep_blind_refuted_rate_below_min_strategy_count = 0
     query_sweep_verified_false_alarm_above_max_strategy_count = 0
-    best_observed_hit_counts: list[int] = []
-    best_observed_total_hits: list[int] = []
+    best_observed_records_with_hits_sum = 0
+    best_observed_records_with_hits_max: int | None = None
+    best_observed_total_hits_sum = 0
+    best_observed_total_hits_max: int | None = None
     max_source_docs = 0
     blocking_reasons: Counter[str] = Counter()
     for index, workflow in enumerate(workflows, start=1):
@@ -543,18 +545,61 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         query_sweep_verified_false_alarm_above_max_strategy_count += _int(
             evidence.get("query_sweep_verified_false_alarm_above_max_strategy_count")
         )
-        if evidence.get("query_sweep_best_observed_strategy"):
+        aggregate_best_strategy_counts = _int_mapping(
+            evidence.get("query_sweep_best_observed_strategy_counts")
+        )
+        if aggregate_best_strategy_counts:
+            query_sweep_best_observed_strategy_counts.update(aggregate_best_strategy_counts)
+        elif evidence.get("query_sweep_best_observed_strategy"):
             query_sweep_best_observed_strategy_counts[
                 str(evidence.get("query_sweep_best_observed_strategy"))
             ] += 1
-        if evidence.get("query_sweep_best_observed_records_with_hits") is not None:
-            best_observed_hit_counts.append(
-                _int(evidence.get("query_sweep_best_observed_records_with_hits"))
+        aggregate_records_with_hits_sum = _optional_int(
+            evidence.get("query_sweep_best_observed_records_with_hits_sum")
+        )
+        aggregate_records_with_hits_max = _optional_int(
+            evidence.get("query_sweep_best_observed_records_with_hits_max")
+        )
+        if aggregate_records_with_hits_sum is not None:
+            best_observed_records_with_hits_sum += aggregate_records_with_hits_sum
+            if aggregate_records_with_hits_max is not None:
+                best_observed_records_with_hits_max = _max_optional_int(
+                    best_observed_records_with_hits_max,
+                    aggregate_records_with_hits_max,
+                )
+        else:
+            records_with_hits = _optional_int(
+                evidence.get("query_sweep_best_observed_records_with_hits")
             )
-        if evidence.get("query_sweep_best_observed_total_hits") is not None:
-            best_observed_total_hits.append(
-                _int(evidence.get("query_sweep_best_observed_total_hits"))
+            if records_with_hits is not None:
+                best_observed_records_with_hits_sum += records_with_hits
+                best_observed_records_with_hits_max = _max_optional_int(
+                    best_observed_records_with_hits_max,
+                    records_with_hits,
+                )
+        aggregate_total_hits_sum = _optional_int(
+            evidence.get("query_sweep_best_observed_total_hits_sum")
+        )
+        aggregate_total_hits_max = _optional_int(
+            evidence.get("query_sweep_best_observed_total_hits_max")
+        )
+        if aggregate_total_hits_sum is not None:
+            best_observed_total_hits_sum += aggregate_total_hits_sum
+            if aggregate_total_hits_max is not None:
+                best_observed_total_hits_max = _max_optional_int(
+                    best_observed_total_hits_max,
+                    aggregate_total_hits_max,
+                )
+        else:
+            total_hits = _optional_int(
+                evidence.get("query_sweep_best_observed_total_hits")
             )
+            if total_hits is not None:
+                best_observed_total_hits_sum += total_hits
+                best_observed_total_hits_max = _max_optional_int(
+                    best_observed_total_hits_max,
+                    total_hits,
+                )
         max_source_docs = max(max_source_docs, _int(evidence.get("source_document_count")))
         for item in _mapping_sequence(gate.get("blocking_reasons")):
             reason = str(item.get("gate") or item.get("reason") or "unknown")
@@ -642,14 +687,14 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "query_sweep_best_observed_strategy_counts": dict(
             sorted(query_sweep_best_observed_strategy_counts.items())
         ),
-        "query_sweep_best_observed_records_with_hits_sum": sum(best_observed_hit_counts),
+        "query_sweep_best_observed_records_with_hits_sum": (
+            best_observed_records_with_hits_sum
+        ),
         "query_sweep_best_observed_records_with_hits_max": (
-            max(best_observed_hit_counts) if best_observed_hit_counts else None
+            best_observed_records_with_hits_max
         ),
-        "query_sweep_best_observed_total_hits_sum": sum(best_observed_total_hits),
-        "query_sweep_best_observed_total_hits_max": (
-            max(best_observed_total_hits) if best_observed_total_hits else None
-        ),
+        "query_sweep_best_observed_total_hits_sum": best_observed_total_hits_sum,
+        "query_sweep_best_observed_total_hits_max": best_observed_total_hits_max,
         "max_source_document_count": max_source_docs,
         "blocking_reason_counts": dict(sorted(blocking_reasons.items())),
         "workflows": tuple(rows),
@@ -1924,6 +1969,19 @@ def _int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _max_optional_int(current: int | None, candidate: int) -> int:
+    return candidate if current is None else max(current, candidate)
 
 
 def _optional_float(value: Any) -> float | None:
