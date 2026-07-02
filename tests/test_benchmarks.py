@@ -9935,6 +9935,122 @@ def test_verifier_ensemble_does_not_token_fallback_for_numeric_alignment_gap(tmp
     assert all(record["record"]["route"]["selected_verifier"] == "EvidenceAlignmentVerifier" for record in records)
 
 
+def test_verifier_ensemble_infers_retrieval_alignment_signal_from_claim_text(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    verified_path = tmp_path / "verified.jsonl"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {
+                    "question": "What is the capital of France?",
+                    "answer": "Paris is the capital of France.",
+                    "text": "What is the capital of France? Paris is the capital of France.",
+                },
+                {
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "No.",
+                    "text": "Do more than 20% of Americans have passports? No.",
+                },
+                {
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "No.",
+                    "text": "Do more than 20% of Americans have passports? No.",
+                },
+                {
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "No.",
+                    "text": "Do more than 20% of Americans have passports? No.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "What is the capital of France? Paris is the capital of France.",
+                    "claim_id": "capital",
+                    "retrieval_documents": [
+                        {
+                            "text": "Paris is the capital of France according to the reference atlas.",
+                            "source": "reference:france",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the capital of France? Paris is the capital of France.",
+                    "claim_id": "capital-repeat",
+                    "retrieval_documents": [
+                        {
+                            "text": "Paris is the capital of France according to the reference atlas.",
+                            "source": "reference:france",
+                        },
+                    ],
+                },
+                {
+                    "claim": "Do more than 20% of Americans have passports? No.",
+                    "claim_id": "passport",
+                    "retrieval_documents": [
+                        {
+                            "text": (
+                                "U.S. passport statistics show more than 40 percent of Americans "
+                                "hold valid passports."
+                            ),
+                            "source": "official:passport-statistics",
+                        },
+                    ],
+                },
+                {
+                    "claim": "Do more than 20% of Americans have passports? No.",
+                    "claim_id": "passport-repeat",
+                    "retrieval_documents": [
+                        {
+                            "text": (
+                                "U.S. passport statistics show more than 40 percent of Americans "
+                                "hold valid passports."
+                            ),
+                            "source": "official:passport-statistics",
+                        },
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=0.0,
+        retrieval_limit=1,
+        verified_records_path=verified_path,
+    )
+    run = payload["runs"][0]
+    records = [json.loads(line)["record"] for line in verified_path.read_text(encoding="utf-8").splitlines()]
+
+    assert run["retrieval_alignment"]["records_with_signal"] == 2
+    assert run["retrieval_alignment"]["decided_records"] == 2
+    assert [record["route"]["selected_verifier"] for record in records] == [
+        "GroundednessVerifier",
+        "GroundednessVerifier",
+        "EvidenceAlignmentVerifier",
+        "EvidenceAlignmentVerifier",
+    ]
+    assert [record["final"]["status"] for record in records] == ["supported", "supported", "refuted", "refuted"]
+    assert records[2]["final"]["metadata"]["decision_rule"] == "slot_evidence_alignment"
+
+
 def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifier_path(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")

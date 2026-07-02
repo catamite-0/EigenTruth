@@ -65,6 +65,7 @@ from eigentruth.verify import (
     TripleEvidenceVerifier,
     VerificationResult,
     VerificationStatus,
+    claim_features,
     stable_cache_key,
 )
 from eigentruth.verify.features import flag_value_enabled
@@ -86,6 +87,10 @@ _VERIFIER_CACHE_KEY_MODES = {
     "transition_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
 }
 _NUMBER_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_])-?\d+(?:,\d{3})*(?:\.\d+)?%?")
+_SYNTHETIC_INDEX_NUMBER_RE = re.compile(
+    r"\b(?:item|record|example|sample)\s+-?\d+(?:,\d{3})*(?:\.\d+)?\b",
+    re.IGNORECASE,
+)
 _CITATION_TOKEN_RE = re.compile(r"\[[A-Za-z0-9_.:/#?=&%+-]{1,80}\]|(?:doi|arxiv):\S+", re.IGNORECASE)
 _RETRIEVAL_ALIGNMENT_POLICY = {
     "min_keyword_overlap": 0.2,
@@ -1314,8 +1319,22 @@ def _record_has_retrieval_alignment_signal(record: ClaimEvidenceRecord) -> bool:
     features = metadata.get("features", {})
     if isinstance(features, Mapping) and any(
         flag_value_enabled(features.get(key))
-        for key in ("has_number", "has_citation", "is_time_sensitive")
+        for key in (
+            "has_number",
+            "has_citation",
+            "has_negation",
+            "is_time_sensitive",
+            "has_named_entity_hint",
+        )
     ):
+        return True
+    inferred_features = claim_features(record.claim.text)
+    if (
+        flag_value_enabled(inferred_features.get("has_number"))
+        and _has_fact_slot_number_signal(record.claim.text)
+    ):
+        return True
+    if any(flag_value_enabled(inferred_features.get(key)) for key in ("has_citation", "is_time_sensitive")):
         return True
     statement = record.metadata.get("statement", {})
     answer = ""
@@ -1324,6 +1343,19 @@ def _record_has_retrieval_alignment_signal(record: ClaimEvidenceRecord) -> bool:
     if not answer:
         answer = str(metadata.get("answer", "")).strip()
     return bool(_NUMBER_TOKEN_RE.search(answer) or _CITATION_TOKEN_RE.search(answer))
+
+
+def _has_fact_slot_number_signal(text: str) -> bool:
+    matches = tuple(_NUMBER_TOKEN_RE.finditer(str(text)))
+    if not matches:
+        return False
+    synthetic_spans = tuple(_SYNTHETIC_INDEX_NUMBER_RE.finditer(str(text)))
+    if not synthetic_spans:
+        return True
+    return any(
+        not any(span.start() <= match.start() and match.end() <= span.end() for span in synthetic_spans)
+        for match in matches
+    )
 
 
 def _retrieval_document_payloads(
