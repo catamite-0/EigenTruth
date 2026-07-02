@@ -6010,7 +6010,8 @@ evidence, claim factuality probe-comparison runtime-drift evidence,
 counterfactual verifier-audit runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
 trajectory-audit runtime-drift evidence, trace-level metacognition runtime-drift
-evidence, trace-level world-model runtime-drift evidence, trace-level context-sensitivity runtime-drift evidence, registered
+evidence, trace-level world-model runtime-drift evidence, trace-level
+context-sensitivity runtime-drift evidence, registered
 frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
@@ -9283,6 +9284,9 @@ coverage, learned-risk coverage, audit-profile rate, learned-risk routed rate,
 learned-risk probability drift, trace-level world-model
 participation/coverage/conflict/low-agreement/trace-gap drift, trace-level
 context-sensitivity participation/coverage/flagged-rate/ratio drift,
+trace-level claim/evidence alignment participation/coverage/alignment,
+misalignment, insufficient-evidence, citation-reference coverage, issue, and
+trace-gap drift,
 promotion-contract coverage, covered-fact per-property rollup drift,
 triple-extraction fixture-matrix coverage/quality drift, claim factuality probe
 comparison coverage, manifest-verification, redline, AUROC,
@@ -9757,7 +9761,16 @@ gates such as
 `--max-runtime-drift-context-sensitivity-flagged-result-rate-increase`,
 `--max-runtime-drift-context-sensitivity-trace-gap-rate-increase`,
 `--max-runtime-drift-context-sensitivity-max-flagged-rate-increase`, and
-`--max-runtime-drift-context-sensitivity-max-ratio-increase`, plus promotion
+`--max-runtime-drift-context-sensitivity-max-ratio-increase`, evidence-alignment
+gates such as
+`--min-runtime-drift-evidence-alignment-participating-trace-rate`,
+`--min-runtime-drift-evidence-alignment-coverage-rate`,
+`--min-runtime-drift-evidence-alignment-alignment-rate`,
+`--min-runtime-drift-evidence-alignment-citation-reference-coverage-rate`,
+`--max-runtime-drift-evidence-alignment-misalignment-rate-increase`,
+`--max-runtime-drift-evidence-alignment-insufficient-evidence-rate-increase`,
+`--max-runtime-drift-evidence-alignment-issue-rate-increase`, and
+`--max-runtime-drift-evidence-alignment-trace-gap-rate-increase`, plus promotion
 evidence gates such as
 `--min-runtime-drift-promotion-contract-coverage`,
 pre-generation probe comparison gates such as

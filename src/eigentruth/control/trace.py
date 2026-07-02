@@ -319,6 +319,9 @@ class ProductTrace:
             "context_sensitivity": _context_sensitivity_summary_from_results(
                 prepared.verification_results,
             ),
+            "evidence_alignment": _evidence_alignment_summary_from_results(
+                prepared.verification_results,
+            ),
             "counterfactual_robustness": _counterfactual_robustness_summary_from_results(
                 prepared.verification_results,
             ),
@@ -478,6 +481,12 @@ class ProductTrace:
     def context_sensitivity_summary(self) -> dict[str, Any]:
         """Summarize evidence-context sensitivity signals recorded on verifier results."""
         return _context_sensitivity_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def evidence_alignment_summary(self) -> dict[str, Any]:
+        """Summarize claim/evidence alignment reports recorded on verifier results."""
+        return _evidence_alignment_summary_from_results(
             tuple(_verification_result_to_dict(result) for result in self.verification_results)
         )
 
@@ -1388,6 +1397,188 @@ def _context_sensitivity_source(metadata: Mapping[str, Any]) -> str | None:
         context_metadata.get("adapter"),
         paired_metadata.get("adapter"),
         metadata.get("context_sensitivity_source"),
+        metadata.get("selected_verifier"),
+        metadata.get("verifier"),
+    )
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _evidence_alignment_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_alignment_status: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    keyword_overlaps = []
+    number_recalls = []
+    entity_recalls = []
+    evidence_alignment_total = 0
+    record_count = 0.0
+    aligned_count = 0.0
+    misaligned_count = 0.0
+    insufficient_count = 0.0
+    reference_count = 0.0
+    matched_reference_count = 0.0
+    cited_evidence_count = 0.0
+    issue_count = 0.0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_evidence_alignment_result(metadata):
+            continue
+        evidence_alignment_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        _increment_count(counts_by_source, _evidence_alignment_source(metadata))
+        summary = _evidence_alignment_result_summary(metadata)
+        if not summary:
+            trace_gap_count += 1
+            continue
+
+        _merge_counts(counts_by_alignment_status, _mapping(summary.get("counts_by_status")))
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        records = _first_non_negative_float(summary.get("record_count"))
+        if records is None and any(
+            summary.get(key) is not None
+            for key in (
+                "alignment_rate",
+                "misalignment_rate",
+                "insufficient_evidence_rate",
+                "issue_count",
+            )
+        ):
+            records = 1.0
+        records = records or 0.0
+        record_count += records
+
+        aligned_count += _first_non_negative_float(
+            summary.get("aligned_count"),
+        ) or _count_from_rate(summary.get("alignment_rate"), records)
+        misaligned_count += _first_non_negative_float(
+            summary.get("misaligned_count"),
+        ) or _count_from_rate(summary.get("misalignment_rate"), records)
+        insufficient_count += _first_non_negative_float(
+            summary.get("insufficient_evidence_count"),
+        ) or _count_from_rate(summary.get("insufficient_evidence_rate"), records)
+        reference_count += _first_non_negative_float(
+            summary.get("citation_reference_count"),
+        ) or 0.0
+        matched_reference_count += _first_non_negative_float(
+            summary.get("matched_citation_reference_count"),
+        ) or _count_from_rate(
+            summary.get("citation_reference_coverage_rate"),
+            _first_non_negative_float(summary.get("citation_reference_count")),
+        )
+        cited_evidence_count += _first_non_negative_float(
+            summary.get("cited_evidence_count"),
+        ) or 0.0
+        issue_count += _first_non_negative_float(summary.get("issue_count")) or 0.0
+        for values, key in (
+            (keyword_overlaps, "keyword_overlap_mean"),
+            (number_recalls, "number_recall_mean"),
+            (entity_recalls, "entity_recall_mean"),
+        ):
+            numeric = _finite_float(summary.get(key))
+            if numeric is not None:
+                values.append(numeric)
+
+    return {
+        "total": len(results),
+        "available": evidence_alignment_total > 0,
+        "evidence_alignment_total": evidence_alignment_total,
+        "coverage_rate": _safe_div(evidence_alignment_total, len(results)) or 0.0,
+        "record_count": record_count,
+        "aligned_count": aligned_count,
+        "misaligned_count": misaligned_count,
+        "insufficient_evidence_count": insufficient_count,
+        "alignment_rate": _safe_div(aligned_count, record_count) or 0.0,
+        "misalignment_rate": _safe_div(misaligned_count, record_count) or 0.0,
+        "insufficient_evidence_rate": _safe_div(insufficient_count, record_count) or 0.0,
+        "keyword_overlap_mean": _mean_or_none(keyword_overlaps),
+        "number_recall_mean": _mean_or_none(number_recalls),
+        "entity_recall_mean": _mean_or_none(entity_recalls),
+        "citation_reference_count": reference_count,
+        "matched_citation_reference_count": matched_reference_count,
+        "cited_evidence_count": cited_evidence_count,
+        "citation_reference_coverage_rate": _safe_div(
+            matched_reference_count,
+            reference_count,
+        ),
+        "issue_count": issue_count,
+        "issue_rate": _safe_div(issue_count, record_count) or 0.0,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, evidence_alignment_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_alignment_status": counts_by_alignment_status,
+        "counts_by_code": counts_by_code,
+        "counts_by_source": counts_by_source,
+        "traceable": evidence_alignment_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_evidence_alignment_result(metadata: Mapping[str, Any]) -> bool:
+    if str(metadata.get("verifier", "")).strip() == "evidence_alignment":
+        return True
+    return any(key in metadata for key in _EVIDENCE_ALIGNMENT_TRACE_METADATA_KEYS)
+
+
+_EVIDENCE_ALIGNMENT_TRACE_METADATA_KEYS = (
+    "evidence_alignment",
+    "evidence_alignment_summary",
+    "evidence_alignment_alignment_rate",
+    "evidence_alignment_misalignment_rate",
+    "evidence_alignment_insufficient_evidence_rate",
+    "evidence_alignment_issue_count",
+)
+
+
+def _evidence_alignment_result_summary(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    report = _mapping(metadata.get("evidence_alignment"))
+    summary = _mapping(report.get("summary"))
+    if summary:
+        return summary
+    summary = _mapping(metadata.get("evidence_alignment_summary"))
+    if summary:
+        return summary
+    flat = {
+        "record_count": metadata.get("evidence_alignment_record_count"),
+        "aligned_count": metadata.get("evidence_alignment_aligned_count"),
+        "misaligned_count": metadata.get("evidence_alignment_misaligned_count"),
+        "insufficient_evidence_count": metadata.get(
+            "evidence_alignment_insufficient_evidence_count"
+        ),
+        "alignment_rate": metadata.get("evidence_alignment_alignment_rate"),
+        "misalignment_rate": metadata.get("evidence_alignment_misalignment_rate"),
+        "insufficient_evidence_rate": metadata.get(
+            "evidence_alignment_insufficient_evidence_rate"
+        ),
+        "keyword_overlap_mean": metadata.get("evidence_alignment_keyword_overlap_mean"),
+        "number_recall_mean": metadata.get("evidence_alignment_number_recall_mean"),
+        "entity_recall_mean": metadata.get("evidence_alignment_entity_recall_mean"),
+        "citation_reference_count": metadata.get(
+            "evidence_alignment_citation_reference_count"
+        ),
+        "matched_citation_reference_count": metadata.get(
+            "evidence_alignment_matched_citation_reference_count"
+        ),
+        "citation_reference_coverage_rate": metadata.get(
+            "evidence_alignment_citation_reference_coverage_rate"
+        ),
+        "issue_count": metadata.get("evidence_alignment_issue_count"),
+    }
+    return {key: value for key, value in flat.items() if value is not None}
+
+
+def _evidence_alignment_source(metadata: Mapping[str, Any]) -> str | None:
+    report = _mapping(metadata.get("evidence_alignment"))
+    report_metadata = _mapping(report.get("metadata"))
+    raw = _first_present(
+        report_metadata.get("adapter"),
+        report_metadata.get("source"),
+        metadata.get("evidence_alignment_source"),
         metadata.get("selected_verifier"),
         metadata.get("verifier"),
     )

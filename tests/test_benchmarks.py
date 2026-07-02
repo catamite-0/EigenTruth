@@ -20672,6 +20672,128 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     ] is True
 
 
+def test_compare_release_candidates_can_require_evidence_alignment_runtime_drift(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    evidence_alignment_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "evidence-alignment-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        evidence_alignment_evidence=True,
+    )
+    missing_evidence_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "missing-evidence-alignment-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
+    blocked_evidence_alignment_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-evidence-alignment-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        evidence_alignment_evidence=True,
+        evidence_alignment_blocked=True,
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=evidence_alignment_drift_report,
+        require_product_runtime_drift_evidence_alignment_evidence=True,
+    )
+    missing = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_evidence_alignment_evidence=True,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_evidence_alignment_drift_report,
+        require_product_runtime_drift_evidence_alignment_evidence=True,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["config"][
+        "require_product_runtime_drift_evidence_alignment_evidence"
+    ] is True
+    summary = payload["release_candidate"]["product_runtime_drift"]["summary"]
+    assert summary["evidence_alignment_evidence_required"] is True
+    assert summary["evidence_alignment_evidence_metric_count"] == 8
+    assert summary["evidence_alignment_evidence_blocked_metric_count"] == 0
+    assert summary["evidence_alignment_alignment_rate_current"] == pytest.approx(1.0)
+    assert summary["evidence_alignment_issue_rate_status"] == "pass"
+
+    assert missing["decision"]["status"] == "blocked"
+    missing_summary = missing["product_runtime_drift_gate"]["summary"]
+    assert missing_summary["evidence_alignment_evidence_missing_metrics"] == (
+        "evidence_alignment.participating_trace_rate",
+        "evidence_alignment.coverage_rate",
+        "evidence_alignment.alignment_rate",
+        "evidence_alignment.misalignment_rate",
+        "evidence_alignment.insufficient_evidence_rate",
+        "evidence_alignment.citation_reference_coverage_rate",
+        "evidence_alignment.issue_rate",
+        "evidence_alignment.trace_gap_rate",
+    )
+    assert any(
+        "evidence-alignment evidence metrics are incomplete" in reason
+        for reason in missing["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    blocked_summary = blocked["product_runtime_drift_gate"]["summary"]
+    assert blocked_summary["evidence_alignment_evidence_blocked_metric_count"] == 4
+    assert any(
+        "evidence-alignment evidence blocked 4 metric" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_can_require_release_efficiency_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -28808,6 +28930,8 @@ def _write_product_runtime_drift_report(
     world_model_blocked=False,
     context_sensitivity_evidence=False,
     context_sensitivity_blocked=False,
+    evidence_alignment_evidence=False,
+    evidence_alignment_blocked=False,
     counterfactual_robustness_evidence=False,
     counterfactual_robustness_blocked=False,
     frontier_release_evidence=False,
@@ -30776,6 +30900,113 @@ def _write_product_runtime_drift_report(
                 "absolute_delta": 0.0,
                 "absolute_increase": 0.0,
                 "threshold": 0.0,
+                "reason": None,
+            },
+        ])
+    if evidence_alignment_evidence:
+        issue_status = "blocked" if evidence_alignment_blocked else "pass"
+        issue_current = 0.25 if evidence_alignment_blocked else 0.0
+        alignment_status = "blocked" if evidence_alignment_blocked else "pass"
+        alignment_current = 0.70 if evidence_alignment_blocked else 1.0
+        metrics.extend([
+            {
+                "metric": "evidence_alignment.participating_trace_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_alignment.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_alignment.alignment_rate",
+                "status": alignment_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": alignment_current,
+                "absolute_delta": alignment_current - 1.0,
+                "threshold": 0.95,
+                "reason": (
+                    "evidence_alignment.alignment_rate below gate"
+                    if evidence_alignment_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "evidence_alignment.misalignment_rate",
+                "status": issue_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": issue_current,
+                "absolute_delta": issue_current,
+                "absolute_increase": issue_current,
+                "threshold": 0.05,
+                "reason": (
+                    "evidence_alignment.misalignment_rate above gate"
+                    if evidence_alignment_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "evidence_alignment.insufficient_evidence_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
+                "reason": None,
+            },
+            {
+                "metric": "evidence_alignment.citation_reference_coverage_rate",
+                "status": alignment_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": alignment_current,
+                "absolute_delta": alignment_current - 1.0,
+                "threshold": 0.95,
+                "reason": (
+                    "evidence_alignment.citation_reference_coverage_rate below gate"
+                    if evidence_alignment_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "evidence_alignment.issue_rate",
+                "status": issue_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": issue_current,
+                "absolute_delta": issue_current,
+                "absolute_increase": issue_current,
+                "threshold": 0.05,
+                "reason": (
+                    "evidence_alignment.issue_rate above gate"
+                    if evidence_alignment_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "evidence_alignment.trace_gap_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.05,
                 "reason": None,
             },
         ])
@@ -42926,7 +43157,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 21
+    assert cache_payload["schema_version"] == 22
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -43751,6 +43982,162 @@ def test_compare_product_runtime_baselines_gates_context_sensitivity_drift(tmp_p
     assert record.metadata[
         "context_sensitivity_max_context_sensitivity_ratio_current"
     ] == pytest.approx(3.0)
+
+
+def test_compare_product_runtime_baselines_gates_evidence_alignment_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-evidence-alignment.json"
+    current_trace = tmp_path / "current-evidence-alignment.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    def write_trace(
+        path: Path,
+        *,
+        request_id: str,
+        verification_results: Sequence[Mapping[str, Any]],
+    ) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "runtime_trace": {
+                    "total_seconds": 0.10,
+                    "phases": [{"name": "initial_verification", "seconds": 0.01}],
+                },
+                "verification_results": list(verification_results),
+            }),
+            encoding="utf-8",
+        )
+
+    write_trace(
+        baseline_trace,
+        request_id="baseline-evidence-alignment",
+        verification_results=(
+            {
+                "status": "supported",
+                "metadata": {
+                    "verifier": "evidence_alignment",
+                    "evidence_alignment": {
+                        "metadata": {"adapter": "sidecar"},
+                        "summary": {
+                            "record_count": 2,
+                            "aligned_count": 2,
+                            "misaligned_count": 0,
+                            "insufficient_evidence_count": 0,
+                            "citation_reference_count": 2,
+                            "matched_citation_reference_count": 2,
+                            "issue_count": 0,
+                            "counts_by_status": {"aligned": 2},
+                        },
+                    },
+                },
+            },
+            {"status": "supported", "metadata": {"selected_route": "lexical"}},
+        ),
+    )
+    write_trace(
+        current_trace,
+        request_id="current-evidence-alignment",
+        verification_results=(
+            {
+                "status": "refuted",
+                "metadata": {
+                    "verifier": "evidence_alignment",
+                    "evidence_alignment": {
+                        "metadata": {"adapter": "sidecar"},
+                        "summary": {
+                            "record_count": 4,
+                            "aligned_count": 1,
+                            "misaligned_count": 2,
+                            "insufficient_evidence_count": 1,
+                            "citation_reference_count": 4,
+                            "matched_citation_reference_count": 2,
+                            "issue_count": 3,
+                            "keyword_overlap_mean": 0.35,
+                            "number_recall_mean": 0.50,
+                            "entity_recall_mean": 0.25,
+                            "counts_by_status": {
+                                "aligned": 1,
+                                "misaligned": 2,
+                                "insufficient_evidence": 1,
+                            },
+                            "counts_by_code": {
+                                "low_keyword_overlap": 2,
+                                "missing_number": 1,
+                            },
+                        },
+                    },
+                },
+            },
+            {"status": "supported", "metadata": {"verifier": "evidence_alignment"}},
+        ),
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-evidence-alignment",
+        version="0.1",
+        min_evidence_alignment_participating_trace_rate=1.0,
+        min_evidence_alignment_coverage_rate=1.0,
+        min_evidence_alignment_alignment_rate=0.95,
+        min_evidence_alignment_citation_reference_coverage_rate=0.95,
+        max_evidence_alignment_misalignment_rate_increase=0.0,
+        max_evidence_alignment_insufficient_evidence_rate_increase=0.0,
+        max_evidence_alignment_issue_rate_increase=0.0,
+        max_evidence_alignment_trace_gap_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-evidence-alignment:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 6
+    assert _metric_by_name(payload, "evidence_alignment.participating_trace_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "evidence_alignment.coverage_rate")["status"] == "pass"
+    assert _metric_by_name(payload, "evidence_alignment.alignment_rate")[
+        "current"
+    ] == pytest.approx(0.25)
+    assert _metric_by_name(payload, "evidence_alignment.misalignment_rate")[
+        "absolute_delta"
+    ] == pytest.approx(0.5)
+    assert _metric_by_name(payload, "evidence_alignment.issue_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "evidence_alignment.trace_gap_rate")[
+        "current"
+    ] == pytest.approx(0.5)
+    assert payload["config"]["max_evidence_alignment_issue_rate_increase"] == (
+        pytest.approx(0.0)
+    )
+    assert manifest["metadata"]["evidence_alignment_blocked_metric_count"] == 6
+    assert manifest["metadata"]["evidence_alignment_issue_rate_current"] == pytest.approx(0.75)
+    assert record.metadata[
+        "evidence_alignment_citation_reference_coverage_rate_current"
+    ] == pytest.approx(0.5)
 
 
 def test_compare_product_runtime_baselines_gates_counterfactual_robustness_drift(tmp_path):
@@ -51452,6 +51839,29 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
             candidates=(candidate,),
             compact_json="maybe",
         )
+
+
+def test_product_trace_replay_workflow_configures_evidence_alignment_runtime_drift(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    config = module.ProductTraceReplayWorkflowConfig(
+        trace_paths=("trace.json",),
+        output_dir=tmp_path / "workflow",
+        candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+        runtime_drift_baseline_path=tmp_path / "baseline.json",
+        min_runtime_drift_evidence_alignment_participating_trace_rate=1.0,
+        min_runtime_drift_evidence_alignment_coverage_rate=1.0,
+        min_runtime_drift_evidence_alignment_alignment_rate=0.95,
+        min_runtime_drift_evidence_alignment_citation_reference_coverage_rate=0.95,
+        max_runtime_drift_evidence_alignment_misalignment_rate_increase=0.0,
+        max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase=0.0,
+        max_runtime_drift_evidence_alignment_issue_rate_increase=0.0,
+        max_runtime_drift_evidence_alignment_trace_gap_rate_increase=0.0,
+    )
+
+    assert module._runtime_drift_configured(config) is True
+    assert config.runtime_drift_baseline_path == tmp_path / "baseline.json"
+    assert config.min_runtime_drift_evidence_alignment_coverage_rate == pytest.approx(1.0)
+    assert config.max_runtime_drift_evidence_alignment_issue_rate_increase == pytest.approx(0.0)
 
 
 def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path):

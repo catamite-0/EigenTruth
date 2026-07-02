@@ -591,6 +591,28 @@ _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_FIELDS: tuple[
         "context_sensitivity_max_context_sensitivity_ratio",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_FIELDS: tuple[
+    tuple[str, str],
+    ...
+] = (
+    (
+        "evidence_alignment.participating_trace_rate",
+        "evidence_alignment_participating_trace_rate",
+    ),
+    ("evidence_alignment.coverage_rate", "evidence_alignment_coverage_rate"),
+    ("evidence_alignment.alignment_rate", "evidence_alignment_alignment_rate"),
+    ("evidence_alignment.misalignment_rate", "evidence_alignment_misalignment_rate"),
+    (
+        "evidence_alignment.insufficient_evidence_rate",
+        "evidence_alignment_insufficient_evidence_rate",
+    ),
+    (
+        "evidence_alignment.citation_reference_coverage_rate",
+        "evidence_alignment_citation_reference_coverage_rate",
+    ),
+    ("evidence_alignment.issue_rate", "evidence_alignment_issue_rate"),
+    ("evidence_alignment.trace_gap_rate", "evidence_alignment_trace_gap_rate"),
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_FIELDS: tuple[
     tuple[str, str],
     ...
@@ -757,6 +779,7 @@ def compare_release_candidates(
     require_product_runtime_drift_evidence_handoff_evidence: bool = False,
     require_product_runtime_drift_world_model_evidence: bool = False,
     require_product_runtime_drift_context_sensitivity_evidence: bool = False,
+    require_product_runtime_drift_evidence_alignment_evidence: bool = False,
     require_product_runtime_drift_counterfactual_robustness_evidence: bool = False,
     require_product_runtime_drift_frontier_release_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
@@ -1041,6 +1064,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_context_sensitivity_evidence": (
                     require_product_runtime_drift_context_sensitivity_evidence
                 ),
+                "require_product_runtime_drift_evidence_alignment_evidence": (
+                    require_product_runtime_drift_evidence_alignment_evidence
+                ),
                 "require_product_runtime_drift_counterfactual_robustness_evidence": (
                     require_product_runtime_drift_counterfactual_robustness_evidence
                 ),
@@ -1232,6 +1258,12 @@ def compare_release_candidates(
     require_product_runtime_drift_context_sensitivity_evidence = bool(
         release_policy_values.get(
             "require_product_runtime_drift_context_sensitivity_evidence",
+            False,
+        )
+    )
+    require_product_runtime_drift_evidence_alignment_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_evidence_alignment_evidence",
             False,
         )
     )
@@ -1850,6 +1882,9 @@ def compare_release_candidates(
         require_context_sensitivity_evidence=(
             require_product_runtime_drift_context_sensitivity_evidence
         ),
+        require_evidence_alignment_evidence=(
+            require_product_runtime_drift_evidence_alignment_evidence
+        ),
         require_counterfactual_robustness_evidence=(
             require_product_runtime_drift_counterfactual_robustness_evidence
         ),
@@ -2140,6 +2175,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_context_sensitivity_evidence": bool(
                 require_product_runtime_drift_context_sensitivity_evidence
+            ),
+            "require_product_runtime_drift_evidence_alignment_evidence": bool(
+                require_product_runtime_drift_evidence_alignment_evidence
             ),
             "require_product_runtime_drift_counterfactual_robustness_evidence": bool(
                 require_product_runtime_drift_counterfactual_robustness_evidence
@@ -7145,6 +7183,7 @@ def _product_runtime_drift_gate(
     require_evidence_handoff_evidence: bool,
     require_world_model_evidence: bool,
     require_context_sensitivity_evidence: bool,
+    require_evidence_alignment_evidence: bool,
     require_counterfactual_robustness_evidence: bool,
     require_frontier_release_evidence: bool,
     recursive: bool,
@@ -7174,6 +7213,7 @@ def _product_runtime_drift_gate(
             or require_evidence_handoff_evidence
             or require_world_model_evidence
             or require_context_sensitivity_evidence
+            or require_evidence_alignment_evidence
             or require_counterfactual_robustness_evidence
             or require_frontier_release_evidence
         ):
@@ -7404,6 +7444,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_context_sensitivity_evidence else (),
                     "context_sensitivity_evidence_blocked_metric_count": 0,
+                    "evidence_alignment_evidence_required": bool(
+                        require_evidence_alignment_evidence
+                    ),
+                    "evidence_alignment_evidence_metric_count": 0,
+                    "evidence_alignment_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_FIELDS
+                        )
+                    ) if require_evidence_alignment_evidence else (),
+                    "evidence_alignment_evidence_blocked_metric_count": 0,
                     "counterfactual_robustness_evidence_required": bool(
                         require_counterfactual_robustness_evidence
                     ),
@@ -7555,6 +7606,12 @@ def _product_runtime_drift_gate(
             required=require_context_sensitivity_evidence,
         )
     )
+    evidence_alignment_evidence_summary = (
+        _product_runtime_drift_evidence_alignment_evidence_summary(
+            metrics,
+            required=require_evidence_alignment_evidence,
+        )
+    )
     counterfactual_robustness_evidence_summary = (
         _product_runtime_drift_counterfactual_robustness_evidence_summary(
             metrics,
@@ -7612,6 +7669,8 @@ def _product_runtime_drift_gate(
         require_world_model_evidence=require_world_model_evidence,
         context_sensitivity_evidence_summary=context_sensitivity_evidence_summary,
         require_context_sensitivity_evidence=require_context_sensitivity_evidence,
+        evidence_alignment_evidence_summary=evidence_alignment_evidence_summary,
+        require_evidence_alignment_evidence=require_evidence_alignment_evidence,
         counterfactual_robustness_evidence_summary=(
             counterfactual_robustness_evidence_summary
         ),
@@ -7658,6 +7717,7 @@ def _product_runtime_drift_gate(
             **evidence_handoff_evidence_summary,
             **world_model_evidence_summary,
             **context_sensitivity_evidence_summary,
+            **evidence_alignment_evidence_summary,
             **counterfactual_robustness_evidence_summary,
             **frontier_release_evidence_summary,
         },
@@ -7713,6 +7773,8 @@ def _product_runtime_drift_report_gate(
     require_world_model_evidence: bool,
     context_sensitivity_evidence_summary: Mapping[str, Any],
     require_context_sensitivity_evidence: bool,
+    evidence_alignment_evidence_summary: Mapping[str, Any],
+    require_evidence_alignment_evidence: bool,
     counterfactual_robustness_evidence_summary: Mapping[str, Any],
     require_counterfactual_robustness_evidence: bool,
     frontier_release_evidence_summary: Mapping[str, Any],
@@ -8130,6 +8192,27 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift context-sensitivity evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_evidence_alignment_evidence:
+        missing_metrics = tuple(
+            evidence_alignment_evidence_summary.get(
+                "evidence_alignment_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift evidence-alignment evidence metrics are incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            evidence_alignment_evidence_summary.get(
+                "evidence_alignment_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift evidence-alignment evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_counterfactual_robustness_evidence:
@@ -8760,6 +8843,40 @@ def _product_runtime_drift_context_sensitivity_evidence_summary(
             summary["context_sensitivity_evidence_blocked_metric_count"] += 1
     summary["context_sensitivity_evidence_metric_count"] = metric_count
     summary["context_sensitivity_evidence_missing_metrics"] = tuple(missing_metrics)
+    return summary
+
+
+def _product_runtime_drift_evidence_alignment_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    missing_metrics: list[str] = []
+    metric_count = 0
+    summary: dict[str, Any] = {
+        "evidence_alignment_evidence_required": bool(required),
+        "evidence_alignment_evidence_metric_count": 0,
+        "evidence_alignment_evidence_missing_metrics": (),
+        "evidence_alignment_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is None or metric.get("current") is None:
+            missing_metrics.append(metric_name)
+            continue
+        metric_count += 1
+        if metric.get("status") == "blocked":
+            summary["evidence_alignment_evidence_blocked_metric_count"] += 1
+    summary["evidence_alignment_evidence_metric_count"] = metric_count
+    summary["evidence_alignment_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
 
 
@@ -10404,6 +10521,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_context_sensitivity_evidence=bool(
             args.require_product_runtime_drift_context_sensitivity_evidence
         ),
+        require_product_runtime_drift_evidence_alignment_evidence=bool(
+            args.require_product_runtime_drift_evidence_alignment_evidence
+        ),
         require_product_runtime_drift_counterfactual_robustness_evidence=bool(
             args.require_product_runtime_drift_counterfactual_robustness_evidence
         ),
@@ -10745,6 +10865,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="require the product runtime drift report to include trace-level "
                              "context-sensitivity participation, coverage, flagged, trace-gap, "
                              "and ratio metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-alignment-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level "
+                             "claim/evidence alignment participation, coverage, alignment, "
+                             "misalignment, citation-coverage, issue, and trace-gap metrics")
     parser.add_argument("--require-product-runtime-drift-counterfactual-robustness-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "counterfactual robustness participation, coverage, pass, "

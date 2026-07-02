@@ -47,6 +47,9 @@ _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
 )
@@ -541,6 +544,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_triple_coverage_metrics(trace))
         metrics.update(_world_model_metrics(trace))
         metrics.update(_context_sensitivity_metrics(trace))
+        metrics.update(_evidence_alignment_metrics(trace))
         metrics.update(_counterfactual_robustness_metrics(trace))
         metrics.update(_citation_integrity_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
@@ -594,6 +598,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_triple_coverage_metrics(trace))
     metrics.update(_world_model_metrics(trace))
     metrics.update(_context_sensitivity_metrics(trace))
+    metrics.update(_evidence_alignment_metrics(trace))
     metrics.update(_counterfactual_robustness_metrics(trace))
     metrics.update(_citation_integrity_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
@@ -1612,6 +1617,86 @@ def _metadata_context_sensitivity_summary(payload: Mapping[str, Any]) -> dict[st
     trace_corpus = _mapping(metadata.get("trace_corpus"))
     return _mapping(trace_corpus.get("context_sensitivity_summary")) or _mapping(
         metadata.get("context_sensitivity_summary")
+    )
+
+
+def _evidence_alignment_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.evidence_alignment_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("evidence_alignment"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = _metadata_evidence_alignment_summary(payload)
+            if summary:
+                source = "metadata_summary"
+            else:
+                summary = ProductTrace(
+                    verification_results=tuple(_sequence(payload.get("verification_results", ())))
+                ).evidence_alignment_summary()
+                source = "full_trace"
+    return {
+        "evidence_alignment_summary": summary,
+        "evidence_alignment_source": source,
+        "evidence_alignment_available": bool(summary.get("available")),
+        "evidence_alignment_total": _finite_float(summary.get("evidence_alignment_total")),
+        "evidence_alignment_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "evidence_alignment_record_count": _finite_float(summary.get("record_count")),
+        "evidence_alignment_aligned_count": _finite_float(summary.get("aligned_count")),
+        "evidence_alignment_misaligned_count": _finite_float(summary.get("misaligned_count")),
+        "evidence_alignment_insufficient_evidence_count": _finite_float(
+            summary.get("insufficient_evidence_count")
+        ),
+        "evidence_alignment_alignment_rate": _finite_float(summary.get("alignment_rate")),
+        "evidence_alignment_misalignment_rate": _finite_float(
+            summary.get("misalignment_rate")
+        ),
+        "evidence_alignment_insufficient_evidence_rate": _finite_float(
+            summary.get("insufficient_evidence_rate")
+        ),
+        "evidence_alignment_keyword_overlap_mean": _finite_float(
+            summary.get("keyword_overlap_mean")
+        ),
+        "evidence_alignment_number_recall_mean": _finite_float(
+            summary.get("number_recall_mean")
+        ),
+        "evidence_alignment_entity_recall_mean": _finite_float(
+            summary.get("entity_recall_mean")
+        ),
+        "evidence_alignment_citation_reference_count": _finite_float(
+            summary.get("citation_reference_count")
+        ),
+        "evidence_alignment_matched_citation_reference_count": _finite_float(
+            summary.get("matched_citation_reference_count")
+        ),
+        "evidence_alignment_citation_reference_coverage_rate": _finite_float(
+            summary.get("citation_reference_coverage_rate")
+        ),
+        "evidence_alignment_cited_evidence_count": _finite_float(
+            summary.get("cited_evidence_count")
+        ),
+        "evidence_alignment_issue_count": _finite_float(summary.get("issue_count")),
+        "evidence_alignment_issue_rate": _finite_float(summary.get("issue_rate")),
+        "evidence_alignment_trace_gap_count": _finite_float(summary.get("trace_gap_count")),
+        "evidence_alignment_trace_gap_rate": _finite_float(summary.get("trace_gap_rate")),
+        "evidence_alignment_traceable": _optional_bool(summary.get("traceable")),
+        "evidence_alignment_counts_by_status": _int_mapping(summary.get("counts_by_status")),
+        "evidence_alignment_counts_by_alignment_status": _int_mapping(
+            summary.get("counts_by_alignment_status")
+        ),
+        "evidence_alignment_counts_by_code": _int_mapping(summary.get("counts_by_code")),
+        "evidence_alignment_counts_by_source": _int_mapping(summary.get("counts_by_source")),
+    }
+
+
+def _metadata_evidence_alignment_summary(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(payload.get("metadata"))
+    trace_corpus = _mapping(metadata.get("trace_corpus"))
+    return _mapping(trace_corpus.get("evidence_alignment_summary")) or _mapping(
+        metadata.get("evidence_alignment_summary")
     )
 
 

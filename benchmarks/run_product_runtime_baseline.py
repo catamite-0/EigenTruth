@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 21
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 22
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -170,6 +170,16 @@ _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES: tuple[str, ...] = 
     "context_sensitivity_max_flagged_rate",
     "context_sensitivity_max_context_sensitivity_ratio",
 )
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "evidence_alignment_participating_trace_rate",
+    "evidence_alignment_coverage_rate",
+    "evidence_alignment_alignment_rate",
+    "evidence_alignment_misalignment_rate",
+    "evidence_alignment_insufficient_evidence_rate",
+    "evidence_alignment_citation_reference_coverage_rate",
+    "evidence_alignment_issue_rate",
+    "evidence_alignment_trace_gap_rate",
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "counterfactual_robustness_participating_trace_rate",
     "counterfactual_robustness_coverage_rate",
@@ -252,6 +262,7 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_evidence_handoff_evidence_required",
     "promotion_contract_product_runtime_drift_world_model_evidence_required",
     "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required",
+    "promotion_contract_product_runtime_drift_evidence_alignment_evidence_required",
     "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_required",
     "promotion_contract_product_runtime_drift_frontier_release_evidence_required",
     "promotion_contract_product_runtime_drift_compared_metric_count",
@@ -284,6 +295,8 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count",
     "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_evidence_alignment_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_evidence_alignment_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_metric_count",
     "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_frontier_release_evidence_metric_count",
@@ -1688,6 +1701,70 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "context_sensitivity_counts_by_status": dict(
             _mapping(metrics.get("context_sensitivity_counts_by_status"))
         ),
+        "evidence_alignment_summary": dict(_mapping(metrics.get("evidence_alignment_summary"))),
+        "evidence_alignment_source": metrics.get("evidence_alignment_source"),
+        "evidence_alignment_available": metrics.get("evidence_alignment_available"),
+        "evidence_alignment_total": metrics.get("evidence_alignment_total"),
+        "evidence_alignment_coverage_rate": metrics.get("evidence_alignment_coverage_rate"),
+        "evidence_alignment_record_count": metrics.get("evidence_alignment_record_count"),
+        "evidence_alignment_aligned_count": metrics.get("evidence_alignment_aligned_count"),
+        "evidence_alignment_misaligned_count": metrics.get(
+            "evidence_alignment_misaligned_count"
+        ),
+        "evidence_alignment_insufficient_evidence_count": metrics.get(
+            "evidence_alignment_insufficient_evidence_count"
+        ),
+        "evidence_alignment_alignment_rate": metrics.get(
+            "evidence_alignment_alignment_rate"
+        ),
+        "evidence_alignment_misalignment_rate": metrics.get(
+            "evidence_alignment_misalignment_rate"
+        ),
+        "evidence_alignment_insufficient_evidence_rate": metrics.get(
+            "evidence_alignment_insufficient_evidence_rate"
+        ),
+        "evidence_alignment_keyword_overlap_mean": metrics.get(
+            "evidence_alignment_keyword_overlap_mean"
+        ),
+        "evidence_alignment_number_recall_mean": metrics.get(
+            "evidence_alignment_number_recall_mean"
+        ),
+        "evidence_alignment_entity_recall_mean": metrics.get(
+            "evidence_alignment_entity_recall_mean"
+        ),
+        "evidence_alignment_citation_reference_count": metrics.get(
+            "evidence_alignment_citation_reference_count"
+        ),
+        "evidence_alignment_matched_citation_reference_count": metrics.get(
+            "evidence_alignment_matched_citation_reference_count"
+        ),
+        "evidence_alignment_citation_reference_coverage_rate": metrics.get(
+            "evidence_alignment_citation_reference_coverage_rate"
+        ),
+        "evidence_alignment_cited_evidence_count": metrics.get(
+            "evidence_alignment_cited_evidence_count"
+        ),
+        "evidence_alignment_issue_count": metrics.get("evidence_alignment_issue_count"),
+        "evidence_alignment_issue_rate": metrics.get("evidence_alignment_issue_rate"),
+        "evidence_alignment_trace_gap_count": metrics.get(
+            "evidence_alignment_trace_gap_count"
+        ),
+        "evidence_alignment_trace_gap_rate": metrics.get(
+            "evidence_alignment_trace_gap_rate"
+        ),
+        "evidence_alignment_traceable": metrics.get("evidence_alignment_traceable"),
+        "evidence_alignment_counts_by_source": dict(
+            _mapping(metrics.get("evidence_alignment_counts_by_source"))
+        ),
+        "evidence_alignment_counts_by_status": dict(
+            _mapping(metrics.get("evidence_alignment_counts_by_status"))
+        ),
+        "evidence_alignment_counts_by_alignment_status": dict(
+            _mapping(metrics.get("evidence_alignment_counts_by_alignment_status"))
+        ),
+        "evidence_alignment_counts_by_code": dict(
+            _mapping(metrics.get("evidence_alignment_counts_by_code"))
+        ),
         "counterfactual_robustness_summary": dict(
             _mapping(metrics.get("counterfactual_robustness_summary"))
         ),
@@ -2047,6 +2124,10 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             compact[field_name] = metrics.get(field_name)
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            compact[field_name] = metrics.get(field_name)
     for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             field_name = f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
@@ -2118,6 +2199,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "world_model": _aggregate_world_model(metrics),
         "context_sensitivity": _aggregate_context_sensitivity(metrics),
+        "evidence_alignment": _aggregate_evidence_alignment(metrics),
         "counterfactual_robustness": _aggregate_counterfactual_robustness(metrics),
         "citation_integrity": _aggregate_citation_integrity(metrics),
         "final_answer": _aggregate_final_answer(metrics),
@@ -4132,6 +4214,113 @@ def _aggregate_context_sensitivity(metrics: Sequence[Mapping[str, Any]]) -> dict
     }
 
 
+def _aggregate_evidence_alignment(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("evidence_alignment_summary")) for item in metrics]
+    evidence_alignment_total = _sum_float(summaries, "evidence_alignment_total")
+    record_count = _sum_float(summaries, "record_count")
+    aligned_count = _sum_float(summaries, "aligned_count")
+    misaligned_count = _sum_float(summaries, "misaligned_count")
+    insufficient_count = _sum_float(summaries, "insufficient_evidence_count")
+    reference_count = _sum_float(summaries, "citation_reference_count")
+    matched_reference_count = _sum_float(summaries, "matched_citation_reference_count")
+    cited_evidence_count = _sum_float(summaries, "cited_evidence_count")
+    issue_count = _sum_float(summaries, "issue_count")
+    trace_gap_count = _sum_float(summaries, "trace_gap_count")
+    counts_by_status: dict[str, int] = {}
+    counts_by_alignment_status: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(counts_by_status, _mapping(item.get("evidence_alignment_counts_by_status")))
+        _merge_counts(
+            counts_by_alignment_status,
+            _mapping(item.get("evidence_alignment_counts_by_alignment_status")),
+        )
+        _merge_counts(counts_by_code, _mapping(item.get("evidence_alignment_counts_by_code")))
+        _merge_counts(counts_by_source, _mapping(item.get("evidence_alignment_counts_by_source")))
+    participating_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("evidence_alignment_total")) or 0.0) > 0.0
+    )
+    traceable_trace_count = sum(
+        1 for item in metrics if item.get("evidence_alignment_traceable") is True
+    )
+    untraceable_trace_count = sum(
+        1
+        for item in metrics
+        if (_finite_float(item.get("evidence_alignment_total")) or 0.0) > 0.0
+        and item.get("evidence_alignment_traceable") is False
+    )
+    return {
+        "source_trace_count": len(metrics),
+        "summary_observations": sum(1 for summary in summaries if summary),
+        "source_counts": _counts(item.get("evidence_alignment_source") for item in metrics),
+        "participating_trace_count": participating_trace_count,
+        "participating_trace_rate": _safe_div(participating_trace_count, len(metrics)),
+        "evidence_alignment_total": evidence_alignment_total,
+        "coverage_rate": _safe_div(evidence_alignment_total, _sum_float(summaries, "total")),
+        "record_count": record_count,
+        "aligned_count": aligned_count,
+        "misaligned_count": misaligned_count,
+        "insufficient_evidence_count": insufficient_count,
+        "alignment_rate": _safe_div(aligned_count, record_count),
+        "misalignment_rate": _safe_div(misaligned_count, record_count),
+        "insufficient_evidence_rate": _safe_div(insufficient_count, record_count),
+        "keyword_overlap_mean": _numeric_summary(
+            item.get("evidence_alignment_keyword_overlap_mean") for item in metrics
+        ),
+        "number_recall_mean": _numeric_summary(
+            item.get("evidence_alignment_number_recall_mean") for item in metrics
+        ),
+        "entity_recall_mean": _numeric_summary(
+            item.get("evidence_alignment_entity_recall_mean") for item in metrics
+        ),
+        "citation_reference_count": reference_count,
+        "matched_citation_reference_count": matched_reference_count,
+        "cited_evidence_count": cited_evidence_count,
+        "citation_reference_coverage_rate": _safe_div(
+            matched_reference_count,
+            reference_count,
+        ),
+        "issue_count": issue_count,
+        "issue_rate": _safe_div(issue_count, record_count),
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, evidence_alignment_total),
+        "traceable_trace_count": traceable_trace_count,
+        "untraceable_trace_count": untraceable_trace_count,
+        "counts_by_status": counts_by_status,
+        "counts_by_alignment_status": counts_by_alignment_status,
+        "counts_by_code": counts_by_code,
+        "counts_by_source": counts_by_source,
+        "per_trace_result_count": _numeric_summary(
+            item.get("evidence_alignment_total") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("evidence_alignment_coverage_rate") for item in metrics
+        ),
+        "per_trace_alignment_rate": _numeric_summary(
+            item.get("evidence_alignment_alignment_rate") for item in metrics
+        ),
+        "per_trace_misalignment_rate": _numeric_summary(
+            item.get("evidence_alignment_misalignment_rate") for item in metrics
+        ),
+        "per_trace_insufficient_evidence_rate": _numeric_summary(
+            item.get("evidence_alignment_insufficient_evidence_rate") for item in metrics
+        ),
+        "per_trace_citation_reference_coverage_rate": _numeric_summary(
+            item.get("evidence_alignment_citation_reference_coverage_rate")
+            for item in metrics
+        ),
+        "per_trace_issue_rate": _numeric_summary(
+            item.get("evidence_alignment_issue_rate") for item in metrics
+        ),
+        "per_trace_trace_gap_rate": _numeric_summary(
+            item.get("evidence_alignment_trace_gap_rate") for item in metrics
+        ),
+    }
+
+
 def _aggregate_counterfactual_robustness(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     summaries = [_mapping(item.get("counterfactual_robustness_summary")) for item in metrics]
     counterfactual_result_total = _sum_float(summaries, "counterfactual_result_total")
@@ -5895,6 +6084,10 @@ def _aggregate_promotion_contract_product_runtime_drift(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
         ),
+        "evidence_alignment_evidence": _aggregate_product_runtime_drift_evidence(
+            metrics,
+            prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_PREFIXES,
+        ),
         "counterfactual_robustness_evidence": _aggregate_product_runtime_drift_evidence(
             metrics,
             prefixes=_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES,
@@ -6180,6 +6373,7 @@ def _write_artifact_manifest(
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     provenance_metadata = _provenance_flat_metadata(report)
     citation_integrity_metadata = _citation_integrity_flat_metadata(report)
+    evidence_alignment_metadata = _evidence_alignment_flat_metadata(report)
     evidence_quality_metadata = _evidence_quality_flat_metadata(report)
     metacognition_metadata = _metacognition_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
@@ -6244,6 +6438,7 @@ def _write_artifact_manifest(
             **trajectory_audit_metadata,
             **provenance_metadata,
             **citation_integrity_metadata,
+            **evidence_alignment_metadata,
             **evidence_quality_metadata,
             **metacognition_metadata,
             **promotion_contract_drift_metadata,
@@ -6283,6 +6478,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
     trajectory_audit_metadata = _trajectory_audit_flat_metadata(report)
     provenance_metadata = _provenance_flat_metadata(report)
     citation_integrity_metadata = _citation_integrity_flat_metadata(report)
+    evidence_alignment_metadata = _evidence_alignment_flat_metadata(report)
     evidence_quality_metadata = _evidence_quality_flat_metadata(report)
     metacognition_metadata = _metacognition_flat_metadata(report)
     promotion_contract_drift_metadata = _promotion_contract_runtime_drift_flat_metadata(report)
@@ -6350,9 +6546,10 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
             "compact_json": config.compact_json,
             **trajectory_audit_metadata,
-            **provenance_metadata,
-            **citation_integrity_metadata,
-            **evidence_quality_metadata,
+                **provenance_metadata,
+                **citation_integrity_metadata,
+                **evidence_alignment_metadata,
+                **evidence_quality_metadata,
             **metacognition_metadata,
             **promotion_contract_drift_metadata,
             **promotion_contract_trace_replay_metadata,
@@ -6544,6 +6741,63 @@ def _citation_integrity_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
     }
 
 
+def _evidence_alignment_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    alignment = _mapping(_nested(report, "summary", "evidence_alignment"))
+    if not alignment:
+        return {}
+    return {
+        "evidence_alignment_source_trace_count": alignment.get("source_trace_count"),
+        "evidence_alignment_summary_observations": alignment.get("summary_observations"),
+        "evidence_alignment_participating_trace_count": alignment.get(
+            "participating_trace_count"
+        ),
+        "evidence_alignment_participating_trace_rate": alignment.get(
+            "participating_trace_rate"
+        ),
+        "evidence_alignment_total": alignment.get("evidence_alignment_total"),
+        "evidence_alignment_coverage_rate": alignment.get("coverage_rate"),
+        "evidence_alignment_record_count": alignment.get("record_count"),
+        "evidence_alignment_aligned_count": alignment.get("aligned_count"),
+        "evidence_alignment_misaligned_count": alignment.get("misaligned_count"),
+        "evidence_alignment_insufficient_evidence_count": alignment.get(
+            "insufficient_evidence_count"
+        ),
+        "evidence_alignment_alignment_rate": alignment.get("alignment_rate"),
+        "evidence_alignment_misalignment_rate": alignment.get("misalignment_rate"),
+        "evidence_alignment_insufficient_evidence_rate": alignment.get(
+            "insufficient_evidence_rate"
+        ),
+        "evidence_alignment_citation_reference_count": alignment.get(
+            "citation_reference_count"
+        ),
+        "evidence_alignment_matched_citation_reference_count": alignment.get(
+            "matched_citation_reference_count"
+        ),
+        "evidence_alignment_citation_reference_coverage_rate": alignment.get(
+            "citation_reference_coverage_rate"
+        ),
+        "evidence_alignment_cited_evidence_count": alignment.get("cited_evidence_count"),
+        "evidence_alignment_issue_count": alignment.get("issue_count"),
+        "evidence_alignment_issue_rate": alignment.get("issue_rate"),
+        "evidence_alignment_trace_gap_count": alignment.get("trace_gap_count"),
+        "evidence_alignment_trace_gap_rate": alignment.get("trace_gap_rate"),
+        "evidence_alignment_traceable_trace_count": alignment.get(
+            "traceable_trace_count"
+        ),
+        "evidence_alignment_untraceable_trace_count": alignment.get(
+            "untraceable_trace_count"
+        ),
+        "evidence_alignment_source_counts": dict(_mapping(alignment.get("source_counts"))),
+        "evidence_alignment_counts_by_status": dict(
+            _mapping(alignment.get("counts_by_status"))
+        ),
+        "evidence_alignment_counts_by_alignment_status": dict(
+            _mapping(alignment.get("counts_by_alignment_status"))
+        ),
+        "evidence_alignment_counts_by_code": dict(_mapping(alignment.get("counts_by_code"))),
+    }
+
+
 def _evidence_quality_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
     evidence = _mapping(_nested(report, "summary", "evidence_quality"))
     if not evidence:
@@ -6693,6 +6947,9 @@ def _promotion_contract_runtime_drift_flat_metadata(
         ),
         "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required_counts": dict(
             _mapping(drift.get("context_sensitivity_evidence_required_counts"))
+        ),
+        "promotion_contract_product_runtime_drift_evidence_alignment_evidence_required_counts": dict(
+            _mapping(drift.get("evidence_alignment_evidence_required_counts"))
         ),
         "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_required_counts": dict(
             _mapping(drift.get("counterfactual_robustness_evidence_required_counts"))
@@ -6853,6 +7110,16 @@ def _promotion_contract_runtime_drift_flat_metadata(
             "context_sensitivity_evidence_blocked_metric_count",
             "mean",
         ),
+        "promotion_contract_product_runtime_drift_evidence_alignment_evidence_metric_count_mean": _nested(
+            drift,
+            "evidence_alignment_evidence_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_evidence_alignment_evidence_blocked_metric_count_mean": _nested(
+            drift,
+            "evidence_alignment_evidence_blocked_metric_count",
+            "mean",
+        ),
         "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_metric_count_mean": _nested(
             drift,
             "counterfactual_robustness_evidence_metric_count",
@@ -6965,6 +7232,12 @@ def _promotion_contract_runtime_drift_flat_metadata(
         _product_runtime_drift_evidence_flat_metadata(
             _mapping(drift.get("context_sensitivity_evidence")),
             prefixes=_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
+        )
+    )
+    metadata.update(
+        _product_runtime_drift_evidence_flat_metadata(
+            _mapping(drift.get("evidence_alignment_evidence")),
+            prefixes=_PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_PREFIXES,
         )
     )
     metadata.update(

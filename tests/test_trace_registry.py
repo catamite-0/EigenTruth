@@ -2593,6 +2593,91 @@ def test_product_trace_context_sensitivity_summary_feeds_runtime_metrics():
     json.dumps(bounded)
 
 
+def test_product_trace_evidence_alignment_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.85,
+                metadata={
+                    "verifier": "evidence_alignment",
+                    "evidence_alignment": {
+                        "metadata": {"adapter": "local-search"},
+                        "summary": {
+                            "record_count": 2,
+                            "aligned_count": 1,
+                            "misaligned_count": 1,
+                            "insufficient_evidence_count": 0,
+                            "keyword_overlap_mean": 0.8,
+                            "number_recall_mean": 0.5,
+                            "entity_recall_mean": 1.0,
+                            "citation_reference_count": 1,
+                            "matched_citation_reference_count": 0,
+                            "cited_evidence_count": 0,
+                            "issue_count": 1,
+                            "counts_by_status": {"aligned": 1, "misaligned": 1},
+                            "counts_by_code": {"missing_claim_number": 1},
+                        },
+                    },
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.35,
+                metadata={
+                    "selected_verifier": "citation-search",
+                    "evidence_alignment_summary": {
+                        "record_count": 1,
+                        "aligned_count": 0,
+                        "misaligned_count": 0,
+                        "insufficient_evidence_count": 1,
+                        "issue_count": 1,
+                        "counts_by_status": {"insufficient_evidence": 1},
+                        "counts_by_code": {"low_keyword_overlap": 1},
+                    },
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.9),
+        )
+    )
+
+    summary = trace.evidence_alignment_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 3
+    assert summary["available"] is True
+    assert summary["evidence_alignment_total"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["record_count"] == pytest.approx(3.0)
+    assert summary["alignment_rate"] == pytest.approx(1 / 3)
+    assert summary["misalignment_rate"] == pytest.approx(1 / 3)
+    assert summary["insufficient_evidence_rate"] == pytest.approx(1 / 3)
+    assert summary["citation_reference_coverage_rate"] == pytest.approx(0.0)
+    assert summary["issue_rate"] == pytest.approx(2 / 3)
+    assert summary["counts_by_source"] == {
+        "local-search": 1,
+        "citation-search": 1,
+    }
+    assert summary["counts_by_alignment_status"] == {
+        "aligned": 1,
+        "misaligned": 1,
+        "insufficient_evidence": 1,
+    }
+    assert bounded["summaries"]["evidence_alignment"]["evidence_alignment_total"] == 2
+    assert metrics["evidence_alignment_source"] == "full_trace"
+    assert metrics["evidence_alignment_misalignment_rate"] == pytest.approx(1 / 3)
+    assert metrics["evidence_alignment_counts_by_code"] == {
+        "missing_claim_number": 1,
+        "low_keyword_overlap": 1,
+    }
+    assert bounded_metrics["evidence_alignment_source"] == "bounded_summary"
+    assert bounded_metrics["evidence_alignment_issue_rate"] == pytest.approx(2 / 3)
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
 def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics():
     trace = ProductTrace(
         verification_results=(

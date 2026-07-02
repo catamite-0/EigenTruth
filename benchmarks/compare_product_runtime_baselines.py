@@ -389,6 +389,25 @@ _CONTEXT_SENSITIVITY_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "context_sensitivity_max_context_sensitivity_ratio",
     ),
 )
+_EVIDENCE_ALIGNMENT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "evidence_alignment.participating_trace_rate",
+        "evidence_alignment_participating_trace_rate",
+    ),
+    ("evidence_alignment.coverage_rate", "evidence_alignment_coverage_rate"),
+    ("evidence_alignment.alignment_rate", "evidence_alignment_alignment_rate"),
+    ("evidence_alignment.misalignment_rate", "evidence_alignment_misalignment_rate"),
+    (
+        "evidence_alignment.insufficient_evidence_rate",
+        "evidence_alignment_insufficient_evidence_rate",
+    ),
+    (
+        "evidence_alignment.citation_reference_coverage_rate",
+        "evidence_alignment_citation_reference_coverage_rate",
+    ),
+    ("evidence_alignment.issue_rate", "evidence_alignment_issue_rate"),
+    ("evidence_alignment.trace_gap_rate", "evidence_alignment_trace_gap_rate"),
+)
 _COUNTERFACTUAL_ROBUSTNESS_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     (
         "counterfactual_robustness.participating_trace_rate",
@@ -1217,6 +1236,56 @@ _CONTEXT_SENSITIVITY_INCREASE_METRIC_SPECS: tuple[
         "max_context_sensitivity_max_ratio_increase",
     ),
 )
+_EVIDENCE_ALIGNMENT_MIN_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "evidence_alignment.participating_trace_rate",
+        ("evidence_alignment", "participating_trace_rate"),
+        "min_evidence_alignment_participating_trace_rate",
+    ),
+    (
+        "evidence_alignment.coverage_rate",
+        ("evidence_alignment", "coverage_rate"),
+        "min_evidence_alignment_coverage_rate",
+    ),
+    (
+        "evidence_alignment.alignment_rate",
+        ("evidence_alignment", "alignment_rate"),
+        "min_evidence_alignment_alignment_rate",
+    ),
+    (
+        "evidence_alignment.citation_reference_coverage_rate",
+        ("evidence_alignment", "citation_reference_coverage_rate"),
+        "min_evidence_alignment_citation_reference_coverage_rate",
+    ),
+)
+_EVIDENCE_ALIGNMENT_INCREASE_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "evidence_alignment.misalignment_rate",
+        ("evidence_alignment", "misalignment_rate"),
+        "max_evidence_alignment_misalignment_rate_increase",
+    ),
+    (
+        "evidence_alignment.insufficient_evidence_rate",
+        ("evidence_alignment", "insufficient_evidence_rate"),
+        "max_evidence_alignment_insufficient_evidence_rate_increase",
+    ),
+    (
+        "evidence_alignment.issue_rate",
+        ("evidence_alignment", "issue_rate"),
+        "max_evidence_alignment_issue_rate_increase",
+    ),
+    (
+        "evidence_alignment.trace_gap_rate",
+        ("evidence_alignment", "trace_gap_rate"),
+        "max_evidence_alignment_trace_gap_rate_increase",
+    ),
+)
 _COUNTERFACTUAL_ROBUSTNESS_MIN_METRIC_SPECS: tuple[
     tuple[str, tuple[str, ...], str],
     ...
@@ -1440,6 +1509,14 @@ def compare_product_runtime_baselines(
     max_context_sensitivity_trace_gap_rate_increase: float | None = None,
     max_context_sensitivity_max_flagged_rate_increase: float | None = None,
     max_context_sensitivity_max_ratio_increase: float | None = None,
+    min_evidence_alignment_participating_trace_rate: float | None = None,
+    min_evidence_alignment_coverage_rate: float | None = None,
+    min_evidence_alignment_alignment_rate: float | None = None,
+    min_evidence_alignment_citation_reference_coverage_rate: float | None = None,
+    max_evidence_alignment_misalignment_rate_increase: float | None = None,
+    max_evidence_alignment_insufficient_evidence_rate_increase: float | None = None,
+    max_evidence_alignment_issue_rate_increase: float | None = None,
+    max_evidence_alignment_trace_gap_rate_increase: float | None = None,
     min_counterfactual_robustness_participating_trace_rate: float | None = None,
     min_counterfactual_robustness_coverage_rate: float | None = None,
     min_counterfactual_robustness_pass_rate: float | None = None,
@@ -1883,6 +1960,30 @@ def compare_product_runtime_baselines(
         ),
         "max_context_sensitivity_max_ratio_increase": _optional_non_negative_float(
             max_context_sensitivity_max_ratio_increase
+        ),
+        "min_evidence_alignment_participating_trace_rate": _optional_rate_float(
+            min_evidence_alignment_participating_trace_rate
+        ),
+        "min_evidence_alignment_coverage_rate": _optional_rate_float(
+            min_evidence_alignment_coverage_rate
+        ),
+        "min_evidence_alignment_alignment_rate": _optional_rate_float(
+            min_evidence_alignment_alignment_rate
+        ),
+        "min_evidence_alignment_citation_reference_coverage_rate": (
+            _optional_rate_float(min_evidence_alignment_citation_reference_coverage_rate)
+        ),
+        "max_evidence_alignment_misalignment_rate_increase": _optional_rate_float(
+            max_evidence_alignment_misalignment_rate_increase
+        ),
+        "max_evidence_alignment_insufficient_evidence_rate_increase": (
+            _optional_rate_float(max_evidence_alignment_insufficient_evidence_rate_increase)
+        ),
+        "max_evidence_alignment_issue_rate_increase": _optional_rate_float(
+            max_evidence_alignment_issue_rate_increase
+        ),
+        "max_evidence_alignment_trace_gap_rate_increase": _optional_rate_float(
+            max_evidence_alignment_trace_gap_rate_increase
         ),
         "min_counterfactual_robustness_participating_trace_rate": _optional_rate_float(
             min_counterfactual_robustness_participating_trace_rate
@@ -2525,6 +2626,7 @@ def _comparison_metrics(
     metrics.extend(_product_trace_metacognition_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_world_model_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_context_sensitivity_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_evidence_alignment_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_counterfactual_robustness_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_claim_risk_localization_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_pre_generation_risk_metrics(baseline_summary, current_summary, gates=gates))
@@ -3858,6 +3960,45 @@ def _context_sensitivity_gate_enabled(gates: Mapping[str, Any]) -> bool:
     )
 
 
+def _evidence_alignment_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _evidence_alignment_gate_enabled(gates):
+        return []
+    rows = [
+        _min_current_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _EVIDENCE_ALIGNMENT_MIN_METRIC_SPECS
+    ]
+    rows.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _EVIDENCE_ALIGNMENT_INCREASE_METRIC_SPECS
+    )
+    return rows
+
+
+def _evidence_alignment_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in (
+            *_EVIDENCE_ALIGNMENT_MIN_METRIC_SPECS,
+            *_EVIDENCE_ALIGNMENT_INCREASE_METRIC_SPECS,
+        )
+    )
+
+
 def _counterfactual_robustness_metrics(
     baseline_summary: Mapping[str, Any],
     current_summary: Mapping[str, Any],
@@ -4579,6 +4720,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_triple_coverage_metadata(report),
         **_world_model_metadata(report),
         **_context_sensitivity_metadata(report),
+        **_evidence_alignment_metadata(report),
         **_counterfactual_robustness_metadata(report),
         **_claim_risk_localization_metadata(report),
         **_product_trace_action_gate_metadata(report),
@@ -4786,6 +4928,25 @@ def _context_sensitivity_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["context_sensitivity_blocked_metric_count"] += 1
+    return metadata
+
+
+def _evidence_alignment_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "evidence_alignment_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _EVIDENCE_ALIGNMENT_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["evidence_alignment_blocked_metric_count"] += 1
     return metadata
 
 
@@ -5397,6 +5558,26 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_context_sensitivity_max_ratio_increase=(
             args.max_context_sensitivity_max_ratio_increase
         ),
+        min_evidence_alignment_participating_trace_rate=(
+            args.min_evidence_alignment_participating_trace_rate
+        ),
+        min_evidence_alignment_coverage_rate=args.min_evidence_alignment_coverage_rate,
+        min_evidence_alignment_alignment_rate=args.min_evidence_alignment_alignment_rate,
+        min_evidence_alignment_citation_reference_coverage_rate=(
+            args.min_evidence_alignment_citation_reference_coverage_rate
+        ),
+        max_evidence_alignment_misalignment_rate_increase=(
+            args.max_evidence_alignment_misalignment_rate_increase
+        ),
+        max_evidence_alignment_insufficient_evidence_rate_increase=(
+            args.max_evidence_alignment_insufficient_evidence_rate_increase
+        ),
+        max_evidence_alignment_issue_rate_increase=(
+            args.max_evidence_alignment_issue_rate_increase
+        ),
+        max_evidence_alignment_trace_gap_rate_increase=(
+            args.max_evidence_alignment_trace_gap_rate_increase
+        ),
         min_counterfactual_robustness_participating_trace_rate=(
             args.min_counterfactual_robustness_participating_trace_rate
         ),
@@ -5953,6 +6134,38 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-context-sensitivity-max-ratio-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-evidence-alignment-participating-trace-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-evidence-alignment-coverage-rate", type=float, default=None)
+    parser.add_argument("--min-evidence-alignment-alignment-rate", type=float, default=None)
+    parser.add_argument(
+        "--min-evidence-alignment-citation-reference-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-evidence-alignment-misalignment-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-evidence-alignment-insufficient-evidence-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-evidence-alignment-issue-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-evidence-alignment-trace-gap-rate-increase",
         type=float,
         default=None,
     )

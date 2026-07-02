@@ -173,6 +173,16 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_context_sensitivity_trace_gap_rate_increase: float | None = None
     max_runtime_drift_context_sensitivity_max_flagged_rate_increase: float | None = None
     max_runtime_drift_context_sensitivity_max_ratio_increase: float | None = None
+    min_runtime_drift_evidence_alignment_participating_trace_rate: float | None = None
+    min_runtime_drift_evidence_alignment_coverage_rate: float | None = None
+    min_runtime_drift_evidence_alignment_alignment_rate: float | None = None
+    min_runtime_drift_evidence_alignment_citation_reference_coverage_rate: float | None = None
+    max_runtime_drift_evidence_alignment_misalignment_rate_increase: float | None = None
+    max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase: (
+        float | None
+    ) = None
+    max_runtime_drift_evidence_alignment_issue_rate_increase: float | None = None
+    max_runtime_drift_evidence_alignment_trace_gap_rate_increase: float | None = None
     min_runtime_drift_counterfactual_robustness_participating_trace_rate: float | None = None
     min_runtime_drift_counterfactual_robustness_coverage_rate: float | None = None
     min_runtime_drift_counterfactual_robustness_pass_rate: float | None = None
@@ -467,6 +477,14 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_context_sensitivity_trace_gap_rate_increase,
                 self.max_runtime_drift_context_sensitivity_max_flagged_rate_increase,
                 self.max_runtime_drift_context_sensitivity_max_ratio_increase,
+                self.min_runtime_drift_evidence_alignment_participating_trace_rate,
+                self.min_runtime_drift_evidence_alignment_coverage_rate,
+                self.min_runtime_drift_evidence_alignment_alignment_rate,
+                self.min_runtime_drift_evidence_alignment_citation_reference_coverage_rate,
+                self.max_runtime_drift_evidence_alignment_misalignment_rate_increase,
+                self.max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase,
+                self.max_runtime_drift_evidence_alignment_issue_rate_increase,
+                self.max_runtime_drift_evidence_alignment_trace_gap_rate_increase,
                 self.min_runtime_drift_counterfactual_robustness_participating_trace_rate,
                 self.min_runtime_drift_counterfactual_robustness_coverage_rate,
                 self.min_runtime_drift_counterfactual_robustness_pass_rate,
@@ -1717,6 +1735,14 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_context_sensitivity_trace_gap_rate_increase,
             config.max_runtime_drift_context_sensitivity_max_flagged_rate_increase,
             config.max_runtime_drift_context_sensitivity_max_ratio_increase,
+            config.min_runtime_drift_evidence_alignment_participating_trace_rate,
+            config.min_runtime_drift_evidence_alignment_coverage_rate,
+            config.min_runtime_drift_evidence_alignment_alignment_rate,
+            config.min_runtime_drift_evidence_alignment_citation_reference_coverage_rate,
+            config.max_runtime_drift_evidence_alignment_misalignment_rate_increase,
+            config.max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase,
+            config.max_runtime_drift_evidence_alignment_issue_rate_increase,
+            config.max_runtime_drift_evidence_alignment_trace_gap_rate_increase,
             config.min_runtime_drift_counterfactual_robustness_participating_trace_rate,
             config.min_runtime_drift_counterfactual_robustness_coverage_rate,
             config.min_runtime_drift_counterfactual_robustness_pass_rate,
@@ -2021,6 +2047,30 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_context_sensitivity_max_ratio_increase": (
             config.max_runtime_drift_context_sensitivity_max_ratio_increase
+        ),
+        "min_evidence_alignment_participating_trace_rate": (
+            config.min_runtime_drift_evidence_alignment_participating_trace_rate
+        ),
+        "min_evidence_alignment_coverage_rate": (
+            config.min_runtime_drift_evidence_alignment_coverage_rate
+        ),
+        "min_evidence_alignment_alignment_rate": (
+            config.min_runtime_drift_evidence_alignment_alignment_rate
+        ),
+        "min_evidence_alignment_citation_reference_coverage_rate": (
+            config.min_runtime_drift_evidence_alignment_citation_reference_coverage_rate
+        ),
+        "max_evidence_alignment_misalignment_rate_increase": (
+            config.max_runtime_drift_evidence_alignment_misalignment_rate_increase
+        ),
+        "max_evidence_alignment_insufficient_evidence_rate_increase": (
+            config.max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase
+        ),
+        "max_evidence_alignment_issue_rate_increase": (
+            config.max_runtime_drift_evidence_alignment_issue_rate_increase
+        ),
+        "max_evidence_alignment_trace_gap_rate_increase": (
+            config.max_runtime_drift_evidence_alignment_trace_gap_rate_increase
         ),
         "min_counterfactual_robustness_participating_trace_rate": (
             config.min_runtime_drift_counterfactual_robustness_participating_trace_rate
@@ -4523,6 +4573,30 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_context_sensitivity_max_ratio_increase=(
             args.max_runtime_drift_context_sensitivity_max_ratio_increase
         ),
+        min_runtime_drift_evidence_alignment_participating_trace_rate=(
+            args.min_runtime_drift_evidence_alignment_participating_trace_rate
+        ),
+        min_runtime_drift_evidence_alignment_coverage_rate=(
+            args.min_runtime_drift_evidence_alignment_coverage_rate
+        ),
+        min_runtime_drift_evidence_alignment_alignment_rate=(
+            args.min_runtime_drift_evidence_alignment_alignment_rate
+        ),
+        min_runtime_drift_evidence_alignment_citation_reference_coverage_rate=(
+            args.min_runtime_drift_evidence_alignment_citation_reference_coverage_rate
+        ),
+        max_runtime_drift_evidence_alignment_misalignment_rate_increase=(
+            args.max_runtime_drift_evidence_alignment_misalignment_rate_increase
+        ),
+        max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase=(
+            args.max_runtime_drift_evidence_alignment_insufficient_evidence_rate_increase
+        ),
+        max_runtime_drift_evidence_alignment_issue_rate_increase=(
+            args.max_runtime_drift_evidence_alignment_issue_rate_increase
+        ),
+        max_runtime_drift_evidence_alignment_trace_gap_rate_increase=(
+            args.max_runtime_drift_evidence_alignment_trace_gap_rate_increase
+        ),
         min_runtime_drift_counterfactual_robustness_participating_trace_rate=(
             args.min_runtime_drift_counterfactual_robustness_participating_trace_rate
         ),
@@ -5081,6 +5155,46 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-context-sensitivity-max-ratio-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-evidence-alignment-participating-trace-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-evidence-alignment-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-evidence-alignment-alignment-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-evidence-alignment-citation-reference-coverage-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-evidence-alignment-misalignment-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-evidence-alignment-insufficient-evidence-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-evidence-alignment-issue-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-evidence-alignment-trace-gap-rate-increase",
         type=float,
         default=None,
     )
