@@ -55327,6 +55327,39 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "status_counts": {"supported": 2},
         },
     }
+    rule_audit = {
+        "workflow": "world_model_rule_input_plan_audit",
+        "status": "needs_requeue",
+        "summary": {
+            "task_count": 5,
+            "finding_count": 2,
+            "requeue_suggestion_count": 1,
+            "finding_counts": {
+                "numeric_rule_missing_candidate_claim_binding": 1,
+                "quantity_rule_for_entity_or_role_question": 1,
+            },
+            "recommended_rule_family_counts": {"entity_disambiguation": 1},
+            "recommended_action_counts": {
+                "collect_missing_inputs": 4,
+                "requeue_rule_input_task": 1,
+            },
+        },
+        "requeue_suggestions": [
+            {
+                "source_request_id": "rule:record-199:1",
+                "target_id": "record-199",
+                "task_id": "rule-input-task-0004",
+                "current_rule_family": "quantity_or_arithmetic",
+                "recommended_rule_family": "entity_disambiguation",
+                "recommended_collection_family": "entity_role_rule_input_collection",
+                "reason_codes": [
+                    "quantity_rule_for_entity_or_role_question",
+                    "numeric_rule_missing_candidate_claim_binding",
+                ],
+                "not_verifier_evidence": True,
+            }
+        ],
+    }
     bundle = {
         "workflow": "mechanism_handoff_evidence_bundle",
         "status": "promote",
@@ -55338,6 +55371,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         citation_workflows=(citation, citation_rollup),
         source_family_coverage_audits=(missing_coverage, covered_coverage),
         rule_input_plan=rule_plan,
+        rule_input_audit_report=rule_audit,
         rule_promotion_reports=(promotion,),
         mechanism_handoff_bundle=bundle,
         metadata={"suite": "unit"},
@@ -55364,14 +55398,36 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     }
     assert payload["lanes"]["citation_evidence"]["query_sweep_no_passing_strategy_count"] == 2
     assert payload["lanes"]["citation_evidence"]["blocking_reason_counts"] == {"query_sweep": 2}
-    assert payload["lanes"]["world_model_rules"]["status"] == "partial"
+    assert payload["lanes"]["world_model_rules"]["status"] == "needs_requeue"
     assert payload["lanes"]["world_model_rules"]["task_count"] == 5
     assert payload["lanes"]["world_model_rules"]["remaining_task_count"] == 3
+    assert payload["summary"]["world_model_rule_audit_requeue_suggestion_count"] == 1
+    assert payload["lanes"]["world_model_rules"]["rule_input_audit_status"] == "needs_requeue"
+    assert payload["lanes"]["world_model_rules"]["rule_input_audit_requeue_suggestion_count"] == 1
+    assert payload["lanes"]["world_model_rules"]["rule_input_audit_recommended_rule_family_counts"] == {
+        "entity_disambiguation": 1
+    }
     assert payload["lanes"]["world_model_rules"]["closed_rule_family_counts"] == {
         "causal_or_procedural": 2
     }
     assert payload["lanes"]["world_model_rules"]["remaining_rule_family_counts"] == {
         "quantity_or_arithmetic": 3
+    }
+    assert payload["lanes"]["world_model_rules"]["audit_adjusted_remaining_rule_family_counts"] == {
+        "entity_disambiguation": 1,
+        "quantity_or_arithmetic": 2,
+    }
+    assert payload["lanes"]["world_model_rules"]["audit_adjusted_required_input_counts"] == {
+        "answer_entity": 1,
+        "calculation.expected": 2,
+        "calculation.expression": 2,
+        "expected_entity": 1,
+        "numeric_value": 2,
+        "reference_time": 2,
+        "requested_role": 1,
+        "source_citation": 3,
+        "subject_entity": 1,
+        "unit": 2,
     }
     assert payload["lanes"]["world_model_rules"]["remaining_missing_input_counts"] == {
         "numeric_value": 3,
@@ -55381,16 +55437,40 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert payload["lanes"]["world_model_rules"]["pending_count"] == 1
     action_ids = {action["action_id"] for action in payload["next_actions"]}
     assert "improve_unresolved_citation_alignment" in action_ids
+    assert "requeue_misaligned_world_model_rule_inputs" in action_ids
     assert "fill_and_promote_remaining_world_model_rules" in action_ids
+    requeue_action = next(
+        action
+        for action in payload["next_actions"]
+        if action["action_id"] == "requeue_misaligned_world_model_rule_inputs"
+    )
+    assert requeue_action["requeue_suggestion_count"] == 1
+    assert requeue_action["recommended_rule_family_counts"] == {"entity_disambiguation": 1}
     rule_action = next(
         action
         for action in payload["next_actions"]
         if action["action_id"] == "fill_and_promote_remaining_world_model_rules"
     )
-    assert rule_action["remaining_rule_family_counts"] == {"quantity_or_arithmetic": 3}
+    assert rule_action["remaining_rule_family_counts"] == {
+        "entity_disambiguation": 1,
+        "quantity_or_arithmetic": 2,
+    }
+    assert rule_action["raw_remaining_rule_family_counts"] == {"quantity_or_arithmetic": 3}
     assert rule_action["missing_input_counts"] == {
         "numeric_value": 3,
         "source_citation": 5,
+    }
+    assert rule_action["audit_adjusted_required_input_counts"] == {
+        "answer_entity": 1,
+        "calculation.expected": 2,
+        "calculation.expression": 2,
+        "expected_entity": 1,
+        "numeric_value": 2,
+        "reference_time": 2,
+        "requested_role": 1,
+        "source_citation": 3,
+        "subject_entity": 1,
+        "unit": 2,
     }
     assert payload["lanes"]["unresolved_queue"]["label_usage"] == {
         "requests_are_verifier_evidence": False
@@ -55402,6 +55482,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     missing_coverage_path = tmp_path / "coverage-missing.json"
     covered_coverage_path = tmp_path / "coverage-covered.json"
     rule_plan_path = tmp_path / "rule-plan.json"
+    rule_audit_path = tmp_path / "rule-audit.json"
     promotion_path = tmp_path / "promotion.json"
     bundle_path = tmp_path / "bundle.json"
     report_path = tmp_path / "summary.json"
@@ -55414,6 +55495,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         (missing_coverage_path, missing_coverage),
         (covered_coverage_path, covered_coverage),
         (rule_plan_path, rule_plan),
+        (rule_audit_path, rule_audit),
         (promotion_path, promotion),
         (bundle_path, bundle),
     ):
@@ -55424,6 +55506,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         citation_workflow_paths=(citation_path, citation_rollup_path),
         source_family_coverage_audit_paths=(missing_coverage_path, covered_coverage_path),
         rule_input_plan_path=rule_plan_path,
+        rule_input_audit_report_path=rule_audit_path,
         rule_promotion_report_paths=(promotion_path,),
         mechanism_handoff_bundle_path=bundle_path,
         json_path=report_path,
@@ -55445,15 +55528,17 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert manifest["metadata"]["citation_status"] == "blocked"
     assert manifest["metadata"]["source_family_acquisition_status"] == "covered"
-    assert manifest["metadata"]["world_model_rule_status"] == "partial"
+    assert manifest["metadata"]["world_model_rule_status"] == "needs_requeue"
     assert manifest["metadata"]["world_model_rule_remaining_task_count"] == 3
+    assert manifest["metadata"]["world_model_rule_audit_requeue_suggestion_count"] == 1
     assert record.metadata["workflow"] == "unresolved_frontier_evidence_summary"
     assert record.metadata["unresolved_target_count"] == 3
     assert record.metadata["citation_status"] == "blocked"
     assert record.metadata["source_family_acquisition_status"] == "covered"
-    assert record.metadata["world_model_rule_status"] == "partial"
+    assert record.metadata["world_model_rule_status"] == "needs_requeue"
     assert record.metadata["world_model_rule_remaining_task_count"] == 3
-    assert record.metadata["next_action_count"] == 2
+    assert record.metadata["world_model_rule_audit_requeue_suggestion_count"] == 1
+    assert record.metadata["next_action_count"] == 3
     assert record.metadata["suite"] == "unit"
 
     cli_report_path = tmp_path / "cli-summary.json"

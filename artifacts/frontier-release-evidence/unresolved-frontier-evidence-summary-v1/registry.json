@@ -5,20 +5,21 @@
       "metadata": {
         "citation_status": "blocked",
         "manifest_summary": {
-          "artifact_count": 9,
+          "artifact_count": 10,
           "directory_count": 0,
-          "file_count": 9,
+          "file_count": 10,
           "missing_count": 0
         },
         "model": "smollm2-l80",
-        "next_action_count": 2,
+        "next_action_count": 3,
         "source": "frontier-v4",
         "source_family_acquisition_status": "covered",
         "status": "needs_evidence",
         "unresolved_target_count": 88,
         "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_requeue_suggestion_count": 8,
         "world_model_rule_remaining_task_count": 17,
-        "world_model_rule_status": "partial"
+        "world_model_rule_status": "needs_requeue"
       },
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-frontier-evidence-summary",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
