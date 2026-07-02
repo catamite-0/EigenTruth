@@ -35607,6 +35607,171 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     assert missing_review["missing_required_flags"] == ("--approved-bindings",)
 
 
+def test_frontier_research_queue_command_plan_templates_queue_execution_actions(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    command_plan_path = tmp_path / "frontier-command-plan.json"
+    base_bindings_path = tmp_path / "frontier-command-bindings.json"
+    approved_bindings_path = tmp_path / "approved-frontier-command-bindings.json"
+    bound_plan_path = tmp_path / "frontier-bound-command-plan.json"
+    review_report_path = tmp_path / "frontier-command-binding-review.json"
+    blocked_run_path = tmp_path / "frontier-bound-command-run.json"
+    command_plan_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_command_plan",
+            "status": "needs_inputs",
+        }),
+        encoding="utf-8",
+    )
+    base_bindings_path.write_text(
+        json.dumps({"workflow": "frontier_research_queue_command_bindings"}),
+        encoding="utf-8",
+    )
+    approved_bindings_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_command_bindings",
+            "status": "approved",
+        }),
+        encoding="utf-8",
+    )
+    bound_plan_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_bound_command_plan",
+            "status": "ready",
+            "source": {"command_plan": str(command_plan_path)},
+        }),
+        encoding="utf-8",
+    )
+    review_report_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_command_binding_review",
+            "status": "ready_for_execution",
+            "source": {
+                "bound_command_plan": str(bound_plan_path),
+                "base_bindings": str(base_bindings_path),
+            },
+            "paths": {"approved_bindings": str(approved_bindings_path)},
+        }),
+        encoding="utf-8",
+    )
+    blocked_run_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_bound_command_run_report",
+            "status": "blocked",
+            "source": {"bound_command_plan": str(bound_plan_path)},
+            "summary": {"failed_count": 1, "missing_output_count": 1},
+            "config": {"dry_run": False, "executes_commands": True},
+        }),
+        encoding="utf-8",
+    )
+
+    review_payload = plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {"frontier_command_binding_reviews": [str(review_report_path)]},
+            "next_actions": [
+                {
+                    "action_id": "review_frontier_queue_command_bindings",
+                    "lane": "frontier_queue_execution",
+                    "priority": 84,
+                    "reason": "review missing decisions",
+                },
+            ],
+        }
+    )
+    review_entry = review_payload["entries"][0]
+    review_command = review_entry["command_templates"][0]
+    review_requirements = requirements_module.frontier_command_requirement_summary(
+        review_command,
+        index=1,
+        required_inputs=review_entry["required_inputs"],
+    )
+
+    assert review_payload["status"] == "needs_inputs"
+    assert review_entry["required_inputs"] == ("frontier_command_review_decisions",)
+    assert review_entry["missing_inputs"] == (
+        "frontier_command_review_decisions",
+        "bound_command_template_values",
+    )
+    assert "review_frontier_research_queue_command_bindings.py" in review_command
+    assert f"--bound-command-plan {bound_plan_path}" in review_command
+    assert f"--base-bindings {base_bindings_path}" in review_command
+    assert "--review-decisions ..." in review_command
+    assert review_requirements["status"] == "ready"
+
+    execute_payload = plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {"frontier_command_binding_reviews": [str(review_report_path)]},
+            "next_actions": [
+                {
+                    "action_id": "execute_reviewed_frontier_queue_command_plan",
+                    "lane": "frontier_queue_execution",
+                    "priority": 83,
+                    "reason": "reviewed plan not executed",
+                },
+            ],
+        }
+    )
+    execute_entry = execute_payload["entries"][0]
+    bind_command, run_command = execute_entry["command_templates"]
+    bind_requirements = requirements_module.frontier_command_requirement_summary(
+        bind_command,
+        index=1,
+        required_inputs=execute_entry["required_inputs"],
+    )
+    run_requirements = requirements_module.frontier_command_requirement_summary(
+        run_command,
+        index=2,
+        required_inputs=execute_entry["required_inputs"],
+    )
+
+    assert execute_payload["status"] == "needs_inputs"
+    assert execute_entry["required_inputs"] == ()
+    assert execute_entry["missing_inputs"] == ("bound_command_template_values",)
+    assert "bind_frontier_research_queue_command_plan.py" in bind_command
+    assert f"--command-plan {command_plan_path}" in bind_command
+    assert f"--bindings {approved_bindings_path}" in bind_command
+    assert "run_frontier_research_queue_bound_command_plan.py" in run_command
+    assert "--bound-command-plan ..." in run_command
+    assert "--execute" in run_command
+    assert bind_requirements["status"] == "ready"
+    assert run_requirements["status"] == "ready"
+
+    repair_payload = plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {"frontier_bound_command_runs": [str(blocked_run_path)]},
+            "next_actions": [
+                {
+                    "action_id": "repair_frontier_queue_command_execution",
+                    "lane": "frontier_queue_execution",
+                    "priority": 82,
+                    "reason": "run failed",
+                },
+            ],
+        }
+    )
+    repair_entry = repair_payload["entries"][0]
+    repair_command = repair_entry["command_templates"][0]
+    repair_requirements = requirements_module.frontier_command_requirement_summary(
+        repair_command,
+        index=1,
+        required_inputs=repair_entry["required_inputs"],
+    )
+
+    assert repair_payload["status"] == "needs_inputs"
+    assert repair_entry["required_inputs"] == ()
+    assert repair_entry["missing_inputs"] == ("bound_command_template_values",)
+    assert "run_frontier_research_queue_bound_command_plan.py" in repair_command
+    assert f"--bound-command-plan {bound_plan_path}" in repair_command
+    assert "--execute" in repair_command
+    assert repair_requirements["status"] == "ready"
+
+
 def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     summary_path = tmp_path / "unresolved-summary.json"

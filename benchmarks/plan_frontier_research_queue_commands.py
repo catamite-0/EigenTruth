@@ -173,6 +173,14 @@ def _unresolved_summary_actions(
             actions.append(_unresolved_citation_alignment_action(payload, action, source_path=source_path))
         elif action_id == "complete_retrieval_semantic_gap_review":
             actions.append(_unresolved_semantic_gap_review_action(payload, action, source_path=source_path))
+        elif action_id == "review_frontier_queue_command_bindings":
+            actions.append(_unresolved_frontier_queue_review_action(payload, action, source_path=source_path))
+        elif action_id == "execute_reviewed_frontier_queue_command_plan":
+            actions.append(
+                _unresolved_frontier_queue_execute_action(payload, action, source_path=source_path)
+            )
+        elif action_id == "repair_frontier_queue_command_execution":
+            actions.append(_unresolved_frontier_queue_repair_action(payload, action, source_path=source_path))
         elif action_id == "fill_and_promote_remaining_world_model_rules":
             actions.append(_unresolved_world_model_rules_action(payload, action, source_path=source_path))
         else:
@@ -452,6 +460,307 @@ def _semantic_gap_review_command(
         "closure_action=complete_retrieval_semantic_gap_review",
     ))
     return _shell_join(parts)
+
+
+def _unresolved_frontier_queue_review_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    review_paths = _string_tuple(_nested(payload, "paths", "frontier_command_binding_reviews"))
+    commands: list[str] = []
+    required_inputs: list[str] = []
+    for review_path_value in review_paths:
+        command, missing = _frontier_command_binding_review_command_from_report(
+            review_path_value,
+            source_path=source_path,
+        )
+        commands.append(command)
+        required_inputs.extend(missing)
+    if not commands:
+        command, missing = _frontier_command_binding_review_command(
+            bound_command_plan=None,
+            base_bindings=None,
+            review_decisions=None,
+        )
+        commands.append(command)
+        required_inputs.extend(missing)
+    return {
+        **dict(action),
+        "title": "Review frontier queue command bindings",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("frontier_queue_execution",),
+        "suggested_commands": tuple(commands),
+        "metadata": {
+            "required_inputs": tuple(dict.fromkeys(required_inputs)),
+            "closure_outputs": (
+                "frontier_command_binding_review_report",
+                "frontier_command_binding_review_approved_bindings",
+                "frontier_command_binding_review_artifact_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "source_command_binding_review_count": len(review_paths),
+            "reason": str(action.get("reason") or ""),
+            "blocked_entry_count": _int_or_zero(action.get("blocked_entry_count")),
+            "pending_review_count": _int_or_zero(action.get("pending_review_count")),
+            "binding_not_reviewed_count": _int_or_zero(
+                action.get("binding_not_reviewed_count")
+            ),
+        },
+    }
+
+
+def _unresolved_frontier_queue_execute_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    run_paths = _string_tuple(_nested(payload, "paths", "frontier_bound_command_runs"))
+    review_paths = _string_tuple(_nested(payload, "paths", "frontier_command_binding_reviews"))
+    commands: list[str] = []
+    required_inputs: list[str] = []
+    for run_path_value in run_paths:
+        command, missing = _frontier_bound_command_run_command_from_report(
+            run_path_value,
+            source_path=source_path,
+        )
+        commands.append(command)
+        required_inputs.extend(missing)
+    if not commands:
+        for review_path_value in review_paths:
+            review_commands, missing = _frontier_queue_execute_commands_from_review(
+                review_path_value,
+                source_path=source_path,
+            )
+            commands.extend(review_commands)
+            required_inputs.extend(missing)
+    if not commands:
+        review_commands, missing = _frontier_queue_execute_commands(
+            command_plan=None,
+            approved_bindings=None,
+            bound_command_plan=None,
+        )
+        commands.extend(review_commands)
+        required_inputs.extend(missing)
+    return {
+        **dict(action),
+        "title": "Execute reviewed frontier queue command plan",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("frontier_queue_execution",),
+        "suggested_commands": tuple(commands),
+        "metadata": {
+            "required_inputs": tuple(dict.fromkeys(required_inputs)),
+            "closure_outputs": (
+                "frontier_approved_bound_command_plan",
+                "frontier_approved_bound_command_manifest",
+                "frontier_bound_command_run_report",
+                "frontier_bound_command_run_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "source_bound_command_run_count": len(run_paths),
+            "source_command_binding_review_count": len(review_paths),
+            "reason": str(action.get("reason") or ""),
+            "ready_review_count": _int_or_zero(action.get("ready_review_count")),
+            "dry_run_report_count": _int_or_zero(action.get("dry_run_report_count")),
+            "command_count": _int_or_zero(action.get("command_count")),
+        },
+    }
+
+
+def _unresolved_frontier_queue_repair_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    run_paths = _string_tuple(_nested(payload, "paths", "frontier_bound_command_runs"))
+    commands: list[str] = []
+    required_inputs: list[str] = []
+    for run_path_value in run_paths:
+        command, missing = _frontier_bound_command_run_command_from_report(
+            run_path_value,
+            source_path=source_path,
+        )
+        commands.append(command)
+        required_inputs.extend(missing)
+    if not commands:
+        command, missing = _frontier_bound_command_run_command(bound_command_plan=None)
+        commands.append(command)
+        required_inputs.extend(missing)
+    return {
+        **dict(action),
+        "title": "Repair frontier queue command execution",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("frontier_queue_execution",),
+        "suggested_commands": tuple(commands),
+        "metadata": {
+            "required_inputs": tuple(dict.fromkeys(required_inputs)),
+            "closure_outputs": (
+                "frontier_bound_command_repair_run_report",
+                "frontier_bound_command_repair_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "source_bound_command_run_count": len(run_paths),
+            "reason": str(action.get("reason") or ""),
+            "failed_count": _int_or_zero(action.get("failed_count")),
+            "timed_out_count": _int_or_zero(action.get("timed_out_count")),
+            "skipped_count": _int_or_zero(action.get("skipped_count")),
+            "invalid_command_count": _int_or_zero(action.get("invalid_command_count")),
+            "missing_output_count": _int_or_zero(action.get("missing_output_count")),
+        },
+    }
+
+
+def _frontier_command_binding_review_command_from_report(
+    review_path_value: str,
+    *,
+    source_path: Path | None,
+) -> tuple[str, tuple[str, ...]]:
+    review_path = _resolve_path(review_path_value, base=source_path)
+    review = _load_optional_json(review_path)
+    source = _mapping(review.get("source"))
+    return _frontier_command_binding_review_command(
+        bound_command_plan=_resolve_path(source.get("bound_command_plan"), base=review_path),
+        base_bindings=_resolve_path(source.get("base_bindings"), base=review_path),
+        review_decisions=_resolve_path(source.get("review_decisions"), base=review_path),
+    )
+
+
+def _frontier_command_binding_review_command(
+    *,
+    bound_command_plan: Path | None,
+    base_bindings: Path | None,
+    review_decisions: Path | None,
+) -> tuple[str, tuple[str, ...]]:
+    missing: list[str] = []
+    if bound_command_plan is None:
+        missing.append("frontier_bound_command_plan")
+    if base_bindings is None:
+        missing.append("frontier_command_bindings")
+    if review_decisions is None:
+        missing.append("frontier_command_review_decisions")
+    parts: list[Any] = [
+        "python",
+        "benchmarks/review_frontier_research_queue_command_bindings.py",
+        "--bound-command-plan",
+        "..." if bound_command_plan is None else str(bound_command_plan),
+        "--base-bindings",
+        "..." if base_bindings is None else str(base_bindings),
+        "--review-decisions",
+        "..." if review_decisions is None else str(review_decisions),
+        "--output-dir",
+        "...",
+        "--json",
+        "...",
+        "--approved-bindings",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+    ]
+    return _shell_join(parts), tuple(missing)
+
+
+def _frontier_queue_execute_commands_from_review(
+    review_path_value: str,
+    *,
+    source_path: Path | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    review_path = _resolve_path(review_path_value, base=source_path)
+    review = _load_optional_json(review_path)
+    review_source = _mapping(review.get("source"))
+    bound_plan_path = _resolve_path(review_source.get("bound_command_plan"), base=review_path)
+    bound_plan = _load_optional_json(bound_plan_path)
+    command_plan = _resolve_path(_nested(bound_plan, "source", "command_plan"), base=bound_plan_path)
+    approved_bindings = _resolve_path(_nested(review, "paths", "approved_bindings"), base=review_path)
+    return _frontier_queue_execute_commands(
+        command_plan=command_plan,
+        approved_bindings=approved_bindings,
+        bound_command_plan=None,
+    )
+
+
+def _frontier_queue_execute_commands(
+    *,
+    command_plan: Path | None,
+    approved_bindings: Path | None,
+    bound_command_plan: Path | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if bound_command_plan is not None:
+        command, missing = _frontier_bound_command_run_command(
+            bound_command_plan=bound_command_plan,
+        )
+        return (command,), missing
+    missing: list[str] = []
+    if command_plan is None:
+        missing.append("frontier_command_plan")
+    if approved_bindings is None:
+        missing.append("approved_frontier_command_bindings")
+    bind_command = _shell_join((
+        "python",
+        "benchmarks/bind_frontier_research_queue_command_plan.py",
+        "--command-plan",
+        "..." if command_plan is None else str(command_plan),
+        "--bindings",
+        "..." if approved_bindings is None else str(approved_bindings),
+        "--json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+    ))
+    run_command, _ = _frontier_bound_command_run_command(bound_command_plan=None)
+    return (bind_command, run_command), tuple(missing)
+
+
+def _frontier_bound_command_run_command_from_report(
+    run_path_value: str,
+    *,
+    source_path: Path | None,
+) -> tuple[str, tuple[str, ...]]:
+    run_path = _resolve_path(run_path_value, base=source_path)
+    report = _load_optional_json(run_path)
+    source = _mapping(report.get("source"))
+    return _frontier_bound_command_run_command(
+        bound_command_plan=_resolve_path(source.get("bound_command_plan"), base=run_path),
+    )
+
+
+def _frontier_bound_command_run_command(
+    *,
+    bound_command_plan: Path | None,
+) -> tuple[str, tuple[str, ...]]:
+    missing = () if bound_command_plan is not None else ("reviewed_frontier_bound_command_plan",)
+    parts: list[Any] = [
+        "python",
+        "benchmarks/run_frontier_research_queue_bound_command_plan.py",
+        "--bound-command-plan",
+        "..." if bound_command_plan is None else str(bound_command_plan),
+        "--json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--execute",
+    ]
+    return _shell_join(parts), missing
 
 
 def _unresolved_world_model_rules_action(
