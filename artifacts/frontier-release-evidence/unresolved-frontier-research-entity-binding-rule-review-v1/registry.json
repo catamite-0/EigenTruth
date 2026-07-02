@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_count": 2,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-rule-review-v1/artifact-manifest.json",
+        "candidate_count": 8,
+        "closure_action": "review_entity_role_binding_candidates",
+        "needs_more_evidence_count": 6,
+        "reviewer": "rule_based_entity_binding_reviewer_v1",
+        "status": "ready_for_promotion_gate",
+        "workflow": "world_model_rule_entity_binding_rule_review"
+      },
+      "name": "unresolved-frontier-research-entity-binding-rule-review",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-rule-review-v1/entity-binding-review-report.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

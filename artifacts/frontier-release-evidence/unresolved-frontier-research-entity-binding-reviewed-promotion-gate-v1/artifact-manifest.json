@@ -1,0 +1,69 @@
+{
+  "artifacts": {
+    "approved_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "approved-entity-bindings.jsonl",
+      "sha256": "466ae5462b3cb48518a2d297da453604785af2c9a71398228a5dcdf9d9fb0a64",
+      "size_bytes": 3762
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-plan-v1/entity-binding-plan.json",
+      "sha256": "95ce156924bfc92d24be3640bb91b914865a02fd12de5f6a0baa2241facaf8b2",
+      "size_bytes": 52122
+    },
+    "entity_binding_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-promotion-gate.json",
+      "sha256": "d5adec2bbf6c07f0cfd0b0d1c52d8c7e4814850936a553bd2b9c626b7a341159",
+      "size_bytes": 20867
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-records.jsonl",
+      "sha256": "c135218040f9f607529d7d80f561b5b7ef9becaa496865cc6159bb22d60bde2b",
+      "size_bytes": 4532
+    },
+    "review_decision_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decision-template.jsonl",
+      "sha256": "1127dbd21fff02735ea65cd6d5a490881e90ee839d928506ffbf3baeb549e3ec",
+      "size_bytes": 7171
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-rule-review-v1/review-decisions.jsonl",
+      "sha256": "26d1a08d6b9b280ea14a20d0d10849c0c84718774bbbf88fe2b118dc986570d8",
+      "size_bytes": 3702
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_binding_count": 2,
+    "candidate_count": 8,
+    "closure_action": "promote_reviewed_entity_role_binding_candidates",
+    "pending_review_count": 0,
+    "promotes_verifier_evidence": false,
+    "status": "ready_for_fill",
+    "workflow": "world_model_rule_entity_binding_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}
