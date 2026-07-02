@@ -69,6 +69,44 @@ REQUIRED_COMMAND_FLAGS = {
         "--report-json",
         "--artifact-manifest",
     ),
+    "benchmarks/run_crossref_source_family_catalog_adapter.py": (
+        "--tasks",
+        "--output",
+        "--report-json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/run_openalex_source_family_catalog_adapter.py": (
+        "--tasks",
+        "--output",
+        "--report-json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/run_worldbank_source_family_catalog_adapter.py": (
+        "--tasks",
+        "--output",
+        "--report-json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/run_gdelt_source_family_catalog_adapter.py": (
+        "--tasks",
+        "--output",
+        "--report-json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/run_seeded_url_source_family_catalog_adapter.py": (
+        "--tasks",
+        "--seeds",
+        "--output",
+        "--report-json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/run_official_site_source_family_catalog_adapter.py": (
+        "--tasks",
+        "--seeds",
+        "--output",
+        "--report-json",
+        "--artifact-manifest",
+    ),
     "benchmarks/run_retrieval_semantic_gap_review_workflow.py": (
         "--verified-records-jsonl",
         "--output-dir",
@@ -172,6 +210,26 @@ REQUIRED_INPUT_FLAGS = {
     },
     "benchmarks/plan_source_family_catalog_collection.py": {
         "source_family_acquisition_plan": "--acquisition-plan",
+    },
+    "benchmarks/run_crossref_source_family_catalog_adapter.py": {
+        "source_family_collection_tasks": "--tasks",
+    },
+    "benchmarks/run_openalex_source_family_catalog_adapter.py": {
+        "source_family_collection_tasks": "--tasks",
+    },
+    "benchmarks/run_worldbank_source_family_catalog_adapter.py": {
+        "source_family_collection_tasks": "--tasks",
+    },
+    "benchmarks/run_gdelt_source_family_catalog_adapter.py": {
+        "source_family_collection_tasks": "--tasks",
+    },
+    "benchmarks/run_seeded_url_source_family_catalog_adapter.py": {
+        "source_family_collection_tasks": "--tasks",
+        "source_family_url_seeds": "--seeds",
+    },
+    "benchmarks/run_official_site_source_family_catalog_adapter.py": {
+        "source_family_collection_tasks": "--tasks",
+        "source_family_url_seeds": "--seeds",
     },
     "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": {
         "source_backed_numeric_bindings": "--numeric-bindings",

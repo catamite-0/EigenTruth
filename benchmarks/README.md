@@ -2945,6 +2945,23 @@ label/model-answer fields out of the boundary. This is the next executable
 handoff before filling real source catalogs and rerunning
 `run_source_family_citation_search_workflow.py`.
 
+The collection plan can also feed the generic command-plan/scaffold/bind chain
+without executing the provider adapters yet:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source "$OUT/source-family-catalog-collection-plan.json" \
+  --json "$OUT/source-family-catalog-adapter-command-plan.json"
+```
+
+When the source workflow is `source_family_catalog_collection_plan`, the
+planner emits reviewable Crossref/OpenAlex commands for `scholarly`, World Bank
+for `official_statistics`, GDELT plus seeded-URL fallback for `news`,
+official-site commands for `official`, and seeded URL commands for
+`domain_specific`. Output catalog paths, reports, manifests, registry keys, and
+seed URL sidecars remain placeholders for the existing scaffold/bind/review
+steps.
+
 ## `run_crossref_source_family_catalog_adapter.py`
 
 Executes the scholarly slice of the source-family collection plan through the
@@ -4321,6 +4338,9 @@ source-family coverage audit/collection commands when corpus expansion is the
 recommended next action. The templates keep output paths, registry keys, and source-backed
 binding sidecars as `...` placeholders, so the follow-up scaffold/bind/run
 steps still require review before anything executes.
+The same planner also accepts `source_family_catalog_collection_plan` reports
+and lowers ready collection-task families into provider-specific catalog
+adapter command templates, keeping URL seeds and output artifacts review-bound.
 Command-plan, bindings, approved-bindings, review-decision, and bound-plan
 files are treated as local control-plane artifacts by
 `plan_frontier_research_queue_input_collection.py` and can be staged with

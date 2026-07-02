@@ -35645,6 +35645,139 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
     assert entity_citation_requirements["status"] == "ready"
 
 
+def test_frontier_research_queue_command_plan_accepts_source_family_collection_plan(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    collection_plan_path = tmp_path / "source-family-catalog-collection-plan.json"
+    tasks_path = tmp_path / "source-family-catalog-collection-tasks.jsonl"
+    command_plan_path = tmp_path / "source-family-adapter-command-plan.json"
+    scaffold_path = tmp_path / "source-family-adapter-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "source-family-adapter-staged-bindings.json"
+    tasks_path.write_text(
+        "\n".join([
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "source_family_catalog_collection_plan",
+                "usage": "source_catalog_collection_only",
+                "not_verifier_evidence": True,
+                "task_id": "catalog-scholarly-alpha",
+                "source_family": "scholarly",
+                "query": "gum swallowing myth",
+                "search_queries": ["gum swallowing myth study"],
+            }),
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "source_family_catalog_collection_plan",
+                "usage": "source_catalog_collection_only",
+                "not_verifier_evidence": True,
+                "task_id": "catalog-official-statistics-alpha",
+                "source_family": "official_statistics",
+                "query": "population country",
+                "search_queries": ["population country official statistics"],
+            }),
+            json.dumps({
+                "schema_version": 1,
+                "workflow": "source_family_catalog_collection_plan",
+                "usage": "source_catalog_collection_only",
+                "not_verifier_evidence": True,
+                "task_id": "catalog-news-alpha",
+                "source_family": "news",
+                "query": "food affordability",
+                "search_queries": ["food affordability news"],
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+    collection_plan_path.write_text(
+        json.dumps({
+            "workflow": "source_family_catalog_collection_plan",
+            "status": "ready_for_source_collection",
+            "paths": {"collection_tasks": "source-family-catalog-collection-tasks.jsonl"},
+            "summary": {
+                "collection_task_count": 3,
+                "task_source_family_counts": {
+                    "news": 1,
+                    "official_statistics": 1,
+                    "scholarly": 1,
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(
+        source=collection_plan_path,
+        json_path=command_plan_path,
+    )
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=command_plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "registry.json",
+    )
+    staged = stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+    )
+
+    entry = payload["entries"][0]
+    commands = entry["command_templates"]
+    requirements = [
+        requirements_module.frontier_command_requirement_summary(command, index=index)
+        for index, command in enumerate(commands, start=1)
+    ]
+    placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold["entries"][0]["placeholder_records"]
+    }
+    binding = staged["bindings"]["run_source_family_catalog_adapters"]
+
+    assert payload["source"]["workflow"] == "source_family_catalog_collection_plan"
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["command_count"] == 5
+    assert entry["action_id"] == "run_source_family_catalog_adapters"
+    assert entry["metadata"]["task_source_family_counts"] == {
+        "news": 1,
+        "official_statistics": 1,
+        "scholarly": 1,
+    }
+    assert [item["script"] for item in requirements] == [
+        "benchmarks/run_crossref_source_family_catalog_adapter.py",
+        "benchmarks/run_openalex_source_family_catalog_adapter.py",
+        "benchmarks/run_worldbank_source_family_catalog_adapter.py",
+        "benchmarks/run_gdelt_source_family_catalog_adapter.py",
+        "benchmarks/run_seeded_url_source_family_catalog_adapter.py",
+    ]
+    assert {item["status"] for item in requirements} == {"ready"}
+    assert str(tasks_path) in commands[0]
+    assert "--source-family scholarly" in commands[0]
+    assert "--source-family official_statistics" in commands[2]
+    assert "--source-family news" in commands[3]
+    assert "--seeds ..." in commands[4]
+    assert placeholders[(1, "--output")]["suggested_binding"][
+        "source"
+    ] == "derived_command_sidecar_path"
+    assert placeholders[(5, "--seeds")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "input_or_report_path",
+        "input_name_hint": "source_family_url_seeds",
+        "flag": "--seeds",
+    }
+    assert staged["staging_summary"]["placeholder_count"] == 31
+    assert staged["staging_summary"]["staged_placeholder_count"] == 30
+    assert staged["staging_summary"]["remaining_placeholder_count"] == 1
+    assert "source-family-catalog.jsonl" in binding["bound_commands"][0]
+    assert "--seeds ..." in binding["bound_commands"][4]
+
+
 def test_frontier_research_queue_command_plan_templates_semantic_gap_without_prior_workflow():
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
@@ -35725,6 +35858,16 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "--acquisition-plan acquisition.jsonl --tasks-jsonl tasks.jsonl "
             "--report-json collection.json --artifact-manifest manifest.json"
         ),
+        "crossref_catalog": (
+            "python benchmarks/run_crossref_source_family_catalog_adapter.py "
+            "--tasks tasks.jsonl --output crossref.jsonl "
+            "--report-json crossref.json --artifact-manifest manifest.json"
+        ),
+        "seeded_catalog": (
+            "python benchmarks/run_seeded_url_source_family_catalog_adapter.py "
+            "--tasks tasks.jsonl --seeds seeds.jsonl --output seeded.jsonl "
+            "--report-json seeded.json --artifact-manifest manifest.json"
+        ),
     }
 
     summaries = {
@@ -35754,6 +35897,16 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             required_inputs=("source_family_acquisition_plan",),
         )
     )
+    crossref_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["crossref_catalog"],
+        index=8,
+        required_inputs=("source_family_collection_tasks",),
+    )
+    seeded_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["seeded_catalog"],
+        index=9,
+        required_inputs=("source_family_collection_tasks", "source_family_url_seeds"),
+    )
 
     assert {name: summary["status"] for name, summary in summaries.items()} == {
         "bind": "ready",
@@ -35762,6 +35915,8 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         "run": "ready",
         "source_family_audit": "ready",
         "source_family_collection": "ready",
+        "crossref_catalog": "ready",
+        "seeded_catalog": "ready",
     }
     assert summaries["review"]["script"] == (
         "benchmarks/review_frontier_research_queue_command_bindings.py"
@@ -35782,6 +35937,13 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     assert summaries["source_family_collection"]["required_input_flags"] == ()
     assert source_family_collection_inputs["required_input_flags"] == (
         {"input": "source_family_acquisition_plan", "flag": "--acquisition-plan"},
+    )
+    assert crossref_inputs["required_input_flags"] == (
+        {"input": "source_family_collection_tasks", "flag": "--tasks"},
+    )
+    assert seeded_inputs["required_input_flags"] == (
+        {"input": "source_family_collection_tasks", "flag": "--tasks"},
+        {"input": "source_family_url_seeds", "flag": "--seeds"},
     )
 
 

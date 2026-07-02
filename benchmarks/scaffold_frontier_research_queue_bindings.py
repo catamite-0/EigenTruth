@@ -286,6 +286,7 @@ def _placeholder_suggestion(
         }, output_index, path
     if normalized in {
         "acquisition_plan_jsonl",
+        "output",
         "rule_inputs_jsonl",
         "rule_results_jsonl",
         "tasks_jsonl",
@@ -325,6 +326,13 @@ def _placeholder_suggestion(
             "review_required": True,
             "reason": "upstream_command_output",
             "input_name_hint": "source_family_acquisition_plan",
+            "flag": flag,
+        }, output_index, previous_report_path
+    if normalized == "seeds":
+        return {
+            "review_required": True,
+            "reason": "input_or_report_path",
+            "input_name_hint": "source_family_url_seeds",
             "flag": flag,
         }, output_index, previous_report_path
     if normalized in {"adapter_report", "rule_inputs", "rule_results"}:
@@ -378,6 +386,7 @@ def _sidecar_output_path(
 ) -> str:
     filename = {
         "acquisition_plan_jsonl": "source-family-acquisition-plan.jsonl",
+        "output": "source-family-catalog.jsonl",
         "rule_inputs_jsonl": "rule-inputs.jsonl",
         "rule_results_jsonl": "rule-results.jsonl",
         "tasks_jsonl": "source-family-collection-tasks.jsonl",

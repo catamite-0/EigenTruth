@@ -23,9 +23,11 @@ WORKFLOW = "frontier_research_queue_command_plan"
 SUPPORTED_SOURCE_WORKFLOWS = frozenset({
     "frontier_status_report",
     "evidence_gap_plan",
+    "source_family_catalog_collection_plan",
     "unresolved_frontier_evidence_summary",
 })
 UNRESOLVED_SUMMARY_WORKFLOW = "unresolved_frontier_evidence_summary"
+SOURCE_FAMILY_CATALOG_COLLECTION_WORKFLOW = "source_family_catalog_collection_plan"
 
 
 def build_frontier_research_queue_command_plan(
@@ -57,7 +59,8 @@ def build_frontier_research_queue_command_plan(
     if workflow not in SUPPORTED_SOURCE_WORKFLOWS:
         raise ValueError(
             "source must have workflow 'frontier_status_report', 'evidence_gap_plan', "
-            "or 'unresolved_frontier_evidence_summary'."
+            "'source_family_catalog_collection_plan', or "
+            "'unresolved_frontier_evidence_summary'."
         )
 
     output_path = None if json_path is None else Path(json_path)
@@ -156,9 +159,213 @@ def _source_actions(
 ) -> tuple[Mapping[str, Any], ...]:
     if payload.get("workflow") == "frontier_status_report":
         return tuple(_mapping_sequence(_nested(payload, "research_queue", "actions")))
+    if payload.get("workflow") == SOURCE_FAMILY_CATALOG_COLLECTION_WORKFLOW:
+        return (_source_family_catalog_adapter_action(payload, source_path=source_path),)
     if payload.get("workflow") == UNRESOLVED_SUMMARY_WORKFLOW:
         return _unresolved_summary_actions(payload, source_path=source_path)
     return tuple(_mapping_sequence(payload.get("actions", ())))
+
+
+def _source_family_catalog_adapter_action(
+    payload: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    tasks_path = _resolve_path(_nested(payload, "paths", "collection_tasks"), base=source_path)
+    family_counts = _source_family_task_counts(payload, tasks_path=tasks_path)
+    command_templates = _source_family_catalog_adapter_commands(
+        tasks_path,
+        family_counts=family_counts,
+    )
+    return {
+        "action_id": "run_source_family_catalog_adapters",
+        "title": "Run source-family catalog adapters",
+        "action_type": "workflow_plan",
+        "priority": 80,
+        "evidence_routes": ("source_family_acquisition", "citation_evidence"),
+        "suggested_commands": command_templates,
+        "metadata": {
+            "required_inputs": (),
+            "closure_outputs": tuple(
+                f"{adapter}_source_family_catalog_report"
+                for adapter in _source_family_adapter_names(family_counts)
+            ),
+            "source_collection_workflow": SOURCE_FAMILY_CATALOG_COLLECTION_WORKFLOW,
+            "collection_task_count": _int_or_zero(
+                _nested(payload, "summary", "collection_task_count")
+            ),
+            "task_source_family_counts": family_counts,
+            "reason": (
+                "source-family acquisition plan is ready; run provider adapters "
+                "before rerunning citation/source-family coverage"
+            ),
+        },
+    }
+
+
+def _source_family_task_counts(
+    payload: Mapping[str, Any],
+    *,
+    tasks_path: Path | None,
+) -> dict[str, int]:
+    summary_counts = {
+        str(key): _int_or_zero(value)
+        for key, value in _mapping(
+            _nested(payload, "summary", "task_source_family_counts")
+        ).items()
+        if str(key) and _int_or_zero(value) > 0
+    }
+    if summary_counts:
+        return dict(sorted(summary_counts.items()))
+    if tasks_path is None or not tasks_path.exists():
+        return {}
+    counts: dict[str, int] = {}
+    with tasks_path.open(encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            if not isinstance(row, Mapping):
+                continue
+            family = str(row.get("source_family") or "").strip()
+            if family:
+                counts[family] = counts.get(family, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _source_family_adapter_names(family_counts: Mapping[str, int]) -> tuple[str, ...]:
+    adapters: list[str] = []
+    if _int_or_zero(family_counts.get("scholarly")):
+        adapters.extend(("crossref", "openalex"))
+    if _int_or_zero(family_counts.get("official_statistics")):
+        adapters.append("worldbank")
+    if _int_or_zero(family_counts.get("news")):
+        adapters.extend(("gdelt", "seeded_news"))
+    if _int_or_zero(family_counts.get("official")):
+        adapters.append("official_site")
+    if _int_or_zero(family_counts.get("domain_specific")):
+        adapters.append("seeded_domain_specific")
+    return tuple(dict.fromkeys(adapters))
+
+
+def _source_family_catalog_adapter_commands(
+    tasks_path: Path | None,
+    *,
+    family_counts: Mapping[str, int],
+) -> tuple[str, ...]:
+    if tasks_path is None or not family_counts:
+        return ()
+    task_path = str(tasks_path)
+    commands: list[str] = []
+    for adapter in _source_family_adapter_names(family_counts):
+        if adapter == "crossref":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_crossref_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="scholarly",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=("--max-query-variants", "2", "--rows-per-query", "2"),
+            ))
+        elif adapter == "openalex":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_openalex_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="scholarly",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=(
+                    "--max-query-variants",
+                    "4",
+                    "--rows-per-query",
+                    "2",
+                    "--include-abstracts",
+                ),
+            ))
+        elif adapter == "worldbank":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_worldbank_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="official_statistics",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=("--indicator", "SP.POP.TOTL", "--mrnev", "1"),
+            ))
+        elif adapter == "gdelt":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_gdelt_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="news",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=("--max-query-variants", "2", "--max-records", "5"),
+            ))
+        elif adapter == "seeded_news":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_seeded_url_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="news",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=("--seeds", "...", "--provider", "seeded_news", "--no-fetch"),
+            ))
+        elif adapter == "official_site":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_official_site_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="official",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=("--seeds", "..."),
+            ))
+        elif adapter == "seeded_domain_specific":
+            commands.append(_source_family_adapter_command(
+                "benchmarks/run_seeded_url_source_family_catalog_adapter.py",
+                tasks_path=task_path,
+                source_family="domain_specific",
+                metadata_source="source_family_catalog_collection_plan",
+                extra_parts=(
+                    "--seeds",
+                    "...",
+                    "--provider",
+                    "seeded_domain_specific",
+                    "--no-fetch",
+                ),
+            ))
+    return tuple(commands)
+
+
+def _source_family_adapter_command(
+    script: str,
+    *,
+    tasks_path: str,
+    source_family: str,
+    metadata_source: str,
+    extra_parts: Sequence[str] = (),
+) -> str:
+    parts = [
+        "python",
+        script,
+        "--tasks",
+        tasks_path,
+        "--output",
+        "...",
+        "--report-json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--source-family",
+        source_family,
+    ]
+    parts.extend(str(item) for item in extra_parts)
+    parts.extend((
+        "--metadata",
+        f"source={metadata_source}",
+        "--metadata",
+        f"source_family={source_family}",
+    ))
+    return _shell_join(parts)
 
 
 def _unresolved_summary_actions(
@@ -1429,6 +1636,12 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             ),
             "source_family_qa_document_count": _int_or_zero(
                 metadata.get("source_family_qa_document_count")
+            ),
+            "collection_task_count": _int_or_zero(
+                metadata.get("collection_task_count")
+            ),
+            "task_source_family_counts": dict(
+                _mapping(metadata.get("task_source_family_counts"))
             ),
             "query_sweep_failure_reason_counts": dict(
                 _mapping(metadata.get("query_sweep_failure_reason_counts"))
