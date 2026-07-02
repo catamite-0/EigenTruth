@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -284,6 +285,31 @@ def run(
             ),
             "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
             "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
+            "query_sweep_failure_reason_counts": _nested(
+                report,
+                "summary",
+                "query_sweep_failure_reason_counts",
+            ),
+            "query_sweep_no_hit_strategy_count": _nested_int(
+                report,
+                "summary",
+                "query_sweep_no_hit_strategy_count",
+            ),
+            "query_sweep_target_route_not_selected_strategy_count": _nested_int(
+                report,
+                "summary",
+                "query_sweep_target_route_not_selected_strategy_count",
+            ),
+            "query_sweep_best_observed_strategy": _nested(
+                report,
+                "summary",
+                "query_sweep_best_observed_strategy",
+            ),
+            "query_sweep_best_observed_failure_reasons": _nested(
+                report,
+                "summary",
+                "query_sweep_best_observed_failure_reasons",
+            ),
             **dict(metadata or {}),
         },
     )
@@ -316,6 +342,31 @@ def run(
                 ),
                 "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
                 "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
+                "query_sweep_failure_reason_counts": _nested(
+                    report,
+                    "summary",
+                    "query_sweep_failure_reason_counts",
+                ),
+                "query_sweep_no_hit_strategy_count": _nested_int(
+                    report,
+                    "summary",
+                    "query_sweep_no_hit_strategy_count",
+                ),
+                "query_sweep_target_route_not_selected_strategy_count": _nested_int(
+                    report,
+                    "summary",
+                    "query_sweep_target_route_not_selected_strategy_count",
+                ),
+                "query_sweep_best_observed_strategy": _nested(
+                    report,
+                    "summary",
+                    "query_sweep_best_observed_strategy",
+                ),
+                "query_sweep_best_observed_failure_reasons": _nested(
+                    report,
+                    "summary",
+                    "query_sweep_best_observed_failure_reasons",
+                ),
                 "provenance_status": None if provenance_report is None else provenance_report.get("status"),
                 "best_passing_strategy": _nested(query_sweep_report, "summary", "best_passing_strategy"),
                 "comparison_status": None if comparison_report is None else comparison_report.get("status"),
@@ -427,6 +478,7 @@ def _summary(
     query_sweep_report: Mapping[str, Any] | None,
     comparison_report: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    query_sweep_diagnostics = _query_sweep_diagnostics(query_sweep_report)
     return {
         "selected_batch_count": _nested_int(handoff, "summary", "selected_batch_count"),
         "selected_batch_ids": _nested(handoff, "summary", "selected_batch_ids"),
@@ -478,6 +530,42 @@ def _summary(
             "summary",
             "best_passing_blind_refuted_count",
         ),
+        "query_sweep_failure_reason_counts": query_sweep_diagnostics[
+            "failure_reason_counts"
+        ],
+        "query_sweep_no_hit_strategy_count": query_sweep_diagnostics[
+            "no_hit_strategy_count"
+        ],
+        "query_sweep_target_route_not_selected_strategy_count": (
+            query_sweep_diagnostics["target_route_not_selected_strategy_count"]
+        ),
+        "query_sweep_blind_refuted_rate_below_min_strategy_count": (
+            query_sweep_diagnostics["blind_refuted_rate_below_min_strategy_count"]
+        ),
+        "query_sweep_verified_false_alarm_above_max_strategy_count": (
+            query_sweep_diagnostics["verified_false_alarm_above_max_strategy_count"]
+        ),
+        "query_sweep_best_observed_strategy": query_sweep_diagnostics[
+            "best_observed_strategy"
+        ],
+        "query_sweep_best_observed_blind_refuted_rate": query_sweep_diagnostics[
+            "best_observed_blind_refuted_rate"
+        ],
+        "query_sweep_best_observed_verified_false_alarm": query_sweep_diagnostics[
+            "best_observed_verified_false_alarm"
+        ],
+        "query_sweep_best_observed_records_with_hits": query_sweep_diagnostics[
+            "best_observed_records_with_hits"
+        ],
+        "query_sweep_best_observed_total_hits": query_sweep_diagnostics[
+            "best_observed_total_hits"
+        ],
+        "query_sweep_best_observed_failure_reasons": query_sweep_diagnostics[
+            "best_observed_failure_reasons"
+        ],
+        "query_sweep_recommended_next_actions": query_sweep_diagnostics[
+            "recommended_next_actions"
+        ],
         "comparison_status": None if comparison_report is None else comparison_report.get("status"),
         "comparison_passed": (
             None
@@ -486,6 +574,136 @@ def _summary(
         ),
         "recommended_external_strategy": _nested(comparison_report, "decision", "recommended_external_strategy"),
     }
+
+
+def _query_sweep_diagnostics(query_sweep_report: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Summarize why citation/search query strategies did not pass gates."""
+    strategies = _mapping_sequence(_nested(query_sweep_report, "strategies"))
+    failure_counts: Counter[str] = Counter()
+    no_hit_strategy_count = 0
+    target_route_not_selected_strategy_count = 0
+    blind_refuted_rate_below_min_strategy_count = 0
+    verified_false_alarm_above_max_strategy_count = 0
+    passing_strategy_count = 0
+    best_observed: Mapping[str, Any] | None = None
+    for strategy in strategies:
+        reasons = _query_strategy_failure_reasons(strategy)
+        if not reasons:
+            passing_strategy_count += 1
+        for reason in reasons:
+            failure_counts[reason] += 1
+        if "no_retrieval_hits" in reasons:
+            no_hit_strategy_count += 1
+        if "target_route_not_selected" in reasons:
+            target_route_not_selected_strategy_count += 1
+        if "blind_refuted_rate_below_min" in reasons:
+            blind_refuted_rate_below_min_strategy_count += 1
+        if "verified_false_alarm_above_max" in reasons:
+            verified_false_alarm_above_max_strategy_count += 1
+        if best_observed is None or _query_strategy_rank(strategy) > _query_strategy_rank(best_observed):
+            best_observed = strategy
+
+    best_reasons = (
+        ()
+        if best_observed is None
+        else _query_strategy_failure_reasons(best_observed)
+    )
+    return {
+        "strategy_count": len(strategies),
+        "passing_strategy_count": passing_strategy_count,
+        "failure_reason_counts": _sorted_counter(failure_counts),
+        "no_hit_strategy_count": no_hit_strategy_count,
+        "target_route_not_selected_strategy_count": target_route_not_selected_strategy_count,
+        "blind_refuted_rate_below_min_strategy_count": (
+            blind_refuted_rate_below_min_strategy_count
+        ),
+        "verified_false_alarm_above_max_strategy_count": (
+            verified_false_alarm_above_max_strategy_count
+        ),
+        "best_observed_strategy": None if best_observed is None else best_observed.get("key"),
+        "best_observed_blind_refuted_rate": (
+            None
+            if best_observed is None
+            else _optional_float(_nested(best_observed, "blind_spot", "target_route_refuted_rate"))
+        ),
+        "best_observed_verified_false_alarm": (
+            None
+            if best_observed is None
+            else _optional_float(_nested(best_observed, "gate", "verified_false_alarm"))
+        ),
+        "best_observed_records_with_hits": (
+            None
+            if best_observed is None
+            else _nested_int(best_observed, "retrieval", "records_with_hits")
+        ),
+        "best_observed_total_hits": (
+            None
+            if best_observed is None
+            else _nested_int(best_observed, "retrieval", "total_hits")
+        ),
+        "best_observed_failure_reasons": best_reasons,
+        "recommended_next_actions": _query_sweep_next_actions(failure_counts),
+    }
+
+
+def _query_strategy_failure_reasons(strategy: Mapping[str, Any]) -> tuple[str, ...]:
+    if bool(_nested(strategy, "gate", "pass")):
+        return ()
+    reasons: list[str] = []
+    records_with_hits = _nested_int(strategy, "retrieval", "records_with_hits")
+    if records_with_hits is not None and records_with_hits <= 0:
+        reasons.append("no_retrieval_hits")
+    selected_count = _nested_int(strategy, "blind_spot", "target_route_selected_count")
+    if selected_count is not None and selected_count <= 0:
+        reasons.append("target_route_not_selected")
+    blind_refuted_rate = _optional_float(
+        _nested(strategy, "blind_spot", "target_route_refuted_rate")
+    )
+    min_blind_refuted_rate = _optional_float(_nested(strategy, "gate", "min_blind_refuted_rate"))
+    if (
+        blind_refuted_rate is not None
+        and min_blind_refuted_rate is not None
+        and blind_refuted_rate < min_blind_refuted_rate
+    ):
+        reasons.append("blind_refuted_rate_below_min")
+    verified_false_alarm = _optional_float(_nested(strategy, "gate", "verified_false_alarm"))
+    max_verified_false_alarm = _optional_float(
+        _nested(strategy, "gate", "max_verified_false_alarm")
+    )
+    if (
+        verified_false_alarm is not None
+        and max_verified_false_alarm is not None
+        and verified_false_alarm > max_verified_false_alarm
+    ):
+        reasons.append("verified_false_alarm_above_max")
+    if not reasons:
+        reasons.append("unknown_gate_failure")
+    return tuple(reasons)
+
+
+def _query_strategy_rank(strategy: Mapping[str, Any]) -> tuple[float, float, float, int, int]:
+    return (
+        _optional_float(_nested(strategy, "blind_spot", "target_route_refuted_rate")) or 0.0,
+        float(_nested_int(strategy, "blind_spot", "target_route_refuted_count") or 0),
+        -(_optional_float(_nested(strategy, "gate", "verified_false_alarm")) or 1.0),
+        _nested_int(strategy, "retrieval", "records_with_hits") or 0,
+        _nested_int(strategy, "retrieval", "total_hits") or 0,
+    )
+
+
+def _query_sweep_next_actions(failure_counts: Counter[str]) -> tuple[str, ...]:
+    actions: list[str] = []
+    if failure_counts.get("no_retrieval_hits"):
+        actions.append("expand_or_retarget_source_corpus")
+    if failure_counts.get("target_route_not_selected"):
+        actions.append("enable_or_repair_retrieval_route_selection")
+    if failure_counts.get("blind_refuted_rate_below_min"):
+        actions.append("improve_claim_intent_alignment_or_query_construction")
+    if failure_counts.get("verified_false_alarm_above_max"):
+        actions.append("tighten_false_alarm_calibration")
+    if failure_counts.get("unknown_gate_failure"):
+        actions.append("inspect_query_sweep_strategy_payload")
+    return tuple(actions)
 
 
 def _report_paths(
@@ -579,11 +797,26 @@ def _nested_int(payload: Mapping[str, Any], *keys: str) -> int | None:
         return None
 
 
+def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(item for item in value if isinstance(item, Mapping))
+    return ()
+
+
 def _optional_float(value: Any) -> float | None:
     try:
         return None if value is None else float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _sorted_counter(counter: Counter[str]) -> dict[str, int]:
+    return dict(
+        sorted(
+            ((key, value) for key, value in counter.items() if key),
+            key=lambda item: (-item[1], item[0]),
+        )
+    )
 
 
 def _parse_metadata(values: Sequence[str]) -> dict[str, str]:

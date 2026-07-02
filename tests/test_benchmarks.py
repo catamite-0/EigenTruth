@@ -62534,6 +62534,17 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     assert payload["summary"]["provenance_passed"] is True
     assert payload["summary"]["query_sweep_best_strategy"] == "question_answer_overlap_0p5"
     assert payload["summary"]["query_sweep_best_passing_strategy"] is None
+    assert payload["summary"]["query_sweep_failure_reason_counts"][
+        "blind_refuted_rate_below_min"
+    ] == 1
+    assert (
+        "improve_claim_intent_alignment_or_query_construction"
+        in payload["summary"]["query_sweep_recommended_next_actions"]
+    )
+    assert payload["summary"]["query_sweep_best_observed_strategy"] == (
+        "question_answer_overlap_0p5"
+    )
+    assert payload["summary"]["query_sweep_best_observed_failure_reasons"]
     assert payload["summary"]["comparison_passed"] is False
     assert payload["config"]["target_route"] == "retrieval_structured_qa"
     assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-corpus.json")
@@ -63462,6 +63473,23 @@ def test_citation_search_batch_evidence_rollup_blocks_failed_child_adapter_gate(
                 "selected_batch_ids": ["unresolved-evidence-batch-0001"],
                 "source_document_count": 1,
                 "corpus_document_count": 1,
+                "query_sweep_failure_reason_counts": {
+                    "no_retrieval_hits": 2,
+                    "blind_refuted_rate_below_min": 3,
+                },
+                "query_sweep_no_hit_strategy_count": 2,
+                "query_sweep_blind_refuted_rate_below_min_strategy_count": 3,
+                "query_sweep_best_observed_strategy": "question_overlap_0p5",
+                "query_sweep_best_observed_records_with_hits": 0,
+                "query_sweep_best_observed_total_hits": 0,
+                "query_sweep_best_observed_failure_reasons": [
+                    "no_retrieval_hits",
+                    "blind_refuted_rate_below_min",
+                ],
+                "query_sweep_recommended_next_actions": [
+                    "expand_or_retarget_source_corpus",
+                    "improve_claim_intent_alignment_or_query_construction",
+                ],
             },
             "paths": {"artifact_manifest": str(child_manifest)},
         }),
@@ -63482,6 +63510,23 @@ def test_citation_search_batch_evidence_rollup_blocks_failed_child_adapter_gate(
     assert payload["summary"]["adapter_gate_status_counts"] == {"partial": 1}
     assert payload["batch_reports"][0]["adapter_gate_status"] == "partial"
     assert payload["batch_reports"][0]["adapter_gate_request_coverage"] == pytest.approx(0.5)
+    assert payload["batch_reports"][0]["query_sweep_failure_reason_counts"] == {
+        "blind_refuted_rate_below_min": 3,
+        "no_retrieval_hits": 2,
+    }
+    assert payload["summary"]["query_sweep_failure_reason_counts"] == {
+        "blind_refuted_rate_below_min": 3,
+        "no_retrieval_hits": 2,
+    }
+    assert payload["summary"]["query_sweep_no_hit_strategy_count"] == 2
+    assert payload["summary"]["query_sweep_blind_refuted_rate_below_min_strategy_count"] == 3
+    assert payload["summary"]["query_sweep_best_observed_strategy_counts"] == {
+        "question_overlap_0p5": 1
+    }
+    assert payload["summary"]["query_sweep_recommended_next_action_counts"] == {
+        "expand_or_retarget_source_corpus": 1,
+        "improve_claim_intent_alignment_or_query_construction": 1,
+    }
     assert "child_gate" in reason_gates
     assert "child_adapter_gate" in reason_gates
 

@@ -137,6 +137,24 @@ def rollup_citation_search_batch_evidence(
             "query_sweep_no_passing_strategy_count": summary[
                 "query_sweep_no_passing_strategy_count"
             ],
+            "query_sweep_failure_reason_counts": summary[
+                "query_sweep_failure_reason_counts"
+            ],
+            "query_sweep_no_hit_strategy_count": summary[
+                "query_sweep_no_hit_strategy_count"
+            ],
+            "query_sweep_target_route_not_selected_strategy_count": summary[
+                "query_sweep_target_route_not_selected_strategy_count"
+            ],
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": summary[
+                "query_sweep_blind_refuted_rate_below_min_strategy_count"
+            ],
+            "query_sweep_verified_false_alarm_above_max_strategy_count": summary[
+                "query_sweep_verified_false_alarm_above_max_strategy_count"
+            ],
+            "query_sweep_recommended_next_action_counts": summary[
+                "query_sweep_recommended_next_action_counts"
+            ],
             "comparison_passed_count": summary["comparison_passed_count"],
             "comparison_failed_count": summary["comparison_failed_count"],
             "max_workers": workers,
@@ -167,6 +185,24 @@ def rollup_citation_search_batch_evidence(
                 "provenance_failed_count": summary["provenance_failed_count"],
                 "query_sweep_no_passing_strategy_count": summary[
                     "query_sweep_no_passing_strategy_count"
+                ],
+                "query_sweep_failure_reason_counts": summary[
+                    "query_sweep_failure_reason_counts"
+                ],
+                "query_sweep_no_hit_strategy_count": summary[
+                    "query_sweep_no_hit_strategy_count"
+                ],
+                "query_sweep_target_route_not_selected_strategy_count": summary[
+                    "query_sweep_target_route_not_selected_strategy_count"
+                ],
+                "query_sweep_blind_refuted_rate_below_min_strategy_count": summary[
+                    "query_sweep_blind_refuted_rate_below_min_strategy_count"
+                ],
+                "query_sweep_verified_false_alarm_above_max_strategy_count": summary[
+                    "query_sweep_verified_false_alarm_above_max_strategy_count"
+                ],
+                "query_sweep_recommended_next_action_counts": summary[
+                    "query_sweep_recommended_next_action_counts"
                 ],
                 "comparison_passed_count": summary["comparison_passed_count"],
                 "comparison_failed_count": summary["comparison_failed_count"],
@@ -291,6 +327,42 @@ def _normalize_child_report(
         "query_sweep_best_passing_blind_refuted_count": _optional_int(
             evidence.get("query_sweep_best_passing_blind_refuted_count")
         ),
+        "query_sweep_failure_reason_counts": dict(
+            _mapping(evidence.get("query_sweep_failure_reason_counts"))
+        ),
+        "query_sweep_no_hit_strategy_count": _optional_int(
+            evidence.get("query_sweep_no_hit_strategy_count")
+        ),
+        "query_sweep_target_route_not_selected_strategy_count": _optional_int(
+            evidence.get("query_sweep_target_route_not_selected_strategy_count")
+        ),
+        "query_sweep_blind_refuted_rate_below_min_strategy_count": _optional_int(
+            evidence.get("query_sweep_blind_refuted_rate_below_min_strategy_count")
+        ),
+        "query_sweep_verified_false_alarm_above_max_strategy_count": _optional_int(
+            evidence.get("query_sweep_verified_false_alarm_above_max_strategy_count")
+        ),
+        "query_sweep_best_observed_strategy": _optional_string(
+            evidence.get("query_sweep_best_observed_strategy")
+        ),
+        "query_sweep_best_observed_blind_refuted_rate": _optional_float(
+            evidence.get("query_sweep_best_observed_blind_refuted_rate")
+        ),
+        "query_sweep_best_observed_verified_false_alarm": _optional_float(
+            evidence.get("query_sweep_best_observed_verified_false_alarm")
+        ),
+        "query_sweep_best_observed_records_with_hits": _optional_int(
+            evidence.get("query_sweep_best_observed_records_with_hits")
+        ),
+        "query_sweep_best_observed_total_hits": _optional_int(
+            evidence.get("query_sweep_best_observed_total_hits")
+        ),
+        "query_sweep_best_observed_failure_reasons": tuple(
+            _string_sequence(evidence.get("query_sweep_best_observed_failure_reasons", ()))
+        ),
+        "query_sweep_recommended_next_actions": tuple(
+            _string_sequence(evidence.get("query_sweep_recommended_next_actions", ()))
+        ),
         "comparison_status": _optional_string(evidence.get("comparison_status")),
         "comparison_passed": _optional_bool(evidence.get("comparison_passed")),
         "recommended_external_strategy": _optional_string(
@@ -352,6 +424,34 @@ def _summary(rows: Sequence[Mapping[str, Any]], *, expected_batch_ids: Sequence[
         count
         for row in rows
         if (count := _optional_int(row.get("query_sweep_best_passing_blind_refuted_count")))
+        is not None
+    )
+    query_failure_counts: Counter[str] = Counter()
+    for row in rows:
+        query_failure_counts.update({
+            str(key): _int_or_zero(value)
+            for key, value in _mapping(row.get("query_sweep_failure_reason_counts")).items()
+        })
+    query_next_action_counts = Counter(
+        action
+        for row in rows
+        for action in _string_sequence(row.get("query_sweep_recommended_next_actions", ()))
+    )
+    query_best_observed_counts = Counter(
+        str(row.get("query_sweep_best_observed_strategy") or "")
+        for row in rows
+        if row.get("query_sweep_best_observed_strategy")
+    )
+    best_observed_hit_counts = tuple(
+        count
+        for row in rows
+        if (count := _optional_int(row.get("query_sweep_best_observed_records_with_hits")))
+        is not None
+    )
+    best_observed_total_hits = tuple(
+        count
+        for row in rows
+        if (count := _optional_int(row.get("query_sweep_best_observed_total_hits")))
         is not None
     )
     return {
@@ -419,6 +519,38 @@ def _summary(rows: Sequence[Mapping[str, Any]], *, expected_batch_ids: Sequence[
         "query_sweep_best_passing_blind_refuted_count_sum": sum(blind_refuted_counts),
         "query_sweep_best_passing_blind_refuted_count_max": (
             max(blind_refuted_counts) if blind_refuted_counts else None
+        ),
+        "query_sweep_failure_reason_counts": _sorted_counter(query_failure_counts),
+        "query_sweep_recommended_next_action_counts": _sorted_counter(
+            query_next_action_counts
+        ),
+        "query_sweep_no_hit_strategy_count": sum(
+            _int_or_zero(row.get("query_sweep_no_hit_strategy_count")) for row in rows
+        ),
+        "query_sweep_target_route_not_selected_strategy_count": sum(
+            _int_or_zero(row.get("query_sweep_target_route_not_selected_strategy_count"))
+            for row in rows
+        ),
+        "query_sweep_blind_refuted_rate_below_min_strategy_count": sum(
+            _int_or_zero(row.get("query_sweep_blind_refuted_rate_below_min_strategy_count"))
+            for row in rows
+        ),
+        "query_sweep_verified_false_alarm_above_max_strategy_count": sum(
+            _int_or_zero(row.get("query_sweep_verified_false_alarm_above_max_strategy_count"))
+            for row in rows
+        ),
+        "query_sweep_best_observed_strategy_counts": _sorted_counter(
+            query_best_observed_counts
+        ),
+        "query_sweep_best_observed_records_with_hits_sum": sum(
+            best_observed_hit_counts
+        ),
+        "query_sweep_best_observed_records_with_hits_max": (
+            max(best_observed_hit_counts) if best_observed_hit_counts else None
+        ),
+        "query_sweep_best_observed_total_hits_sum": sum(best_observed_total_hits),
+        "query_sweep_best_observed_total_hits_max": (
+            max(best_observed_total_hits) if best_observed_total_hits else None
         ),
         "comparison_present_count": sum(
             1 for row in rows if row.get("comparison_passed") is not None

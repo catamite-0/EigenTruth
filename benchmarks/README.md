@@ -2655,6 +2655,12 @@ queue report and consumes those source-bound fixture hits as precomputed
 retrieval evidence.
 large evidence queues can be normalized, audited, and swept batch by batch while
 preserving the same manifest and registry gates.
+Blocked query sweeps also write `query_sweep_failure_reason_counts`,
+`query_sweep_best_observed_*`, and `query_sweep_recommended_next_actions` into
+the workflow summary. These fields split failures into no retrieval hits,
+target-route selection gaps, blind-spot refute coverage misses, and verified
+false-alarm violations; they are diagnostics for the next queue pass, not new
+promotion evidence.
 
 ## `build_source_family_catalog.py`
 
@@ -2825,6 +2831,10 @@ evidence class, best query-sweep strategies, passing-strategy blind-spot
 refutation counts, and controlled-vs-external comparison status so the release
 evidence report can explain whether citation/search is blocked by source
 provenance, lexical alignment, or comparison failure.
+When child workflows expose query-sweep failure diagnostics, the rollup also
+aggregates failure-reason counts and recommended next-action counts across
+batches. This keeps unresolved citation/search work actionable without relaxing
+the child gate or comparison gate.
 
 ```bash
 python benchmarks/rollup_citation_search_batch_evidence.py \
