@@ -45,7 +45,7 @@ QUERY_FIELDS = (
     "citation_entity",
 )
 CITATION_QUERY_FIELDS = ("citation_question", "citation_entity")
-_SOURCE_FAMILY_FILTER_FETCH_MULTIPLIER = 4
+_SOURCE_FAMILY_FILTER_FETCH_MULTIPLIER = 20
 _SOURCE_FAMILY_COMPATIBILITY = {
     "official": ("official_statistics",),
     "official_statistics": ("official",),
@@ -61,6 +61,34 @@ _SOURCE_PREFIX_FAMILY_HINTS = (
     ("news:", "news"),
     ("qa:", "reference"),
 )
+_TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+_RERANK_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "how",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "the",
+    "to",
+    "what",
+    "which",
+    "who",
+    "whom",
+    "whose",
+    "why",
+}
 
 
 def load_score_dump(path: Path) -> dict[str, Any]:
@@ -570,13 +598,16 @@ def _apply_source_family_filter(
         }
 
     plan = _source_family_plan(statement, query_field=query_field)
+    unique_hits, duplicate_hit_count = _deduplicate_retrieval_hits(hits)
     if plan is None:
-        kept = tuple(hits[:limit])
+        kept = tuple(unique_hits[:limit])
         return kept, {
             "mode": source_family_filter,
             "status": "skipped",
             "reason": "missing_question",
             "candidate_hit_count": len(hits),
+            "unique_candidate_hit_count": len(unique_hits),
+            "duplicate_hit_count": duplicate_hit_count,
             "kept_hit_count": len(kept),
             "dropped_hit_count": 0,
         }
@@ -585,7 +616,7 @@ def _apply_source_family_filter(
     compatible: list[RetrievalHit] = []
     incompatible: list[RetrievalHit] = []
     incompatible_examples: list[dict[str, Any]] = []
-    for hit in hits:
+    for hit in unique_hits:
         hit_families = _hit_source_families(hit)
         if hit_families and any(family in accepted_families for family in hit_families):
             compatible.append(_annotate_source_family_hit(
@@ -609,10 +640,13 @@ def _apply_source_family_filter(
             })
 
     if source_family_filter == "planned_rerank":
+        compatible = _source_family_ranked_hits(compatible, statement=statement, plan=plan)
+        incompatible = _source_family_ranked_hits(incompatible, statement=statement, plan=plan)
         kept = tuple((compatible + incompatible)[:limit])
         dropped_count = 0
         status = "reranked"
     else:
+        compatible = _source_family_ranked_hits(compatible, statement=statement, plan=plan)
         kept = tuple(compatible[:limit])
         dropped_count = len(incompatible)
         status = "applied"
@@ -621,6 +655,8 @@ def _apply_source_family_filter(
         "mode": source_family_filter,
         "status": status,
         "candidate_hit_count": len(hits),
+        "unique_candidate_hit_count": len(unique_hits),
+        "duplicate_hit_count": duplicate_hit_count,
         "kept_hit_count": len(kept),
         "dropped_hit_count": dropped_count,
         "compatible_hit_count": len(compatible),
@@ -632,6 +668,81 @@ def _apply_source_family_filter(
         "incompatible_hit_examples": tuple(incompatible_examples),
         "dropped_hit_examples": tuple(incompatible_examples),
     }
+
+
+def _deduplicate_retrieval_hits(hits: Sequence[RetrievalHit]) -> tuple[tuple[RetrievalHit, ...], int]:
+    seen: set[tuple[str, str, str]] = set()
+    unique: list[RetrievalHit] = []
+    for hit in hits:
+        key = _retrieval_hit_dedup_key(hit)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(hit)
+    return tuple(unique), len(hits) - len(unique)
+
+
+def _retrieval_hit_dedup_key(hit: RetrievalHit) -> tuple[str, str, str]:
+    metadata = dict(hit.metadata)
+    source = "" if hit.source is None else str(hit.source).strip()
+    if source:
+        return (source, "", "")
+    result_id = str(metadata.get("result_sha256") or metadata.get("url") or "").strip()
+    if result_id:
+        return ("", result_id, "")
+    return ("", "", hit.text.strip())
+
+
+def _source_family_ranked_hits(
+    hits: Sequence[RetrievalHit],
+    *,
+    statement: Mapping[str, Any],
+    plan,
+) -> list[RetrievalHit]:
+    family_order = _source_family_preference_order(plan)
+    return sorted(
+        hits,
+        key=lambda hit: (
+            _source_family_rank(hit, family_order),
+            -_evidence_text_overlap(statement, hit),
+            -float(hit.score),
+            "" if hit.source is None else str(hit.source),
+        ),
+    )
+
+
+def _source_family_preference_order(plan) -> tuple[str, ...]:
+    ordered: list[str] = []
+    for raw_family in tuple(plan.families):
+        family = _normalize_source_family(raw_family)
+        for candidate in (family, *tuple(_SOURCE_FAMILY_COMPATIBILITY.get(family, ()))):
+            if candidate and candidate not in ordered:
+                ordered.append(candidate)
+    return tuple(ordered)
+
+
+def _source_family_rank(hit: RetrievalHit, family_order: Sequence[str]) -> int:
+    hit_families = _hit_source_families(hit)
+    ranks = [family_order.index(family) for family in hit_families if family in family_order]
+    return min(ranks) if ranks else len(family_order) + 1
+
+
+def _evidence_text_overlap(statement: Mapping[str, Any], hit: RetrievalHit) -> float:
+    claim_tokens = _rerank_tokens(_statement_text(statement))
+    if not claim_tokens:
+        return 0.0
+    evidence_tokens = set(_rerank_tokens(hit.text))
+    if not evidence_tokens:
+        return 0.0
+    return len(set(claim_tokens) & evidence_tokens) / len(set(claim_tokens))
+
+
+def _rerank_tokens(text: str) -> tuple[str, ...]:
+    return tuple(
+        token
+        for token in (match.group(0).casefold() for match in _TOKEN_RE.finditer(str(text)))
+        if token and token not in _RERANK_STOPWORDS
+    )
 
 
 def _source_family_plan(statement: Mapping[str, Any], *, query_field: str):

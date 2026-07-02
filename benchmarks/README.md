@@ -1557,7 +1557,8 @@ When local corpora include `source_family` metadata, add
 `--source-family-filters off,planned,planned_rerank` to compare the default
 retrieval order with hard source-family filtering and compatible-source
 reranking. `planned` drops hits whose source family does not match the citation
-query plan; `planned_rerank` puts compatible hits first while retaining
+query plan; `planned_rerank` expands the candidate pool, deduplicates repeated
+sources, puts higher-priority compatible families first, and retains
 incompatible hits as fallback evidence.
 
 ```bash
@@ -8002,8 +8003,9 @@ external or domain-shifted evidence: `--require-retrieval-source`,
 evidence and record the filter in `input_provenance`. For citation-oriented
 fixtures, `--source-family-filter planned` can hard-filter retrieved evidence by
 the planned source family, while `--source-family-filter planned_rerank`
-prioritizes compatible evidence and keeps other hits as fallback. Both modes are
-metadata-driven and remain dependency-free. `--verification-cache-dir` is
+expands the candidate pool, deduplicates repeated sources, prioritizes
+compatible evidence by the plan's family order, and keeps other hits as fallback.
+Both modes are metadata-driven and remain dependency-free. `--verification-cache-dir` is
 optional and stores verified-record traces keyed by score dump,
 claims/evidence content, verifier parameters, and state/QA sources so repeated
 alpha/repeat sweeps can skip claim verification.

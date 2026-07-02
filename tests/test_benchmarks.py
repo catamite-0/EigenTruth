@@ -9564,6 +9564,78 @@ def test_build_evidence_fixture_planned_source_family_filter_drops_incompatible_
     ]
 
 
+def test_build_evidence_fixture_planned_rerank_deduplicates_candidate_sources():
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0],
+        "scores": {"truth_proj": [0.1]},
+        "statements": [
+            {
+                "question": "What is the population of India?",
+                "answer": "The population of India is 1.4 billion.",
+                "text": "What is the population of India? The population of India is 1.4 billion.",
+                "metadata": {"question_type": "quantity"},
+            },
+        ],
+    }
+    duplicate_scholarly = tuple(
+        {
+            "text": (
+                "OpenAlex scholarly metadata title: Global country population "
+                "benchmarking study with broad national estimates."
+            ),
+            "source": "openalex:https://openalex.org/W-population",
+            "score": 1.0,
+            "metadata": {
+                "source_family": "scholarly",
+                "result_sha256": "same-openalex-result",
+                "retrieval_index_text": (
+                    "What is the population of India? population India "
+                    "official statistics data reference"
+                ),
+            },
+        }
+        for _ in range(8)
+    )
+    corpus = (
+        *duplicate_scholarly,
+        {
+            "text": "World Bank official statistics: India population was 1,450,935,791 in 2024.",
+            "source": "worldbank:SP.POP.TOTL:IND",
+            "score": 0.7,
+            "metadata": {
+                "source_family": "official_statistics",
+                "result_sha256": "worldbank-india-population",
+                "retrieval_index_text": (
+                    "What is the population of India? population India "
+                    "official statistics data reference"
+                ),
+            },
+        },
+    )
+
+    fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.4,
+        retrieval_limit=1,
+        query_field="citation_question",
+        include_label_metadata=False,
+        source_family_filter="planned_rerank",
+    )
+
+    retrieval = fixture["records"][0]["metadata"]["retrieval"]
+    source_filter = retrieval["source_family_filter"]
+    hits = fixture["records"][0]["retrieval_documents"]
+
+    assert source_filter["status"] == "reranked"
+    assert source_filter["duplicate_hit_count"] == 7
+    assert source_filter["compatible_hit_count"] == 1
+    assert source_filter["incompatible_hit_count"] == 1
+    assert hits[0]["source"] == "worldbank:SP.POP.TOTL:IND"
+
+
 def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
