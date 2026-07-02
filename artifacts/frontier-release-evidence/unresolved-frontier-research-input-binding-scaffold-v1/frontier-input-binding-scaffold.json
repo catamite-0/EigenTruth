@@ -4,48 +4,8 @@
     "expand_input_tasks": true,
     "writes_empty_values_only": true
   },
-  "downstream_commands": [
-    {
-      "command": "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl --numeric-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl --output-dir artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings --json artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings/rule-input-fill.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings/artifact-manifest.json",
-      "executes_commands": false,
-      "input_name": "source_backed_numeric_bindings",
-      "input_tasks_path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
-      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
-      "review_required": true,
-      "sidecar_key": "numeric_bindings",
-      "sidecar_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl"
-    },
-    {
-      "command": "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl --temporal-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl --output-dir artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings --json artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings/rule-input-fill.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings/artifact-manifest.json",
-      "executes_commands": false,
-      "input_name": "source_backed_temporal_bindings",
-      "input_tasks_path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
-      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
-      "review_required": true,
-      "sidecar_key": "temporal_bindings",
-      "sidecar_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl"
-    }
-  ],
-  "input_task_sources": {
-    "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings": {
-      "excluded_request_id_count": 17,
-      "expand_input_tasks": true,
-      "expanded_task_count": 6,
-      "input_tasks_path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
-      "target_remaining_rule_count": 6,
-      "target_rule_family": "quantity_or_arithmetic",
-      "task_collection_family": "numeric_rule_input_collection"
-    },
-    "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings": {
-      "excluded_request_id_count": 17,
-      "expand_input_tasks": true,
-      "expanded_task_count": 3,
-      "input_tasks_path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
-      "target_remaining_rule_count": 3,
-      "target_rule_family": "temporal_consistency",
-      "task_collection_family": "temporal_snapshot_rule_input_collection"
-    }
-  },
+  "downstream_commands": [],
+  "input_task_sources": {},
   "label_usage": {
     "labels_copied_to_binding_sidecars": false,
     "labels_used_for_binding_scaffold": false,
@@ -65,40 +25,31 @@
     "subject_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-subject-bindings.jsonl",
     "temporal_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl"
   },
-  "rows_by_request": {
-    "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings": [
-      "numeric_bindings",
-      6
-    ],
-    "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings": [
-      "temporal_bindings",
-      3
-    ]
-  },
+  "rows_by_request": {},
   "schema_version": 1,
   "scope": "Editable sidecar scaffold for source-backed frontier input bindings. Rows are empty non-evidence skeletons and remain review-gated until a human or external adapter fills values.",
   "skipped_requests": [],
   "source": {
-    "collection_request_count": 2,
+    "collection_request_count": 0,
     "input_collection_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
-    "input_collection_status": "ready_for_collection",
+    "input_collection_status": "empty",
     "input_collection_workflow": "frontier_research_queue_input_collection_plan",
     "review_request_count": 0
   },
-  "status": "needs_binding_values",
+  "status": "empty",
   "summary": {
-    "binding_skeleton_count": 9,
-    "downstream_command_count": 2,
-    "expanded_task_count": 9,
+    "binding_skeleton_count": 0,
+    "downstream_command_count": 0,
+    "expanded_task_count": 0,
     "request_level_skeleton_count": 0,
     "review_family_counts": {},
     "review_request_count": 0,
     "sidecar_counts": {
       "entity_bindings": 0,
       "mechanism_bindings": 0,
-      "numeric_bindings": 6,
+      "numeric_bindings": 0,
       "subject_bindings": 0,
-      "temporal_bindings": 3
+      "temporal_bindings": 0
     },
     "skipped_request_count": 0
   },

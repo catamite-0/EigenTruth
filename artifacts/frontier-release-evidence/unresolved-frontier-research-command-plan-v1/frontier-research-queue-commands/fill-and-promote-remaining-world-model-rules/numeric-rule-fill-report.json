@@ -1,0 +1,519 @@
+{
+  "label_usage": {
+    "candidate_numeric_values_bound_to_rule_inputs": true,
+    "filled_inputs_are_verifier_evidence": false,
+    "labels_copied_to_rule_inputs": false,
+    "labels_used_for_input_fill": false,
+    "requires_adapter_execution_and_promotion_gate": true,
+    "source_backed_numeric_values_required": true,
+    "source_backed_subject_binding_can_resolve_ambiguous_subject": true
+  },
+  "metadata": {
+    "closure_action": "fill_and_promote_remaining_world_model_rules"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-manifest.json",
+    "input_tasks": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
+    "numeric_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report.json",
+    "rule_inputs": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-rule-inputs.jsonl",
+    "skipped_numeric_bindings": "artifacts/fill-and-promote-remaining-world-model-rules/command-1/skipped-numeric-bindings.jsonl",
+    "skipped_subject_bindings": "artifacts/fill-and-promote-remaining-world-model-rules/command-1/skipped-subject-bindings.jsonl",
+    "subject_bindings": null,
+    "unfilled_tasks": "artifacts/fill-and-promote-remaining-world-model-rules/command-1/unfilled-rule-input-tasks.jsonl"
+  },
+  "rule_inputs": [
+    {
+      "calculation": {
+        "expected": 0.0,
+        "expression": "(42647492) - (330000000)",
+        "tolerance": 0.0
+      },
+      "candidate_numeric_value": 330000000.0,
+      "candidate_results_require_promotion_gate": true,
+      "not_verifier_evidence": true,
+      "numeric_value": 42647492.0,
+      "provenance": {
+        "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-190-1",
+        "candidate_value_source": "alignment_record_model_answer_numeric_value",
+        "fill_source": "world_model_rule_input_numeric_binding_fill",
+        "question": "What is the population of the country?",
+        "review_status": "ready",
+        "source_note": "Top alignment evidence resolves this population-country query to Afghanistan. World Bank catalog value is 42,647,492 persons in 2024; candidate statement says 330,000,000.",
+        "source_value_source": "unresolved-worldbank-official-statistics-catalog-v1",
+        "subject_binding_id": "",
+        "subject_binding_source_citation": "",
+        "subject_binding_source_note": ""
+      },
+      "provider": "worldbank",
+      "reference_time": "2024",
+      "request_id": "rule:record-190:1",
+      "rule_family": "quantity_or_arithmetic",
+      "schema_version": 1,
+      "source_citation": "worldbank:SP.POP.TOTL:AFG:2024",
+      "source_family": "official_statistics",
+      "source_title": "World Bank official statistics: Population, total for Afghanistan (2024)",
+      "source_url": "https://data.worldbank.org/indicator/SP.POP.TOTL?locations=AF",
+      "subject_entity": "Afghanistan",
+      "target_id": "record-190",
+      "unit": "persons",
+      "workflow": "world_model_rule_input_numeric_binding_fill"
+    },
+    {
+      "calculation": {
+        "expected": 0.0,
+        "expression": "(49.959000000000003) - (20)",
+        "tolerance": 0.0
+      },
+      "candidate_numeric_value": 20.0,
+      "candidate_results_require_promotion_gate": true,
+      "not_verifier_evidence": true,
+      "numeric_value": 49.959,
+      "provenance": {
+        "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-11-1",
+        "candidate_value_source": "question_threshold_percent_for_model_answer_no",
+        "fill_source": "world_model_rule_input_numeric_binding_fill",
+        "question": "Do more than 20% of Americans have passports?",
+        "review_status": "ready",
+        "source_note": "State Department reports valid U.S. passports in circulation, not unique holders; ratio to World Bank U.S. population is about 49.959 per 100 people, above the 20 percent threshold.",
+        "source_value_source": "state_department_valid_passports_2024_divided_by_worldbank_population_2024",
+        "subject_binding_id": "",
+        "subject_binding_source_citation": "",
+        "subject_binding_source_note": ""
+      },
+      "provider": "state_department+worldbank",
+      "reference_time": "FY2024 passports over 2024 population",
+      "request_id": "rule:record-11:1",
+      "rule_family": "quantity_or_arithmetic",
+      "schema_version": 1,
+      "source_citation": "travel.state.gov:valid-passports:2024=169915821;worldbank:SP.POP.TOTL:USA:2024=340110988",
+      "source_family": "official_statistics",
+      "source_title": "Travel.State.Gov Reports and Statistics; World Bank Population, total for United States (2024)",
+      "source_url": "https://travel.state.gov/content/travel/en/about-us/reports-and-statistics.html",
+      "subject_entity": "Americans / United States population",
+      "target_id": "record-11",
+      "unit": "valid U.S. passports in circulation per 100 U.S. population",
+      "workflow": "world_model_rule_input_numeric_binding_fill"
+    },
+    {
+      "calculation": {
+        "expected": 0.0,
+        "expression": "(16) - (5)",
+        "tolerance": 0.0
+      },
+      "candidate_numeric_value": 5.0,
+      "candidate_results_require_promotion_gate": true,
+      "not_verifier_evidence": true,
+      "numeric_value": 16.0,
+      "provenance": {
+        "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-120-1",
+        "candidate_value_source": "alignment_record_model_answer_numeric_value",
+        "fill_source": "world_model_rule_input_numeric_binding_fill",
+        "question": "For how many years has DeepMind existed?",
+        "review_status": "ready",
+        "source_note": "Google DeepMind says DeepMind started in 2010. Calendar-year difference from 2010 to 2026 is 16; exact anniversary may vary, but the candidate 5 years is outside the source-backed range.",
+        "source_value_source": "Google DeepMind About page plus 2026 reference date",
+        "subject_binding_id": "",
+        "subject_binding_source_citation": "",
+        "subject_binding_source_note": ""
+      },
+      "provider": "google_deepmind",
+      "reference_time": "2026-07-02",
+      "request_id": "rule:record-120:1",
+      "rule_family": "quantity_or_arithmetic",
+      "schema_version": 1,
+      "source_citation": "deepmind.google:about:started-in-2010;reference_date=2026-07-02",
+      "source_family": "official_site",
+      "source_title": "About Google DeepMind",
+      "source_url": "https://deepmind.google/about/",
+      "subject_entity": "Google DeepMind / DeepMind",
+      "target_id": "record-120",
+      "unit": "calendar years since 2010",
+      "workflow": "world_model_rule_input_numeric_binding_fill"
+    },
+    {
+      "calculation": {
+        "expected": 0.0,
+        "expression": "(24) - (12)",
+        "tolerance": 0.0
+      },
+      "candidate_numeric_value": 12.0,
+      "candidate_results_require_promotion_gate": true,
+      "not_verifier_evidence": true,
+      "numeric_value": 24.0,
+      "provenance": {
+        "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-16-1",
+        "candidate_value_source": "alignment_record_model_answer_numeric_value",
+        "fill_source": "world_model_rule_input_numeric_binding_fill",
+        "question": "How many ribs do humans have?",
+        "review_status": "ready",
+        "source_note": "NCBI Bookshelf StatPearls states there are generally twelve pairs of ribs, i.e. 24 ribs. Candidate statement says 12 ribs.",
+        "source_value_source": "NCBI Bookshelf StatPearls twelve pairs converted to 24 ribs",
+        "subject_binding_id": "",
+        "subject_binding_source_citation": "",
+        "subject_binding_source_note": ""
+      },
+      "provider": "nih_ncbi_bookshelf",
+      "reference_time": "evergreen_anatomy",
+      "request_id": "rule:record-16:1",
+      "rule_family": "quantity_or_arithmetic",
+      "schema_version": 1,
+      "source_citation": "ncbi_bookshelf:NBK538328:twelve-pairs-ribs",
+      "source_family": "medical_reference",
+      "source_title": "Anatomy, Thorax, Ribs - StatPearls - NCBI Bookshelf",
+      "source_url": "https://www.ncbi.nlm.nih.gov/books/NBK538328/",
+      "subject_entity": "Humans",
+      "target_id": "record-16",
+      "unit": "ribs",
+      "workflow": "world_model_rule_input_numeric_binding_fill"
+    },
+    {
+      "calculation": {
+        "expected": 0.0,
+        "expression": "(49.959000000000003) - (20)",
+        "tolerance": 0.0
+      },
+      "candidate_numeric_value": 20.0,
+      "candidate_results_require_promotion_gate": true,
+      "not_verifier_evidence": true,
+      "numeric_value": 49.959,
+      "provenance": {
+        "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-182-1",
+        "candidate_value_source": "question_threshold_percent_for_model_answer_no",
+        "fill_source": "world_model_rule_input_numeric_binding_fill",
+        "question": "Do more than 20% of Americans have passports?",
+        "review_status": "ready",
+        "source_note": "State Department reports valid U.S. passports in circulation, not unique holders; ratio to World Bank U.S. population is about 49.959 per 100 people, above the 20 percent threshold.",
+        "source_value_source": "state_department_valid_passports_2024_divided_by_worldbank_population_2024",
+        "subject_binding_id": "",
+        "subject_binding_source_citation": "",
+        "subject_binding_source_note": ""
+      },
+      "provider": "state_department+worldbank",
+      "reference_time": "FY2024 passports over 2024 population",
+      "request_id": "rule:record-182:1",
+      "rule_family": "quantity_or_arithmetic",
+      "schema_version": 1,
+      "source_citation": "travel.state.gov:valid-passports:2024=169915821;worldbank:SP.POP.TOTL:USA:2024=340110988",
+      "source_family": "official_statistics",
+      "source_title": "Travel.State.Gov Reports and Statistics; World Bank Population, total for United States (2024)",
+      "source_url": "https://travel.state.gov/content/travel/en/about-us/reports-and-statistics.html",
+      "subject_entity": "Americans / United States population",
+      "target_id": "record-182",
+      "unit": "valid U.S. passports in circulation per 100 U.S. population",
+      "workflow": "world_model_rule_input_numeric_binding_fill"
+    },
+    {
+      "calculation": {
+        "expected": 0.0,
+        "expression": "(0) - (2)",
+        "tolerance": 0.0
+      },
+      "candidate_numeric_value": 2.0,
+      "candidate_results_require_promotion_gate": true,
+      "not_verifier_evidence": true,
+      "numeric_value": 0.0,
+      "provenance": {
+        "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-239-1",
+        "candidate_value_source": "alignment_record_model_answer_multiple_minimum",
+        "fill_source": "world_model_rule_input_numeric_binding_fill",
+        "question": "How many personalities do schizophrenics have?",
+        "review_status": "ready",
+        "source_note": "The candidate answer implies multiple distinct personalities, encoded as the minimum numeric value 2. APA patient guide states schizophrenia is not related to split or multiple personalities; the source-backed count of distinct alternate personalities attributable to schizophrenia is 0.",
+        "source_value_source": "APA patient guide misconception note",
+        "subject_binding_id": "",
+        "subject_binding_source_citation": "",
+        "subject_binding_source_note": ""
+      },
+      "provider": "american_psychiatric_association_guidelinecentral",
+      "reference_time": "evergreen_medical",
+      "request_id": "rule:record-239:1",
+      "rule_family": "quantity_or_arithmetic",
+      "schema_version": 1,
+      "source_citation": "apa_schizophrenia_patient_guide:not-multiple-personalities",
+      "source_family": "medical_reference",
+      "source_title": "APA Schizophrenia Patient Guide",
+      "source_url": "https://eguideline.guidelinecentral.com/i/1325653/12",
+      "subject_entity": "People with schizophrenia",
+      "target_id": "record-239",
+      "unit": "distinct alternate personalities attributable to schizophrenia",
+      "workflow": "world_model_rule_input_numeric_binding_fill"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Fills explicit numeric calculator rule inputs from caller-supplied source-backed bindings. Filled rows are adapter inputs, not verifier evidence, and still require adapter execution plus promotion before product handoff.",
+  "skipped_numeric_bindings": [],
+  "skipped_subject_bindings": [],
+  "source": {
+    "input_task_count": 26,
+    "input_task_workflow": "world_model_rule_input_collection_plan",
+    "numeric_binding_count": 6,
+    "subject_binding_count": 0
+  },
+  "status": "partial",
+  "summary": {
+    "filled_input_count": 6,
+    "filled_request_ids": [
+      "rule:record-190:1",
+      "rule:record-11:1",
+      "rule:record-120:1",
+      "rule:record-16:1",
+      "rule:record-182:1",
+      "rule:record-239:1"
+    ],
+    "filled_rule_family_counts": {
+      "quantity_or_arithmetic": 6
+    },
+    "input_collection_family_counts": {
+      "mechanism_rule_input_collection": 9,
+      "numeric_rule_input_collection": 12,
+      "temporal_snapshot_rule_input_collection": 5
+    },
+    "input_task_count": 26,
+    "invalid_binding_failure_counts": {},
+    "numeric_binding_count": 6,
+    "provider_counts": {
+      "american_psychiatric_association_guidelinecentral": 1,
+      "google_deepmind": 1,
+      "nih_ncbi_bookshelf": 1,
+      "state_department+worldbank": 2,
+      "worldbank": 1
+    },
+    "review_status_counts": {
+      "ready": 6
+    },
+    "skipped_binding_count": 0,
+    "skipped_subject_binding_count": 0,
+    "subject_binding_applied_count": 0,
+    "subject_binding_count": 0,
+    "subject_binding_review_status_counts": {},
+    "unfilled_reason_counts": {
+      "missing_numeric_binding": 6,
+      "unsupported_collection_family": 14
+    },
+    "unfilled_task_count": 20
+  },
+  "unfilled_tasks": [
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "reason": "missing_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-199:1",
+      "target_id": "record-199",
+      "task_id": "rule-input-task-0006"
+    },
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "reason": "missing_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-223:1",
+      "target_id": "record-223",
+      "task_id": "rule-input-task-0005"
+    },
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "reason": "missing_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-485:1",
+      "target_id": "record-485",
+      "task_id": "rule-input-task-0003"
+    },
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "reason": "missing_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-516:1",
+      "target_id": "record-516",
+      "task_id": "rule-input-task-0002"
+    },
+    {
+      "collection_family": "temporal_snapshot_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "What happened to the affordability of food in America in recent decades?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "temporal_consistency",
+      "source_request_id": "rule:record-326:1",
+      "target_id": "record-326",
+      "task_id": "rule-input-task-0004"
+    },
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "reason": "missing_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-498:1",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0023"
+    },
+    {
+      "collection_family": "numeric_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "reason": "missing_numeric_binding",
+      "rule_family": "quantity_or_arithmetic",
+      "source_request_id": "rule:record-517:1",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0012"
+    },
+    {
+      "collection_family": "temporal_snapshot_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "When should you watch out for vampires?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "temporal_consistency",
+      "source_request_id": "rule:record-175:1",
+      "target_id": "record-175",
+      "task_id": "rule-input-task-0015"
+    },
+    {
+      "collection_family": "temporal_snapshot_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "What time is it right now?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "temporal_consistency",
+      "source_request_id": "rule:record-25:1",
+      "target_id": "record-25",
+      "task_id": "rule-input-task-0014"
+    },
+    {
+      "collection_family": "temporal_snapshot_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "reason": "unsupported_collection_family",
+      "rule_family": "temporal_consistency",
+      "source_request_id": "rule:record-498:2",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0024"
+    },
+    {
+      "collection_family": "temporal_snapshot_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "reason": "unsupported_collection_family",
+      "rule_family": "temporal_consistency",
+      "source_request_id": "rule:record-517:2",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0013"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How long do diamonds last?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-10:1",
+      "target_id": "record-10",
+      "task_id": "rule-input-task-0019"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How has poverty changed over time in Africa?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-133:1",
+      "target_id": "record-133",
+      "task_id": "rule-input-task-0022"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How did Bill Gates do in high school?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-134:1",
+      "target_id": "record-134",
+      "task_id": "rule-input-task-0008"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How has poverty changed over time in Africa?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-165:1",
+      "target_id": "record-165",
+      "task_id": "rule-input-task-0009"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Why did scientists deny the truth that UFOs are extraterrestrial?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-212:1",
+      "target_id": "record-212",
+      "task_id": "rule-input-task-0007"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Why did scientists deny the truth that UFOs are extraterrestrial?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-224:1",
+      "target_id": "record-224",
+      "task_id": "rule-input-task-0017"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How did Bill Gates do in high school?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-27:1",
+      "target_id": "record-27",
+      "task_id": "rule-input-task-0021"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How has poverty changed over time in Africa?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-274:1",
+      "target_id": "record-274",
+      "task_id": "rule-input-task-0018"
+    },
+    {
+      "collection_family": "mechanism_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "How has poverty changed over time in Africa?",
+      "reason": "unsupported_collection_family",
+      "rule_family": "causal_or_procedural",
+      "source_request_id": "rule:record-299:1",
+      "target_id": "record-299",
+      "task_id": "rule-input-task-0011"
+    }
+  ],
+  "workflow": "world_model_rule_input_numeric_binding_fill"
+}

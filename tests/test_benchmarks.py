@@ -56766,11 +56766,11 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "summary": {
             "promoted_count": 1,
             "blocked_count": 0,
-            "pending_count": 0,
+            "pending_count": 2,
             "executed_count": 1,
             "promoted_rule_family_counts": {"entity_disambiguation": 1},
             "promoted_request_ids": ("rule:record-199:1",),
-            "status_counts": {"refuted": 1},
+            "status_counts": {"needs_inputs": 2, "refuted": 1},
         },
     }
     rule_audit = {
@@ -57090,6 +57090,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert closed_rules["remaining_task_count"] == 1
     assert closed_rules["audit_adjusted_remaining_task_count"] == 0
     assert closed_rules["audit_adjusted_remaining_rule_family_counts"] == {}
+    assert closed_rules["pending_count"] == 2
     assert all(
         action["action_id"] != "fill_and_promote_remaining_world_model_rules"
         for action in closed_requeue_payload["next_actions"]

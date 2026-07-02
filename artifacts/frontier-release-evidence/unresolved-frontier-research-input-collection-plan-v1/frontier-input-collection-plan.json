@@ -1,194 +1,5 @@
 {
-  "collection_requests": [
-    {
-      "action_id": "fill_and_promote_remaining_world_model_rules",
-      "binding_review_status": "needs_review",
-      "blocking_placeholders": [
-        {
-          "command_index": 1,
-          "context": {
-            "after": [
-              "--output-dir",
-              "artifacts/fill-and-promote-remaining-world-model-rules/command-1"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
-              "--numeric-bindings"
-            ]
-          },
-          "flag": "--numeric-bindings",
-          "placeholder_index": 1,
-          "script": "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
-          "token_index": 5
-        }
-      ],
-      "blocks_bound_command_execution": true,
-      "collection_family": "numeric_rule_input_binding_collection",
-      "command_status": "needs_inputs",
-      "entry_id": "frontier-research-0002",
-      "evidence_routes": [
-        "world_model_rules"
-      ],
-      "input_category": "source_backed",
-      "input_name": "source_backed_numeric_bindings",
-      "lane": "world_model_rules",
-      "metadata": {
-        "promoted_rule_request_ids": [
-          "rule:record-10:1",
-          "rule:record-133:1",
-          "rule:record-165:1",
-          "rule:record-274:1",
-          "rule:record-299:1",
-          "rule:record-27:1",
-          "rule:record-134:1",
-          "rule:record-212:1",
-          "rule:record-224:1",
-          "rule:record-199:1",
-          "rule:record-223:1",
-          "rule:record-485:1",
-          "rule:record-516:1",
-          "rule:record-498:1",
-          "rule:record-517:1",
-          "rule:record-498:2",
-          "rule:record-517:2"
-        ],
-        "remaining_rule_family_counts": {
-          "quantity_or_arithmetic": 6,
-          "temporal_consistency": 3
-        },
-        "target_remaining_rule_count": 6,
-        "target_rule_family": "quantity_or_arithmetic"
-      },
-      "not_verifier_evidence": true,
-      "recommended_binding_skeleton": {
-        "candidate_numeric_value": "",
-        "not_verifier_evidence": true,
-        "reference_time": "",
-        "request_id": "",
-        "review_status": "approved",
-        "source_citation": "",
-        "source_numeric_value": "",
-        "subject_entity": "",
-        "target_id": "",
-        "unit": ""
-      },
-      "recommended_next_tools": [
-        "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
-        "benchmarks/plan_world_model_rule_numeric_subject_bindings.py"
-      ],
-      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
-      "required_binding_fields": [
-        "request_id",
-        "target_id",
-        "subject_entity",
-        "candidate_numeric_value",
-        "source_numeric_value",
-        "unit",
-        "reference_time",
-        "source_citation",
-        "review_status",
-        "not_verifier_evidence"
-      ],
-      "review_required": true,
-      "schema_version": 1,
-      "source_gap_ids": [],
-      "target_flag": "--numeric-bindings",
-      "title": "Fill and promote remaining deterministic world-model rules",
-      "workflow": "frontier_research_queue_input_collection_plan"
-    },
-    {
-      "action_id": "fill_and_promote_remaining_world_model_rules",
-      "binding_review_status": "needs_review",
-      "blocking_placeholders": [
-        {
-          "command_index": 4,
-          "context": {
-            "after": [
-              "--output-dir",
-              "artifacts/fill-and-promote-remaining-world-model-rules/command-4"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
-              "--temporal-bindings"
-            ]
-          },
-          "flag": "--temporal-bindings",
-          "placeholder_index": 1,
-          "script": "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py",
-          "token_index": 5
-        }
-      ],
-      "blocks_bound_command_execution": true,
-      "collection_family": "temporal_binding_collection",
-      "command_status": "needs_inputs",
-      "entry_id": "frontier-research-0002",
-      "evidence_routes": [
-        "world_model_rules"
-      ],
-      "input_category": "source_backed",
-      "input_name": "source_backed_temporal_bindings",
-      "lane": "world_model_rules",
-      "metadata": {
-        "promoted_rule_request_ids": [
-          "rule:record-10:1",
-          "rule:record-133:1",
-          "rule:record-165:1",
-          "rule:record-274:1",
-          "rule:record-299:1",
-          "rule:record-27:1",
-          "rule:record-134:1",
-          "rule:record-212:1",
-          "rule:record-224:1",
-          "rule:record-199:1",
-          "rule:record-223:1",
-          "rule:record-485:1",
-          "rule:record-516:1",
-          "rule:record-498:1",
-          "rule:record-517:1",
-          "rule:record-498:2",
-          "rule:record-517:2"
-        ],
-        "remaining_rule_family_counts": {
-          "quantity_or_arithmetic": 6,
-          "temporal_consistency": 3
-        },
-        "target_remaining_rule_count": 3,
-        "target_rule_family": "temporal_consistency"
-      },
-      "not_verifier_evidence": true,
-      "recommended_binding_skeleton": {
-        "claim_time": "",
-        "not_verifier_evidence": true,
-        "request_id": "",
-        "retrieved_at": "",
-        "review_status": "approved",
-        "source_citation": "",
-        "source_time": "",
-        "target_id": ""
-      },
-      "recommended_next_tools": [
-        "benchmarks/plan_world_model_rule_temporal_bindings.py",
-        "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py"
-      ],
-      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
-      "required_binding_fields": [
-        "request_id",
-        "target_id",
-        "claim_time",
-        "source_time",
-        "retrieved_at",
-        "source_citation",
-        "review_status",
-        "not_verifier_evidence"
-      ],
-      "review_required": true,
-      "schema_version": 1,
-      "source_gap_ids": [],
-      "target_flag": "--temporal-bindings",
-      "title": "Fill and promote remaining deterministic world-model rules",
-      "workflow": "frontier_research_queue_input_collection_plan"
-    }
-  ],
+  "collection_requests": [],
   "config": {
     "review_contracts": [
       "bound_command_template_values",
@@ -203,15 +14,7 @@
       "source_backed_entity_bindings"
     ]
   },
-  "covered_inputs": [
-    {
-      "action_id": "fill_and_promote_remaining_world_model_rules",
-      "blocking_placeholder_count": 2,
-      "coverage_reason": "remaining placeholders are represented by specific input requests",
-      "entry_id": "frontier-research-0002",
-      "input_name": "bound_command_template_values"
-    }
-  ],
+  "covered_inputs": [],
   "label_usage": {
     "collection_requests_are_verifier_evidence": false,
     "labels_copied_to_collection_requests": false,
@@ -232,71 +35,56 @@
   "scope": "Preflight collection plan for unbound frontier research-queue inputs. Requests are not verifier evidence and do not approve or execute the bound command plan.",
   "source": {
     "bound_command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
-    "bound_plan_status": "needs_inputs",
+    "bound_plan_status": "ready",
     "bound_plan_summary": {
       "action_ids": [
-        "improve_unresolved_citation_alignment",
-        "fill_and_promote_remaining_world_model_rules"
+        "improve_unresolved_citation_alignment"
       ],
       "binding_review_status_counts": {
-        "needs_review": 2
+        "needs_review": 1
       },
       "bound_placeholder_count": 0,
-      "command_count": 9,
+      "command_count": 3,
       "command_status_counts": {
-        "needs_inputs": 1,
         "ready": 1
       },
       "command_validation_issue_count": 0,
-      "entry_count": 2,
+      "entry_count": 1,
       "evidence_route_counts": {
         "citation_evidence": 1,
-        "source_family_acquisition": 1,
-        "world_model_rules": 1
+        "source_family_acquisition": 1
       },
-      "expected_output_count": 8,
+      "expected_output_count": 2,
       "missing_command_template_count": 0,
-      "missing_input_count": 3,
-      "needs_input_entry_count": 1,
-      "placeholder_count": 2,
+      "missing_input_count": 0,
+      "needs_input_entry_count": 0,
+      "placeholder_count": 0,
       "ready_entry_count": 1,
-      "review_required_entry_count": 2,
+      "review_required_entry_count": 1,
       "source_gap_ids": [],
-      "unbound_placeholder_count": 2
+      "unbound_placeholder_count": 0
     },
     "bound_plan_workflow": "frontier_research_queue_bound_command_plan"
   },
-  "status": "ready_for_collection",
+  "status": "empty",
   "summary": {
-    "action_ids": [
-      "fill_and_promote_remaining_world_model_rules"
-    ],
-    "actionable_entry_count": 1,
+    "action_ids": [],
+    "actionable_entry_count": 0,
     "binding_review_status_counts": {
-      "needs_review": 2
+      "needs_review": 1
     },
-    "blocking_placeholder_count": 2,
-    "collection_family_counts": {
-      "numeric_rule_input_binding_collection": 1,
-      "temporal_binding_collection": 1
-    },
-    "collection_request_count": 2,
-    "collection_request_ids": [
-      "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
-      "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings"
-    ],
-    "covered_input_count": 1,
-    "entry_count": 2,
-    "input_counts": {
-      "bound_command_template_values": 1,
-      "source_backed_numeric_bindings": 1,
-      "source_backed_temporal_bindings": 1
-    },
+    "blocking_placeholder_count": 0,
+    "collection_family_counts": {},
+    "collection_request_count": 0,
+    "collection_request_ids": [],
+    "covered_input_count": 0,
+    "entry_count": 1,
+    "input_counts": {},
     "review_family_counts": {},
     "review_request_count": 0,
     "review_request_ids": [],
-    "source_backed_request_count": 2,
-    "unbound_input_count": 3
+    "source_backed_request_count": 0,
+    "unbound_input_count": 0
   },
   "workflow": "frontier_research_queue_input_collection_plan"
 }

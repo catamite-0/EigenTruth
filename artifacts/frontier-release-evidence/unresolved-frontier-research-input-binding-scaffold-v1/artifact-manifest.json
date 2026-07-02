@@ -13,16 +13,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-input-binding-scaffold.json",
-      "sha256": "9f43d0896e1fdaba0f4a5433f4cf04c38b5e3d43cfe20972b7fd891294255734",
-      "size_bytes": 7294
+      "sha256": "488c3fc52513967685b377ef170696b3fa5d22e0ca84396dc682b8e9a5c4102b",
+      "size_bytes": 2911
     },
     "input_collection_plan": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
-      "sha256": "7b8b9df4b26737e5d926f1f7970769847bc1d249d0ae167fb6ed3c216c6bd472",
-      "size_bytes": 10638
+      "sha256": "3ecd588cb48f19915fd3590f4e5f61ec76b13fb424903f0d1c107d659b475e86",
+      "size_bytes": 3320
     },
     "mechanism_bindings": {
       "exists": true,
@@ -37,8 +37,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "source-backed-numeric-bindings.jsonl",
-      "sha256": "2f083bddc5bc52f3f78914cf178bdf5d94715c0d138b6c6561d0fe39c63edff0",
-      "size_bytes": 18259
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     },
     "review_requests": {
       "exists": true,
@@ -61,17 +61,17 @@
       "file_count": 1,
       "kind": "file",
       "path": "source-backed-temporal-bindings.jsonl",
-      "sha256": "f58c929ddc907df1225d3fc98f7da2ae5ab1244c2226d21397239c901763ca33",
-      "size_bytes": 7309
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "binding_skeleton_count": 9,
-    "expanded_task_count": 9,
+    "binding_skeleton_count": 0,
+    "expanded_task_count": 0,
     "review_request_count": 0,
     "runner": "scaffold_frontier_research_queue_input_bindings",
-    "status": "needs_binding_values",
+    "status": "empty",
     "workflow": "frontier_research_queue_input_binding_scaffold"
   },
   "schema_version": 1,

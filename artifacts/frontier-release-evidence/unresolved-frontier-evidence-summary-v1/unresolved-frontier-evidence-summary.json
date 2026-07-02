@@ -109,26 +109,15 @@
       "workflow": "unresolved_blind_spot_evidence_queue"
     },
     "world_model_rules": {
-      "audit_adjusted_remaining_rule_family_counts": {
-        "quantity_or_arithmetic": 6,
-        "temporal_consistency": 3
-      },
-      "audit_adjusted_remaining_task_count": 9,
-      "audit_adjusted_required_input_counts": {
-        "calculation.expected": 6,
-        "calculation.expression": 6,
-        "claim_time": 3,
-        "numeric_value": 6,
-        "reference_time": 6,
-        "retrieved_at": 3,
-        "source_citation": 9,
-        "source_time": 3,
-        "unit": 6
-      },
+      "audit_adjusted_remaining_rule_family_counts": {},
+      "audit_adjusted_remaining_task_count": 0,
+      "audit_adjusted_required_input_counts": {},
       "blocked_count": 0,
       "closed_rule_family_counts": {
         "causal_or_procedural": 9,
-        "entity_disambiguation": 8
+        "entity_disambiguation": 8,
+        "quantity_or_arithmetic": 6,
+        "temporal_consistency": 3
       },
       "mechanism_handoff_bundle_status": "promote",
       "mechanism_handoff_target_count": 9,
@@ -145,11 +134,13 @@
         "source_time": 5,
         "unit": 12
       },
-      "pending_count": 0,
-      "promoted_count": 17,
+      "pending_count": 43,
+      "promoted_count": 26,
       "promoted_rule_family_counts": {
         "causal_or_procedural": 9,
-        "entity_disambiguation": 8
+        "entity_disambiguation": 8,
+        "quantity_or_arithmetic": 6,
+        "temporal_consistency": 3
       },
       "promoted_rule_request_ids": [
         "rule:record-10:1",
@@ -168,9 +159,18 @@
         "rule:record-498:1",
         "rule:record-517:1",
         "rule:record-498:2",
-        "rule:record-517:2"
+        "rule:record-517:2",
+        "rule:record-190:1",
+        "rule:record-182:1",
+        "rule:record-239:1",
+        "rule:record-11:1",
+        "rule:record-16:1",
+        "rule:record-120:1",
+        "rule:record-326:1",
+        "rule:record-25:1",
+        "rule:record-175:1"
       ],
-      "promotion_report_count": 4,
+      "promotion_report_count": 6,
       "promotion_reports": [
         {
           "blocked_count": 0,
@@ -258,10 +258,55 @@
             "supported": 2
           },
           "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 6,
+          "index": 5,
+          "pending_count": 20,
+          "promoted_count": 6,
+          "promoted_request_ids": [
+            "rule:record-190:1",
+            "rule:record-182:1",
+            "rule:record-239:1",
+            "rule:record-11:1",
+            "rule:record-16:1",
+            "rule:record-120:1"
+          ],
+          "promoted_rule_family_counts": {
+            "quantity_or_arithmetic": 6
+          },
+          "status": "promote",
+          "status_counts": {
+            "needs_inputs": 20,
+            "refuted": 6
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 3,
+          "index": 6,
+          "pending_count": 23,
+          "promoted_count": 3,
+          "promoted_request_ids": [
+            "rule:record-326:1",
+            "rule:record-25:1",
+            "rule:record-175:1"
+          ],
+          "promoted_rule_family_counts": {
+            "temporal_consistency": 3
+          },
+          "status": "promote",
+          "status_counts": {
+            "needs_inputs": 23,
+            "supported": 3
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
         }
       ],
       "promotion_status_counts": {
-        "promote": 4
+        "promote": 6
       },
       "remaining_missing_input_counts": {
         "claim_time": 5,
@@ -273,10 +318,10 @@
         "unit": 12
       },
       "remaining_rule_family_counts": {
-        "quantity_or_arithmetic": 12,
-        "temporal_consistency": 5
+        "quantity_or_arithmetic": 6,
+        "temporal_consistency": 2
       },
-      "remaining_task_count": 17,
+      "remaining_task_count": 8,
       "requeued_rule_family_counts": {
         "entity_disambiguation": 8
       },
@@ -325,13 +370,14 @@
       },
       "rule_stub_requeue_skipped_suggestion_count": 0,
       "rule_stub_requeue_status": "ready_for_rule_authoring",
-      "status": "partial",
+      "status": "promote",
       "task_count": 26
     }
   },
   "metadata": {
-    "model": "smollm2-l80",
-    "source": "frontier-v4"
+    "added_numeric_promotions": "6",
+    "added_temporal_promotions": "3",
+    "closure_action": "fill_and_promote_remaining_world_model_rules"
   },
   "next_actions": [
     {
@@ -339,59 +385,6 @@
       "lane": "citation_evidence",
       "priority": 88,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use"
-    },
-    {
-      "action_id": "fill_and_promote_remaining_world_model_rules",
-      "audit_adjusted_required_input_counts": {
-        "calculation.expected": 6,
-        "calculation.expression": 6,
-        "claim_time": 3,
-        "numeric_value": 6,
-        "reference_time": 6,
-        "retrieved_at": 3,
-        "source_citation": 9,
-        "source_time": 3,
-        "unit": 6
-      },
-      "lane": "world_model_rules",
-      "missing_input_counts": {
-        "claim_time": 5,
-        "numeric_value": 12,
-        "reference_time": 12,
-        "retrieved_at": 5,
-        "source_citation": 14,
-        "source_time": 5,
-        "unit": 12
-      },
-      "priority": 85,
-      "promoted_rule_request_ids": [
-        "rule:record-10:1",
-        "rule:record-133:1",
-        "rule:record-165:1",
-        "rule:record-274:1",
-        "rule:record-299:1",
-        "rule:record-27:1",
-        "rule:record-134:1",
-        "rule:record-212:1",
-        "rule:record-224:1",
-        "rule:record-199:1",
-        "rule:record-223:1",
-        "rule:record-485:1",
-        "rule:record-516:1",
-        "rule:record-498:1",
-        "rule:record-517:1",
-        "rule:record-498:2",
-        "rule:record-517:2"
-      ],
-      "raw_remaining_rule_family_counts": {
-        "quantity_or_arithmetic": 12,
-        "temporal_consistency": 5
-      },
-      "reason": "world-model/calculator rule inputs are not fully promoted",
-      "remaining_rule_family_counts": {
-        "quantity_or_arithmetic": 6,
-        "temporal_consistency": 3
-      }
     }
   ],
   "paths": {
@@ -407,7 +400,9 @@
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
       "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
-      "artifacts/frontier-release-evidence/unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json"
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json"
     ],
     "rule_stub_requeue_report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
     "source_family_coverage_audits": [
@@ -421,24 +416,24 @@
   "status": "needs_evidence",
   "summary": {
     "adapter_request_count": 332,
-    "blocked_lane_count": 2,
+    "blocked_lane_count": 1,
     "citation_provenance_pass_count": 1,
     "citation_workflow_count": 1,
-    "covered_or_promoted_lane_count": 1,
+    "covered_or_promoted_lane_count": 2,
     "lane_statuses": {
       "citation_evidence": "blocked",
       "source_family_acquisition": "covered",
       "unresolved_queue": "ready_for_adapter_execution",
-      "world_model_rules": "partial"
+      "world_model_rules": "promote"
     },
     "mechanism_handoff_trace_count": 9,
     "missing_lane_count": 0,
     "source_family_coverage_audit_count": 1,
     "unresolved_target_count": 88,
-    "world_model_rule_audit_adjusted_remaining_task_count": 9,
+    "world_model_rule_audit_adjusted_remaining_task_count": 0,
     "world_model_rule_audit_requeue_suggestion_count": 8,
-    "world_model_rule_promoted_count": 17,
-    "world_model_rule_remaining_task_count": 17,
+    "world_model_rule_promoted_count": 26,
+    "world_model_rule_remaining_task_count": 8,
     "world_model_rule_requeue_outstanding_count": 0,
     "world_model_rule_task_count": 26
   },

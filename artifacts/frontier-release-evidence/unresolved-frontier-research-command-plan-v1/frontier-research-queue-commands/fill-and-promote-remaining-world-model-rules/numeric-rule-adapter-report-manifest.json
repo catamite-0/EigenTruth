@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-adapter-report.json",
+      "sha256": "85707b9bd1d1cbf31fa71f5610fb0904b1734d7e612e3665ce032e171793b4f4",
+      "size_bytes": 2813
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../fill-and-promote-remaining-world-model-rules/command-2/world-model-rule-input-requests.jsonl",
+      "sha256": "36c4ef07076c8f7e86fb4665b0032db1945ec093428f568361a1c81d21e9ed28",
+      "size_bytes": 11495
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-fill-report-rule-inputs.jsonl",
+      "sha256": "1abdbcee0842933db9fd55ffd77f5413ecd1c7e6920258f67d66a0943604d317",
+      "size_bytes": 9614
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-adapter-report-rule-results.jsonl",
+      "sha256": "afa90427d42148064c2ae0afb1c6cf2842ab71ceb17461f8a57ab70be82cf752",
+      "size_bytes": 32294
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../unresolved-world-model-rule-authoring-adapter-v1/world-model-rule-input-requests.jsonl",
+      "sha256": "04ad9ab025659d83e47f7af67e7ea2702ffc034c9ac7c02197d2201018ee0234",
+      "size_bytes": 14513
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_lane": "numeric_rules",
+    "executed_count": 6,
+    "input_request_count": 20,
+    "needs_input_count": 20,
+    "skipped_non_rule_stub_count": 0,
+    "source_stub_count": 26,
+    "status": "partial",
+    "stub_count": 26,
+    "stub_result_coverage": 1.0,
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

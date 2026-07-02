@@ -26,6 +26,34 @@
       "name": "truthfulqa-frontier-smollm2-l80-unresolved-frontier-evidence-summary",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "added_numeric_promotions": "6",
+        "added_temporal_promotions": "3",
+        "citation_status": "blocked",
+        "closure_action": "fill_and_promote_remaining_world_model_rules",
+        "manifest_summary": {
+          "artifact_count": 15,
+          "directory_count": 0,
+          "file_count": 15,
+          "missing_count": 0
+        },
+        "next_action_count": 1,
+        "source_family_acquisition_status": "covered",
+        "status": "needs_evidence",
+        "unresolved_target_count": 88,
+        "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_adjusted_remaining_task_count": 0,
+        "world_model_rule_audit_requeue_suggestion_count": 8,
+        "world_model_rule_remaining_task_count": 8,
+        "world_model_rule_requeue_outstanding_count": 0,
+        "world_model_rule_status": "promote"
+      },
+      "name": "unresolved-frontier-evidence-summary",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "version": "0.2"
     }
   ],
   "schema_version": 1

@@ -5,32 +5,32 @@
       "file_count": 1,
       "kind": "file",
       "path": "binding-audit-rows.jsonl",
-      "sha256": "dfe96e8028589ebfc7132ec6ebf17e24183dfb6e977a79c68449ac71ff8bba04",
-      "size_bytes": 18437
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     },
     "entity_bindings": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
-      "sha256": "b8a3fe4720a41cecd8549c90dadda8673a1dcccf32e96167b69cbdb522a8b064",
-      "size_bytes": 19500
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     },
     "frontier_research_queue_input_binding_audit": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-input-binding-audit.json",
-      "sha256": "951d8ffcd48f7463bb7f9dabfe2c67a97b065d1ea774f15b06d299c8b01f9fbd",
-      "size_bytes": 31348
+      "sha256": "d987b6b17fb1ae520397760295e46079f78560f49774cd9a25bbefe640cfef78",
+      "size_bytes": 4406
     },
     "input_binding_scaffold": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
-      "sha256": "82f4ccaba12d39b3072fc3d41f449329129ebeaf512b978c38b828be3e908511",
-      "size_bytes": 9105
+      "sha256": "488c3fc52513967685b377ef170696b3fa5d22e0ca84396dc682b8e9a5c4102b",
+      "size_bytes": 2911
     },
     "mechanism_bindings": {
       "exists": true,
@@ -45,8 +45,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
-      "sha256": "3d983a9820766ba2f8f410dc0315448bb0ef6db4fa46ef81b772e72c6383bdcd",
-      "size_bytes": 31739
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     },
     "subject_bindings": {
       "exists": true,
@@ -61,16 +61,18 @@
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl",
-      "sha256": "6ca7d9e71a664a50593f7b1402a66e6b33bde17d7cb10a303ee2a0c46adcfd62",
-      "size_bytes": 10201
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "blocked_binding_count": 25,
+    "blocked_binding_count": 0,
+    "closure_action": "fill_and_promote_remaining_world_model_rules",
     "missing_sidecar_count": 0,
     "ready_binding_count": 0,
-    "status": "blocked",
+    "source_backed_rows": "0",
+    "status": "empty",
     "workflow": "frontier_research_queue_input_binding_audit"
   },
   "schema_version": 1,

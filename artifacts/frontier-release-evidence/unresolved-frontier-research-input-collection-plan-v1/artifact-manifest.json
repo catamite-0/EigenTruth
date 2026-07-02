@@ -5,24 +5,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
-      "sha256": "1521e75d187d700ad9237a6bd86ceb006711f17e13d84dcef7681d4bbcafee2b",
-      "size_bytes": 23880
+      "sha256": "829e43ae0614148e8f5e05fc8d0bed78dfb51a581b2b0be819cb99a025dd5cc7",
+      "size_bytes": 11743
     },
     "collection_requests": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-input-collection-requests.jsonl",
-      "sha256": "93bde9e7250d3c31a5e4de46ab99673d270486451eda0add548c9352cf30b7d8",
-      "size_bytes": 4798
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
     },
     "frontier_research_queue_input_collection_plan": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-input-collection-plan.json",
-      "sha256": "7b8b9df4b26737e5d926f1f7970769847bc1d249d0ae167fb6ed3c216c6bd472",
-      "size_bytes": 10638
+      "sha256": "3ecd588cb48f19915fd3590f4e5f61ec76b13fb424903f0d1c107d659b475e86",
+      "size_bytes": 3320
     },
     "review_requests": {
       "exists": true,
@@ -35,12 +35,12 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "collection_request_count": 2,
-    "covered_input_count": 1,
+    "collection_request_count": 0,
+    "covered_input_count": 0,
     "review_request_count": 0,
     "runner": "plan_frontier_research_queue_input_collection",
-    "source_backed_request_count": 2,
-    "status": "ready_for_collection",
+    "source_backed_request_count": 0,
+    "status": "empty",
     "workflow": "frontier_research_queue_input_collection_plan"
   },
   "schema_version": 1,

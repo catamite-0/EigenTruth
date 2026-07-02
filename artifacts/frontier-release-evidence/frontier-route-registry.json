@@ -1388,6 +1388,89 @@
       "name": "smollm2-l80-frontier-v4-unresolved-frontier-command-plan",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-manifest.json",
+        "closure_action": "fill_and_promote_remaining_world_model_rules",
+        "filled_input_count": 3,
+        "status": "partial",
+        "unfilled_task_count": 23,
+        "workflow": "world_model_rule_input_temporal_binding_fill"
+      },
+      "name": "fill-and-promote-remaining-world-model-rules-command-4",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-manifest.json",
+        "closure_action": "fill_and_promote_remaining_world_model_rules",
+        "filled_input_count": 6,
+        "status": "partial",
+        "subject_binding_applied_count": 0,
+        "unfilled_task_count": 20,
+        "workflow": "world_model_rule_input_numeric_binding_fill"
+      },
+      "name": "fill-and-promote-remaining-world-model-rules-command-1",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-manifest.json",
+        "closure_lane": "numeric_rules",
+        "executed_count": 6,
+        "input_request_count": 20,
+        "needs_input_count": 20,
+        "skipped_non_rule_stub_count": 0,
+        "source_stub_count": 26,
+        "status": "partial",
+        "stub_count": 26,
+        "stub_result_coverage": 1.0,
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "fill-and-promote-remaining-world-model-rules-command-2",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-manifest.json",
+        "closure_lane": "temporal_rules",
+        "executed_count": 3,
+        "input_request_count": 23,
+        "needs_input_count": 23,
+        "skipped_non_rule_stub_count": 0,
+        "source_stub_count": 26,
+        "status": "partial",
+        "stub_count": 26,
+        "stub_result_coverage": 1.0,
+        "workflow": "world_model_rule_authoring_adapter"
+      },
+      "name": "fill-and-promote-remaining-world-model-rules-command-5",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_report_gate": "pass",
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report-manifest.json",
+        "blocked_count": 0,
+        "closure_lane": "temporal_rules",
+        "pending_count": 23,
+        "promoted_count": 3,
+        "status": "promote",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "fill-and-promote-remaining-world-model-rules-command-6",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json",
+      "version": "0.2"
     }
   ],
   "schema_version": 1

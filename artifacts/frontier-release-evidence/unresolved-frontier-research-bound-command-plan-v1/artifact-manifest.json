@@ -13,28 +13,28 @@
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
-      "sha256": "8b6063f065f449c28f5c424d75b9decc7078a2c7ddaa903dd45b204e1d1866db",
-      "size_bytes": 20323
+      "sha256": "c061237f802a37a27843aae42b5706c9e4e1fdb1a8e5c1273ac71b39beb227f5",
+      "size_bytes": 11472
     },
     "frontier_research_queue_bound_command_plan": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-research-bound-command-plan.json",
-      "sha256": "1521e75d187d700ad9237a6bd86ceb006711f17e13d84dcef7681d4bbcafee2b",
-      "size_bytes": 23880
+      "sha256": "829e43ae0614148e8f5e05fc8d0bed78dfb51a581b2b0be819cb99a025dd5cc7",
+      "size_bytes": 11743
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "command_count": 9,
-    "entry_count": 2,
-    "missing_input_count": 3,
+    "command_count": 3,
+    "entry_count": 1,
+    "missing_input_count": 0,
     "ready_entry_count": 1,
-    "review_required_entry_count": 2,
+    "review_required_entry_count": 1,
     "runner": "bind_frontier_research_queue_command_plan",
-    "status": "needs_inputs",
-    "unbound_placeholder_count": 2,
+    "status": "ready",
+    "unbound_placeholder_count": 0,
     "workflow": "frontier_research_queue_bound_command_plan"
   },
   "schema_version": 1,

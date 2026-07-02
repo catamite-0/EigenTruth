@@ -517,7 +517,7 @@ def _world_model_rule_lane(
         status = "partial"
     elif blocked_count:
         status = "blocked"
-    elif pending_count:
+    elif pending_count and audit_adjusted_remaining_task_count:
         status = "needs_inputs"
     elif bundle_status not in {None, "promote"}:
         status = "blocked"

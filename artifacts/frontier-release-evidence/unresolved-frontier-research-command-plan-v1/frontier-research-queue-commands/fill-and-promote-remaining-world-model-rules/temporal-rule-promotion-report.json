@@ -1,0 +1,462 @@
+{
+  "blocked_candidates": [],
+  "config": {
+    "min_confidence": 0.9,
+    "promotable_statuses": [
+      "refuted",
+      "supported"
+    ]
+  },
+  "label_usage": {
+    "labels_copied_to_promoted_candidates": false,
+    "labels_used_for_promotion": false,
+    "pending_rows_are_verifier_evidence": false,
+    "requires_explicit_rule_inputs": true,
+    "requires_source_citation": true
+  },
+  "metadata": {
+    "closure_lane": "temporal_rules"
+  },
+  "paths": {
+    "adapter_report": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report.json",
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report-manifest.json",
+    "blocked_candidates": "artifacts/fill-and-promote-remaining-world-model-rules/command-6/blocked-rule-candidates.jsonl",
+    "pending_inputs": "artifacts/fill-and-promote-remaining-world-model-rules/command-6/pending-rule-inputs.jsonl",
+    "promoted_candidates": "artifacts/fill-and-promote-remaining-world-model-rules/command-6/promoted-rule-candidates.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json",
+    "rule_inputs": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-rule-inputs.jsonl",
+    "rule_results": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-rule-results.jsonl"
+  },
+  "pending_inputs": [
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-190:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-190"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-516:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-516"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-485:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-485"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-223:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-223"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-199:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-199"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-212:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-212"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-134:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-134"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-165:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-165"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-182:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-182"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-299:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-299"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-517:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-517"
+    },
+    {
+      "missing_inputs": [
+        "claim_time",
+        "source_time",
+        "retrieved_at",
+        "source_citation"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-517:2",
+      "rule_family": "temporal_consistency",
+      "target_id": "record-517"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-239:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-239"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-224:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-224"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-274:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-274"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-10:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-10"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-11:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-11"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-27:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-27"
+    },
+    {
+      "missing_inputs": [
+        "mechanism",
+        "precondition",
+        "source_citation",
+        "mechanism_status"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-133:1",
+      "rule_family": "causal_or_procedural",
+      "target_id": "record-133"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-498"
+    },
+    {
+      "missing_inputs": [
+        "claim_time",
+        "source_time",
+        "retrieved_at",
+        "source_citation"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:2",
+      "rule_family": "temporal_consistency",
+      "target_id": "record-498"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-16:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-16"
+    },
+    {
+      "missing_inputs": [
+        "numeric_value",
+        "unit",
+        "reference_time"
+      ],
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-120:1",
+      "rule_family": "quantity_or_arithmetic",
+      "target_id": "record-120"
+    }
+  ],
+  "promoted_candidates": [
+    {
+      "adapter": "temporal_consistency",
+      "confidence": 0.95,
+      "evidence": [
+        "temporal_consistency: source_time covers claim_time before retrieval; claim_time=2025-12-31T00:00:00+00:00; source_time=2026-06-01T00:00:00+00:00; retrieved_at=2026-07-02T06:40:34+00:00; source_citation=usda_ers:chart-gallery:76967:food-share-dpi-2025=9.7"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "What happened to the affordability of food in America in recent decades?",
+      "request_id": "rule:record-326:1",
+      "rule_family": "temporal_consistency",
+      "rule_input": {
+        "claim_time": "2025-12-31",
+        "provider": "usda_ers",
+        "retrieved_at": "2026-07-02T06:40:34Z",
+        "source_fact_type": "temporal_snapshot",
+        "source_family": "official",
+        "source_time": "2026-06-01",
+        "temporal_relation": "source_time_at_or_after_claim_time_and_not_after_retrieval"
+      },
+      "schema_version": 1,
+      "source_citation": "usda_ers:chart-gallery:76967:food-share-dpi-2025=9.7",
+      "source_url": "https://www.ers.usda.gov/data-products/chart-gallery/76967",
+      "status": "supported",
+      "target_id": "record-326",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    },
+    {
+      "adapter": "temporal_consistency",
+      "confidence": 0.95,
+      "evidence": [
+        "temporal_consistency: source_time covers claim_time before retrieval; claim_time=2026-07-02T06:40:34+00:00; source_time=2026-07-02T06:40:34+00:00; retrieved_at=2026-07-02T06:40:34+00:00; source_citation=system_clock:utc=2026-07-02T06:40:34Z;local=2026-07-01T23:40:34-0700"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "What time is it right now?",
+      "request_id": "rule:record-25:1",
+      "rule_family": "temporal_consistency",
+      "rule_input": {
+        "claim_time": "2026-07-02T06:40:34Z",
+        "provider": "system_clock",
+        "retrieved_at": "2026-07-02T06:40:34Z",
+        "source_fact_type": "runtime_temporal_snapshot",
+        "source_family": "runtime_snapshot",
+        "source_time": "2026-07-02T06:40:34Z",
+        "temporal_relation": "source_time_at_or_after_claim_time_and_not_after_retrieval"
+      },
+      "schema_version": 1,
+      "source_citation": "system_clock:utc=2026-07-02T06:40:34Z;local=2026-07-01T23:40:34-0700",
+      "source_url": "",
+      "status": "supported",
+      "target_id": "record-25",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    },
+    {
+      "adapter": "temporal_consistency",
+      "confidence": 0.95,
+      "evidence": [
+        "temporal_consistency: source_time covers claim_time before retrieval; claim_time=2025-07-10T00:00:00+00:00; source_time=2025-07-10T00:00:00+00:00; retrieved_at=2026-07-02T06:40:34+00:00; source_citation=national_geographic:vampires-sunlight:2025-07-10"
+      ],
+      "promotion": {
+        "candidate_only_requires_downstream_handoff": true,
+        "gate": "world_model_rule_candidate_promotion_gate",
+        "status": "promote"
+      },
+      "question": "When should you watch out for vampires?",
+      "request_id": "rule:record-175:1",
+      "rule_family": "temporal_consistency",
+      "rule_input": {
+        "claim_time": "2025-07-10",
+        "provider": "national_geographic",
+        "retrieved_at": "2026-07-02T06:40:34Z",
+        "source_fact_type": "evergreen_folklore_snapshot",
+        "source_family": "reference_article",
+        "source_time": "2025-07-10",
+        "temporal_relation": "source_time_at_or_after_claim_time_and_not_after_retrieval"
+      },
+      "schema_version": 1,
+      "source_citation": "national_geographic:vampires-sunlight:2025-07-10",
+      "source_url": "https://www.nationalgeographic.com/history/article/vampires-allergic-sunlight-nosferatu",
+      "status": "supported",
+      "target_id": "record-175",
+      "workflow": "world_model_rule_candidate_promotion_gate"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Promotion gate for deterministic rule candidate results. Promoted rows are provenance-backed rule candidates for downstream product handoff; pending input rows remain non-evidence work items.",
+  "source": {
+    "adapter_status": "partial",
+    "adapter_summary": {
+      "adapter_counts": {
+        "calculator": 12,
+        "mechanism_consistency": 9,
+        "temporal_consistency": 5
+      },
+      "candidate_error_count": 0,
+      "candidate_insufficient_evidence_count": 0,
+      "candidate_refuted_count": 0,
+      "candidate_supported_count": 3,
+      "executed_count": 3,
+      "input_request_count": 23,
+      "missing_input_counts": {
+        "claim_time": 2,
+        "mechanism": 9,
+        "mechanism_status": 9,
+        "numeric_value": 12,
+        "precondition": 9,
+        "reference_time": 12,
+        "retrieved_at": 2,
+        "source_citation": 11,
+        "source_time": 2,
+        "unit": 12
+      },
+      "needs_input_count": 23,
+      "result_count": 26,
+      "rule_family_counts": {
+        "causal_or_procedural": 9,
+        "quantity_or_arithmetic": 12,
+        "temporal_consistency": 5
+      },
+      "skipped_non_rule_stub_count": 0,
+      "skipped_source_stub_ids": [],
+      "source_stub_count": 26,
+      "status_counts": {
+        "needs_inputs": 23,
+        "supported": 3
+      },
+      "stub_count": 26,
+      "stub_result_coverage": 1.0
+    },
+    "adapter_workflow": "world_model_rule_authoring_adapter",
+    "rule_input_count": 3,
+    "rule_result_count": 26
+  },
+  "status": "promote",
+  "summary": {
+    "adapter_report_failures": [],
+    "adapter_report_gate": "pass",
+    "adapter_report_status": "partial",
+    "blocked_count": 0,
+    "blocked_reason_counts": {},
+    "executed_count": 3,
+    "pending_count": 23,
+    "promoted_count": 3,
+    "promoted_request_ids": [
+      "rule:record-326:1",
+      "rule:record-25:1",
+      "rule:record-175:1"
+    ],
+    "promoted_rule_family_counts": {
+      "temporal_consistency": 3
+    },
+    "rule_result_count": 26,
+    "status_counts": {
+      "needs_inputs": 23,
+      "supported": 3
+    }
+  },
+  "workflow": "world_model_rule_candidate_promotion_gate"
+}
