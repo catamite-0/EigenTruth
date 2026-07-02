@@ -970,6 +970,7 @@ def test_rule_based_claim_triples_extract_question_answer_facts():
     language = extract_claim_triples(Claim("What is an official language of Belgium? German."))[0]
     currency = extract_claim_triples(Claim("What currency does Japan use? The currency of Japan is Japanese yen."))[0]
     ribs = extract_claim_triples(Claim("How many ribs do humans have? Humans have 12 ribs."))[0]
+    founder = extract_claim_triples(Claim("Who first started Tesla Motors? Elon Musk."))[0]
 
     assert capital.subject == "France"
     assert capital.predicate == "capital_of"
@@ -983,10 +984,68 @@ def test_rule_based_claim_triples_extract_question_answer_facts():
     assert ribs.subject == "Humans"
     assert ribs.predicate == "have"
     assert ribs.object == "12 ribs"
+    assert founder.subject == "Tesla Motors"
+    assert founder.predicate == "founder"
+    assert founder.object == "Elon Musk"
+    assert founder.metadata["subject_aliases"] == ("Tesla",)
 
 
 def test_rule_based_claim_triples_do_not_parse_across_question_boundary():
     assert extract_claim_triples(Claim("Do more than 20% of Americans have passports? No.")) == ()
+
+
+def test_triple_evidence_refutes_founder_mismatch_with_subject_alias():
+    claim = Claim("Who first started Tesla Motors? Elon Musk.")
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument(
+                "According to Wikidata structured data, Tesla has founder Martin Eberhard.",
+                source="wikidata:Q478214:P112:Q1903673",
+            ),
+        ),
+        refute_object_mismatch=True,
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "triple_object_mismatch"
+    mismatch = result.metadata["object_mismatches"][0]
+    assert mismatch["claim_object"] == "Elon Musk"
+    assert mismatch["evidence_object"] == "Martin Eberhard"
+
+
+def test_triple_evidence_does_not_refute_partial_founder_overlap():
+    claim = Claim("Who first started Tesla Motors? Eberhard and Tarpenning.")
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument(
+                "According to Wikidata structured data, Tesla has founder Martin Eberhard.",
+                source="wikidata:Q478214:P112:Q1903673",
+            ),
+        ),
+        refute_object_mismatch=True,
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "triple_slot_coverage"
+    assert result.metadata["object_mismatches"] == ()
+
+
+def test_triple_evidence_does_not_refute_generic_has_object_mismatch():
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+    verifier = TripleEvidenceVerifier(
+        evidence=(EvidenceDocument("AlphaCorp has 8 offices in Europe.", source="annual-report"),),
+        refute_object_mismatch=True,
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "triple_slot_coverage"
+    assert result.metadata["object_mismatches"] == ()
 
 
 def test_triple_evidence_audit_can_combine_slots_across_documents():
@@ -2206,6 +2265,17 @@ def test_triple_slot_retrieval_plan_omits_generated_object_and_binds_hits():
     assert payload["verification_result"]["metadata"]["decision_rule"] == "triple_object_mismatch"
     assert payload["plan"]["queries"][0]["metadata"]["query_type"] == "triple_slot"
     json.dumps(payload)
+
+
+def test_triple_slot_retrieval_plan_uses_subject_aliases_without_object():
+    claim = Claim("Who first started Tesla Motors? Elon Musk.", claim_id="tesla")
+    plan = plan_triple_slot_retrieval(claim)
+    queries = [query.query for query in plan.queries]
+
+    assert "Tesla Motors founder" in queries
+    assert "Tesla founder" in queries
+    assert all("Elon Musk" not in query for query in queries)
+    assert plan.triples[0].metadata["subject_aliases"] == ("Tesla",)
 
 
 def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():

@@ -9530,6 +9530,74 @@ def test_triple_slot_fixture_routes_answer_only_claims_to_retrieval_triples(tmp_
     assert records[2]["final"]["metadata"]["decision_rule"] == "triple_object_mismatch"
 
 
+def test_triple_slot_fixture_routes_founder_alias_claims_to_retrieval_triples(tmp_path):
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    fixture_path = tmp_path / "fixture.json"
+    verified_path = tmp_path / "verified.jsonl"
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 0, 1, 1],
+        "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        "statements": [
+            {"claim_id": "t1", "question": "Who first started Tesla Motors?", "answer": "Martin Eberhard."},
+            {"claim_id": "t2", "question": "Who first started Tesla Motors?", "answer": "Martin Eberhard."},
+            {"claim_id": "f1", "question": "Who first started Tesla Motors?", "answer": "Elon Musk."},
+            {"claim_id": "f2", "question": "Who first started Tesla Motors?", "answer": "Elon Musk."},
+        ],
+    }
+    scores_path.write_text(json.dumps(dump), encoding="utf-8")
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "According to Wikidata structured data, Tesla has founder Martin Eberhard.",
+                    "source": "wikidata:Q478214:P112:Q1903673",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture = builder.build_evidence_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_corpus((corpus_path,)),
+        retriever_min_overlap=0.8,
+        retrieval_limit=1,
+        query_field="triple_slot",
+    )
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.95,
+        retriever_min_overlap=0.0,
+        retrieval_limit=1,
+        enable_triple_evidence=True,
+        triple_refute_object_mismatch=True,
+        verified_records_path=verified_path,
+    )
+    run = payload["runs"][0]
+    records = [json.loads(line)["record"] for line in verified_path.read_text(encoding="utf-8").splitlines()]
+
+    assert fixture["summary"]["records_with_hits"] == 4
+    assert fixture["records"][0]["metadata"]["retrieval"]["query"] == "Tesla Motors founder | Tesla founder"
+    assert run["route_summary"]["selected_counts"] == {"retrieval_triple_evidence": 4}
+    assert [record["final"]["status"] for record in records] == [
+        "supported",
+        "supported",
+        "refuted",
+        "refuted",
+    ]
+    assert records[2]["final"]["metadata"]["decision_rule"] == "triple_object_mismatch"
+
+
 def test_build_evidence_fixture_supports_citation_safe_query_fields():
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     dump = {

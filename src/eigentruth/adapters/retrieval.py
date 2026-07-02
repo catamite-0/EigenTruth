@@ -830,31 +830,29 @@ def _triple_slot_query_variants(
     *,
     include_object: bool,
 ) -> tuple[tuple[str, str], ...]:
-    subject = _clean_query_part(triple.subject)
+    subjects = _query_subject_variants(triple)
     predicate = _clean_query_part(_predicate_query_text(triple.predicate))
     object_value = _clean_query_part(triple.object)
-    if not subject or not predicate:
+    if not subjects or not predicate:
         return ()
 
     variants: list[tuple[str, str]] = []
     normalized_predicate = _normalized_predicate(triple.predicate)
-    if normalized_predicate in {"capital_of", "official_language_of", "currency_of"}:
-        variants.append((_clean_query_part(f"{predicate} of {subject}"), "property_of_subject"))
-    elif normalized_predicate == "located_in":
-        variants.append((_clean_query_part(f"{subject} located in"), "subject_predicate"))
-    elif normalized_predicate == "equals":
-        variants.append((_clean_query_part(f"{subject} equals"), "subject_predicate"))
-    else:
-        variants.append((_clean_query_part(f"{subject} {predicate}"), "subject_predicate"))
+    for subject_index, subject in enumerate(subjects):
+        suffix = "" if subject_index == 0 else "_alias"
+        if normalized_predicate in {"capital_of", "official_language_of", "currency_of"}:
+            variants.append((_clean_query_part(f"{predicate} of {subject}"), f"property_of_subject{suffix}"))
+        elif normalized_predicate == "located_in":
+            variants.append((_clean_query_part(f"{subject} located in"), f"subject_predicate{suffix}"))
+        elif normalized_predicate == "equals":
+            variants.append((_clean_query_part(f"{subject} equals"), f"subject_predicate{suffix}"))
+        else:
+            variants.append((_clean_query_part(f"{subject} {predicate}"), f"subject_predicate{suffix}"))
 
-    variants.append((_clean_query_part(f"{subject} {predicate}"), "subject_predicate_generic"))
-    if include_object and object_value:
-        variants.append((_clean_query_part(f"{subject} {predicate} {object_value}"), "full_triple"))
-    return tuple(
-        (query, strategy)
-        for query, strategy in _unique_query_variants(variants)
-        if query
-    )
+        variants.append((_clean_query_part(f"{subject} {predicate}"), f"subject_predicate_generic{suffix}"))
+        if include_object and object_value:
+            variants.append((_clean_query_part(f"{subject} {predicate} {object_value}"), f"full_triple{suffix}"))
+    return tuple((query, strategy) for query, strategy in _unique_query_variants(variants) if query)
 
 
 def _predicate_query_text(value: str) -> str:
@@ -863,10 +861,38 @@ def _predicate_query_text(value: str) -> str:
         "capital_of": "capital",
         "official_language_of": "official language",
         "currency_of": "currency",
+        "founder": "founder",
         "located_in": "located in",
         "equals": "equals",
     }
     return mapping.get(normalized, normalized.replace("_", " "))
+
+
+def _query_subject_variants(triple: ClaimTriple) -> tuple[str, ...]:
+    values = [triple.subject]
+    metadata = dict(triple.metadata)
+    for key in ("subject_aliases", "subject_alias", "aliases", "alias"):
+        raw = metadata.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, (str, bytes, bytearray)):
+            candidates = (raw,)
+        else:
+            try:
+                candidates = tuple(raw)
+            except TypeError:
+                candidates = (raw,)
+        values.extend(str(candidate) for candidate in candidates)
+    seen: set[str] = set()
+    unique = []
+    for value in values:
+        text = _clean_query_part(str(value))
+        key = _query_dedupe_key(text)
+        if not key or key in seen:
+            continue
+        unique.append(text)
+        seen.add(key)
+    return tuple(unique)
 
 
 def _normalized_predicate(value: str) -> str:

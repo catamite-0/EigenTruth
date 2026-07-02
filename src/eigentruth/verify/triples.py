@@ -75,8 +75,31 @@ _QA_USES_CURRENCY_RE = re.compile(
     r"^(?:what|which)\s+currenc(?:y|ies)\s+(?:does|do|did)\s+(?P<subject>.+?)\s+use\?\s*(?P<object>.+)$",
     re.IGNORECASE,
 )
+_QA_FOUNDER_RE = re.compile(
+    r"^(?:who|which\s+person|what\s+person)\s+(?:first\s+)?"
+    r"(?:started|founded|co-founded|cofounded|created|launched)\s+"
+    r"(?P<subject>.+?)\?\s*(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_QA_FOUNDER_OF_RE = re.compile(
+    r"^(?:who|which\s+person|what\s+person)\s+(?:is|are|was|were)\s+"
+    r"(?:the\s+)?(?:founder|founders|co-founder|co-founders|cofounder|cofounders)\s+of\s+"
+    r"(?P<subject>.+?)\?\s*(?P<object>.+)$",
+    re.IGNORECASE,
+)
 _LOCATED_IN_RE = re.compile(
     r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+(?:located\s+in|based\s+in)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_HAS_FOUNDER_RE = re.compile(
+    r"^(?P<subject>.+?)\s+(?:has|have|had)\s+"
+    r"(?:a\s+|an\s+|the\s+)?(?P<predicate>founder|founders|co-founder|co-founders|cofounder|cofounders)\s+"
+    r"(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_FOUNDED_BY_RE = re.compile(
+    r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+"
+    r"(?:founded|started|created|launched)\s+by\s+(?P<object>.+)$",
     re.IGNORECASE,
 )
 _HAS_RE = re.compile(
@@ -96,6 +119,7 @@ _IS_RE = re.compile(
     r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+(?P<object>.+)$",
     re.IGNORECASE,
 )
+_ACCORDING_TO_PREFIX_RE = re.compile(r"^according\s+to\s+[^,]+,\s*(?P<body>.+)$", re.IGNORECASE)
 _BOUNDARY_CHARS = " \t\r\n.,;:!?()[]{}\"'`“”‘’。！？"
 _STOPWORDS = {
     "a",
@@ -125,9 +149,19 @@ _PREDICATE_ALIASES = {
     "official_language_of": ("official", "language"),
     "currency_of": ("currency",),
     "equals": (),
+    "founder": ("founder",),
     "located_in": ("located",),
     "is": (),
 }
+_OBJECT_MISMATCH_PREDICATES = frozenset({
+    "capital_of",
+    "currency_of",
+    "equals",
+    "founder",
+    "located_in",
+    "official_language_of",
+})
+_SUBJECT_ALIAS_METADATA_KEYS = ("subject_aliases", "subject_alias", "aliases", "alias")
 _LINK_GROUP_METADATA_KEYS = ("evidence_group", "document_group", "record_id", "source_record_id")
 _LINK_CLAIM_METADATA_KEYS = ("claim_id", "claim_ids", "supports_claim_id", "supports_claim_ids")
 _LINK_ENTITY_METADATA_KEYS = ("entity", "entities", "subject", "subjects", "subject_id", "entity_id")
@@ -258,167 +292,233 @@ class RuleBasedTripleExtractor:
             return metadata_triples
 
         text = _clean_sentence(claim.text)
-        if not text:
-            return ()
-        if _contains_blocked_extraction_context(text):
-            return ()
+        prefix = _ACCORDING_TO_PREFIX_RE.match(text)
+        if prefix is not None:
+            triples = _rule_based_triples_from_text(claim, _clean_sentence(prefix.group("body")))
+            if triples:
+                return triples
+        triples = _rule_based_triples_from_text(claim, text)
+        if triples:
+            return triples
+        return ()
 
-        if "?" in text:
-            question_answer = _question_answer_triples(claim, text)
-            if question_answer:
-                return question_answer
-            return _answer_assertion_triples(claim, text)
 
-        capital = _CAPITAL_OF_RE.match(text)
-        if capital is not None:
-            return (_triple(
+def _rule_based_triples_from_text(claim: Claim, text: str) -> tuple[ClaimTriple, ...]:
+    if not text:
+        return ()
+    if _contains_blocked_extraction_context(text):
+        return ()
+
+    if "?" in text:
+        question_answer = _question_answer_triples(claim, text)
+        if question_answer:
+            return question_answer
+        return _answer_assertion_triples(claim, text)
+
+    capital = _CAPITAL_OF_RE.match(text)
+    if capital is not None:
+        return (
+            _triple(
                 claim,
                 subject=capital.group("subject"),
                 predicate="capital_of",
                 object_value=capital.group("object"),
                 source="capital_of_rule",
-            ),)
+            ),
+        )
 
-        capital_subject = _CAPITAL_SUBJECT_RE.match(text)
-        if capital_subject is not None:
-            return (_triple(
+    capital_subject = _CAPITAL_SUBJECT_RE.match(text)
+    if capital_subject is not None:
+        return (
+            _triple(
                 claim,
                 subject=capital_subject.group("subject"),
                 predicate="capital_of",
                 object_value=capital_subject.group("object"),
                 source="capital_subject_rule",
-            ),)
+            ),
+        )
 
-        possessive_capital = _POSSESSIVE_CAPITAL_RE.match(text)
-        if possessive_capital is not None:
-            return (_triple(
+    possessive_capital = _POSSESSIVE_CAPITAL_RE.match(text)
+    if possessive_capital is not None:
+        return (
+            _triple(
                 claim,
                 subject=possessive_capital.group("subject"),
                 predicate="capital_of",
                 object_value=possessive_capital.group("object"),
                 source="possessive_capital_rule",
-            ),)
+            ),
+        )
 
-        official_language = _OFFICIAL_LANGUAGE_OF_RE.match(text)
-        if official_language is not None:
-            return (_triple(
+    official_language = _OFFICIAL_LANGUAGE_OF_RE.match(text)
+    if official_language is not None:
+        return (
+            _triple(
                 claim,
                 subject=official_language.group("subject"),
                 predicate="official_language_of",
                 object_value=official_language.group("object"),
                 source="official_language_of_rule",
-            ),)
+            ),
+        )
 
-        official_language_subject = _OFFICIAL_LANGUAGE_SUBJECT_RE.match(text)
-        if official_language_subject is not None:
-            return (_triple(
+    official_language_subject = _OFFICIAL_LANGUAGE_SUBJECT_RE.match(text)
+    if official_language_subject is not None:
+        return (
+            _triple(
                 claim,
                 subject=official_language_subject.group("subject"),
                 predicate="official_language_of",
                 object_value=official_language_subject.group("object"),
                 source="official_language_subject_rule",
-            ),)
+            ),
+        )
 
-        possessive_official_language = _POSSESSIVE_OFFICIAL_LANGUAGE_RE.match(text)
-        if possessive_official_language is not None:
-            return (_triple(
+    possessive_official_language = _POSSESSIVE_OFFICIAL_LANGUAGE_RE.match(text)
+    if possessive_official_language is not None:
+        return (
+            _triple(
                 claim,
                 subject=possessive_official_language.group("subject"),
                 predicate="official_language_of",
                 object_value=possessive_official_language.group("object"),
                 source="possessive_official_language_rule",
-            ),)
+            ),
+        )
 
-        currency = _CURRENCY_OF_RE.match(text)
-        if currency is not None:
-            return (_triple(
+    currency = _CURRENCY_OF_RE.match(text)
+    if currency is not None:
+        return (
+            _triple(
                 claim,
                 subject=currency.group("subject"),
                 predicate="currency_of",
                 object_value=currency.group("object"),
                 source="currency_of_rule",
-            ),)
+            ),
+        )
 
-        currency_subject = _CURRENCY_SUBJECT_RE.match(text)
-        if currency_subject is not None:
-            return (_triple(
+    currency_subject = _CURRENCY_SUBJECT_RE.match(text)
+    if currency_subject is not None:
+        return (
+            _triple(
                 claim,
                 subject=currency_subject.group("subject"),
                 predicate="currency_of",
                 object_value=currency_subject.group("object"),
                 source="currency_subject_rule",
-            ),)
+            ),
+        )
 
-        possessive_currency = _POSSESSIVE_CURRENCY_RE.match(text)
-        if possessive_currency is not None:
-            return (_triple(
+    possessive_currency = _POSSESSIVE_CURRENCY_RE.match(text)
+    if possessive_currency is not None:
+        return (
+            _triple(
                 claim,
                 subject=possessive_currency.group("subject"),
                 predicate="currency_of",
                 object_value=possessive_currency.group("object"),
                 source="possessive_currency_rule",
-            ),)
+            ),
+        )
 
-        uses_currency = _USES_CURRENCY_RE.match(text)
-        if uses_currency is not None:
-            return (_triple(
+    uses_currency = _USES_CURRENCY_RE.match(text)
+    if uses_currency is not None:
+        return (
+            _triple(
                 claim,
                 subject=uses_currency.group("subject"),
                 predicate="currency_of",
                 object_value=uses_currency.group("object"),
                 source="uses_currency_rule",
-            ),)
+            ),
+        )
 
-        located = _LOCATED_IN_RE.match(text)
-        if located is not None:
-            return (_triple(
+    located = _LOCATED_IN_RE.match(text)
+    if located is not None:
+        return (
+            _triple(
                 claim,
                 subject=located.group("subject"),
                 predicate="located_in",
                 object_value=located.group("object"),
                 source="located_in_rule",
-            ),)
+            ),
+        )
 
-        has_match = _HAS_RE.match(text)
-        if has_match is not None:
-            return (_triple(
+    has_founder = _HAS_FOUNDER_RE.match(text)
+    if has_founder is not None:
+        return (
+            _triple(
+                claim,
+                subject=has_founder.group("subject"),
+                predicate=_founder_predicate(has_founder.group("predicate")),
+                object_value=has_founder.group("object"),
+                source="has_founder_rule",
+            ),
+        )
+
+    founded_by = _FOUNDED_BY_RE.match(text)
+    if founded_by is not None:
+        return (
+            _triple(
+                claim,
+                subject=founded_by.group("subject"),
+                predicate="founder",
+                object_value=founded_by.group("object"),
+                source="founded_by_rule",
+            ),
+        )
+
+    has_match = _HAS_RE.match(text)
+    if has_match is not None:
+        return (
+            _triple(
                 claim,
                 subject=has_match.group("subject"),
                 predicate=has_match.group("predicate"),
                 object_value=has_match.group("object"),
                 source="has_rule",
-            ),)
+            ),
+        )
 
-        observation = _OBSERVATION_RE.match(text)
-        if observation is not None:
-            return (_triple(
+    observation = _OBSERVATION_RE.match(text)
+    if observation is not None:
+        return (
+            _triple(
                 claim,
                 subject=observation.group("subject"),
                 predicate=observation.group("predicate"),
                 object_value=observation.group("object"),
                 source="observation_rule",
-            ),)
+            ),
+        )
 
-        equation = _EQUATION_RE.match(text)
-        if equation is not None:
-            return (_triple(
+    equation = _EQUATION_RE.match(text)
+    if equation is not None:
+        return (
+            _triple(
                 claim,
                 subject=equation.group("subject"),
                 predicate="equals",
                 object_value=equation.group("object"),
                 source="equation_rule",
-            ),)
+            ),
+        )
 
-        is_match = _IS_RE.match(text)
-        if is_match is not None:
-            return (_triple(
+    is_match = _IS_RE.match(text)
+    if is_match is not None:
+        return (
+            _triple(
                 claim,
                 subject=is_match.group("subject"),
                 predicate="is",
                 object_value=is_match.group("object"),
                 source="is_rule",
-            ),)
-        return ()
+            ),
+        )
+    return ()
 
 
 @dataclass(frozen=True)
@@ -672,8 +772,7 @@ class TripleEvidenceAudit:
         covered_slots = tuple(_valid_slot_name(slot) for slot in self.covered_slots)
         missing_slots = tuple(_valid_slot_name(slot) for slot in self.missing_slots)
         slot_coverage = {
-            str(key): _coerce_probability(value, name=f"{key} coverage")
-            for key, value in self.slot_coverage.items()
+            str(key): _coerce_probability(value, name=f"{key} coverage") for key, value in self.slot_coverage.items()
         }
         slot_evidence = tuple(_coerce_slot_evidence(item) for item in self.slot_evidence)
         object.__setattr__(self, "triple", triple)
@@ -785,10 +884,7 @@ class TripleEvidenceVerifier:
         """Return a slot-level evidence audit for one claim."""
         triples = tuple(self.extractor.extract(claim))
         documents = _documents_with_context(self.evidence, context)
-        audits = tuple(
-            _audit_triple(triple, documents, min_slot_coverage=self.min_slot_coverage)
-            for triple in triples
-        )
+        audits = tuple(_audit_triple(triple, documents, min_slot_coverage=self.min_slot_coverage) for triple in triples)
         return TripleEvidenceAuditReport(claim_id=claim.claim_id, audits=audits)
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
@@ -839,10 +935,7 @@ class TripleEvidenceVerifier:
                 metadata=metadata,
             )
         explanation = "one or more extracted claim triples have missing evidence slots"
-        if any(
-            audit.metadata.get("evidence_link_passed") is False
-            for audit in report.audits
-        ):
+        if any(audit.metadata.get("evidence_link_passed") is False for audit in report.audits):
             explanation = "one or more extracted claim triples have unlinked evidence slots"
         return VerificationResult(
             status=VerificationStatus.INSUFFICIENT_EVIDENCE,
@@ -921,6 +1014,8 @@ def _question_answer_triples(claim: Claim, text: str) -> tuple[ClaimTriple, ...]
         (_QA_OFFICIAL_LANGUAGE_RE, "official_language_of", "qa_official_language_rule"),
         (_QA_CURRENCY_RE, "currency_of", "qa_currency_rule"),
         (_QA_USES_CURRENCY_RE, "currency_of", "qa_uses_currency_rule"),
+        (_QA_FOUNDER_RE, "founder", "qa_founder_rule"),
+        (_QA_FOUNDER_OF_RE, "founder", "qa_founder_of_rule"),
     )
     for pattern, predicate, source in patterns:
         match = pattern.match(text)
@@ -930,17 +1025,23 @@ def _question_answer_triples(claim: Claim, text: str) -> tuple[ClaimTriple, ...]
         if not answer:
             return ()
         subject = match.group("subject")
-        return (_triple(
-            claim,
-            subject=subject,
-            predicate=predicate,
-            object_value=_normalize_question_answer_object(
-                answer,
+        return (
+            _triple(
+                claim,
                 subject=subject,
                 predicate=predicate,
+                object_value=_normalize_question_answer_object(
+                    answer,
+                    subject=subject,
+                    predicate=predicate,
+                ),
+                source=source,
+                metadata=_question_answer_triple_metadata(
+                    subject=subject,
+                    predicate=predicate,
+                ),
             ),
-            source=source,
-        ),)
+        )
     return ()
 
 
@@ -983,6 +1084,56 @@ def _normalize_question_answer_object(
         if _slot_overlap_all(subject, triple.subject):
             return triple.object
     return answer
+
+
+def _question_answer_triple_metadata(
+    *,
+    subject: str,
+    predicate: str,
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    if _clean_predicate(predicate) == "founder":
+        aliases = _founder_subject_aliases(subject)
+        if aliases:
+            metadata["subject_aliases"] = aliases
+    return metadata
+
+
+def _founder_predicate(value: str) -> str:
+    normalized = _clean_predicate(value)
+    if normalized in {"founder", "founders", "co_founder", "co_founders", "cofounder", "cofounders"}:
+        return "founder"
+    return normalized
+
+
+def _founder_subject_aliases(subject: str) -> tuple[str, ...]:
+    text = _clean_slot(subject)
+    suffixes = (
+        " Motors",
+        " Motor",
+        " Company",
+        " Corporation",
+        " Corp",
+        " Incorporated",
+        " Inc",
+        " Limited",
+        " Ltd",
+        " LLC",
+    )
+    aliases: list[str] = []
+    for suffix in suffixes:
+        if text.casefold().endswith(suffix.casefold()):
+            alias = text[: -len(suffix)].strip()
+            if alias and alias.casefold() != text.casefold():
+                aliases.append(alias)
+    seen: set[str] = set()
+    unique = []
+    for alias in aliases:
+        key = _metadata_key(alias)
+        if key and key not in seen:
+            unique.append(alias)
+            seen.add(key)
+    return tuple(unique)
 
 
 def _coerce_prediction_triple_payloads(
@@ -1066,7 +1217,11 @@ def _triple(
     predicate: str,
     object_value: str,
     source: str,
+    metadata: Mapping[str, Any] | None = None,
 ) -> ClaimTriple:
+    payload = {"extractor": "rule_based_triple_extractor", "source": source}
+    if metadata is not None:
+        payload.update(dict(metadata))
     return ClaimTriple(
         subject=subject,
         predicate=predicate,
@@ -1074,7 +1229,7 @@ def _triple(
         claim_id=claim.claim_id,
         source_text=claim.text,
         confidence=0.55,
-        metadata={"extractor": "rule_based_triple_extractor", "source": source},
+        metadata=payload,
     )
 
 
@@ -1156,9 +1311,7 @@ def _aggregate_scored_documents(
     covered = tuple(slot for slot, value in slot_coverage.items() if value >= min_slot_coverage)
     missing = tuple(slot for slot in ("subject", "predicate", "object") if slot not in covered)
     evidence_documents = _unique_slot_documents(
-        slot_documents[slot]
-        for slot, value in slot_coverage.items()
-        if value > 0.0
+        slot_documents[slot] for slot, value in slot_coverage.items() if value > 0.0
     )
     if not evidence_documents:
         evidence_documents = (max(scored, key=lambda item: sum(item.slot_coverage.values())).document,)
@@ -1182,17 +1335,11 @@ def _aggregate_scored_documents(
         ),
         metadata={
             "decision_rule": (
-                "multi_document_slot_coverage"
-                if len(evidence_documents) > 1
-                else "single_document_slot_coverage"
+                "multi_document_slot_coverage" if len(evidence_documents) > 1 else "single_document_slot_coverage"
             ),
-            "slot_sources": {
-                slot: slot_documents[slot].source
-                for slot in ("subject", "predicate", "object")
-            },
+            "slot_sources": {slot: slot_documents[slot].source for slot in ("subject", "predicate", "object")},
             "slot_evidence": {
-                slot: _evidence_label(slot_documents[slot])
-                for slot in ("subject", "predicate", "object")
+                slot: _evidence_label(slot_documents[slot]) for slot in ("subject", "predicate", "object")
             },
             "evidence_document_count": len(evidence_documents),
             **link_metadata,
@@ -1225,6 +1372,8 @@ def _object_mismatch_summaries(
     summaries = []
     seen: set[tuple[str, str, str, str | None]] = set()
     for audit in audits:
+        if _clean_predicate(audit.triple.predicate) not in _OBJECT_MISMATCH_PREDICATES:
+            continue
         if "object" not in audit.missing_slots:
             continue
         if not {"subject", "predicate"} <= set(audit.covered_slots):
@@ -1250,17 +1399,19 @@ def _object_mismatch_summaries(
                 if key in seen:
                     continue
                 seen.add(key)
-                summaries.append({
-                    "reason": reason,
-                    "claim_triple": audit.triple.to_dict(),
-                    "evidence_triple": evidence_triple.to_dict(),
-                    "evidence": _evidence_label(document),
-                    "source": document.source,
-                    "claim_object": audit.triple.object,
-                    "evidence_object": evidence_triple.object,
-                    "claim_object_tokens": _slot_tokens(audit.triple.object),
-                    "evidence_object_tokens": _slot_tokens(evidence_triple.object),
-                })
+                summaries.append(
+                    {
+                        "reason": reason,
+                        "claim_triple": audit.triple.to_dict(),
+                        "evidence_triple": evidence_triple.to_dict(),
+                        "evidence": _evidence_label(document),
+                        "source": document.source,
+                        "claim_object": audit.triple.object,
+                        "evidence_object": evidence_triple.object,
+                        "claim_object_tokens": _slot_tokens(audit.triple.object),
+                        "evidence_object_tokens": _slot_tokens(evidence_triple.object),
+                    }
+                )
     return tuple(summaries)
 
 
@@ -1272,14 +1423,20 @@ def _same_subject_predicate(
 ) -> bool:
     if _clean_predicate(claim_triple.predicate) != _clean_predicate(evidence_triple.predicate):
         return False
-    claim_subject = set(_slot_tokens(claim_triple.subject))
-    evidence_subject = set(_slot_tokens(evidence_triple.subject))
-    if not claim_subject or not evidence_subject:
-        return False
-    return (
-        _slot_coverage(tuple(claim_subject), evidence_subject) >= min_slot_coverage
-        and _slot_coverage(tuple(evidence_subject), claim_subject) >= min_slot_coverage
-    )
+    for claim_subject in _slot_token_variants(claim_triple, "subject"):
+        claim_subject_tokens = set(claim_subject)
+        if not claim_subject_tokens:
+            continue
+        for evidence_subject in _slot_token_variants(evidence_triple, "subject"):
+            evidence_subject_tokens = set(evidence_subject)
+            if not evidence_subject_tokens:
+                continue
+            if (
+                _slot_coverage(claim_subject, evidence_subject_tokens) >= min_slot_coverage
+                and _slot_coverage(evidence_subject, claim_subject_tokens) >= min_slot_coverage
+            ):
+                return True
+    return False
 
 
 def _slot_overlap_all(left: str, right: str) -> bool:
@@ -1303,6 +1460,8 @@ def _object_mismatch_reason(claim_object: str, evidence_object: str) -> str | No
     if not claim_tokens or not evidence_tokens:
         return None
     if claim_tokens <= evidence_tokens or evidence_tokens <= claim_tokens:
+        return None
+    if claim_tokens & evidence_tokens:
         return None
     if claim_tokens - evidence_tokens and evidence_tokens - claim_tokens:
         return "alternate_object"
@@ -1366,16 +1525,19 @@ def _multi_document_link_metadata(
             "evidence_link_value": shared_group,
         }
     if triple.claim_id is not None and all(
-        _metadata_contains(document.metadata, _LINK_CLAIM_METADATA_KEYS, triple.claim_id)
-        for document in documents
+        _metadata_contains(document.metadata, _LINK_CLAIM_METADATA_KEYS, triple.claim_id) for document in documents
     ):
         return {
             "evidence_link_passed": True,
             "evidence_link_rule": "claim_id_metadata",
             "evidence_link_value": triple.claim_id,
         }
+    subject_values = _slot_values(triple, "subject")
     if all(
-        _metadata_contains_slot(document.metadata, _LINK_ENTITY_METADATA_KEYS, triple.subject)
+        any(
+            _metadata_contains_slot(document.metadata, _LINK_ENTITY_METADATA_KEYS, subject)
+            for subject in subject_values
+        )
         for document in documents
     ):
         return {
@@ -1383,9 +1545,8 @@ def _multi_document_link_metadata(
             "evidence_link_rule": "subject_metadata",
             "evidence_link_value": triple.subject,
         }
-    subject_tokens = _slot_tokens(triple.subject)
     if all(
-        _slot_coverage(subject_tokens, set(_tokens(document.text))) >= min_slot_coverage
+        _best_slot_coverage(triple, "subject", set(_tokens(document.text))) >= min_slot_coverage
         for document in documents
     ):
         return {
@@ -1414,10 +1575,7 @@ def _shared_metadata_value(
     documents: Sequence[EvidenceDocument],
     keys: Sequence[str],
 ) -> str | None:
-    value_sets = [
-        set(_metadata_values(document.metadata, keys))
-        for document in documents
-    ]
+    value_sets = [set(_metadata_values(document.metadata, keys)) for document in documents]
     if not value_sets or any(not values for values in value_sets):
         return None
     shared = set.intersection(*value_sets)
@@ -1493,7 +1651,7 @@ def _slot_evidence_items(
         coverage = slot_coverage.get(slot, 0.0)
         document = slot_documents.get(slot)
         evidence_tokens = set(_tokens(document.text)) if document is not None else set()
-        expected_tokens = _expected_slot_tokens(triple, slot)
+        expected_tokens = _best_expected_slot_tokens(triple, slot, evidence_tokens)
         matched_tokens = tuple(token for token in expected_tokens if token in evidence_tokens)
         missing_tokens = tuple(token for token in expected_tokens if token not in evidence_tokens)
         items.append(
@@ -1515,18 +1673,9 @@ def _slot_summary(audits: Sequence[TripleEvidenceAudit]) -> dict[str, dict[str, 
     summary: dict[str, dict[str, Any]] = {}
     for slot in ("subject", "predicate", "object"):
         values = [audit.slot_coverage.get(slot, 0.0) for audit in audits]
-        slot_evidence = [
-            item
-            for audit in audits
-            for item in audit.slot_evidence
-            if item.slot == slot
-        ]
+        slot_evidence = [item for audit in audits for item in audit.slot_evidence if item.slot == slot]
         sources = tuple(
-            sorted({
-                item.source
-                for item in slot_evidence
-                if item.source is not None and str(item.source).strip()
-            })
+            sorted({item.source for item in slot_evidence if item.source is not None and str(item.source).strip()})
         )
         summary[slot] = {
             "mean_coverage": 0.0 if not values else sum(values) / len(values),
@@ -1550,9 +1699,57 @@ def _expected_slot_value(triple: ClaimTriple, slot: str) -> str:
 
 
 def _expected_slot_tokens(triple: ClaimTriple, slot: str) -> tuple[str, ...]:
+    variants = _slot_token_variants(triple, slot)
+    return variants[0] if variants else ()
+
+
+def _best_expected_slot_tokens(
+    triple: ClaimTriple,
+    slot: str,
+    evidence_tokens: set[str],
+) -> tuple[str, ...]:
+    variants = _slot_token_variants(triple, slot)
+    if not variants:
+        return ()
+    return max(variants, key=lambda tokens: _slot_coverage(tokens, evidence_tokens))
+
+
+def _slot_token_variants(triple: ClaimTriple, slot: str) -> tuple[tuple[str, ...], ...]:
     if slot == "predicate":
-        return _predicate_tokens(triple.predicate)
-    return _slot_tokens(_expected_slot_value(triple, slot))
+        return (_predicate_tokens(triple.predicate),)
+    values = _slot_values(triple, slot)
+    variants: list[tuple[str, ...]] = []
+    seen: set[tuple[str, ...]] = set()
+    for value in values:
+        tokens = _slot_tokens(value)
+        if not tokens or tokens in seen:
+            continue
+        variants.append(tokens)
+        seen.add(tokens)
+    return tuple(variants)
+
+
+def _slot_values(triple: ClaimTriple, slot: str) -> tuple[str, ...]:
+    if slot != "subject":
+        return (_expected_slot_value(triple, slot),)
+    values = [_expected_slot_value(triple, slot)]
+    values.extend(_metadata_values(triple.metadata, _SUBJECT_ALIAS_METADATA_KEYS))
+    seen: set[str] = set()
+    unique = []
+    for value in values:
+        key = _metadata_key(value)
+        if not key or key in seen:
+            continue
+        unique.append(value)
+        seen.add(key)
+    return tuple(unique)
+
+
+def _best_slot_coverage(triple: ClaimTriple, slot: str, evidence_tokens: set[str]) -> float:
+    variants = _slot_token_variants(triple, slot)
+    if not variants:
+        return 1.0
+    return max(_slot_coverage(tokens, evidence_tokens) for tokens in variants)
 
 
 def _score_document(
@@ -1563,7 +1760,7 @@ def _score_document(
 ) -> _ScoredDocument:
     evidence_tokens = set(_tokens(document.text))
     coverage = {
-        "subject": _slot_coverage(_slot_tokens(triple.subject), evidence_tokens),
+        "subject": _best_slot_coverage(triple, "subject", evidence_tokens),
         "predicate": _slot_coverage(_predicate_tokens(triple.predicate), evidence_tokens),
         "object": _slot_coverage(_slot_tokens(triple.object), evidence_tokens),
     }
