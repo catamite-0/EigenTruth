@@ -37,6 +37,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
     "source_backed_numeric_bindings": {
         "lane": "world_model_rules",
         "collection_family": "numeric_rule_input_binding_collection",
+        "rule_family": "quantity_or_arithmetic",
         "recommended_next_tools": (
             "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
             "benchmarks/plan_world_model_rule_numeric_subject_bindings.py",
@@ -70,6 +71,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
     "source_backed_subject_bindings": {
         "lane": "world_model_rules",
         "collection_family": "numeric_subject_binding_collection",
+        "rule_family": "quantity_or_arithmetic",
         "recommended_next_tools": (
             "benchmarks/plan_world_model_rule_numeric_subject_bindings.py",
             "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
@@ -95,6 +97,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
     "source_backed_temporal_bindings": {
         "lane": "world_model_rules",
         "collection_family": "temporal_binding_collection",
+        "rule_family": "temporal_consistency",
         "recommended_next_tools": (
             "benchmarks/plan_world_model_rule_temporal_bindings.py",
             "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py",
@@ -124,6 +127,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
     "source_backed_mechanism_bindings": {
         "lane": "world_model_rules",
         "collection_family": "mechanism_rule_input_collection",
+        "rule_family": "causal_or_procedural",
         "recommended_next_tools": (
             "benchmarks/fill_world_model_rule_inputs_from_mechanism_bindings.py",
         ),
@@ -152,6 +156,7 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
     "source_backed_entity_bindings": {
         "lane": "world_model_rules",
         "collection_family": "entity_role_rule_input_binding_collection",
+        "rule_family": "entity_disambiguation",
         "recommended_next_tools": (
             "benchmarks/plan_world_model_rule_entity_bindings.py",
             "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py",
@@ -418,6 +423,7 @@ def _collection_request(
 ) -> dict[str, Any]:
     contract = SOURCE_BACKED_CONTRACTS.get(input_name, _generic_source_backed_contract(input_name))
     request_id = f"{_slug(action_id)}:{_slug(input_name)}"
+    request_metadata = _collection_request_metadata(entry, contract)
     return {
         "schema_version": 1,
         "workflow": WORKFLOW,
@@ -438,10 +444,30 @@ def _collection_request(
         "command_status": str(entry.get("command_status") or "unknown"),
         "evidence_routes": _string_tuple(entry.get("evidence_routes", ())),
         "source_gap_ids": _string_tuple(entry.get("source_gap_ids", ())),
+        "metadata": request_metadata,
         "review_required": True,
         "not_verifier_evidence": True,
         "blocks_bound_command_execution": True,
     }
+
+
+def _collection_request_metadata(
+    entry: Mapping[str, Any],
+    contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    entry_metadata = _mapping(entry.get("metadata"))
+    remaining_counts = _int_mapping(entry_metadata.get("remaining_rule_family_counts"))
+    target_rule_family = str(contract.get("rule_family") or "")
+    metadata: dict[str, Any] = {
+        "target_rule_family": target_rule_family,
+        "remaining_rule_family_counts": remaining_counts,
+        "promoted_rule_request_ids": _string_tuple(
+            entry_metadata.get("promoted_rule_request_ids", ())
+        ),
+    }
+    if target_rule_family and target_rule_family in remaining_counts:
+        metadata["target_remaining_rule_count"] = int(remaining_counts[target_rule_family])
+    return metadata
 
 
 def _review_request(
@@ -774,6 +800,24 @@ def _int_or_zero(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _int_mapping(value: Any) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {
+        str(key): int(number)
+        for key, number in value.items()
+        if str(key) and not isinstance(number, bool) and _is_int_like(number)
+    }
+
+
+def _is_int_like(value: Any) -> bool:
+    try:
+        int(value)
+    except (TypeError, ValueError):
+        return False
+    return True
 
 
 def _sorted_counter(counter: Counter[str]) -> dict[str, int]:

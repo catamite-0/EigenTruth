@@ -53,6 +53,7 @@
       ],
       "metadata": {
         "closure_output_count": 2,
+        "promoted_rule_request_ids": [],
         "remaining_rule_family_counts": {},
         "required_input_count": 0,
         "workflow_keys": {
@@ -160,6 +161,25 @@
       ],
       "metadata": {
         "closure_output_count": 6,
+        "promoted_rule_request_ids": [
+          "rule:record-10:1",
+          "rule:record-133:1",
+          "rule:record-165:1",
+          "rule:record-274:1",
+          "rule:record-299:1",
+          "rule:record-27:1",
+          "rule:record-134:1",
+          "rule:record-212:1",
+          "rule:record-224:1",
+          "rule:record-199:1",
+          "rule:record-223:1",
+          "rule:record-485:1",
+          "rule:record-516:1",
+          "rule:record-498:1",
+          "rule:record-517:1",
+          "rule:record-498:2",
+          "rule:record-517:2"
+        ],
         "remaining_rule_family_counts": {
           "quantity_or_arithmetic": 6,
           "temporal_consistency": 3

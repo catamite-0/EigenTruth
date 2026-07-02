@@ -108,18 +108,28 @@ def scaffold_frontier_research_queue_input_bindings(
         if config is None:
             skipped_requests.append(_skipped_request(request, reason="unsupported_input_name"))
             continue
+        request_filter = _request_task_filter(request)
+        if request_filter["max_tasks"] == 0:
+            skipped_requests.append(_skipped_request(request, reason="no_remaining_rule_family_count"))
+            continue
         input_tasks_path = _input_tasks_path_hint(request)
         task_rows = _load_matching_tasks(
             input_tasks_path,
             task_collection_family=str(config["task_collection_family"]),
             expand_input_tasks=expand_input_tasks,
             source_root=None if source_path is None else source_path.parent,
+            task_rule_family=request_filter["rule_family"],
+            excluded_request_ids=request_filter["excluded_request_ids"],
+            max_tasks=request_filter["max_tasks"],
         )
         input_task_sources[str(request.get("request_id") or "")] = {
             "input_tasks_path": None if input_tasks_path is None else str(input_tasks_path),
             "expanded_task_count": len(task_rows),
             "expand_input_tasks": bool(expand_input_tasks),
             "task_collection_family": str(config["task_collection_family"]),
+            "target_rule_family": request_filter["rule_family"],
+            "excluded_request_id_count": len(request_filter["excluded_request_ids"]),
+            "target_remaining_rule_count": request_filter["max_tasks"],
         }
         rows = (
             tuple(
@@ -294,6 +304,11 @@ def _base_skeleton(
     skeleton["sidecar_key"] = sidecar_key
     skeleton["required_binding_fields"] = _string_tuple(request.get("required_binding_fields", ()))
     skeleton["source_gap_ids"] = _string_tuple(request.get("source_gap_ids", ()))
+    request_metadata = _mapping(request.get("metadata"))
+    skeleton["target_rule_family"] = str(request_metadata.get("target_rule_family") or "")
+    skeleton["promoted_rule_request_ids"] = _string_tuple(
+        request_metadata.get("promoted_rule_request_ids", ())
+    )
     skeleton["source_note"] = ""
     return skeleton
 
@@ -342,6 +357,9 @@ def _load_matching_tasks(
     task_collection_family: str,
     expand_input_tasks: bool,
     source_root: Path | None,
+    task_rule_family: str = "",
+    excluded_request_ids: Sequence[str] = (),
+    max_tasks: int | None = None,
 ) -> tuple[Mapping[str, Any], ...]:
     if not expand_input_tasks or path is None:
         return ()
@@ -349,11 +367,45 @@ def _load_matching_tasks(
     if not task_path.exists():
         return ()
     rows = _load_jsonl_mappings(task_path)
-    return tuple(
-        row
-        for row in rows
-        if str(row.get("collection_family") or "") == task_collection_family
-    )
+    excluded = set(str(item) for item in excluded_request_ids if str(item))
+    matched: list[Mapping[str, Any]] = []
+    limit = None if max_tasks is None else max(0, int(max_tasks))
+    if limit == 0:
+        return ()
+    for row in rows:
+        if str(row.get("collection_family") or "") != task_collection_family:
+            continue
+        if task_rule_family and str(row.get("rule_family") or "") != task_rule_family:
+            continue
+        if _task_request_id(row) in excluded:
+            continue
+        matched.append(row)
+        if limit is not None and len(matched) >= limit:
+            break
+    return tuple(matched)
+
+
+def _request_task_filter(request: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(request.get("metadata"))
+    max_tasks = _optional_int(metadata.get("target_remaining_rule_count"))
+    return {
+        "rule_family": str(metadata.get("target_rule_family") or ""),
+        "excluded_request_ids": _string_tuple(metadata.get("promoted_rule_request_ids", ())),
+        "max_tasks": max_tasks,
+    }
+
+
+def _task_request_id(row: Mapping[str, Any]) -> str:
+    return str(row.get("source_request_id") or row.get("request_id") or "")
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _skipped_request(request: Mapping[str, Any], *, reason: str) -> dict[str, Any]:

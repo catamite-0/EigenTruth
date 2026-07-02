@@ -455,6 +455,7 @@ def _world_model_rule_lane(
     promoted_count = 0
     blocked_count = 0
     pending_count = 0
+    promoted_request_ids: list[str] = []
     promoted_rule_families: Counter[str] = Counter()
     status_counts: Counter[str] = Counter()
     for index, report in enumerate(rule_promotion_reports, start=1):
@@ -468,6 +469,7 @@ def _world_model_rule_lane(
         blocked_count += blocked
         pending_count += pending
         promoted_rule_families.update(_int_mapping(summary.get("promoted_rule_family_counts")))
+        promoted_request_ids.extend(_string_tuple(summary.get("promoted_request_ids", ())))
         promotion_rows.append({
             "index": index,
             "workflow": report.get("workflow"),
@@ -479,6 +481,7 @@ def _world_model_rule_lane(
             "promoted_rule_family_counts": _int_mapping(
                 summary.get("promoted_rule_family_counts")
             ),
+            "promoted_request_ids": _string_tuple(summary.get("promoted_request_ids", ())),
             "status_counts": _int_mapping(summary.get("status_counts")),
         })
     bundle_summary = _mapping(
@@ -575,6 +578,7 @@ def _world_model_rule_lane(
         "promotion_report_count": len(promotion_rows),
         "promotion_status_counts": dict(sorted(status_counts.items())),
         "promoted_count": promoted_count,
+        "promoted_rule_request_ids": tuple(dict.fromkeys(promoted_request_ids)),
         "blocked_count": blocked_count,
         "pending_count": pending_count,
         "promoted_rule_family_counts": dict(sorted(promoted_rule_families.items())),
@@ -640,6 +644,7 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             ),
             "raw_remaining_rule_family_counts": rules.get("remaining_rule_family_counts", {}),
             "missing_input_counts": rules.get("remaining_missing_input_counts", {}),
+            "promoted_rule_request_ids": rules.get("promoted_rule_request_ids", ()),
             "audit_adjusted_required_input_counts": rules.get(
                 "audit_adjusted_required_input_counts", {}
             ),
@@ -806,6 +811,16 @@ def _sequence(value: Any) -> tuple[Any, ...]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return tuple(value)
     return ()
+
+
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,) if value else ()
+    if not isinstance(value, Sequence) or isinstance(value, (bytes, bytearray)):
+        return (str(value),) if str(value) else ()
+    return tuple(str(item) for item in value if str(item))
 
 
 def _int_mapping(value: Any) -> dict[str, int]:

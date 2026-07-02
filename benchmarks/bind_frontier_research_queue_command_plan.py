@@ -168,7 +168,8 @@ def _bind_frontier_entry(
             dict.fromkeys((*_string_tuple(bound.get("unbound_inputs", ())), "valid_bound_commands"))
         )
     bound["metadata"] = {
-        "workflow_keys": _workflow_keys(metadata),
+        **dict(metadata),
+        "workflow_keys": _workflow_keys(metadata) or dict(_mapping(metadata.get("workflow_keys"))),
         "source_required_input_count": len(_string_tuple(entry.get("required_inputs", ()))),
         "source_planned_output_count": len(_mapping_sequence(entry.get("planned_outputs", ()))),
     }

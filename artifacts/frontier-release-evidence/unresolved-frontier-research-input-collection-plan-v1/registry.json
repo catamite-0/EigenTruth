@@ -3,20 +3,20 @@
     {
       "artifact_type": "report",
       "metadata": {
-        "actionable_entry_count": 2,
+        "actionable_entry_count": 1,
         "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/artifact-manifest.json",
         "bound_command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
-        "collection_request_count": 3,
-        "covered_input_count": 0,
+        "collection_request_count": 2,
+        "covered_input_count": 1,
         "manifest_summary": {
           "artifact_count": 4,
           "directory_count": 0,
           "file_count": 4,
           "missing_count": 0
         },
-        "review_request_count": 2,
-        "source_backed_request_count": 3,
-        "status": "needs_collection_and_review",
+        "review_request_count": 0,
+        "source_backed_request_count": 2,
+        "status": "ready_for_collection",
         "workflow": "frontier_research_queue_input_collection_plan"
       },
       "name": "unresolved-frontier-research-input-collection-plan",

@@ -32,6 +32,33 @@
       "input_category": "source_backed",
       "input_name": "source_backed_numeric_bindings",
       "lane": "world_model_rules",
+      "metadata": {
+        "promoted_rule_request_ids": [
+          "rule:record-10:1",
+          "rule:record-133:1",
+          "rule:record-165:1",
+          "rule:record-274:1",
+          "rule:record-299:1",
+          "rule:record-27:1",
+          "rule:record-134:1",
+          "rule:record-212:1",
+          "rule:record-224:1",
+          "rule:record-199:1",
+          "rule:record-223:1",
+          "rule:record-485:1",
+          "rule:record-516:1",
+          "rule:record-498:1",
+          "rule:record-517:1",
+          "rule:record-498:2",
+          "rule:record-517:2"
+        ],
+        "remaining_rule_family_counts": {
+          "quantity_or_arithmetic": 6,
+          "temporal_consistency": 3
+        },
+        "target_remaining_rule_count": 6,
+        "target_rule_family": "quantity_or_arithmetic"
+      },
       "not_verifier_evidence": true,
       "recommended_binding_skeleton": {
         "candidate_numeric_value": "",
@@ -101,6 +128,33 @@
       "input_category": "source_backed",
       "input_name": "source_backed_temporal_bindings",
       "lane": "world_model_rules",
+      "metadata": {
+        "promoted_rule_request_ids": [
+          "rule:record-10:1",
+          "rule:record-133:1",
+          "rule:record-165:1",
+          "rule:record-274:1",
+          "rule:record-299:1",
+          "rule:record-27:1",
+          "rule:record-134:1",
+          "rule:record-212:1",
+          "rule:record-224:1",
+          "rule:record-199:1",
+          "rule:record-223:1",
+          "rule:record-485:1",
+          "rule:record-516:1",
+          "rule:record-498:1",
+          "rule:record-517:1",
+          "rule:record-498:2",
+          "rule:record-517:2"
+        ],
+        "remaining_rule_family_counts": {
+          "quantity_or_arithmetic": 6,
+          "temporal_consistency": 3
+        },
+        "target_remaining_rule_count": 3,
+        "target_rule_family": "temporal_consistency"
+      },
       "not_verifier_evidence": true,
       "recommended_binding_skeleton": {
         "claim_time": "",
@@ -133,72 +187,6 @@
       "target_flag": "--temporal-bindings",
       "title": "Fill and promote remaining deterministic world-model rules",
       "workflow": "frontier_research_queue_input_collection_plan"
-    },
-    {
-      "action_id": "fill_and_promote_remaining_world_model_rules",
-      "binding_review_status": "needs_review",
-      "blocking_placeholders": [
-        {
-          "command_index": 7,
-          "context": {
-            "after": [
-              "--output-dir",
-              "artifacts/fill-and-promote-remaining-world-model-rules/command-7"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl",
-              "--entity-bindings"
-            ]
-          },
-          "flag": "--entity-bindings",
-          "placeholder_index": 1,
-          "script": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
-          "token_index": 5
-        }
-      ],
-      "blocks_bound_command_execution": true,
-      "collection_family": "entity_role_rule_input_binding_collection",
-      "command_status": "needs_inputs",
-      "entry_id": "frontier-research-0002",
-      "evidence_routes": [
-        "world_model_rules"
-      ],
-      "input_category": "source_backed",
-      "input_name": "source_backed_entity_bindings",
-      "lane": "world_model_rules",
-      "not_verifier_evidence": true,
-      "recommended_binding_skeleton": {
-        "answer_entity": "",
-        "expected_entity": "",
-        "not_verifier_evidence": true,
-        "request_id": "",
-        "requested_role": "",
-        "review_status": "approved",
-        "source_citation": "",
-        "subject_entity": "",
-        "target_id": ""
-      },
-      "recommended_next_tools": [
-        "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py"
-      ],
-      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
-      "required_binding_fields": [
-        "request_id",
-        "target_id",
-        "subject_entity",
-        "answer_entity",
-        "expected_entity",
-        "requested_role",
-        "source_citation",
-        "review_status",
-        "not_verifier_evidence"
-      ],
-      "review_required": true,
-      "schema_version": 1,
-      "source_gap_ids": [],
-      "target_flag": "--entity-bindings",
-      "title": "Fill and promote remaining deterministic world-model rules",
-      "workflow": "frontier_research_queue_input_collection_plan"
     }
   ],
   "config": {
@@ -215,7 +203,15 @@
       "source_backed_entity_bindings"
     ]
   },
-  "covered_inputs": [],
+  "covered_inputs": [
+    {
+      "action_id": "fill_and_promote_remaining_world_model_rules",
+      "blocking_placeholder_count": 2,
+      "coverage_reason": "remaining placeholders are represented by specific input requests",
+      "entry_id": "frontier-research-0002",
+      "input_name": "bound_command_template_values"
+    }
+  ],
   "label_usage": {
     "collection_requests_are_verifier_evidence": false,
     "labels_copied_to_collection_requests": false,
@@ -231,273 +227,7 @@
     "input_collection_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
     "review_requests": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-review-requests.jsonl"
   },
-  "review_requests": [
-    {
-      "action_id": "improve_unresolved_citation_alignment",
-      "binding_review_status": "needs_review",
-      "blocking_placeholders": [
-        {
-          "command_index": 1,
-          "context": {
-            "after": [
-              "--name",
-              "improve-unresolved-citation-alignment-command-1"
-            ],
-            "before": [
-              "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/run_source_family_citation_search_workflow.py",
-          "token_index": 29
-        },
-        {
-          "command_index": 2,
-          "context": {
-            "after": [
-              "--name",
-              "improve-unresolved-citation-alignment-command-2"
-            ],
-            "before": [
-              "artifacts/improve-unresolved-citation-alignment/command-2/artifact-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/run_source_family_citation_search_workflow.py",
-          "token_index": 29
-        },
-        {
-          "command_index": 3,
-          "context": {
-            "after": [
-              "--name",
-              "improve-unresolved-citation-alignment-command-3"
-            ],
-            "before": [
-              "artifacts/improve-unresolved-citation-alignment/command-3/artifact-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/run_source_family_citation_search_workflow.py",
-          "token_index": 29
-        }
-      ],
-      "blocks_bound_command_execution": true,
-      "command_status": "needs_inputs",
-      "command_validation": {
-        "issue_count": 0,
-        "issues": []
-      },
-      "entry_id": "frontier-research-0001",
-      "evidence_routes": [
-        "citation_evidence",
-        "source_family_acquisition"
-      ],
-      "input_category": "review",
-      "input_name": "bound_command_template_values",
-      "not_verifier_evidence": true,
-      "reason": "unmapped_command_template_placeholders",
-      "recommended_next_steps": [
-        "Review remaining command placeholders and either bind them explicitly or rerun binding staging with additional reviewed inputs."
-      ],
-      "request_id": "improve-unresolved-citation-alignment:bound-command-template-values",
-      "review_family": "command_template_binding_review",
-      "review_required": true,
-      "schema_version": 1,
-      "source_gap_ids": [],
-      "title": "Rerun unresolved citation alignment candidates",
-      "workflow": "frontier_research_queue_input_collection_plan"
-    },
-    {
-      "action_id": "fill_and_promote_remaining_world_model_rules",
-      "binding_review_status": "needs_review",
-      "blocking_placeholders": [
-        {
-          "command_index": 1,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-1"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 2,
-          "script": "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 2,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-2"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/run_world_model_rule_authoring_adapter.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 3,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-3"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/promote_world_model_rule_candidates.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 4,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-4"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 2,
-          "script": "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 5,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-5"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/run_world_model_rule_authoring_adapter.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 6,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-6"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/promote_world_model_rule_candidates.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 7,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-7"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 2,
-          "script": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 8,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-8"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/run_world_model_rule_authoring_adapter.py",
-          "token_index": 15
-        },
-        {
-          "command_index": 9,
-          "context": {
-            "after": [
-              "--name",
-              "fill-and-promote-remaining-world-model-rules-command-9"
-            ],
-            "before": [
-              "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-promotion-report-manifest.json",
-              "--registry"
-            ]
-          },
-          "flag": "--registry",
-          "placeholder_index": 1,
-          "script": "benchmarks/promote_world_model_rule_candidates.py",
-          "token_index": 15
-        }
-      ],
-      "blocks_bound_command_execution": true,
-      "command_status": "needs_inputs",
-      "command_validation": {
-        "issue_count": 0,
-        "issues": []
-      },
-      "entry_id": "frontier-research-0002",
-      "evidence_routes": [
-        "world_model_rules"
-      ],
-      "input_category": "review",
-      "input_name": "bound_command_template_values",
-      "not_verifier_evidence": true,
-      "reason": "unmapped_command_template_placeholders",
-      "recommended_next_steps": [
-        "Review remaining command placeholders and either bind them explicitly or rerun binding staging with additional reviewed inputs."
-      ],
-      "request_id": "fill-and-promote-remaining-world-model-rules:bound-command-template-values",
-      "review_family": "command_template_binding_review",
-      "review_required": true,
-      "schema_version": 1,
-      "source_gap_ids": [],
-      "title": "Fill and promote remaining deterministic world-model rules",
-      "workflow": "frontier_research_queue_input_collection_plan"
-    }
-  ],
+  "review_requests": [],
   "schema_version": 1,
   "scope": "Preflight collection plan for unbound frontier research-queue inputs. Requests are not verifier evidence and do not approve or execute the bound command plan.",
   "source": {
@@ -512,9 +242,10 @@
         "needs_review": 2
       },
       "bound_placeholder_count": 0,
-      "command_count": 12,
+      "command_count": 9,
       "command_status_counts": {
-        "needs_inputs": 2
+        "needs_inputs": 1,
+        "ready": 1
       },
       "command_validation_issue_count": 0,
       "entry_count": 2,
@@ -523,58 +254,49 @@
         "source_family_acquisition": 1,
         "world_model_rules": 1
       },
-      "expected_output_count": 11,
+      "expected_output_count": 8,
       "missing_command_template_count": 0,
-      "missing_input_count": 5,
-      "needs_input_entry_count": 2,
-      "placeholder_count": 15,
-      "ready_entry_count": 0,
+      "missing_input_count": 3,
+      "needs_input_entry_count": 1,
+      "placeholder_count": 2,
+      "ready_entry_count": 1,
       "review_required_entry_count": 2,
       "source_gap_ids": [],
-      "unbound_placeholder_count": 15
+      "unbound_placeholder_count": 2
     },
     "bound_plan_workflow": "frontier_research_queue_bound_command_plan"
   },
-  "status": "needs_collection_and_review",
+  "status": "ready_for_collection",
   "summary": {
     "action_ids": [
-      "fill_and_promote_remaining_world_model_rules",
-      "improve_unresolved_citation_alignment"
+      "fill_and_promote_remaining_world_model_rules"
     ],
-    "actionable_entry_count": 2,
+    "actionable_entry_count": 1,
     "binding_review_status_counts": {
       "needs_review": 2
     },
-    "blocking_placeholder_count": 15,
+    "blocking_placeholder_count": 2,
     "collection_family_counts": {
-      "entity_role_rule_input_binding_collection": 1,
       "numeric_rule_input_binding_collection": 1,
       "temporal_binding_collection": 1
     },
-    "collection_request_count": 3,
+    "collection_request_count": 2,
     "collection_request_ids": [
       "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
-      "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
-      "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings"
+      "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings"
     ],
-    "covered_input_count": 0,
+    "covered_input_count": 1,
     "entry_count": 2,
     "input_counts": {
-      "bound_command_template_values": 2,
-      "source_backed_entity_bindings": 1,
+      "bound_command_template_values": 1,
       "source_backed_numeric_bindings": 1,
       "source_backed_temporal_bindings": 1
     },
-    "review_family_counts": {
-      "command_template_binding_review": 2
-    },
-    "review_request_count": 2,
-    "review_request_ids": [
-      "improve-unresolved-citation-alignment:bound-command-template-values",
-      "fill-and-promote-remaining-world-model-rules:bound-command-template-values"
-    ],
-    "source_backed_request_count": 3,
-    "unbound_input_count": 5
+    "review_family_counts": {},
+    "review_request_count": 0,
+    "review_request_ids": [],
+    "source_backed_request_count": 2,
+    "unbound_input_count": 3
   },
   "workflow": "frontier_research_queue_input_collection_plan"
 }

@@ -151,6 +151,25 @@
         "causal_or_procedural": 9,
         "entity_disambiguation": 8
       },
+      "promoted_rule_request_ids": [
+        "rule:record-10:1",
+        "rule:record-133:1",
+        "rule:record-165:1",
+        "rule:record-274:1",
+        "rule:record-299:1",
+        "rule:record-27:1",
+        "rule:record-134:1",
+        "rule:record-212:1",
+        "rule:record-224:1",
+        "rule:record-199:1",
+        "rule:record-223:1",
+        "rule:record-485:1",
+        "rule:record-516:1",
+        "rule:record-498:1",
+        "rule:record-517:1",
+        "rule:record-498:2",
+        "rule:record-517:2"
+      ],
       "promotion_report_count": 4,
       "promotion_reports": [
         {
@@ -159,6 +178,9 @@
           "index": 1,
           "pending_count": 0,
           "promoted_count": 1,
+          "promoted_request_ids": [
+            "rule:record-10:1"
+          ],
           "promoted_rule_family_counts": {
             "causal_or_procedural": 1
           },
@@ -174,6 +196,12 @@
           "index": 2,
           "pending_count": 0,
           "promoted_count": 4,
+          "promoted_request_ids": [
+            "rule:record-133:1",
+            "rule:record-165:1",
+            "rule:record-274:1",
+            "rule:record-299:1"
+          ],
           "promoted_rule_family_counts": {
             "causal_or_procedural": 4
           },
@@ -189,6 +217,12 @@
           "index": 3,
           "pending_count": 0,
           "promoted_count": 4,
+          "promoted_request_ids": [
+            "rule:record-27:1",
+            "rule:record-134:1",
+            "rule:record-212:1",
+            "rule:record-224:1"
+          ],
           "promoted_rule_family_counts": {
             "causal_or_procedural": 4
           },
@@ -205,6 +239,16 @@
           "index": 4,
           "pending_count": 0,
           "promoted_count": 8,
+          "promoted_request_ids": [
+            "rule:record-199:1",
+            "rule:record-223:1",
+            "rule:record-485:1",
+            "rule:record-516:1",
+            "rule:record-498:1",
+            "rule:record-517:1",
+            "rule:record-498:2",
+            "rule:record-517:2"
+          ],
           "promoted_rule_family_counts": {
             "entity_disambiguation": 8
           },
@@ -320,6 +364,25 @@
         "unit": 12
       },
       "priority": 85,
+      "promoted_rule_request_ids": [
+        "rule:record-10:1",
+        "rule:record-133:1",
+        "rule:record-165:1",
+        "rule:record-274:1",
+        "rule:record-299:1",
+        "rule:record-27:1",
+        "rule:record-134:1",
+        "rule:record-212:1",
+        "rule:record-224:1",
+        "rule:record-199:1",
+        "rule:record-223:1",
+        "rule:record-485:1",
+        "rule:record-516:1",
+        "rule:record-498:1",
+        "rule:record-517:1",
+        "rule:record-498:2",
+        "rule:record-517:2"
+      ],
       "raw_remaining_rule_family_counts": {
         "quantity_or_arithmetic": 12,
         "temporal_consistency": 5

@@ -13,11 +13,11 @@
           "file_count": 2,
           "missing_count": 0
         },
-        "placeholder_count": 93,
-        "remaining_placeholder_count": 15,
-        "review_required_placeholder_count": 15,
-        "staged_placeholder_count": 78,
-        "staged_upstream_output_count": 12,
+        "placeholder_count": 68,
+        "remaining_placeholder_count": 2,
+        "review_required_placeholder_count": 2,
+        "staged_placeholder_count": 66,
+        "staged_upstream_output_count": 8,
         "status": "needs_review",
         "workflow": "frontier_research_queue_binding_suggestion_staging"
       },

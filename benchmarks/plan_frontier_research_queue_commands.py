@@ -396,6 +396,9 @@ def _unresolved_world_model_rules_action(
             "reason": str(action.get("reason") or ""),
             "missing_input_counts": dict(_mapping(action.get("missing_input_counts"))),
             "remaining_rule_family_counts": dict(remaining_families),
+            "promoted_rule_request_ids": _string_tuple(
+                action.get("promoted_rule_request_ids", ())
+            ),
         },
     }
 
@@ -755,6 +758,9 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             "closure_output_count": len(closure_outputs),
             "remaining_rule_family_counts": dict(
                 _mapping(metadata.get("remaining_rule_family_counts"))
+            ),
+            "promoted_rule_request_ids": _string_tuple(
+                metadata.get("promoted_rule_request_ids", ())
             ),
         },
     }

@@ -33942,6 +33942,7 @@ def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules
                         "quantity_or_arithmetic": 1,
                         "temporal_consistency": 1,
                     },
+                    "promoted_rule_request_ids": ("rule:record-199:1",),
                     "missing_input_counts": {
                         "numeric_value": 1,
                         "source_citation": 2,
@@ -33970,6 +33971,7 @@ def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules
         "quantity_or_arithmetic": 1,
         "temporal_consistency": 1,
     }
+    assert entry["metadata"]["promoted_rule_request_ids"] == ("rule:record-199:1",)
 
 
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
@@ -34816,6 +34818,13 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
                             "temporal_rule_fill_report",
                             "entity_rule_fill_report",
                         ),
+                        "remaining_rule_family_counts": {
+                            "quantity_or_arithmetic": 2,
+                            "temporal_consistency": 1,
+                            "entity_disambiguation": 1,
+                        },
+                        "promoted_rule_request_ids": ("rule:record-closed:1",),
+                        "source_summary_workflow": "unit_frontier_summary",
                     },
                 },
             ),
@@ -34861,6 +34870,9 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
         "source_backed_entity_bindings",
         "bound_command_template_values",
     )
+    assert bound["entries"][0]["metadata"]["workflow_keys"] == {
+        "source_summary_workflow": "unit_frontier_summary"
+    }
     assert payload["workflow"] == "frontier_research_queue_input_collection_plan"
     assert payload["status"] == "ready_for_collection"
     assert payload["summary"]["collection_request_count"] == 3
@@ -34890,6 +34902,11 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
     assert numeric_request["blocking_placeholders"][0]["flag"] == "--numeric-bindings"
     assert temporal_request["blocking_placeholders"][0]["flag"] == "--temporal-bindings"
     assert entity_request["blocking_placeholders"][0]["flag"] == "--entity-bindings"
+    assert numeric_request["metadata"]["target_rule_family"] == "quantity_or_arithmetic"
+    assert numeric_request["metadata"]["target_remaining_rule_count"] == 2
+    assert numeric_request["metadata"]["promoted_rule_request_ids"] == ["rule:record-closed:1"]
+    assert temporal_request["metadata"]["target_rule_family"] == "temporal_consistency"
+    assert entity_request["metadata"]["target_rule_family"] == "entity_disambiguation"
     assert entity_request["recommended_next_tools"][0] == (
         "benchmarks/plan_world_model_rule_entity_bindings.py"
     )
@@ -36151,6 +36168,106 @@ def test_frontier_research_queue_input_binding_scaffold_can_skip_task_expansion(
     assert payload["summary"]["request_level_skeleton_count"] == 1
     assert rows[0]["scaffold_status"] == "needs_input_task_expansion_or_manual_request_id"
     assert rows[0]["review_status"] == "needs_review"
+
+
+def test_frontier_research_queue_input_binding_scaffold_filters_closed_remaining_tasks(
+    tmp_path,
+):
+    input_scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_input_bindings"
+    )
+    task_path = tmp_path / "rule-input-tasks.jsonl"
+    task_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "task_id": "closed-task",
+                    "source_request_id": "rule:record-closed:1",
+                    "target_id": "record-closed",
+                    "collection_family": "numeric_rule_input_collection",
+                    "rule_family": "quantity_or_arithmetic",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "task_id": "open-task-1",
+                    "source_request_id": "rule:record-open:1",
+                    "target_id": "record-open",
+                    "collection_family": "numeric_rule_input_collection",
+                    "rule_family": "quantity_or_arithmetic",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "task_id": "open-task-2",
+                    "source_request_id": "rule:record-extra:1",
+                    "target_id": "record-extra",
+                    "collection_family": "numeric_rule_input_collection",
+                    "rule_family": "quantity_or_arithmetic",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = input_scaffold_module.scaffold_frontier_research_queue_input_bindings(
+        input_collection_plan={
+            "workflow": "frontier_research_queue_input_collection_plan",
+            "status": "ready_for_collection",
+            "collection_requests": (
+                {
+                    "request_id": "action:source-backed-numeric-bindings",
+                    "action_id": "action",
+                    "input_name": "source_backed_numeric_bindings",
+                    "collection_family": "numeric_rule_input_binding_collection",
+                    "required_binding_fields": (
+                        "request_id",
+                        "target_id",
+                        "source_numeric_value",
+                        "source_citation",
+                    ),
+                    "recommended_binding_skeleton": {
+                        "request_id": "",
+                        "target_id": "",
+                        "source_numeric_value": "",
+                        "source_citation": "",
+                    },
+                    "blocking_placeholders": (
+                        {
+                            "flag": "--numeric-bindings",
+                            "context": {
+                                "before": (str(task_path), "--numeric-bindings"),
+                            },
+                        },
+                    ),
+                    "metadata": {
+                        "target_rule_family": "quantity_or_arithmetic",
+                        "target_remaining_rule_count": 1,
+                        "promoted_rule_request_ids": ("rule:record-closed:1",),
+                    },
+                },
+            ),
+            "review_requests": (),
+        },
+        output_dir=tmp_path / "input-binding-scaffold",
+    )
+    rows = [
+        json.loads(line)
+        for line in (tmp_path / "input-binding-scaffold" / "source-backed-numeric-bindings.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    source = payload["input_task_sources"]["action:source-backed-numeric-bindings"]
+
+    assert payload["summary"]["binding_skeleton_count"] == 1
+    assert payload["summary"]["expanded_task_count"] == 1
+    assert source["target_rule_family"] == "quantity_or_arithmetic"
+    assert source["target_remaining_rule_count"] == 1
+    assert source["excluded_request_id_count"] == 1
+    assert rows[0]["request_id"] == "rule:record-open:1"
+    assert rows[0]["target_rule_family"] == "quantity_or_arithmetic"
+    assert rows[0]["promoted_rule_request_ids"] == ["rule:record-closed:1"]
 
 
 def test_frontier_research_queue_input_binding_audit_blocks_unreviewed_reserved_rows(
@@ -56639,6 +56756,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "pending_count": 1,
             "executed_count": 2,
             "promoted_rule_family_counts": {"causal_or_procedural": 2},
+            "promoted_request_ids": ("rule:record-mechanism:1", "rule:record-mechanism:2"),
             "status_counts": {"supported": 2},
         },
     }
@@ -56651,6 +56769,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "pending_count": 0,
             "executed_count": 1,
             "promoted_rule_family_counts": {"entity_disambiguation": 1},
+            "promoted_request_ids": ("rule:record-199:1",),
             "status_counts": {"refuted": 1},
         },
     }
@@ -56792,6 +56911,10 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "source_citation": 5,
     }
     assert payload["lanes"]["world_model_rules"]["promoted_count"] == 2
+    assert payload["lanes"]["world_model_rules"]["promoted_rule_request_ids"] == (
+        "rule:record-mechanism:1",
+        "rule:record-mechanism:2",
+    )
     assert payload["lanes"]["world_model_rules"]["pending_count"] == 1
     action_ids = {action["action_id"] for action in payload["next_actions"]}
     assert "improve_unresolved_citation_alignment" in action_ids
@@ -56896,6 +57019,11 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "causal_or_procedural": 2,
         "entity_disambiguation": 1,
     }
+    assert promoted_requeued_rules["promoted_rule_request_ids"] == (
+        "rule:record-mechanism:1",
+        "rule:record-mechanism:2",
+        "rule:record-199:1",
+    )
     assert promoted_requeued_rules["closed_rule_family_counts"] == {
         "causal_or_procedural": 2,
         "entity_disambiguation": 1,
@@ -56919,6 +57047,11 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert promoted_requeued_action["remaining_rule_family_counts"] == {
         "quantity_or_arithmetic": 2
     }
+    assert promoted_requeued_action["promoted_rule_request_ids"] == (
+        "rule:record-mechanism:1",
+        "rule:record-mechanism:2",
+        "rule:record-199:1",
+    )
     assert promoted_requeued_action["audit_adjusted_required_input_counts"] == {
         "calculation.expected": 2,
         "calculation.expression": 2,

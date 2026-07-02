@@ -3,7 +3,7 @@
     {
       "artifact_type": "report",
       "metadata": {
-        "command_count": 12,
+        "command_count": 9,
         "entry_count": 2,
         "manifest_summary": {
           "artifact_count": 2,
@@ -12,10 +12,10 @@
           "missing_count": 0
         },
         "missing_command_template_count": 0,
-        "missing_input_count": 5,
+        "missing_input_count": 4,
         "needs_input_entry_count": 2,
         "only_active_research_queue": false,
-        "placeholder_count": 93,
+        "placeholder_count": 68,
         "ready_entry_count": 0,
         "source_path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
         "source_research_alignment_status": null,

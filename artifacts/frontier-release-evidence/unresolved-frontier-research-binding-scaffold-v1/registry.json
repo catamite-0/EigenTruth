@@ -14,10 +14,10 @@
           "file_count": 3,
           "missing_count": 0
         },
-        "placeholder_count": 93,
-        "required_input_count": 3,
+        "placeholder_count": 68,
+        "required_input_count": 2,
         "status": "needs_review",
-        "suggested_binding_count": 93,
+        "suggested_binding_count": 68,
         "workflow": "frontier_research_queue_binding_scaffold"
       },
       "name": "unresolved-frontier-research-binding-scaffold",

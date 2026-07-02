@@ -5,9 +5,9 @@
       "metadata": {
         "citation_status": "blocked",
         "manifest_summary": {
-          "artifact_count": 12,
+          "artifact_count": 13,
           "directory_count": 0,
-          "file_count": 12,
+          "file_count": 13,
           "missing_count": 0
         },
         "model": "smollm2-l80",
@@ -17,6 +17,7 @@
         "status": "needs_evidence",
         "unresolved_target_count": 88,
         "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_adjusted_remaining_task_count": 9,
         "world_model_rule_audit_requeue_suggestion_count": 8,
         "world_model_rule_remaining_task_count": 17,
         "world_model_rule_requeue_outstanding_count": 0,

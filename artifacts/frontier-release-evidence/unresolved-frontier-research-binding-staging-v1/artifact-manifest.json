@@ -5,26 +5,26 @@
       "file_count": 1,
       "kind": "file",
       "path": "../unresolved-frontier-research-binding-scaffold-v1/frontier-research-binding-scaffold.json",
-      "sha256": "5e6d3b17e15a79f4e21d46ce8e4e39c80f2dc2c9a060a4aeec7965311d02bd96",
-      "size_bytes": 145332
+      "sha256": "5937f27a2c54bad6e3ec7c90e8b5c785061b6147027305985420ab900af89bab",
+      "size_bytes": 109110
     },
     "frontier_research_queue_staged_command_bindings": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "frontier-research-command-bindings-staged.json",
-      "sha256": "4a32c96923cf077ba12cda8af95c6cebcee01471e15c2b33434b6d626222d807",
-      "size_bytes": 89872
+      "sha256": "4b9c3c6988e6971ac514ff2c4441f5346bf732178bc119b25936e1232be293cb",
+      "size_bytes": 68235
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "bindings_workflow": "frontier_research_queue_command_bindings",
     "entry_count": 2,
-    "remaining_placeholder_count": 15,
+    "remaining_placeholder_count": 2,
     "runner": "stage_frontier_research_queue_binding_suggestions",
-    "staged_placeholder_count": 78,
-    "staged_upstream_output_count": 12,
+    "staged_placeholder_count": 66,
+    "staged_upstream_output_count": 8,
     "status": "needs_review",
     "workflow": "frontier_research_queue_binding_suggestion_staging"
   },
