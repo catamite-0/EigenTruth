@@ -21,7 +21,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Semantic Energy (arXiv:2508.14496) supports energy-style uncertainty beyond entropy. EigenTruth already has lightweight semantic-energy proxies; a future step is to compare them against conformal abstention and route-cost gates.
 - Adaptive Conformal Semantic Entropy (arXiv:2605.04295, 2026) directly supports EigenTruth's ACSE-style path: semantic dispersion should be adaptively inflated by cluster/sample features and then calibrated, rather than using raw entropy as a universal threshold. EigenTruth's current `AdaptiveScoreTransform` / `AdaptiveConformalCalibrator` and `inside_semantic_energy` score-dump features are the dependency-free version of that idea; the missing release step is to compare adaptive artifacts against redline entropy and route-cost gates before product promotion.
 - Principled Detection of Hallucinations in Large Language Models via Multiple Testing (arXiv:2508.18473) argues that no single hallucination score is likely to cover all failure modes, and combines several calibrated scores through conformal p-values plus multiple-testing control. This directly fits EigenTruth's multi-signal posture: geometry, confidence, semantic-energy, retrieval, verifier, and world-model evidence should remain individually inspectable while sharing one global false-alarm budget.
-- CiteCheck (arXiv:2605.27700) shows that citation hallucinations often appear as small metadata drift rather than fully fabricated references. This supports a separate citation-integrity route before broad retrieval: DOI, arXiv id, URL, author/year, title, and local reference labels should be checked against a trusted citation catalog instead of treated as ordinary lexical groundedness.
+- CiteCheck (arXiv:2605.27700) shows that citation hallucinations often appear as small metadata drift rather than fully fabricated references. CiteAudit (arXiv:2602.23452) and FACTUM-style citation-hallucination work (arXiv:2601.05866) push the same direction from metadata extraction toward claim/source support: a citation can exist while failing to support the generated claim. EigenTruth now splits this into two local boundaries: `CitationVerifier` checks reference identity and field drift, while `EvidenceAlignmentVerifier` / `audit_evidence_alignment(...)` checks whether caller-supplied evidence, retrieval hits, or citation hits cover claim keywords, numbers, entity-like slots, and cited-reference ids. The score-dump bridge exposes `evidence_alignment_*` calibration signals; this is deterministic slot alignment, not a learned entailment or live web-search proof.
 - Internal Representations as Indicators of Hallucinations in Agent Tool Selection (arXiv:2601.05214) frames agent hallucination as incorrect tool selection, malformed parameters, and tool bypass. This supports keeping tool-route intent explicit in `ClaimVerificationPlan` instead of only checking final text.
 - World-Model-Augmented Web Agents with Action Correction (arXiv:2602.15384) uses consequence simulation and action correction before risky actions. This supports EigenTruth's world-model route as a post-draft verifier and pre-action correction adapter rather than a core dependency. The product-side implementation now exposes `ProductTrace.world_model_summary()` and bounded `summaries.world_model` fields so world-model evidence can be audited by adapter/reference, conflict path, low agreement, and trace-gap rates instead of only appearing as benchmark score columns.
 - Grounded Iterative Language Planning (arXiv:2606.27806, 2026) strengthens the same product-control position: a parameterized world-model backbone can supply valid actions, predicted state deltas, risk, and value, while the LLM drafts flexible actions and is revised when the two disagree. EigenTruth's dependency-free analog is a pre-action world-model gate over `ActionRequest` payloads: simulate, check postconditions, and block/correct before dispatch rather than treating action hallucination as a final-answer-only problem.
@@ -43,6 +43,28 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Anytime-Valid Conformal Risk Control (arXiv:2602.04364) points toward risk control under ongoing streams and optional stopping. EigenTruth's current lightweight implementation is deliberately narrower: an accepted-error Bernoulli e-process monitor over labeled feedback, plus the existing finite prefix alpha-spending monitor. It is an online drift alarm for a fixed deployed threshold, not a full anytime-valid CRC optimizer.
 
 ## Implemented This Continuation
+
+Added citation/search evidence-alignment signals:
+
+- `EvidenceAlignmentEvidence`, `EvidenceAlignmentPolicy`,
+  `EvidenceAlignmentRecord`, `EvidenceAlignmentReport`,
+  `EvidenceAlignmentVerifier`, and `audit_evidence_alignment(...)` provide a
+  dependency-free claim-to-evidence alignment audit over local evidence,
+  retrieval hits, or citation hits.
+- The audit records keyword overlap, numeric slot recall, entity-like slot
+  recall, cited-reference coverage, selected evidence, missing numbers/entities,
+  and issue codes such as `missing_claim_number`, `negation_mismatch`, and
+  `missing_cited_evidence`.
+- `build_verifier_signal_score_dump.py` now converts sidecar
+  `evidence_alignment` reports into `evidence_alignment_failed`,
+  `evidence_alignment_insufficient`, `evidence_alignment_keyword_gap`,
+  `evidence_alignment_number_gap`, `evidence_alignment_entity_gap`,
+  `evidence_alignment_citation_gap`, and `evidence_alignment_issue_rate`
+  columns for conformal/fusion experiments.
+- This closes the next local bridge for citation/search alignment research:
+  source existence, source metadata, and source support are now separate
+  observable axes, while semantic entailment models and live search adapters
+  remain optional next-layer integrations.
 
 Added metacognitive / verbal-uncertainty alignment audits:
 

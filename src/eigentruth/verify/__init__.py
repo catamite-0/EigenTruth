@@ -41,6 +41,14 @@ from eigentruth.verify.counterfactual import (
     audit_counterfactual_verification,
     generate_counterfactual_probes,
 )
+from eigentruth.verify.evidence_alignment import (
+    EvidenceAlignmentEvidence,
+    EvidenceAlignmentPolicy,
+    EvidenceAlignmentRecord,
+    EvidenceAlignmentReport,
+    EvidenceAlignmentVerifier,
+    audit_evidence_alignment,
+)
 from eigentruth.verify.groundedness import (
     EvidenceDocument,
     EvidenceQualityAssessment,
@@ -133,6 +141,11 @@ __all__ = [
     "CounterfactualProbeGenerator",
     "CounterfactualVerificationAuditor",
     "CounterfactualVerificationReport",
+    "EvidenceAlignmentEvidence",
+    "EvidenceAlignmentPolicy",
+    "EvidenceAlignmentRecord",
+    "EvidenceAlignmentReport",
+    "EvidenceAlignmentVerifier",
     "EvidenceDocument",
     "EvidenceQualityAssessment",
     "EvidenceQualityPolicy",
@@ -173,6 +186,7 @@ __all__ = [
     "SourceFamilyPlan",
     "apply_claim_coherence",
     "audit_counterfactual_verification",
+    "audit_evidence_alignment",
     "audit_perturbation_consistency",
     "assess_evidence_quality",
     "generate_counterfactual_probes",

@@ -34,6 +34,13 @@ DEFAULT_VERIFIER_SIGNALS = (
     "fact_selfcheck_insufficient",
     "fact_selfcheck_not_applicable",
     "fact_selfcheck_uncovered_rate",
+    "evidence_alignment_failed",
+    "evidence_alignment_insufficient",
+    "evidence_alignment_keyword_gap",
+    "evidence_alignment_number_gap",
+    "evidence_alignment_entity_gap",
+    "evidence_alignment_citation_gap",
+    "evidence_alignment_issue_rate",
     "perturbation_conflict_rate",
     "perturbation_high_confidence_conflict_rate",
     "perturbation_missing_rate",
@@ -183,6 +190,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
     refute_rate = _unit_interval(selfcheck_metadata.get("refute_rate", 0.0), name="selfcheck.refute_rate")
     selfcheck_executed = bool(selfcheck_payload)
     fact_selfcheck_features = _fact_selfcheck_signal_features(record)
+    evidence_alignment_features = _evidence_alignment_signal_features(record)
     perturbation_features = _perturbation_consistency_signal_features(record)
     world_model_features = _world_model_signal_features(record, final)
     context_sensitivity_features = _context_sensitivity_signal_features(sidecar_record, record, final)
@@ -197,6 +205,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
         "selfcheck_disagreement": max(0.0, 1.0 - max(support_rate, refute_rate)) if selfcheck_executed else 0.0,
         "selfcheck_insufficient": 1.0 if selfcheck_status == "insufficient_evidence" else 0.0,
         **fact_selfcheck_features,
+        **evidence_alignment_features,
         **perturbation_features,
         **world_model_features,
         **context_sensitivity_features,
@@ -228,6 +237,27 @@ def verifier_signal_definitions() -> dict[str, str]:
         "fact_selfcheck_not_applicable": "1 when fact selfcheck status is not_applicable, else 0.",
         "fact_selfcheck_uncovered_rate": (
             "fraction of claim triples left insufficient by fact selfcheck, else 0."
+        ),
+        "evidence_alignment_failed": (
+            "1 when claim-to-evidence alignment report fails or reports a misaligned claim, else 0."
+        ),
+        "evidence_alignment_insufficient": (
+            "fraction of evidence-alignment records with insufficient evidence, else 0."
+        ),
+        "evidence_alignment_keyword_gap": (
+            "1 - mean claim/evidence keyword overlap from evidence-alignment reports, else 0."
+        ),
+        "evidence_alignment_number_gap": (
+            "1 - mean numeric slot recall from evidence-alignment reports, else 0."
+        ),
+        "evidence_alignment_entity_gap": (
+            "1 - mean entity-like slot recall from evidence-alignment reports, else 0."
+        ),
+        "evidence_alignment_citation_gap": (
+            "1 - cited-reference coverage rate from evidence-alignment reports, else 0."
+        ),
+        "evidence_alignment_issue_rate": (
+            "alignment issue count divided by aligned record count when reported, else 0."
         ),
         "perturbation_conflict_rate": (
             "fraction of answer-preserving prompt perturbation variants that conflict with the anchor claim."
@@ -401,6 +431,90 @@ def _fact_selfcheck_signal_features(record: Mapping[str, Any]) -> dict[str, floa
         "fact_selfcheck_not_applicable": 1.0 if status == "not_applicable" else 0.0,
         "fact_selfcheck_uncovered_rate": uncovered_rate,
     }
+
+
+def _evidence_alignment_signal_features(record: Mapping[str, Any]) -> dict[str, float]:
+    defaults = {
+        "evidence_alignment_failed": 0.0,
+        "evidence_alignment_insufficient": 0.0,
+        "evidence_alignment_keyword_gap": 0.0,
+        "evidence_alignment_number_gap": 0.0,
+        "evidence_alignment_entity_gap": 0.0,
+        "evidence_alignment_citation_gap": 0.0,
+        "evidence_alignment_issue_rate": 0.0,
+    }
+    payload = _evidence_alignment_payload(record)
+    if not payload:
+        return defaults
+
+    status = str(payload.get("status", ""))
+    metadata = _mapping(payload.get("metadata"))
+    report = _mapping(
+        payload.get("evidence_alignment")
+        or metadata.get("evidence_alignment")
+        or payload
+    )
+    summary = _mapping(report.get("summary"))
+    if not summary:
+        summary = _mapping(payload.get("summary"))
+    if not summary:
+        return defaults
+
+    record_count = _optional_non_negative_float(summary.get("record_count"), name="evidence_alignment.record_count")
+    if record_count is None:
+        record_count = 0.0
+    misalignment_rate = _unit_interval(
+        summary.get("misalignment_rate", 0.0),
+        name="evidence_alignment.misalignment_rate",
+    )
+    insufficient_rate = _unit_interval(
+        summary.get("insufficient_evidence_rate", 0.0),
+        name="evidence_alignment.insufficient_evidence_rate",
+    )
+    issue_count = _optional_non_negative_float(summary.get("issue_count"), name="evidence_alignment.issue_count")
+    issue_rate = 0.0 if not record_count or issue_count is None else max(0.0, min(1.0, issue_count / record_count))
+    passed = summary.get("passed")
+    failed = (
+        passed is False
+        or status == "refuted"
+        or misalignment_rate > 0.0
+    )
+    return {
+        "evidence_alignment_failed": 1.0 if failed else 0.0,
+        "evidence_alignment_insufficient": insufficient_rate,
+        "evidence_alignment_keyword_gap": _gap_from_optional_unit_interval(
+            summary.get("keyword_overlap_mean"),
+            name="evidence_alignment.keyword_overlap_mean",
+        ),
+        "evidence_alignment_number_gap": _gap_from_optional_unit_interval(
+            summary.get("number_recall_mean"),
+            name="evidence_alignment.number_recall_mean",
+        ),
+        "evidence_alignment_entity_gap": _gap_from_optional_unit_interval(
+            summary.get("entity_recall_mean"),
+            name="evidence_alignment.entity_recall_mean",
+        ),
+        "evidence_alignment_citation_gap": _gap_from_optional_unit_interval(
+            summary.get("citation_reference_coverage_rate"),
+            name="evidence_alignment.citation_reference_coverage_rate",
+        ),
+        "evidence_alignment_issue_rate": issue_rate,
+    }
+
+
+def _evidence_alignment_payload(record: Mapping[str, Any]) -> Mapping[str, Any]:
+    final = _mapping(record.get("final"))
+    final_metadata = _mapping(final.get("metadata"))
+    for candidate in (
+        record.get("evidence_alignment"),
+        record.get("citation_evidence_alignment"),
+        record.get("claim_evidence_alignment"),
+        final.get("evidence_alignment"),
+        final_metadata.get("evidence_alignment"),
+    ):
+        if isinstance(candidate, Mapping):
+            return candidate
+    return {}
 
 
 def _perturbation_consistency_signal_features(record: Mapping[str, Any]) -> dict[str, float]:
@@ -846,6 +960,12 @@ def _unit_interval(value: Any, *, name: str) -> float:
     if not (0.0 <= numeric <= 1.0):
         raise ValueError(f"{name} must be in [0, 1].")
     return numeric
+
+
+def _gap_from_optional_unit_interval(value: Any, *, name: str) -> float:
+    if value is None:
+        return 0.0
+    return max(0.0, 1.0 - _unit_interval(value, name=name))
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:

@@ -58422,6 +58422,114 @@ def test_build_verifier_signal_score_dump_includes_perturbation_consistency_sign
     assert DEFAULT_SCORE_DIRECTIONS["perturbation_missing_rate"] == "higher"
 
 
+def test_build_verifier_signal_score_dump_includes_evidence_alignment_signals(tmp_path):
+    module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    output_path = tmp_path / "enhanced.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    records = [
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "final": {
+                    "status": "supported",
+                    "confidence": 0.9,
+                    "metadata": {
+                        "evidence_alignment": {
+                            "summary": {
+                                "passed": True,
+                                "record_count": 1,
+                                "misalignment_rate": 0.0,
+                                "insufficient_evidence_rate": 0.0,
+                                "keyword_overlap_mean": 1.0,
+                                "number_recall_mean": 1.0,
+                                "entity_recall_mean": 1.0,
+                                "citation_reference_coverage_rate": 1.0,
+                                "issue_count": 0,
+                            }
+                        }
+                    },
+                },
+            },
+        },
+        {
+            "run": "synthetic",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "final": {"status": "refuted", "confidence": 0.8},
+                "evidence_alignment": {
+                    "status": "refuted",
+                    "metadata": {
+                        "evidence_alignment": {
+                            "summary": {
+                                "passed": False,
+                                "record_count": 2,
+                                "misalignment_rate": 0.5,
+                                "insufficient_evidence_rate": 0.5,
+                                "keyword_overlap_mean": 0.25,
+                                "number_recall_mean": 0.0,
+                                "entity_recall_mean": 0.5,
+                                "citation_reference_coverage_rate": 0.0,
+                                "issue_count": 2,
+                            }
+                        }
+                    },
+                },
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            verified_records_jsonl=str(verified_records_path),
+            run_name="synthetic",
+            keep_signals="truth_proj",
+            verifier_signals=(
+                "evidence_alignment_failed,evidence_alignment_insufficient,"
+                "evidence_alignment_keyword_gap,evidence_alignment_number_gap,"
+                "evidence_alignment_entity_gap,evidence_alignment_citation_gap,"
+                "evidence_alignment_issue_rate"
+            ),
+            output=str(output_path),
+            output_format="json",
+            json=None,
+        )
+    )
+    enhanced = load_score_dump(output_path, required_scores=("evidence_alignment_failed",))
+
+    assert enhanced.scores["evidence_alignment_failed"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["evidence_alignment_insufficient"] == pytest.approx((0.0, 0.5))
+    assert enhanced.scores["evidence_alignment_keyword_gap"] == pytest.approx((0.0, 0.75))
+    assert enhanced.scores["evidence_alignment_number_gap"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["evidence_alignment_entity_gap"] == pytest.approx((0.0, 0.5))
+    assert enhanced.scores["evidence_alignment_citation_gap"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["evidence_alignment_issue_rate"] == pytest.approx((0.0, 1.0))
+    assert DEFAULT_SCORE_DIRECTIONS["evidence_alignment_failed"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["evidence_alignment_number_gap"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["evidence_alignment_citation_gap"] == "higher"
+
+
 def test_context_sensitivity_sidecar_enrichment_feeds_verifier_signal_score_dump(tmp_path):
     enricher = importlib.import_module("benchmarks.enrich_context_sensitivity_sidecar")
     signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")

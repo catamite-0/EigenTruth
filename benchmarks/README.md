@@ -4885,6 +4885,13 @@ answer-preserving prompt variants; the converter emits
 `perturbation_conflict_rate`, `perturbation_high_confidence_conflict_rate`,
 `perturbation_missing_rate`, `perturbation_failed`, and
 `perturbation_not_applicable` columns for CHOKE-style calibration experiments.
+Verified-record sidecars can also carry an `evidence_alignment` report from
+`EvidenceAlignmentVerifier` or `audit_evidence_alignment(...)`; the converter
+emits `evidence_alignment_failed`, `evidence_alignment_insufficient`,
+`evidence_alignment_keyword_gap`, `evidence_alignment_number_gap`,
+`evidence_alignment_entity_gap`, `evidence_alignment_citation_gap`, and
+`evidence_alignment_issue_rate` columns. These are local claim/evidence slot
+checks for citation/search alignment, not semantic entailment proof.
 `run_verifier_signal_fusion_workflow.py --enable-fact-selfcheck` now runs that
 same bridge end to end: generated selfcheck fixtures preserve statement-level
 `claim_triples` / `triples`, external sample records may provide sample-level

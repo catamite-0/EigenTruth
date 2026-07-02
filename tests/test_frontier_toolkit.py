@@ -89,6 +89,9 @@ from eigentruth.verify import (
     CounterfactualProbe,
     CounterfactualProbeGenerator,
     CounterfactualVerificationAuditor,
+    EvidenceAlignmentEvidence,
+    EvidenceAlignmentPolicy,
+    EvidenceAlignmentVerifier,
     EvidenceDocument,
     EvidenceQualityPolicy,
     EvidenceQualitySummary,
@@ -115,6 +118,7 @@ from eigentruth.verify import (
     apply_claim_coherence,
     audit_claim_triples,
     audit_counterfactual_verification,
+    audit_evidence_alignment,
     audit_perturbation_consistency,
     default_routed_verifier,
     default_verifier_routes,
@@ -3072,6 +3076,81 @@ def test_citation_verifier_reports_unresolved_references_fail_closed():
     assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert result.metadata["unresolved_count"] == 1
     assert result.explanation == "one or more citation references were not found in trusted catalog"
+
+
+def test_evidence_alignment_verifier_supports_cited_evidence_slots():
+    claim = Claim(
+        "AlphaCorp reported 42 stores in 2025 [annual-report].",
+        claim_id="alpha",
+        metadata={"citation": {"citation_id": "annual-report"}, "features": {"has_citation": True}},
+    )
+    evidence = EvidenceAlignmentEvidence(
+        "AlphaCorp reported 42 stores in 2025 across its retail segment.",
+        source="annual-report",
+        citation_id="annual-report",
+        score=0.9,
+    )
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(evidence,),
+        policy=EvidenceAlignmentPolicy(require_cited_evidence=True),
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    summary = report["summary"]
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert summary["passed"] is True
+    assert summary["citation_reference_coverage_rate"] == pytest.approx(1.0)
+    assert summary["number_recall_mean"] == pytest.approx(1.0)
+    assert report["records"][0]["cited_evidence_count"] == 1
+    json.dumps(result.metadata)
+
+
+def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
+    claim = Claim(
+        "AlphaCorp reported 42 stores in 2025 [annual-report].",
+        claim_id="alpha",
+        metadata={"citation": {"citation_id": "annual-report"}},
+    )
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "AlphaCorp reported 41 stores in 2025 across its retail segment.",
+                "source": "annual-report",
+                "citation_id": "annual-report",
+            },
+        ),
+        policy={"require_cited_evidence": True},
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    record = report["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert record["status"] == "misaligned"
+    assert "missing_claim_number" in record["issue_codes"]
+    assert record["missing_numbers"] == ("42",)
+    assert report["summary"]["misalignment_rate"] == pytest.approx(1.0)
+
+
+def test_audit_evidence_alignment_uses_context_retrieval_hits():
+    claim = Claim("BetaLab had no offices in Paris.", claim_id="beta")
+
+    report = audit_evidence_alignment(
+        claim,
+        context={
+            "retrieval_hits": [
+                {"text": "BetaLab had offices in Paris.", "source": "registry", "score": 0.8},
+            ],
+        },
+    )
+
+    summary = report.summary()
+    assert summary["passed"] is False
+    assert summary["misaligned_count"] == 1
+    assert "negation_mismatch" in report.records[0].issue_codes
 
 
 def test_default_verifier_routes_can_fail_closed_on_citation_catalog_mismatch():
