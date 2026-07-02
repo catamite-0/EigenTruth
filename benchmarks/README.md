@@ -7932,7 +7932,10 @@ writes handoff requests for claim/evidence alignment review, structured-fact
 normalization, world-model or calculator rule authoring, and query refinement
 when source binding or lexical overlap is weak. The handoff is explicitly not
 verifier evidence; it may use labels to identify false negatives, and it records
-that fact in `label_usage` for auditability.
+that fact in `label_usage` for auditability. When source-backed number/entity
+slots are available, the payload also includes `fact_candidates` in the
+`structured_fact_review_only` schema accepted by
+`build_alignment_fact_review_corpus.py`.
 
 ```bash
 python benchmarks/build_retrieval_semantic_gap_handoff.py \
@@ -7943,6 +7946,12 @@ python benchmarks/build_retrieval_semantic_gap_handoff.py \
   --registry artifacts/local-release-registry.json \
   --name source-bound-retrieval-semantic-gap-handoff \
   --version 0.1
+
+python benchmarks/build_alignment_fact_review_corpus.py \
+  --candidates artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.json \
+  --output artifacts/source-bound-sweep/alignment-fact-review-corpus.json \
+  --report-json artifacts/source-bound-sweep/alignment-fact-review-report.json \
+  --records-jsonl artifacts/source-bound-sweep/alignment-fact-review-records.jsonl
 ```
 
 Use this after source-bound citation sweeps when `records_with_retrieval_hits`

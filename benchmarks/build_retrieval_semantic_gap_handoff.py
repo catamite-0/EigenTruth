@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -41,6 +42,7 @@ STRUCTURED_METADATA_KEYS = (
     "subject_label",
     "object_label",
 )
+DESCRIBED_AS_RE = re.compile(r"\bis\s+described\s+as\s+(?P<value>[^.]+)", re.IGNORECASE)
 
 
 def build_retrieval_semantic_gap_handoff(
@@ -124,10 +126,16 @@ def build_retrieval_semantic_gap_handoff(
         if max_targets is not None and len(targets) >= int(max_targets):
             break
 
+    fact_candidates = tuple(
+        candidate
+        for target in targets
+        for candidate in _fact_candidates_for_target(target)
+    )
     summary = _summary(
         verified_records=verified_records,
         targets=targets,
         requests=requests,
+        fact_candidates=fact_candidates,
         source_route_counts=source_route_counts,
         source_status_counts=source_status_counts,
         source_decision_rule_counts=source_decision_rule_counts,
@@ -153,6 +161,7 @@ def build_retrieval_semantic_gap_handoff(
         "summary": summary,
         "targets": targets,
         "requests": {key: tuple(value) for key, value in requests.items()},
+        "fact_candidates": fact_candidates,
         "metadata": dict(metadata or {}),
     }
 
@@ -248,6 +257,7 @@ def run(
                 "workflow": WORKFLOW,
                 "status": payload["status"],
                 "candidate_count": payload["summary"]["candidate_count"],
+                "fact_candidate_count": payload["summary"]["fact_candidate_count"],
                 "total_request_count": payload["summary"]["total_request_count"],
                 "mode": mode,
                 "record_indices_json": None if record_indices_path is None else str(record_indices_path),
@@ -264,6 +274,7 @@ def run(
                 "workflow": WORKFLOW,
                 "status": payload["status"],
                 "candidate_count": payload["summary"]["candidate_count"],
+                "fact_candidate_count": payload["summary"]["fact_candidate_count"],
                 "total_request_count": payload["summary"]["total_request_count"],
                 "mode": mode,
                 "record_indices_json": None if record_indices_path is None else str(record_indices_path),
@@ -438,6 +449,62 @@ def _requests_for_target(target: Mapping[str, Any]) -> dict[str, dict[str, Any] 
     }
 
 
+def _fact_candidates_for_target(target: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    lanes = set(str(item) for item in _sequence(target.get("recommended_lanes")))
+    if "structured_fact_candidate" not in lanes:
+        return ()
+    target_id = str(target.get("target_id", "target"))
+    retrieval = _mapping(target.get("retrieval"))
+    candidates = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for index, hit in enumerate(_sequence(retrieval.get("top_hits")), start=1):
+        if not isinstance(hit, Mapping):
+            continue
+        subject = _fact_subject(target, hit)
+        property_hint = _fact_property_hint(target, hit)
+        value = _fact_value(target, hit)
+        evidence_span = str(hit.get("text", "")).strip()
+        evidence_source = str(hit.get("source", "")).strip()
+        if not all((subject, property_hint, value, evidence_span, evidence_source)):
+            continue
+        key = (
+            subject.casefold(),
+            property_hint.casefold(),
+            value.casefold(),
+            evidence_source.casefold(),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        statement = _mapping(target.get("statement"))
+        candidates.append({
+            "candidate_id": f"fact:{target_id}:{index}",
+            "request_id": f"fact:{target_id}:1",
+            "target_id": target_id,
+            "subject": subject,
+            "requested_subject": _first_nonempty(_sequence(_mapping(target.get("claim")).get("entity_candidates"))),
+            "matched_entity": subject,
+            "property_hint": property_hint,
+            "value": value,
+            "model_answer": statement.get("model_answer"),
+            "question": statement.get("question") or _mapping(target.get("claim")).get("text"),
+            "evidence_span": evidence_span,
+            "evidence_source": evidence_source,
+            "source_family": _source_family_for_hit(hit),
+            "provider": _provider_for_hit(hit),
+            "confidence": _hit_confidence(hit),
+            "usage": "structured_fact_review_only",
+            "metadata": {
+                "builder": WORKFLOW,
+                "gap_reason": target.get("gap_reason"),
+                "decision_rule": _mapping(target.get("route")).get("decision_rule"),
+            },
+        })
+        if len(candidates) >= 3:
+            break
+    return tuple(candidates)
+
+
 def _recommended_lanes(
     *,
     claim_text: str,
@@ -475,6 +542,7 @@ def _summary(
     verified_records: Sequence[Mapping[str, Any]],
     targets: Sequence[Mapping[str, Any]],
     requests: Mapping[str, Sequence[Mapping[str, Any]]],
+    fact_candidates: Sequence[Mapping[str, Any]],
     source_route_counts: Counter[str],
     source_status_counts: Counter[str],
     source_decision_rule_counts: Counter[str],
@@ -487,6 +555,11 @@ def _summary(
     target_decision_rule_counts: Counter[str] = Counter()
     source_binding_mode_counts: Counter[str] = Counter()
     hit_source_counts: Counter[str] = Counter()
+    fact_candidate_property_counts: Counter[str] = Counter(
+        str(item.get("property_hint"))
+        for item in fact_candidates
+        if item.get("property_hint")
+    )
     for target in targets:
         label_counts[str(target.get("label", "unknown"))] += 1
         route = _mapping(target.get("route"))
@@ -517,6 +590,8 @@ def _summary(
         "recommended_lane_counts": _sorted_counter(lane_counts),
         "source_binding_mode_counts": _sorted_counter(source_binding_mode_counts),
         "top_hit_sources": _counter_top(hit_source_counts, limit=20),
+        "fact_candidate_count": len(fact_candidates),
+        "fact_candidate_property_counts": _sorted_counter(fact_candidate_property_counts),
         "request_counts": request_counts,
         "total_request_count": sum(request_counts.values()),
     }
@@ -622,6 +697,129 @@ def _has_structured_hit(hits: Sequence[Mapping[str, Any]]) -> bool:
     return False
 
 
+def _fact_subject(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
+    metadata = _mapping(hit.get("metadata"))
+    return _clean_text(_first_nonempty((
+        metadata.get("country_name"),
+        metadata.get("subject_label"),
+        metadata.get("subject"),
+        metadata.get("entity_name"),
+        metadata.get("entity"),
+        metadata.get("organization_name"),
+        metadata.get("location_name"),
+        *_sequence(_mapping(target.get("alignment")).get("claim_entities")),
+        *_sequence(_mapping(target.get("claim")).get("entity_candidates")),
+    )))
+
+
+def _fact_property_hint(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
+    metadata = _mapping(hit.get("metadata"))
+    property_id = _clean_text(_first_nonempty((
+        metadata.get("statement_property"),
+        metadata.get("property_id"),
+        metadata.get("property"),
+        metadata.get("indicator"),
+    )))
+    property_label = _clean_text(_first_nonempty((
+        metadata.get("indicator_name"),
+        metadata.get("statement_property_label"),
+        metadata.get("property_label"),
+    )))
+    if property_label and property_id:
+        return f"{property_label}:{property_id}"
+    if property_label:
+        return property_label
+    if property_id:
+        return property_id
+    source_property = _property_hint_from_source(hit)
+    if source_property:
+        return source_property
+    if DESCRIBED_AS_RE.search(str(hit.get("text", ""))):
+        return "description"
+    question_type = _clean_text(_mapping(target.get("statement")).get("question_type"))
+    if question_type in {"quantity", "temporal", "location", "person"}:
+        return question_type
+    return ""
+
+
+def _fact_value(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
+    metadata = _mapping(hit.get("metadata"))
+    alignment = _mapping(target.get("alignment"))
+    claim_numbers = {_normalize_slot_value(item) for item in _sequence(alignment.get("claim_numbers"))}
+    model_answer = _normalize_slot_value(_mapping(target.get("statement")).get("model_answer"))
+    for value in _sequence(alignment.get("evidence_numbers")):
+        text = _clean_text(value)
+        normalized = _normalize_slot_value(text)
+        if text and normalized not in claim_numbers and normalized != model_answer:
+            return text
+    for value in _sequence(alignment.get("evidence_numbers")):
+        text = _clean_text(value)
+        if text:
+            return text
+    described_value = _extract_description_value(str(hit.get("text", "")))
+    if described_value:
+        return described_value
+    return _clean_text(_first_nonempty((
+        metadata.get("object_label"),
+        metadata.get("value"),
+        metadata.get("answer"),
+        metadata.get("indicator_value"),
+    )))
+
+
+def _source_family_for_hit(hit: Mapping[str, Any]) -> str:
+    metadata = _mapping(hit.get("metadata"))
+    source_family = _clean_text(metadata.get("source_family"))
+    if source_family:
+        return source_family
+    source = str(hit.get("source", "")).casefold()
+    if source.startswith("worldbank:"):
+        return "official_statistics"
+    if source.startswith("wikidata:") or source.startswith("wikipedia:"):
+        return "reference"
+    if source.startswith("openalex:") or source.startswith("crossref:"):
+        return "scholarly"
+    if source.startswith("official:"):
+        return "official"
+    if source.startswith("news:") or source.startswith("gdelt:"):
+        return "news"
+    return "unknown"
+
+
+def _provider_for_hit(hit: Mapping[str, Any]) -> str:
+    metadata = _mapping(hit.get("metadata"))
+    provider = _clean_text(metadata.get("provider"))
+    if provider:
+        return provider
+    source = str(hit.get("source", "")).split(":", 1)[0].strip()
+    return source or "unknown"
+
+
+def _property_hint_from_source(hit: Mapping[str, Any]) -> str:
+    source = str(hit.get("source", "")).strip()
+    tail = source.rsplit(":", 1)[-1].strip()
+    if tail == "description":
+        return "description"
+    return ""
+
+
+def _extract_description_value(text: str) -> str:
+    match = DESCRIBED_AS_RE.search(text)
+    if match is None:
+        return ""
+    return match.group("value").strip()
+
+
+def _hit_confidence(hit: Mapping[str, Any]) -> float:
+    try:
+        value = float(hit.get("score", 0.5))
+    except (TypeError, ValueError):
+        return 0.5
+    if value != value:
+        return 0.5
+    return max(0.0, min(1.0, value))
+
+
 def _hit_summary(hit: Mapping[str, Any]) -> dict[str, Any]:
     metadata = _mapping(hit.get("metadata"))
     copied_metadata = {
@@ -634,6 +832,17 @@ def _hit_summary(hit: Mapping[str, Any]) -> dict[str, Any]:
             "property_label",
             "country_name",
             "indicator_name",
+            "subject_label",
+            "subject",
+            "entity_name",
+            "entity",
+            "organization_name",
+            "location_name",
+            "object_label",
+            "value",
+            "answer",
+            "indicator_value",
+            "provider",
             "source_queue_request_sha256",
             "source_request_sha256",
             "collection_request_sha256",
@@ -646,6 +855,24 @@ def _hit_summary(hit: Mapping[str, Any]) -> dict[str, Any]:
         "score": hit.get("score"),
         "metadata": copied_metadata,
     }
+
+
+def _first_nonempty(values: Sequence[Any]) -> Any:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return value
+    return None
+
+
+def _clean_text(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def _normalize_slot_value(value: Any) -> str:
+    return _clean_text(value).replace(",", "").casefold()
 
 
 def _gap_reason(

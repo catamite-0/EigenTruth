@@ -8084,6 +8084,7 @@ def test_analyze_retrieval_route_gaps_summarizes_verified_records(tmp_path):
 
 def test_build_retrieval_semantic_gap_handoff_targets_false_negative_hits(tmp_path):
     module = importlib.import_module("benchmarks.build_retrieval_semantic_gap_handoff")
+    review_module = importlib.import_module("benchmarks.build_alignment_fact_review_corpus")
     from eigentruth.registry import ArtifactRegistry
 
     records_path = tmp_path / "verified-records.jsonl"
@@ -8144,6 +8145,7 @@ def test_build_retrieval_semantic_gap_handoff_targets_false_negative_hits(tmp_pa
                         "score": 0.94,
                         "metadata": {
                             "statement_property": "SP.POP.TOTL",
+                            "indicator_name": "Population, total",
                             "country_name": "Afghanistan",
                             "source_queue_request_sha256": ["abc"],
                         },
@@ -8216,6 +8218,7 @@ def test_build_retrieval_semantic_gap_handoff_targets_false_negative_hits(tmp_pa
     assert payload["summary"]["source_record_count"] == 3
     assert payload["summary"]["evaluated_source_record_count"] == 2
     assert payload["summary"]["candidate_count"] == 1
+    assert payload["summary"]["fact_candidate_count"] == 1
     assert payload["summary"]["skipped_reason_counts"] == {
         "already_refuted": 1,
         "outside_record_index_filter": 1,
@@ -8229,12 +8232,73 @@ def test_build_retrieval_semantic_gap_handoff_targets_false_negative_hits(tmp_pa
     assert target["target_id"] == "record-0"
     assert target["retrieval"]["source_binding"]["mode"] == "exact"
     assert target["alignment"]["claim_numbers"] == ("330",)
+    fact_candidate = payload["fact_candidates"][0]
+    assert fact_candidate["subject"] == "Afghanistan"
+    assert fact_candidate["property_hint"] == "Population, total:SP.POP.TOTL"
+    assert fact_candidate["value"] == "42,647,492"
     assert saved["requests"]["structured_fact_candidate"][0]["request_id"] == "fact:record-0:1"
+    assert saved["fact_candidates"][0]["usage"] == "structured_fact_review_only"
     assert saved["requests"]["world_model_rule_candidate"][0]["features"]["has_number"] is True
+    review_payload = review_module.build_alignment_fact_review_corpus(saved["fact_candidates"])
+    assert review_payload["corpus"]["summary"]["accepted_document_count"] == 1
+    assert review_payload["corpus"]["documents"][0]["answer"] == "42,647,492"
     assert manifest["artifacts"]["retrieval_semantic_gap_handoff"]["exists"] is True
     assert registry.get("report:semantic-gap-handoff:0.1").metadata["workflow"] == (
         "retrieval_semantic_gap_handoff"
     )
+    assert registry.get("report:semantic-gap-handoff:0.1").metadata["fact_candidate_count"] == 1
+
+
+def test_retrieval_semantic_gap_handoff_extracts_description_fact_candidates():
+    module = importlib.import_module("benchmarks.build_retrieval_semantic_gap_handoff")
+    review_module = importlib.import_module("benchmarks.build_alignment_fact_review_corpus")
+
+    payload = module.build_retrieval_semantic_gap_handoff(
+        [
+            {
+                "record_index": 27,
+                "label": 1,
+                "record": {
+                    "claim": {
+                        "text": "Bill Gates is a livestock farmer.",
+                        "claim_id": "bill-gates-description",
+                        "metadata": {},
+                    },
+                    "final": {
+                        "status": "insufficient_evidence",
+                        "metadata": {"decision_rule": "low_overlap"},
+                    },
+                    "route": {
+                        "selected_route": "retrieval_groundedness",
+                        "selected_verifier": "GroundednessVerifier",
+                        "used_retrieval": True,
+                    },
+                    "retrieval_hits": [
+                        {
+                            "text": (
+                                "According to Wikidata entity metadata, Bill Gates is described as "
+                                "American businessman, investor, and philanthropist (born 1955)."
+                            ),
+                            "source": "wikidata:Q5284:description",
+                            "score": 1.0,
+                            "metadata": {
+                                "provider": "source_family_catalog",
+                                "source_family": "reference",
+                            },
+                        },
+                    ],
+                },
+            }
+        ],
+    )
+    candidate = payload["fact_candidates"][0]
+    review_payload = review_module.build_alignment_fact_review_corpus(payload["fact_candidates"])
+
+    assert payload["summary"]["fact_candidate_count"] == 1
+    assert candidate["subject"] == "Bill Gates"
+    assert candidate["property_hint"] == "description"
+    assert candidate["value"] == "American businessman, investor, and philanthropist (born 1955)"
+    assert review_payload["corpus"]["summary"]["accepted_document_count"] == 1
 
 
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
