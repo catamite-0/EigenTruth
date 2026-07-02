@@ -58530,6 +58530,186 @@ def test_build_verifier_signal_score_dump_includes_evidence_alignment_signals(tm
     assert DEFAULT_SCORE_DIRECTIONS["evidence_alignment_citation_gap"] == "higher"
 
 
+def test_evidence_alignment_sidecar_enrichment_feeds_verifier_signal_score_dump(tmp_path):
+    enricher = importlib.import_module("benchmarks.enrich_evidence_alignment_sidecar")
+    signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    evidence_path = tmp_path / "evidence.json"
+    enriched_path = tmp_path / "verified-records-evidence-alignment.jsonl"
+    enhanced_path = tmp_path / "enhanced.json"
+    report_path = tmp_path / "evidence-alignment-enrichment-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    verified_records = [
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "synthetic",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "claim": {
+                    "claim_id": "claim-0",
+                    "text": "AlphaCorp reported 42 stores [annual-report].",
+                },
+                "final": {"status": "supported", "confidence": 0.9},
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "verifier_ensemble_verified_record",
+            "run": "synthetic",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "claim": {
+                    "claim_id": "claim-1",
+                    "text": "AlphaCorp reported 42 stores [annual-report].",
+                },
+                "final": {"status": "refuted", "confidence": 0.8},
+            },
+        },
+    ]
+    evidence_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "run": "synthetic",
+                    "record_index": 0,
+                    "evidence": [
+                        {
+                            "text": "AlphaCorp reported 42 stores in its annual report.",
+                            "source": "annual-report",
+                            "citation_id": "annual-report",
+                            "score": 0.95,
+                        },
+                    ],
+                },
+                {
+                    "run": "synthetic",
+                    "record_index": 1,
+                    "evidence": [
+                        {
+                            "text": "AlphaCorp reported 41 stores in its annual report.",
+                            "source": "annual-report",
+                            "citation_id": "annual-report",
+                            "score": 0.9,
+                        },
+                    ],
+                },
+            ]
+        }),
+        encoding="utf-8",
+    )
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in verified_records),
+        encoding="utf-8",
+    )
+
+    enrichment_report = enricher.run(
+        SimpleNamespace(
+            verified_records_jsonl=str(verified_records_path),
+            evidence=str(evidence_path),
+            output=str(enriched_path),
+            run_name="synthetic",
+            min_keyword_overlap=0.2,
+            min_number_recall=1.0,
+            min_entity_recall=0.5,
+            require_cited_evidence=True,
+            allow_missing=False,
+            overwrite=False,
+            json=str(report_path),
+        )
+    )
+    signal_builder.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            verified_records_jsonl=str(enriched_path),
+            run_name="synthetic",
+            keep_signals="truth_proj",
+            verifier_signals=(
+                "evidence_alignment_failed,evidence_alignment_number_gap,"
+                "evidence_alignment_citation_gap,evidence_alignment_issue_rate"
+            ),
+            output=str(enhanced_path),
+            output_format="json",
+            json=None,
+        )
+    )
+    enriched_records = [
+        json.loads(line)
+        for line in enriched_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    enhanced = load_score_dump(enhanced_path, required_scores=("evidence_alignment_failed",))
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert enrichment_report["enriched_record_count"] == 2
+    assert saved_report["summary"]["aligned_count"] == 1
+    assert saved_report["summary"]["misaligned_count"] == 1
+    assert enriched_records[0]["record"]["evidence_alignment"]["status"] == "supported"
+    assert enriched_records[1]["record"]["evidence_alignment"]["status"] == "refuted"
+    assert enhanced.scores["evidence_alignment_failed"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["evidence_alignment_number_gap"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["evidence_alignment_citation_gap"] == pytest.approx((0.0, 0.0))
+    assert enhanced.scores["evidence_alignment_issue_rate"] == pytest.approx((0.0, 1.0))
+
+
+def test_evidence_alignment_sidecar_enrichment_requires_matching_evidence(tmp_path):
+    enricher = importlib.import_module("benchmarks.enrich_evidence_alignment_sidecar")
+
+    verified_records = [
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "record": {"claim": {"claim_id": "claim-0", "text": "AlphaCorp reported 42 stores."}},
+        },
+        {
+            "run": "synthetic",
+            "record_index": 1,
+            "record": {"claim": {"claim_id": "claim-1", "text": "BetaCorp reported 7 stores."}},
+        },
+    ]
+    evidence_records = [
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "evidence": [{"text": "AlphaCorp reported 42 stores."}],
+        },
+    ]
+
+    with pytest.raises(ValueError, match="missing evidence record"):
+        enricher.enrich_evidence_alignment_sidecar(
+            verified_records,
+            evidence_records,
+            run_name="synthetic",
+            allow_missing=False,
+        )
+
+    enriched, report = enricher.enrich_evidence_alignment_sidecar(
+        verified_records,
+        evidence_records,
+        run_name="synthetic",
+        allow_missing=True,
+    )
+
+    assert report["enriched_record_count"] == 1
+    assert report["missing_record_count"] == 1
+    assert "evidence_alignment" in enriched[0]["record"]
+    assert "evidence_alignment" not in enriched[1]["record"]
+
+
 def test_context_sensitivity_sidecar_enrichment_feeds_verifier_signal_score_dump(tmp_path):
     enricher = importlib.import_module("benchmarks.enrich_context_sensitivity_sidecar")
     signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")

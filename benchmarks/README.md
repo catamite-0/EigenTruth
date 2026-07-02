@@ -4892,6 +4892,13 @@ emits `evidence_alignment_failed`, `evidence_alignment_insufficient`,
 `evidence_alignment_entity_gap`, `evidence_alignment_citation_gap`, and
 `evidence_alignment_issue_rate` columns. These are local claim/evidence slot
 checks for citation/search alignment, not semantic entailment proof.
+When those reports are produced by an external citation/search adapter,
+`enrich_evidence_alignment_sidecar.py` can join JSON or JSONL evidence records
+back onto the verified-record sidecar by `run + record_index` or `claim_id`,
+then write `EvidenceAlignmentVerifier` results in the sidecar schema consumed by
+the score-dump converter. Evidence records may be grouped records with
+`evidence` / `hits` / `source_documents`, or individual hit records carrying the
+same join keys in top-level fields or metadata.
 `run_verifier_signal_fusion_workflow.py --enable-fact-selfcheck` now runs that
 same bridge end to end: generated selfcheck fixtures preserve statement-level
 `claim_triples` / `triples`, external sample records may provide sample-level
@@ -8272,15 +8279,23 @@ python benchmarks/eval_verifier_ensemble.py \
   --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
   --json artifacts/verifier-signals/verifier-ensemble-report.json
 
+python benchmarks/enrich_evidence_alignment_sidecar.py \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --evidence artifacts/verifier-signals/citation-search-evidence.jsonl \
+  --run-name qwen-l80 \
+  --require-cited-evidence \
+  --output artifacts/verifier-signals/verified-records-evidence-alignment.jsonl \
+  --json artifacts/verifier-signals/evidence-alignment-sidecar-report.json
+
 python benchmarks/build_context_sensitivity_logprob_pairs.py \
-  --records artifacts/verifier-signals/verified-records.jsonl \
+  --records artifacts/verifier-signals/verified-records-evidence-alignment.jsonl \
   --model-id Qwen/Qwen2.5-0.5B \
   --run-name qwen-l80 \
   --output artifacts/verifier-signals/paired-context-logprobs.jsonl \
   --json artifacts/verifier-signals/paired-context-logprobs-report.json
 
 python benchmarks/enrich_context_sensitivity_sidecar.py \
-  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records-evidence-alignment.jsonl \
   --paired-logprobs artifacts/verifier-signals/paired-context-logprobs.jsonl \
   --run-name qwen-l80 \
   --output artifacts/verifier-signals/verified-records-context.jsonl \

@@ -61,6 +61,10 @@ Added citation/search evidence-alignment signals:
   `evidence_alignment_number_gap`, `evidence_alignment_entity_gap`,
   `evidence_alignment_citation_gap`, and `evidence_alignment_issue_rate`
   columns for conformal/fusion experiments.
+- `enrich_evidence_alignment_sidecar.py` now joins local citation/search
+  evidence JSON or JSONL back onto verified-record sidecars by
+  `run + record_index` or `claim_id`, then writes `EvidenceAlignmentVerifier`
+  results in the schema consumed by `build_verifier_signal_score_dump.py`.
 - This closes the next local bridge for citation/search alignment research:
   source existence, source metadata, and source support are now separate
   observable axes, while semantic entailment models and live search adapters
