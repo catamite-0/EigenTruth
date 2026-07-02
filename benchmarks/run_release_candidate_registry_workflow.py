@@ -264,6 +264,9 @@ def _apply_release_policy_profile_to_config(
             "require_unresolved_frontier_evidence_closure": (
                 config.require_unresolved_frontier_evidence_closure
             ),
+            "require_frontier_queue_execution_smoke": (
+                config.require_frontier_queue_execution_smoke
+            ),
             "unresolved_frontier_evidence_summary_key": (
                 config.unresolved_frontier_evidence_summary_key
             ),
@@ -371,6 +374,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     unresolved_frontier_evidence_summary_registry_path: Path | None = None
     unresolved_frontier_evidence_summary_key: str | None = None
     require_unresolved_frontier_evidence_closure: bool = False
+    require_frontier_queue_execution_smoke: bool = False
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
@@ -1003,6 +1007,9 @@ def run_release_candidate_registry_workflow(
         require_unresolved_frontier_evidence_closure=(
             config.require_unresolved_frontier_evidence_closure
         ),
+        require_frontier_queue_execution_smoke=(
+            config.require_frontier_queue_execution_smoke
+        ),
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
@@ -1405,6 +1412,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_unresolved_frontier_evidence_closure": (
                 config.require_unresolved_frontier_evidence_closure
+            ),
+            "require_frontier_queue_execution_smoke": (
+                config.require_frontier_queue_execution_smoke
             ),
             "world_model_signal_workflow": (
                 None
@@ -1936,6 +1946,9 @@ def _comparison_with_registry_config(
         ),
         "require_unresolved_frontier_evidence_closure": (
             config.require_unresolved_frontier_evidence_closure
+        ),
+        "require_frontier_queue_execution_smoke": (
+            config.require_frontier_queue_execution_smoke
         ),
     })
     payload["config"] = comparison_config
@@ -3266,6 +3279,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "unresolved_frontier_evidence_summary_required": (
             unresolved_frontier_evidence_summary.get("require_closure")
         ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            unresolved_frontier_evidence_summary.get("require_queue_execution_smoke")
+        ),
         "unresolved_frontier_evidence_summary_status": (
             unresolved_frontier_evidence_summary.get("report_status")
         ),
@@ -3274,6 +3290,21 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "unresolved_frontier_evidence_summary_lane_statuses": (
             unresolved_frontier_evidence_summary.get("lane_statuses")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            unresolved_frontier_evidence_summary.get(
+                "frontier_queue_execution_smoke_status"
+            )
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            unresolved_frontier_evidence_summary.get(
+                "frontier_queue_execution_smoke_count"
+            )
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            unresolved_frontier_evidence_summary.get(
+                "frontier_queue_execution_smoke_manifest_verified_count"
+            )
         ),
         "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
         "world_model_signal_workflow_manifest": (
@@ -3909,6 +3940,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         require_unresolved_frontier_evidence_closure=bool(
             args.require_unresolved_frontier_evidence_closure
         ),
+        require_frontier_queue_execution_smoke=bool(
+            args.require_frontier_queue_execution_smoke
+        ),
         world_model_signal_workflow_path=(
             None
             if args.world_model_signal_workflow is None
@@ -4389,6 +4423,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-unresolved-frontier-evidence-closure", action="store_true",
                         help="require the unresolved frontier evidence summary to promote with "
                              "zero next actions before release registration")
+    parser.add_argument("--require-frontier-queue-execution-smoke", action="store_true",
+                        help="require the unresolved frontier evidence summary to record a passing "
+                             "frontier queue execution smoke with verified manifest")
     parser.add_argument("--world-model-signal-workflow", default=None,
                         help="optional world-model signal calibration workflow report that must pass its "
                              "conflict/trace-gap release gate")

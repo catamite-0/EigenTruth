@@ -15706,6 +15706,9 @@ def _write_unresolved_frontier_evidence_summary(
     status: str = "promote",
     next_actions: Sequence[Mapping[str, Any]] = (),
     lane_statuses: Mapping[str, str] | None = None,
+    frontier_queue_execution_smoke_status: str | None = None,
+    frontier_queue_execution_smoke_count: int = 0,
+    frontier_queue_execution_smoke_manifest_verified_count: int = 0,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -15750,6 +15753,28 @@ def _write_unresolved_frontier_evidence_summary(
             "artifact_manifest": str(manifest_path),
         },
     }
+    if frontier_queue_execution_smoke_status is not None:
+        payload["summary"].update({
+            "frontier_queue_execution_smoke_status": (
+                frontier_queue_execution_smoke_status
+            ),
+            "frontier_queue_execution_smoke_count": (
+                frontier_queue_execution_smoke_count
+            ),
+            "frontier_queue_execution_smoke_manifest_verified_count": (
+                frontier_queue_execution_smoke_manifest_verified_count
+            ),
+        })
+        payload["lanes"]["frontier_queue_execution"] = {
+            "status": lane_status_payload.get("frontier_queue_execution", "promote"),
+            "control_plane_smoke_status": frontier_queue_execution_smoke_status,
+            "frontier_queue_execution_smoke_count": (
+                frontier_queue_execution_smoke_count
+            ),
+            "frontier_queue_execution_smoke_manifest_verified_count": (
+                frontier_queue_execution_smoke_manifest_verified_count
+            ),
+        }
     report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     manifest = build_artifact_manifest(
         {"unresolved_frontier_evidence_summary": report_path},
@@ -19490,6 +19515,12 @@ def test_compare_release_candidates_can_require_unresolved_frontier_closure(tmp_
     promoted_summary_path = _write_unresolved_frontier_evidence_summary(
         tmp_path / "unresolved-frontier-promote"
     )
+    smoked_summary_path = _write_unresolved_frontier_evidence_summary(
+        tmp_path / "unresolved-frontier-promote-with-smoke",
+        frontier_queue_execution_smoke_status="pass",
+        frontier_queue_execution_smoke_count=1,
+        frontier_queue_execution_smoke_manifest_verified_count=1,
+    )
     blocked_summary_path = _write_unresolved_frontier_evidence_summary(
         tmp_path / "unresolved-frontier-blocked",
         status="needs_evidence",
@@ -19541,6 +19572,30 @@ def test_compare_release_candidates_can_require_unresolved_frontier_closure(tmp_
         readiness_registry_path=registry_path,
         unresolved_frontier_evidence_summary_path=blocked_summary_path,
         require_unresolved_frontier_evidence_closure=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    smoke_missing = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        unresolved_frontier_evidence_summary_path=promoted_summary_path,
+        require_unresolved_frontier_evidence_closure=True,
+        require_frontier_queue_execution_smoke=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    smoke_promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        unresolved_frontier_evidence_summary_path=smoked_summary_path,
+        require_unresolved_frontier_evidence_closure=True,
+        require_frontier_queue_execution_smoke=True,
         min_best_quality_auroc=0.70,
         max_uncached_forward_seconds=20.0,
         min_selected=4,
@@ -19601,6 +19656,32 @@ def test_compare_release_candidates_can_require_unresolved_frontier_closure(tmp_
             "blocking_reasons"
         ]
     )
+    assert smoke_missing["decision"]["status"] == "blocked"
+    assert smoke_missing["unresolved_frontier_evidence_summary_gate"]["gate"][
+        "queue_execution_smoke_required"
+    ] is True
+    assert any(
+        "frontier queue execution smoke status is None" in reason
+        for reason in smoke_missing["unresolved_frontier_evidence_summary_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
+    assert any(
+        "frontier queue execution smoke report is required" in reason
+        for reason in smoke_missing["unresolved_frontier_evidence_summary_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
+    assert smoke_promoted["decision"]["status"] == "promote"
+    assert smoke_promoted["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "require_queue_execution_smoke"
+    ] is True
+    assert smoke_promoted["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "frontier_queue_execution_smoke_status"
+    ] == "pass"
+    assert smoke_promoted["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "frontier_queue_execution_smoke_manifest_verified_count"
+    ] == 1
     assert promoted_from_key["decision"]["status"] == "promote"
     assert promoted_from_key["release_candidate"]["unresolved_frontier_evidence_summary"][
         "record_key"
@@ -24274,7 +24355,10 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         refuted_count=1,
     )
     frontier_closure_summary = _write_unresolved_frontier_evidence_summary(
-        tmp_path / "frontier-unresolved-closure"
+        tmp_path / "frontier-unresolved-closure",
+        frontier_queue_execution_smoke_status="pass",
+        frontier_queue_execution_smoke_count=1,
+        frontier_queue_execution_smoke_manifest_verified_count=1,
     )
     ArtifactRegistry.load_json(registry_path).record_report(
         name="covered-facts-external-evidence-handoff",
@@ -25997,6 +26081,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_product_runtime_drift_frontier_release_evidence is True
     assert frontier_profile_config.require_frontier_release_input_manifests is True
     assert frontier_profile_config.require_unresolved_frontier_evidence_closure is True
+    assert frontier_profile_config.require_frontier_queue_execution_smoke is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
     assert frontier_profile_config.external_evidence_baseline_comparison_key == (
@@ -26024,6 +26109,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_pre_generation_evidence"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_frontier_queue_execution_smoke"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_runtime_drift_claim_factuality_evidence"

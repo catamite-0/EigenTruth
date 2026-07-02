@@ -77,6 +77,7 @@ RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
         "require_product_runtime_drift_frontier_release_evidence": True,
         "require_frontier_release_input_manifests": True,
         "require_unresolved_frontier_evidence_closure": True,
+        "require_frontier_queue_execution_smoke": True,
         "require_product_trace_action_audit_gate": True,
         "require_product_trace_action_execution_gate": True,
         "external_evidence_baseline_comparison_key": (

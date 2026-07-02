@@ -6174,6 +6174,8 @@ also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_evidence_handoff_evidence=true`,
 `require_product_runtime_drift_world_model_evidence=true`,
 `require_product_runtime_drift_context_sensitivity_evidence=true`,
+`require_unresolved_frontier_evidence_closure=true`,
+`require_frontier_queue_execution_smoke=true`,
 `require_product_trace_action_audit_gate=true`, and
 `require_product_trace_action_execution_gate=true`, plus the registered
 covered-facts external-evidence handoff, registered triple-extraction fixture

@@ -811,6 +811,7 @@ def compare_release_candidates(
     unresolved_frontier_evidence_summary_registry_path: str | Path | None = None,
     unresolved_frontier_evidence_summary_key: str | None = None,
     require_unresolved_frontier_evidence_closure: bool = False,
+    require_frontier_queue_execution_smoke: bool = False,
     world_model_signal_workflow_path: str | Path | None = None,
     world_model_signal_workflow_registry_path: str | Path | None = None,
     world_model_signal_workflow_key: str | None = None,
@@ -1099,6 +1100,9 @@ def compare_release_candidates(
                 "require_unresolved_frontier_evidence_closure": (
                     require_unresolved_frontier_evidence_closure
                 ),
+                "require_frontier_queue_execution_smoke": (
+                    require_frontier_queue_execution_smoke
+                ),
                 "unresolved_frontier_evidence_summary_key": (
                     unresolved_frontier_evidence_summary_key
                 ),
@@ -1316,6 +1320,9 @@ def compare_release_candidates(
     )
     require_unresolved_frontier_evidence_closure = bool(
         release_policy_values.get("require_unresolved_frontier_evidence_closure", False)
+    )
+    require_frontier_queue_execution_smoke = bool(
+        release_policy_values.get("require_frontier_queue_execution_smoke", False)
     )
     unresolved_frontier_evidence_summary_key = clean_optional_key(
         release_policy_values["unresolved_frontier_evidence_summary_key"]
@@ -2031,6 +2038,7 @@ def compare_release_candidates(
             unresolved_frontier_evidence_summary_source
         ),
         require_closure=require_unresolved_frontier_evidence_closure,
+        require_queue_execution_smoke=require_frontier_queue_execution_smoke,
         recursive=recursive,
         allow_unverified=allow_unverified,
         manifest_fingerprint_workers=manifest_fingerprint_workers,
@@ -2332,6 +2340,9 @@ def compare_release_candidates(
             ),
             "require_unresolved_frontier_evidence_closure": bool(
                 require_unresolved_frontier_evidence_closure
+            ),
+            "require_frontier_queue_execution_smoke": bool(
+                require_frontier_queue_execution_smoke
             ),
             "world_model_signal_workflow": (
                 None
@@ -6546,21 +6557,31 @@ def _unresolved_frontier_evidence_summary_gate(
     *,
     unresolved_frontier_evidence_summary_source: Mapping[str, Any] | None,
     require_closure: bool,
+    require_queue_execution_smoke: bool,
     recursive: bool,
     allow_unverified: bool,
     manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if unresolved_frontier_evidence_summary_source is None:
-        if not require_closure:
+        if not require_closure and not require_queue_execution_smoke:
             return None
+        blocking_reasons = []
+        if require_closure:
+            blocking_reasons.append(
+                "unresolved frontier evidence closure summary is required"
+            )
+        if require_queue_execution_smoke:
+            blocking_reasons.append(
+                "frontier queue execution smoke requires an unresolved frontier "
+                "evidence summary"
+            )
         gate = {
-            "required": True,
+            "required": bool(require_closure or require_queue_execution_smoke),
+            "queue_execution_smoke_required": bool(require_queue_execution_smoke),
             "present": False,
             "passed": False,
-            "blocking_reasons": [
-                "unresolved frontier evidence closure summary is required"
-            ],
+            "blocking_reasons": blocking_reasons,
         }
         return {
             "schema_version": 1,
@@ -6569,9 +6590,13 @@ def _unresolved_frontier_evidence_summary_gate(
             "manifest_path": None,
             "workflow": None,
             "report_status": None,
-            "require_closure": True,
+            "require_closure": bool(require_closure),
+            "require_queue_execution_smoke": bool(require_queue_execution_smoke),
             "next_action_count": None,
             "lane_statuses": {},
+            "frontier_queue_execution_smoke_status": None,
+            "frontier_queue_execution_smoke_count": 0,
+            "frontier_queue_execution_smoke_manifest_verified_count": 0,
             "blocking_reasons": tuple(gate["blocking_reasons"]),
             "verification": {},
             "gate": gate,
@@ -6609,6 +6634,7 @@ def _unresolved_frontier_evidence_summary_gate(
         verification=verification,
         allow_unverified=allow_unverified,
         require_closure=require_closure,
+        require_queue_execution_smoke=require_queue_execution_smoke,
         next_action_count=len(next_actions),
     )
     return {
@@ -6624,9 +6650,32 @@ def _unresolved_frontier_evidence_summary_gate(
         "report_status": report.get("status"),
         "summary": summary,
         "require_closure": bool(require_closure),
+        "require_queue_execution_smoke": bool(require_queue_execution_smoke),
         "next_action_count": len(next_actions),
         "next_actions": next_actions,
         "lane_statuses": lane_statuses,
+        "frontier_queue_execution_smoke_status": _frontier_queue_execution_smoke_value(
+            summary,
+            lanes,
+            "frontier_queue_execution_smoke_status",
+            "control_plane_smoke_status",
+        ),
+        "frontier_queue_execution_smoke_count": _count_value(
+            _frontier_queue_execution_smoke_value(
+                summary,
+                lanes,
+                "frontier_queue_execution_smoke_count",
+                "frontier_queue_execution_smoke_count",
+            )
+        ),
+        "frontier_queue_execution_smoke_manifest_verified_count": _count_value(
+            _frontier_queue_execution_smoke_value(
+                summary,
+                lanes,
+                "frontier_queue_execution_smoke_manifest_verified_count",
+                "frontier_queue_execution_smoke_manifest_verified_count",
+            )
+        ),
         "blocking_reasons": tuple(gate.get("blocking_reasons", ())),
         "verification": verification,
         "gate": gate,
@@ -6641,6 +6690,7 @@ def _unresolved_frontier_evidence_summary_report_gate(
     verification: Mapping[str, Any],
     allow_unverified: bool,
     require_closure: bool,
+    require_queue_execution_smoke: bool,
     next_action_count: int,
 ) -> dict[str, Any]:
     failures = []
@@ -6668,12 +6718,89 @@ def _unresolved_frontier_evidence_summary_report_gate(
                 "unresolved frontier evidence summary still has "
                 f"{next_action_count} next action(s)"
             )
+    if require_queue_execution_smoke:
+        summary = _mapping(report.get("summary"))
+        lanes = _mapping(report.get("lanes"))
+        smoke_status = _frontier_queue_execution_smoke_value(
+            summary,
+            lanes,
+            "frontier_queue_execution_smoke_status",
+            "control_plane_smoke_status",
+        )
+        smoke_count = _count_value(_frontier_queue_execution_smoke_value(
+            summary,
+            lanes,
+            "frontier_queue_execution_smoke_count",
+            "frontier_queue_execution_smoke_count",
+        ))
+        smoke_verified_count = _count_value(_frontier_queue_execution_smoke_value(
+            summary,
+            lanes,
+            "frontier_queue_execution_smoke_manifest_verified_count",
+            "frontier_queue_execution_smoke_manifest_verified_count",
+        ))
+        smoke_failed_count = _count_value(_frontier_queue_execution_smoke_value(
+            summary,
+            lanes,
+            "frontier_queue_execution_smoke_failed_count",
+            "frontier_queue_execution_smoke_failed_count",
+        ))
+        smoke_manifest_failed_count = _count_value(_frontier_queue_execution_smoke_value(
+            summary,
+            lanes,
+            "frontier_queue_execution_smoke_manifest_failed_count",
+            "frontier_queue_execution_smoke_manifest_failed_count",
+        ))
+        if smoke_status != "pass":
+            failures.append(
+                "frontier queue execution smoke status is "
+                f"{smoke_status!r}, expected 'pass'"
+            )
+        if smoke_count < 1:
+            failures.append("frontier queue execution smoke report is required")
+        if smoke_failed_count:
+            failures.append(
+                "frontier queue execution smoke has "
+                f"{smoke_failed_count} failed report(s)"
+            )
+        if smoke_manifest_failed_count:
+            failures.append(
+                "frontier queue execution smoke has "
+                f"{smoke_manifest_failed_count} failed manifest verification(s)"
+            )
+        if smoke_verified_count < smoke_count:
+            failures.append(
+                "frontier queue execution smoke manifest verified count is "
+                f"{smoke_verified_count}, expected at least {smoke_count}"
+            )
     return {
-        "required": bool(require_closure),
+        "required": bool(require_closure or require_queue_execution_smoke),
+        "queue_execution_smoke_required": bool(require_queue_execution_smoke),
         "present": report_error is None,
         "passed": not failures,
         "blocking_reasons": failures,
     }
+
+
+def _frontier_queue_execution_smoke_value(
+    summary: Mapping[str, Any],
+    lanes: Mapping[str, Any],
+    summary_key: str,
+    lane_key: str,
+) -> Any:
+    if summary_key in summary:
+        return summary.get(summary_key)
+    frontier_lane = _mapping(lanes.get("frontier_queue_execution"))
+    return frontier_lane.get(lane_key)
+
+
+def _count_value(value: Any) -> int:
+    if isinstance(value, bool):
+        return 0
+    try:
+        return max(int(value), 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _unresolved_frontier_evidence_summary_manifest_path(
@@ -10342,9 +10469,27 @@ def _candidate_with_gates(
             "workflow": unresolved_frontier_evidence_summary.get("workflow"),
             "report_status": unresolved_frontier_evidence_summary.get("report_status"),
             "require_closure": unresolved_frontier_evidence_summary.get("require_closure"),
+            "require_queue_execution_smoke": unresolved_frontier_evidence_summary.get(
+                "require_queue_execution_smoke"
+            ),
             "next_action_count": unresolved_frontier_evidence_summary.get("next_action_count"),
             "lane_statuses": dict(
                 unresolved_frontier_evidence_summary.get("lane_statuses") or {}
+            ),
+            "frontier_queue_execution_smoke_status": (
+                unresolved_frontier_evidence_summary.get(
+                    "frontier_queue_execution_smoke_status"
+                )
+            ),
+            "frontier_queue_execution_smoke_count": (
+                unresolved_frontier_evidence_summary.get(
+                    "frontier_queue_execution_smoke_count"
+                )
+            ),
+            "frontier_queue_execution_smoke_manifest_verified_count": (
+                unresolved_frontier_evidence_summary.get(
+                    "frontier_queue_execution_smoke_manifest_verified_count"
+                )
             ),
             "blocking_reasons": tuple(
                 unresolved_frontier_evidence_summary.get("blocking_reasons", ())
@@ -10951,6 +11096,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_unresolved_frontier_evidence_closure=bool(
             args.require_unresolved_frontier_evidence_closure
         ),
+        require_frontier_queue_execution_smoke=bool(
+            args.require_frontier_queue_execution_smoke
+        ),
         world_model_signal_workflow_path=args.world_model_signal_workflow,
         world_model_signal_workflow_registry_path=args.world_model_signal_workflow_registry,
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
@@ -11335,6 +11483,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-unresolved-frontier-evidence-closure", action="store_true",
                         help="require the unresolved frontier evidence summary to promote with "
                              "zero next actions before release")
+    parser.add_argument("--require-frontier-queue-execution-smoke", action="store_true",
+                        help="require the unresolved frontier evidence summary to record a passing "
+                             "frontier queue execution smoke with verified manifest")
     parser.add_argument("--world-model-signal-workflow", default=None,
                         help="optional world-model signal calibration workflow report that must pass its "
                              "conflict/trace-gap release gate")
