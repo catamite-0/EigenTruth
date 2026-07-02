@@ -6877,6 +6877,10 @@ The v1.9/v7 handoff audit promotes all `77/77` required metrics, including
 action-receipt and receipt-claim-support groups, and the v15 manifest verifies
 recursively. The older v13/v1.6 chain remains useful as the `65/65` pre-receipt
 boundary regression artifact.
+`frontier_audit` release candidates now also carry the promoted unresolved
+frontier evidence summary into `ProductPromotionContract`, runtime metrics, and
+bounded trace metadata, including queue-execution smoke status and recursive
+manifest verification counts.
 
 Build a single read-only status snapshot from the promoted release candidate,
 active product contract handoff, and latest evidence-gap plan. The default
@@ -6997,6 +7001,9 @@ Pass the resulting `frontier-queue-execution-smoke.json` to
 `summarize_unresolved_frontier_evidence.py --frontier-queue-execution-smoke`
 when you want the unresolved closure summary and release registry workflow to
 carry this control-plane health check alongside real queue-execution evidence.
+When that summary promotes, the release-candidate comparison exposes it through
+the promotion contract and product runtime telemetry instead of leaving it as a
+standalone coordination artifact.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 

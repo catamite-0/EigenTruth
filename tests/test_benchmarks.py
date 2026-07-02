@@ -24690,6 +24690,16 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["release_candidate"]["unresolved_frontier_evidence_summary"][
         "next_action_count"
     ] == 0
+    from eigentruth.control import ProductPromotionContract
+
+    frontier_contract = ProductPromotionContract.from_mapping(frontier_payload)
+    assert frontier_contract.unresolved_frontier_evidence_summary["status"] == "promote"
+    assert frontier_contract.unresolved_frontier_evidence_summary[
+        "queue_execution_smoke_status"
+    ] == "pass"
+    assert frontier_contract.metadata[
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == 1
     assert frontier_payload["triple_extraction_fixture_matrix_gate"]["gate"]["policy"][
         "min_mean_best_external_f1"
     ] == pytest.approx(0.90)

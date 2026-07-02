@@ -561,6 +561,31 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
             "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts": {
                 "pass": 2,
             },
+            "promotion_contract_unresolved_frontier_evidence_summary": {
+                "status": "promote",
+                "report_path": "unresolved-frontier-summary.json",
+                "manifest_path": "unresolved-frontier-manifest.json",
+                "workflow": "unresolved_frontier_evidence_summary",
+                "next_action_count": 0,
+                "queue_execution_smoke_status": "pass",
+            },
+            "promotion_contract_unresolved_frontier_evidence_summary_status": "promote",
+            "promotion_contract_unresolved_frontier_evidence_summary_report": (
+                "unresolved-frontier-summary.json"
+            ),
+            "promotion_contract_unresolved_frontier_evidence_summary_manifest": (
+                "unresolved-frontier-manifest.json"
+            ),
+            "promotion_contract_unresolved_frontier_evidence_summary_closure_required": True,
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required": True,
+            "promotion_contract_unresolved_frontier_evidence_summary_next_action_count": 0,
+            "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses": {
+                "world_model_rules": "promote",
+                "frontier_queue_execution": "promote",
+            },
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status": "pass",
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count": 1,
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": 1,
             "external_evidence_baseline_comparison_source": "registry",
             "external_evidence_baseline_comparison_status": "promote",
             "external_evidence_baseline_comparison_decision_status": "promote",
@@ -680,6 +705,20 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert payload["metadata"][
         "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
     ] == {"pass": 2}
+    assert payload["metadata"][
+        "promotion_contract_unresolved_frontier_evidence_summary"
+    ] == {
+        "status": "promote",
+        "report_path": "unresolved-frontier-summary.json",
+        "_truncated": True,
+        "_omitted_keys": 4,
+    }
+    assert payload["metadata"][
+        "promotion_contract_unresolved_frontier_evidence_summary_status"
+    ] == "promote"
+    assert payload["metadata"][
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
     assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
         "status": "promote",
         "distinct_predicate_count": 6,
@@ -728,6 +767,28 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics[
         "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
     ] == {"pass": 2}
+    assert (
+        metrics["promotion_contract_unresolved_frontier_evidence_summary_available"]
+        is True
+    )
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_status"
+    ] == "promote"
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_report"
+    ] == "unresolved-frontier-summary.json"
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == pytest.approx(1.0)
     assert metrics[
         "promotion_contract_external_evidence_baseline_comparison_source"
     ] == "registry"
@@ -4572,6 +4633,26 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "citation_batch_comparison_status_counts": {"pass": 2},
             "run_names": ["verifier-stability", "abstention-stability"],
         },
+        unresolved_frontier_evidence_summary={
+            "report_path": "unresolved-frontier-summary.json",
+            "manifest_path": "unresolved-frontier-summary-manifest.json",
+            "source": "registry",
+            "registry": "release-registry.json",
+            "record_key": "report:unresolved-frontier-evidence-summary:0.1",
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "promote",
+            "report_status": "promote",
+            "closure_required": True,
+            "queue_execution_smoke_required": True,
+            "next_action_count": 0,
+            "lane_statuses": {
+                "world_model_rules": "promote",
+                "frontier_queue_execution": "promote",
+            },
+            "queue_execution_smoke_status": "pass",
+            "queue_execution_smoke_count": 1,
+            "queue_execution_smoke_manifest_verified_count": 1,
+        },
         control_defaults={"max_verifier_route_attempts": 3},
         metadata={
             "selector_replay_status": "promote",
@@ -4637,6 +4718,7 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert loaded.path == contract_path
     assert loaded.source == str(contract_path)
     assert loaded.contract.model_id == "demo-model"
+    assert loaded.contract.unresolved_frontier_evidence_summary["status"] == "promote"
     assert loaded.contract.runtime_budget_policy.max_mean_attempted_route_count == 1.1
 
     metadata = loaded.runtime_metadata(budget_enabled=True)
@@ -4668,9 +4750,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_promotion_summary"]["gate_statuses"][
         "frontier_release_evidence"
     ] == "promote"
+    assert metadata["promotion_contract_promotion_summary"]["gate_statuses"][
+        "unresolved_frontier_evidence_summary"
+    ] == "promote"
     assert metadata["promotion_contract_promotion_summary"]["recommended_records"][
         "frontier_release_evidence"
     ] == "frontier-release-evidence.json"
+    assert metadata["promotion_contract_promotion_summary"]["recommended_records"][
+        "unresolved_frontier_evidence_summary"
+    ] == "unresolved-frontier-summary.json"
     assert metadata["promotion_contract_frontier_release_evidence"]["status"] == (
         "promote"
     )
@@ -4740,6 +4828,21 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata[
         "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
     ] == {"pass": 2}
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary"
+    ]["status"] == "promote"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_report"
+    ] == "unresolved-frontier-summary.json"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest"
+    ] == "unresolved-frontier-summary-manifest.json"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == 1
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -4837,6 +4940,24 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics[
         "promotion_contract_frontier_release_evidence_run_count"
     ] == pytest.approx(2.0)
+    assert (
+        runtime_metrics[
+            "promotion_contract_unresolved_frontier_evidence_summary_available"
+        ]
+        is True
+    )
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == pytest.approx(1.0)
     assert runtime_metrics[
         "promotion_contract_recommended_route_covered_fact_property_metric_count"
     ] == pytest.approx(1.0)

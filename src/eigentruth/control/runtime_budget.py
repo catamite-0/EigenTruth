@@ -2117,6 +2117,14 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         **_frontier_release_evidence_from_flat_metadata(metadata),
         **nested_frontier_release_evidence,
     }
+    nested_unresolved_frontier_evidence_summary = _mapping(
+        metadata.get("promotion_contract_unresolved_frontier_evidence_summary")
+    )
+    unresolved_frontier_evidence_summary = {
+        **_unresolved_frontier_evidence_summary_from_flat_metadata(contract_metadata),
+        **_unresolved_frontier_evidence_summary_from_flat_metadata(metadata),
+        **nested_unresolved_frontier_evidence_summary,
+    }
     nested_fact_selfcheck_gate = _mapping(
         metadata.get("promotion_contract_fact_selfcheck_gate")
     )
@@ -2194,6 +2202,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         or bool(evidence_handoff.get("available"))
         or bool(triple_audit_evidence.get("available"))
         or bool(frontier_release_evidence)
+        or bool(unresolved_frontier_evidence_summary)
         or bool(fact_selfcheck_gate)
     )
     pre_generation_manifest_verification = _mapping(
@@ -2226,6 +2235,9 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     frontier_release_evidence_available = bool(frontier_release_evidence)
     frontier_release_evidence_run_names = _sequence(
         frontier_release_evidence.get("run_names")
+    )
+    unresolved_frontier_evidence_summary_available = bool(
+        unresolved_frontier_evidence_summary
     )
     fact_selfcheck_gate_available = bool(fact_selfcheck_gate)
     summary = {
@@ -2373,6 +2385,75 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
             "run_names": list(frontier_release_evidence_run_names)
             if frontier_release_evidence_run_names
             else None,
+        },
+        "unresolved_frontier_evidence_summary": {
+            "available": unresolved_frontier_evidence_summary_available,
+            "source": _optional_string(
+                unresolved_frontier_evidence_summary.get("source")
+            ),
+            "report": _optional_string(
+                _first_present(
+                    unresolved_frontier_evidence_summary.get("report_path"),
+                    unresolved_frontier_evidence_summary.get("report"),
+                )
+            ),
+            "manifest": _optional_string(
+                _first_present(
+                    unresolved_frontier_evidence_summary.get("manifest_path"),
+                    unresolved_frontier_evidence_summary.get("manifest"),
+                )
+            ),
+            "registry": _optional_string(
+                unresolved_frontier_evidence_summary.get("registry")
+            ),
+            "record": _optional_string(
+                _first_present(
+                    unresolved_frontier_evidence_summary.get("record_key"),
+                    unresolved_frontier_evidence_summary.get("record"),
+                )
+            ),
+            "status": _optional_string(
+                unresolved_frontier_evidence_summary.get("status")
+            ),
+            "workflow": _optional_string(
+                unresolved_frontier_evidence_summary.get("workflow")
+            ),
+            "report_status": _optional_string(
+                unresolved_frontier_evidence_summary.get("report_status")
+            ),
+            "closure_required": _optional_bool(
+                unresolved_frontier_evidence_summary.get("closure_required")
+            ),
+            "queue_execution_smoke_required": _optional_bool(
+                unresolved_frontier_evidence_summary.get(
+                    "queue_execution_smoke_required"
+                )
+            ),
+            "next_action_count": _finite_float(
+                unresolved_frontier_evidence_summary.get("next_action_count")
+            ),
+            "lane_statuses": dict(
+                _mapping(unresolved_frontier_evidence_summary.get("lane_statuses"))
+            )
+            or None,
+            "queue_execution_smoke_status": _optional_string(
+                unresolved_frontier_evidence_summary.get(
+                    "queue_execution_smoke_status"
+                )
+            ),
+            "queue_execution_smoke_count": _finite_float(
+                unresolved_frontier_evidence_summary.get(
+                    "queue_execution_smoke_count"
+                )
+            ),
+            "queue_execution_smoke_manifest_verified_count": _finite_float(
+                unresolved_frontier_evidence_summary.get(
+                    "queue_execution_smoke_manifest_verified_count"
+                )
+            ),
+            "blocking_reasons": list(
+                _sequence(unresolved_frontier_evidence_summary.get("blocking_reasons"))
+            ),
         },
         "fact_selfcheck_gate": {
             "available": fact_selfcheck_gate_available,
@@ -3151,6 +3232,9 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     claim_factuality_summary = _mapping(summary["claim_factuality_probe_comparison"])
     counterfactual_summary = _mapping(summary["counterfactual_verification"])
     frontier_release_evidence_summary = _mapping(summary["frontier_release_evidence"])
+    unresolved_frontier_evidence_summary = _mapping(
+        summary["unresolved_frontier_evidence_summary"]
+    )
     fact_selfcheck_gate_summary = _mapping(summary["fact_selfcheck_gate"])
     product_trace_replay_metrics = _promotion_contract_product_trace_replay_metric_values(
         product_trace_replay
@@ -3292,6 +3376,62 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_frontier_release_evidence_run_names": (
             frontier_release_evidence_summary.get("run_names")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary": (
+            unresolved_frontier_evidence_summary or None
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_available": (
+            unresolved_frontier_evidence_summary_available
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_status": (
+            unresolved_frontier_evidence_summary.get("status")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report": (
+            unresolved_frontier_evidence_summary.get("report")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest": (
+            unresolved_frontier_evidence_summary.get("manifest")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_source": (
+            unresolved_frontier_evidence_summary.get("source")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_registry": (
+            unresolved_frontier_evidence_summary.get("registry")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_record": (
+            unresolved_frontier_evidence_summary.get("record")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_workflow": (
+            unresolved_frontier_evidence_summary.get("workflow")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_status": (
+            unresolved_frontier_evidence_summary.get("report_status")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_closure_required": (
+            unresolved_frontier_evidence_summary.get("closure_required")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            unresolved_frontier_evidence_summary.get("queue_execution_smoke_required")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count": (
+            unresolved_frontier_evidence_summary.get("next_action_count")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses": (
+            unresolved_frontier_evidence_summary.get("lane_statuses")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            unresolved_frontier_evidence_summary.get("queue_execution_smoke_status")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            unresolved_frontier_evidence_summary.get("queue_execution_smoke_count")
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            unresolved_frontier_evidence_summary.get(
+                "queue_execution_smoke_manifest_verified_count"
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons": (
+            unresolved_frontier_evidence_summary.get("blocking_reasons")
         ),
         "promotion_contract_fact_selfcheck_gate": fact_selfcheck_gate or None,
         "promotion_contract_fact_selfcheck_gate_available": (
@@ -5008,6 +5148,40 @@ def _frontier_release_evidence_from_flat_metadata(
         "blocking_reasons": value("blocking_reasons"),
     }
     return {key: item for key, item in evidence.items() if item is not None}
+
+
+def _unresolved_frontier_evidence_summary_from_flat_metadata(
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    def value(suffix: str) -> Any:
+        return _first_present(
+            metadata.get(f"unresolved_frontier_evidence_summary_{suffix}"),
+            metadata.get(
+                f"promotion_contract_unresolved_frontier_evidence_summary_{suffix}"
+            ),
+        )
+
+    summary = {
+        "report_path": value("report"),
+        "manifest_path": value("manifest"),
+        "source": value("source"),
+        "registry": value("registry"),
+        "record_key": _first_present(value("record"), value("registry_key")),
+        "status": value("status"),
+        "workflow": value("workflow"),
+        "report_status": value("report_status"),
+        "closure_required": value("closure_required"),
+        "queue_execution_smoke_required": value("queue_execution_smoke_required"),
+        "next_action_count": value("next_action_count"),
+        "lane_statuses": value("lane_statuses"),
+        "queue_execution_smoke_status": value("queue_execution_smoke_status"),
+        "queue_execution_smoke_count": value("queue_execution_smoke_count"),
+        "queue_execution_smoke_manifest_verified_count": value(
+            "queue_execution_smoke_manifest_verified_count"
+        ),
+        "blocking_reasons": value("blocking_reasons"),
+    }
+    return {key: item for key, item in summary.items() if item is not None}
 
 
 def _fact_selfcheck_gate_from_flat_metadata(

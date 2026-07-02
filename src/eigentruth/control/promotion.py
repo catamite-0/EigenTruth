@@ -57,6 +57,7 @@ _PROMOTION_CONTRACT_GATE_STATUS_KEYS = (
     ("feedback_policy", "feedback_policy_workflow_status"),
     ("release_efficiency", "release_efficiency_status"),
     ("frontier_release_evidence", "frontier_release_evidence_status"),
+    ("unresolved_frontier_evidence_summary", "unresolved_frontier_evidence_summary_status"),
     ("uncertainty_escalation", "uncertainty_escalation_workflow_status"),
 )
 
@@ -114,6 +115,7 @@ class ProductPromotionContract:
     counterfactual_verification: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     frontier_release_evidence: Mapping[str, Any] = field(default_factory=dict)
+    unresolved_frontier_evidence_summary: Mapping[str, Any] = field(default_factory=dict)
     fact_selfcheck_gate: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
@@ -191,6 +193,11 @@ class ProductPromotionContract:
             "frontier_release_evidence",
             dict(self.frontier_release_evidence),
         )
+        object.__setattr__(
+            self,
+            "unresolved_frontier_evidence_summary",
+            dict(self.unresolved_frontier_evidence_summary),
+        )
         object.__setattr__(self, "fact_selfcheck_gate", dict(self.fact_selfcheck_gate))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
@@ -250,6 +257,9 @@ class ProductPromotionContract:
                 release_efficiency=_mapping(payload.get("release_efficiency")),
                 frontier_release_evidence=_mapping(
                     payload.get("frontier_release_evidence")
+                ),
+                unresolved_frontier_evidence_summary=_mapping(
+                    payload.get("unresolved_frontier_evidence_summary")
                 ),
                 fact_selfcheck_gate=_mapping(payload.get("fact_selfcheck_gate")),
                 metadata=_mapping(payload.get("metadata")),
@@ -351,6 +361,20 @@ class ProductPromotionContract:
             ),
             manifests=manifests,
         )
+        unresolved_frontier_evidence_summary_report = _mapping(
+            comparison.get("unresolved_frontier_evidence_summary_gate")
+        )
+        unresolved_frontier_evidence_summary_report.update(
+            _drop_none_values(
+                _mapping(candidate.get("unresolved_frontier_evidence_summary"))
+            )
+        )
+        unresolved_frontier_evidence_summary = (
+            _unresolved_frontier_evidence_summary_metadata(
+                unresolved_frontier_evidence_summary_report,
+                manifests=manifests,
+            )
+        )
         fact_selfcheck_gate = _mapping(candidate.get("fact_selfcheck_gate"))
         runtime_cost = _mapping(candidate.get("runtime_cost"))
         product_trace_replay_metadata = _product_trace_replay_workflow_metadata(
@@ -451,6 +475,7 @@ class ProductPromotionContract:
             counterfactual_verification=counterfactual_verification,
             release_efficiency=release_efficiency,
             frontier_release_evidence=frontier_release_evidence,
+            unresolved_frontier_evidence_summary=unresolved_frontier_evidence_summary,
             fact_selfcheck_gate=fact_selfcheck_gate,
             metadata={
                 "release_candidate_status": status,
@@ -467,6 +492,14 @@ class ProductPromotionContract:
                 ),
                 "frontier_release_evidence_status": decision.get(
                     "frontier_release_evidence_status"
+                ),
+                "unresolved_frontier_evidence_summary_status": decision.get(
+                    "unresolved_frontier_evidence_summary_status"
+                ),
+                "recommended_unresolved_frontier_evidence_summary_report": (
+                    decision.get(
+                        "recommended_unresolved_frontier_evidence_summary_report"
+                    )
                 ),
                 "recommended_frontier_release_evidence_report": decision.get(
                     "recommended_frontier_release_evidence_report"
@@ -888,6 +921,9 @@ class ProductPromotionContract:
                 ),
                 **_release_efficiency_flat_metadata(release_efficiency),
                 **_frontier_release_evidence_flat_metadata(frontier_release_evidence),
+                **_unresolved_frontier_evidence_summary_flat_metadata(
+                    unresolved_frontier_evidence_summary
+                ),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
                 "performance_evidence_bundle_release_ready": (
@@ -1231,6 +1267,9 @@ class ProductPromotionContract:
             "counterfactual_verification": dict(self.counterfactual_verification),
             "release_efficiency": dict(self.release_efficiency),
             "frontier_release_evidence": dict(self.frontier_release_evidence),
+            "unresolved_frontier_evidence_summary": dict(
+                self.unresolved_frontier_evidence_summary
+            ),
             "fact_selfcheck_gate": dict(self.fact_selfcheck_gate),
             "metadata": dict(self.metadata),
             "summary": self.to_summary_dict(),
@@ -1327,6 +1366,10 @@ def product_promotion_contract_summary(
                 "recommended_frontier_release_evidence_report"
             )
             or contract.frontier_release_evidence.get("report_path"),
+            "unresolved_frontier_evidence_summary": metadata.get(
+                "recommended_unresolved_frontier_evidence_summary_report"
+            )
+            or contract.unresolved_frontier_evidence_summary.get("report_path"),
         }),
         "control_defaults": dict(contract.control_defaults),
         "control_policy_configured": bool(contract.control_policy_config),
@@ -1384,6 +1427,11 @@ def _promotion_contract_gate_statuses(
         statuses.get("frontier_release_evidence"),
         contract.frontier_release_evidence.get("status"),
         contract.frontier_release_evidence.get("decision_status"),
+    ))
+    statuses["unresolved_frontier_evidence_summary"] = _optional_str(_first_present(
+        statuses.get("unresolved_frontier_evidence_summary"),
+        contract.unresolved_frontier_evidence_summary.get("status"),
+        contract.unresolved_frontier_evidence_summary.get("report_status"),
     ))
     return statuses
 
@@ -3285,6 +3333,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_frontier_release_evidence": dict(
             contract.frontier_release_evidence
         ),
+        "promotion_contract_unresolved_frontier_evidence_summary": dict(
+            contract.unresolved_frontier_evidence_summary
+        ),
         "promotion_contract_fact_selfcheck_gate": dict(contract.fact_selfcheck_gate),
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
@@ -3297,6 +3348,7 @@ def product_promotion_contract_metadata(
         **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
         **_promotion_contract_frontier_release_evidence_metadata(contract),
+        **_promotion_contract_unresolved_frontier_evidence_summary_metadata(contract),
         **_promotion_contract_fact_selfcheck_gate_metadata(contract),
         **covered_fact_scope,
     }
@@ -4908,7 +4960,11 @@ def _frontier_release_evidence_metadata(
         "registry": report.get("registry"),
         "record_key": report.get("record_key"),
         "workflow": report.get("workflow"),
-        "status": _first_present(report.get("status"), gate.get("status")),
+        "status": _first_present(
+            report.get("status"),
+            gate.get("status"),
+            report.get("report_status"),
+        ),
         "report_status": report.get("report_status"),
         "decision_status": report.get("decision_status"),
         "verifier_track_status": report.get("verifier_track_status"),
@@ -5074,6 +5130,91 @@ def _frontier_release_evidence_flat_metadata(
         ),
         "frontier_release_evidence_run_names": report.get("run_names"),
         "frontier_release_evidence_blocking_reasons": report.get("blocking_reasons"),
+    })
+
+
+def _unresolved_frontier_evidence_summary_metadata(
+    report: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    gate = _mapping(report.get("gate"))
+    return _drop_none_values({
+        "report_path": report.get("report_path"),
+        "manifest_path": _first_present(
+            report.get("manifest_path"),
+            manifests.get("unresolved_frontier_evidence_summary_manifest"),
+        ),
+        "source": report.get("source"),
+        "registry": report.get("registry"),
+        "record_key": report.get("record_key"),
+        "workflow": report.get("workflow"),
+        "status": _first_present(
+            report.get("status"),
+            gate.get("status"),
+            report.get("report_status"),
+        ),
+        "report_status": report.get("report_status"),
+        "closure_required": report.get("require_closure"),
+        "queue_execution_smoke_required": report.get("require_queue_execution_smoke"),
+        "next_action_count": report.get("next_action_count"),
+        "lane_statuses": report.get("lane_statuses"),
+        "queue_execution_smoke_status": report.get(
+            "frontier_queue_execution_smoke_status"
+        ),
+        "queue_execution_smoke_count": report.get(
+            "frontier_queue_execution_smoke_count"
+        ),
+        "queue_execution_smoke_manifest_verified_count": report.get(
+            "frontier_queue_execution_smoke_manifest_verified_count"
+        ),
+        "blocking_reasons": _first_present(
+            report.get("blocking_reasons"),
+            gate.get("blocking_reasons"),
+        ),
+    })
+
+
+def _unresolved_frontier_evidence_summary_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "unresolved_frontier_evidence_summary_report": report.get("report_path"),
+        "unresolved_frontier_evidence_summary_manifest": report.get("manifest_path"),
+        "unresolved_frontier_evidence_summary_source": report.get("source"),
+        "unresolved_frontier_evidence_summary_registry": report.get("registry"),
+        "unresolved_frontier_evidence_summary_record": report.get("record_key"),
+        "unresolved_frontier_evidence_summary_status": report.get("status"),
+        "unresolved_frontier_evidence_summary_workflow": report.get("workflow"),
+        "unresolved_frontier_evidence_summary_report_status": (
+            report.get("report_status")
+        ),
+        "unresolved_frontier_evidence_summary_closure_required": (
+            report.get("closure_required")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            report.get("queue_execution_smoke_required")
+        ),
+        "unresolved_frontier_evidence_summary_next_action_count": (
+            report.get("next_action_count")
+        ),
+        "unresolved_frontier_evidence_summary_lane_statuses": (
+            report.get("lane_statuses")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            report.get("queue_execution_smoke_status")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            report.get("queue_execution_smoke_count")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            report.get("queue_execution_smoke_manifest_verified_count")
+        ),
+        "unresolved_frontier_evidence_summary_blocking_reasons": (
+            report.get("blocking_reasons")
+        ),
     })
 
 
@@ -5333,6 +5474,121 @@ def _promotion_contract_frontier_release_evidence_metadata(
             _first_present(
                 evidence.get("blocking_reasons"),
                 metadata.get("frontier_release_evidence_blocking_reasons"),
+            )
+        ),
+    })
+
+
+def _promotion_contract_unresolved_frontier_evidence_summary_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    summary = _mapping(contract.unresolved_frontier_evidence_summary)
+    return _drop_none_values({
+        "promotion_contract_unresolved_frontier_evidence_summary_status": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_status"),
+                summary.get("status"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_report"),
+                metadata.get("recommended_unresolved_frontier_evidence_summary_report"),
+                summary.get("report_path"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_manifest"),
+                summary.get("manifest_path"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_source": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_source"),
+                summary.get("source"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_registry": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_registry"),
+                summary.get("registry"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_record": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_record"),
+                metadata.get("unresolved_frontier_evidence_summary_registry_key"),
+                summary.get("record_key"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_workflow": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_workflow"),
+                summary.get("workflow"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_status": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_report_status"),
+                summary.get("report_status"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_closure_required": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_closure_required"),
+                summary.get("closure_required"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_required"
+                ),
+                summary.get("queue_execution_smoke_required"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_next_action_count"),
+                summary.get("next_action_count"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_lane_statuses"),
+                summary.get("lane_statuses"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+                ),
+                summary.get("queue_execution_smoke_status"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_count"
+                ),
+                summary.get("queue_execution_smoke_count"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+                ),
+                summary.get("queue_execution_smoke_manifest_verified_count"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_blocking_reasons"),
+                summary.get("blocking_reasons"),
             )
         ),
     })
