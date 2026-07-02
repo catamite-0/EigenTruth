@@ -1091,14 +1091,20 @@ def _verify_records(
                 VerificationStatus.INSUFFICIENT_EVIDENCE,
                 VerificationStatus.NOT_APPLICABLE,
             }:
-                retriever = retriever_for(record.retrieval_documents)
-                hits = _timed_retrieve(
-                    route_timings,
-                    retriever=retriever,
-                    query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
-                    limit=retrieval_limit,
-                )
-                hit_documents = tuple(hit.to_dict() for hit in hits)
+                if _record_has_precomputed_retrieval_hits(record):
+                    hit_documents = _timed_precomputed_retrieve(
+                        route_timings,
+                        documents=record.retrieval_documents,
+                    )
+                else:
+                    retriever = retriever_for(record.retrieval_documents)
+                    hits = _timed_retrieve(
+                        route_timings,
+                        retriever=retriever,
+                        query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
+                        limit=retrieval_limit,
+                    )
+                    hit_documents = tuple(hit.to_dict() for hit in hits)
             qa_documents = hit_documents
             has_retrieval_alignment_signal = _record_has_retrieval_alignment_signal(record)
             if qa_documents and retrieval_qa_result is None:
@@ -1358,6 +1364,21 @@ def _record_has_claim_triple(record: ClaimEvidenceRecord) -> bool:
         return False
 
 
+def _record_has_precomputed_retrieval_hits(record: ClaimEvidenceRecord) -> bool:
+    if not record.retrieval_documents:
+        return False
+    retrieval = record.metadata.get("retrieval")
+    if not isinstance(retrieval, Mapping):
+        return False
+    query_field = str(retrieval.get("query_field", "")).strip()
+    if query_field != "triple_slot":
+        return False
+    n_hits = _non_negative_int(retrieval.get("n_hits"))
+    if n_hits is not None and n_hits <= 0:
+        return False
+    return bool(retrieval.get("query") or retrieval.get("queries") or retrieval.get("query_plan"))
+
+
 def _record_has_retrieval_alignment_signal(record: ClaimEvidenceRecord) -> bool:
     metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
     features = metadata.get("features", {})
@@ -1602,6 +1623,24 @@ def _timed_retrieve(
         "operation": "retrieve",
         "duration_seconds": duration,
         "hit_count": len(hits),
+    })
+    return hits
+
+
+def _timed_precomputed_retrieve(
+    route_timings: list[dict[str, Any]],
+    *,
+    documents: Sequence[Mapping[str, Any] | str],
+) -> tuple[Mapping[str, Any], ...]:
+    started = perf_counter()
+    hits = _retrieval_document_payloads(documents)
+    duration = perf_counter() - started
+    route_timings.append({
+        "route": "retrieval_groundedness",
+        "operation": "retrieve",
+        "duration_seconds": duration,
+        "hit_count": len(hits),
+        "source": "precomputed_fixture",
     })
     return hits
 

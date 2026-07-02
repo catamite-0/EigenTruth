@@ -9577,7 +9577,7 @@ def test_triple_slot_fixture_routes_founder_alias_claims_to_retrieval_triples(tm
         repeats=1,
         seed=0,
         verifier_min_overlap=0.95,
-        retriever_min_overlap=0.0,
+        retriever_min_overlap=0.8,
         retrieval_limit=1,
         enable_triple_evidence=True,
         triple_refute_object_mismatch=True,
@@ -9595,7 +9595,13 @@ def test_triple_slot_fixture_routes_founder_alias_claims_to_retrieval_triples(tm
         "refuted",
         "refuted",
     ]
+    assert records[2]["retrieval_hits"][0]["source"] == "wikidata:Q478214:P112:Q1903673"
     assert records[2]["final"]["metadata"]["decision_rule"] == "triple_object_mismatch"
+    assert any(
+        timing.get("source") == "precomputed_fixture"
+        for timing in records[2]["route"]["attempted_route_timings"]
+        if timing.get("operation") == "retrieve"
+    )
 
 
 def test_build_evidence_fixture_supports_citation_safe_query_fields():
