@@ -286,10 +286,13 @@ def _placeholder_suggestion(
         }, output_index, path
     if normalized in {
         "acquisition_plan_jsonl",
+        "batch_jsonl",
         "output",
+        "request_jsonl",
         "rule_inputs_jsonl",
         "rule_results_jsonl",
         "tasks_jsonl",
+        "target_jsonl",
     }:
         path = _sidecar_output_path(
             normalized,
@@ -333,6 +336,13 @@ def _placeholder_suggestion(
             "review_required": True,
             "reason": "input_or_report_path",
             "input_name_hint": "source_family_url_seeds",
+            "flag": flag,
+        }, output_index, previous_report_path
+    if normalized == "source_catalog":
+        return {
+            "review_required": True,
+            "reason": "input_or_report_path",
+            "input_name_hint": "source_family_source_catalog",
             "flag": flag,
         }, output_index, previous_report_path
     if normalized in {"adapter_report", "rule_inputs", "rule_results"}:
@@ -386,10 +396,13 @@ def _sidecar_output_path(
 ) -> str:
     filename = {
         "acquisition_plan_jsonl": "source-family-acquisition-plan.jsonl",
+        "batch_jsonl": "execution-batches.jsonl",
         "output": "source-family-catalog.jsonl",
+        "request_jsonl": "adapter-requests.jsonl",
         "rule_inputs_jsonl": "rule-inputs.jsonl",
         "rule_results_jsonl": "rule-results.jsonl",
         "tasks_jsonl": "source-family-collection-tasks.jsonl",
+        "target_jsonl": "lane-targets.jsonl",
     }.get(normalized_flag, f"{normalized_flag}.jsonl")
     if previous_report_path:
         report = Path(previous_report_path)

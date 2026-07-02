@@ -69,6 +69,29 @@ REQUIRED_COMMAND_FLAGS = {
         "--report-json",
         "--artifact-manifest",
     ),
+    "benchmarks/build_source_family_structured_qa_lane_execution_queue.py": (
+        "--triage",
+        "--collection-corpus",
+        "--output-dir",
+        "--report-json",
+        "--request-jsonl",
+        "--batch-jsonl",
+        "--artifact-manifest",
+    ),
+    "benchmarks/plan_source_family_structured_qa_lane_reruns.py": (
+        "--lane-queue",
+        "--collection-corpus",
+        "--json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py": (
+        "--lane-queue",
+        "--collection-corpus",
+        "--batch-id",
+        "--output-dir",
+        "--json",
+        "--artifact-manifest",
+    ),
     "benchmarks/run_crossref_source_family_catalog_adapter.py": (
         "--tasks",
         "--output",
@@ -210,6 +233,20 @@ REQUIRED_INPUT_FLAGS = {
     },
     "benchmarks/plan_source_family_catalog_collection.py": {
         "source_family_acquisition_plan": "--acquisition-plan",
+    },
+    "benchmarks/build_source_family_structured_qa_lane_execution_queue.py": {
+        "source_family_structured_qa_gap_triage": "--triage",
+        "source_family_structured_qa_fact_collection_corpus": "--collection-corpus",
+    },
+    "benchmarks/plan_source_family_structured_qa_lane_reruns.py": {
+        "source_family_structured_qa_lane_execution_queue": "--lane-queue",
+        "source_family_structured_qa_fact_collection_corpus": "--collection-corpus",
+        "source_family_source_catalog": "--source-catalog",
+    },
+    "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py": {
+        "source_family_structured_qa_lane_execution_queue": "--lane-queue",
+        "source_family_structured_qa_fact_collection_corpus": "--collection-corpus",
+        "source_family_source_catalog": "--source-catalog",
     },
     "benchmarks/run_crossref_source_family_catalog_adapter.py": {
         "source_family_collection_tasks": "--tasks",

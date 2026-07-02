@@ -35778,6 +35778,172 @@ def test_frontier_research_queue_command_plan_accepts_source_family_collection_p
     assert "--seeds ..." in binding["bound_commands"][4]
 
 
+def test_frontier_research_queue_binding_scaffold_handles_structured_qa_lane_sidecars():
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    command_plan = {
+        "workflow": "frontier_research_queue_command_plan",
+        "status": "needs_inputs",
+        "entries": (
+            {
+                "action_id": "run_structured_qa_lane_control_plane",
+                "required_inputs": (
+                    "source_family_structured_qa_gap_triage",
+                    "source_family_structured_qa_fact_collection_corpus",
+                    "source_family_source_catalog",
+                ),
+                "command_templates": (
+                    "python benchmarks/build_source_family_structured_qa_lane_execution_queue.py "
+                    "--triage ... --collection-corpus ... --output-dir ... "
+                    "--report-json ... --target-jsonl ... --request-jsonl ... "
+                    "--batch-jsonl ... --artifact-manifest ...",
+                    "python benchmarks/plan_source_family_structured_qa_lane_reruns.py "
+                    "--lane-queue ... --collection-corpus ... --source-catalog ... "
+                    "--json ... --artifact-manifest ...",
+                    "python benchmarks/run_source_family_structured_qa_lane_batch_workflow.py "
+                    "--lane-queue ... --collection-corpus ... --source-catalog ... "
+                    "--batch-id ... --output-dir ... --json ... --artifact-manifest ...",
+                ),
+            },
+        ),
+    }
+
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=command_plan,
+        registry_output_path="artifacts/frontier-registry.json",
+    )
+    placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold["entries"][0]["placeholder_records"]
+    }
+
+    assert scaffold["status"] == "needs_review"
+    assert placeholders[(1, "--target-jsonl")]["suggested_binding"] == {
+        "path": "artifacts/run-structured-qa-lane-control-plane/command-1/lane-targets.jsonl",
+        "source": "derived_command_sidecar_path",
+    }
+    assert placeholders[(1, "--request-jsonl")]["suggested_binding"] == {
+        "path": "artifacts/run-structured-qa-lane-control-plane/command-1/adapter-requests.jsonl",
+        "source": "derived_command_sidecar_path",
+    }
+    assert placeholders[(1, "--batch-jsonl")]["suggested_binding"] == {
+        "path": "artifacts/run-structured-qa-lane-control-plane/command-1/execution-batches.jsonl",
+        "source": "derived_command_sidecar_path",
+    }
+    assert placeholders[(2, "--source-catalog")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "required_input_flag",
+        "input_name": "source_family_source_catalog",
+        "flag": "--source-catalog",
+    }
+    assert placeholders[(3, "--batch-id")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "input_or_report_path",
+        "input_name_hint": "batch_id",
+    }
+
+
+def test_frontier_research_queue_command_plan_accepts_structured_qa_lane_rerun_queue():
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    source = {
+        "workflow": "source_family_structured_qa_lane_rerun_queue",
+        "status": "ready",
+        "summary": {
+            "batch_count": 2,
+            "ready_command_count": 2,
+            "missing_command_count": 0,
+            "source_backed_batch_count": 1,
+            "rule_only_batch_count": 1,
+            "command_status_counts": {"ready": 2},
+            "request_type_counts": {
+                "source_family_structured_fact": 1,
+                "world_model_or_calculator_rule": 1,
+            },
+            "lane_counts": {
+                "richer_property_or_indicator_collection": 1,
+                "answer_collision_audit": 1,
+            },
+        },
+        "entries": (
+            {
+                "batch_id": "lane-batch-1",
+                "command_status": "ready",
+                "command": (
+                    "python",
+                    "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py",
+                    "--lane-queue",
+                    "lane-queue.json",
+                    "--collection-corpus",
+                    "collection.json",
+                    "--source-catalog",
+                    "catalog.jsonl",
+                    "--batch-id",
+                    "lane-batch-1",
+                    "--output-dir",
+                    "out/lane-batch-1",
+                    "--json",
+                    "out/lane-batch-1/lane-batch-workflow.json",
+                    "--artifact-manifest",
+                    "out/lane-batch-1/artifact-manifest.json",
+                ),
+                "missing_inputs": (),
+            },
+            {
+                "batch_id": "lane-batch-rules",
+                "command_status": "ready",
+                "command": (
+                    "python",
+                    "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py",
+                    "--lane-queue",
+                    "lane-queue.json",
+                    "--collection-corpus",
+                    "collection.json",
+                    "--batch-id",
+                    "lane-batch-rules",
+                    "--output-dir",
+                    "out/lane-batch-rules",
+                    "--json",
+                    "out/lane-batch-rules/lane-batch-workflow.json",
+                    "--artifact-manifest",
+                    "out/lane-batch-rules/artifact-manifest.json",
+                ),
+                "missing_inputs": (),
+            },
+        ),
+    }
+
+    payload = plan_module.build_frontier_research_queue_command_plan(source=source)
+    entry = payload["entries"][0]
+    requirements = [
+        requirements_module.frontier_command_requirement_summary(command, index=index)
+        for index, command in enumerate(entry["command_templates"], start=1)
+    ]
+
+    assert payload["status"] == "ready"
+    assert payload["source"]["workflow"] == "source_family_structured_qa_lane_rerun_queue"
+    assert entry["action_id"] == "run_source_family_structured_qa_lane_batches"
+    assert entry["command_status"] == "ready"
+    assert entry["required_inputs"] == ()
+    assert entry["metadata"]["batch_count"] == 2
+    assert entry["metadata"]["source_backed_batch_count"] == 1
+    assert entry["metadata"]["rule_only_batch_count"] == 1
+    assert entry["metadata"]["request_type_counts"] == {
+        "source_family_structured_fact": 1,
+        "world_model_or_calculator_rule": 1,
+    }
+    assert len(entry["command_templates"]) == 2
+    assert all(
+        "run_source_family_structured_qa_lane_batch_workflow.py" in command
+        for command in entry["command_templates"]
+    )
+    assert [item["status"] for item in requirements] == ["ready", "ready"]
+    assert {item["script"] for item in requirements} == {
+        "benchmarks/run_source_family_structured_qa_lane_batch_workflow.py"
+    }
+
+
 def test_frontier_research_queue_command_plan_templates_semantic_gap_without_prior_workflow():
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
@@ -35858,6 +36024,24 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "--acquisition-plan acquisition.jsonl --tasks-jsonl tasks.jsonl "
             "--report-json collection.json --artifact-manifest manifest.json"
         ),
+        "structured_qa_lane_queue": (
+            "python benchmarks/build_source_family_structured_qa_lane_execution_queue.py "
+            "--triage triage.json --collection-corpus corpus.json --output-dir lanes "
+            "--report-json lane-queue.json --request-jsonl adapter-requests.jsonl "
+            "--batch-jsonl execution-batches.jsonl --artifact-manifest manifest.json"
+        ),
+        "structured_qa_lane_reruns": (
+            "python benchmarks/plan_source_family_structured_qa_lane_reruns.py "
+            "--lane-queue lane-queue.json --collection-corpus corpus.json "
+            "--source-catalog catalog.jsonl --json reruns.json "
+            "--artifact-manifest manifest.json"
+        ),
+        "structured_qa_lane_batch": (
+            "python benchmarks/run_source_family_structured_qa_lane_batch_workflow.py "
+            "--lane-queue lane-queue.json --collection-corpus corpus.json "
+            "--source-catalog catalog.jsonl --batch-id batch-1 --output-dir batch "
+            "--json lane-batch.json --artifact-manifest manifest.json"
+        ),
         "crossref_catalog": (
             "python benchmarks/run_crossref_source_family_catalog_adapter.py "
             "--tasks tasks.jsonl --output crossref.jsonl "
@@ -35897,14 +36081,40 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             required_inputs=("source_family_acquisition_plan",),
         )
     )
+    structured_lane_queue_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["structured_qa_lane_queue"],
+        index=8,
+        required_inputs=(
+            "source_family_structured_qa_gap_triage",
+            "source_family_structured_qa_fact_collection_corpus",
+        ),
+    )
+    structured_lane_rerun_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["structured_qa_lane_reruns"],
+        index=9,
+        required_inputs=(
+            "source_family_structured_qa_lane_execution_queue",
+            "source_family_structured_qa_fact_collection_corpus",
+            "source_family_source_catalog",
+        ),
+    )
+    structured_lane_batch_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["structured_qa_lane_batch"],
+        index=10,
+        required_inputs=(
+            "source_family_structured_qa_lane_execution_queue",
+            "source_family_structured_qa_fact_collection_corpus",
+            "source_family_source_catalog",
+        ),
+    )
     crossref_inputs = requirements_module.frontier_command_requirement_summary(
         commands["crossref_catalog"],
-        index=8,
+        index=11,
         required_inputs=("source_family_collection_tasks",),
     )
     seeded_inputs = requirements_module.frontier_command_requirement_summary(
         commands["seeded_catalog"],
-        index=9,
+        index=12,
         required_inputs=("source_family_collection_tasks", "source_family_url_seeds"),
     )
 
@@ -35915,6 +36125,9 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         "run": "ready",
         "source_family_audit": "ready",
         "source_family_collection": "ready",
+        "structured_qa_lane_queue": "ready",
+        "structured_qa_lane_reruns": "ready",
+        "structured_qa_lane_batch": "ready",
         "crossref_catalog": "ready",
         "seeded_catalog": "ready",
     }
@@ -35937,6 +36150,35 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     assert summaries["source_family_collection"]["required_input_flags"] == ()
     assert source_family_collection_inputs["required_input_flags"] == (
         {"input": "source_family_acquisition_plan", "flag": "--acquisition-plan"},
+    )
+    assert structured_lane_queue_inputs["required_input_flags"] == (
+        {"input": "source_family_structured_qa_gap_triage", "flag": "--triage"},
+        {
+            "input": "source_family_structured_qa_fact_collection_corpus",
+            "flag": "--collection-corpus",
+        },
+    )
+    assert structured_lane_rerun_inputs["required_input_flags"] == (
+        {
+            "input": "source_family_structured_qa_lane_execution_queue",
+            "flag": "--lane-queue",
+        },
+        {
+            "input": "source_family_structured_qa_fact_collection_corpus",
+            "flag": "--collection-corpus",
+        },
+        {"input": "source_family_source_catalog", "flag": "--source-catalog"},
+    )
+    assert structured_lane_batch_inputs["required_input_flags"] == (
+        {
+            "input": "source_family_structured_qa_lane_execution_queue",
+            "flag": "--lane-queue",
+        },
+        {
+            "input": "source_family_structured_qa_fact_collection_corpus",
+            "flag": "--collection-corpus",
+        },
+        {"input": "source_family_source_catalog", "flag": "--source-catalog"},
     )
     assert crossref_inputs["required_input_flags"] == (
         {"input": "source_family_collection_tasks", "flag": "--tasks"},

@@ -24,10 +24,14 @@ SUPPORTED_SOURCE_WORKFLOWS = frozenset({
     "frontier_status_report",
     "evidence_gap_plan",
     "source_family_catalog_collection_plan",
+    "source_family_structured_qa_lane_rerun_queue",
     "unresolved_frontier_evidence_summary",
 })
 UNRESOLVED_SUMMARY_WORKFLOW = "unresolved_frontier_evidence_summary"
 SOURCE_FAMILY_CATALOG_COLLECTION_WORKFLOW = "source_family_catalog_collection_plan"
+SOURCE_FAMILY_STRUCTURED_QA_LANE_RERUN_WORKFLOW = (
+    "source_family_structured_qa_lane_rerun_queue"
+)
 
 
 def build_frontier_research_queue_command_plan(
@@ -60,6 +64,7 @@ def build_frontier_research_queue_command_plan(
         raise ValueError(
             "source must have workflow 'frontier_status_report', 'evidence_gap_plan', "
             "'source_family_catalog_collection_plan', or "
+            "'source_family_structured_qa_lane_rerun_queue', or "
             "'unresolved_frontier_evidence_summary'."
         )
 
@@ -161,6 +166,8 @@ def _source_actions(
         return tuple(_mapping_sequence(_nested(payload, "research_queue", "actions")))
     if payload.get("workflow") == SOURCE_FAMILY_CATALOG_COLLECTION_WORKFLOW:
         return (_source_family_catalog_adapter_action(payload, source_path=source_path),)
+    if payload.get("workflow") == SOURCE_FAMILY_STRUCTURED_QA_LANE_RERUN_WORKFLOW:
+        return (_source_family_structured_qa_lane_rerun_action(payload),)
     if payload.get("workflow") == UNRESOLVED_SUMMARY_WORKFLOW:
         return _unresolved_summary_actions(payload, source_path=source_path)
     return tuple(_mapping_sequence(payload.get("actions", ())))
@@ -366,6 +373,76 @@ def _source_family_adapter_command(
         f"source_family={source_family}",
     ))
     return _shell_join(parts)
+
+
+def _source_family_structured_qa_lane_rerun_action(
+    payload: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    entries = _mapping_sequence(payload.get("entries", ()))
+    command_templates = tuple(
+        command
+        for command in (_lane_rerun_command(entry.get("command")) for entry in entries)
+        if command
+    )
+    missing_roles = {
+        str(item.get("role") or "")
+        for entry in entries
+        for item in _mapping_sequence(entry.get("missing_inputs", ()))
+        if str(item.get("role") or "")
+    }
+    required_inputs = tuple(
+        dict.fromkeys(
+            input_name
+            for role in sorted(missing_roles)
+            for input_name in _lane_rerun_required_inputs(role)
+            if input_name
+        )
+    )
+    summary = _mapping(payload.get("summary"))
+    return {
+        "action_id": "run_source_family_structured_qa_lane_batches",
+        "title": "Run source-family structured QA lane batches",
+        "action_type": "workflow_plan",
+        "priority": 78,
+        "evidence_routes": ("source_family_structured_qa_lane_batches",),
+        "suggested_commands": command_templates,
+        "metadata": {
+            "required_inputs": required_inputs,
+            "closure_outputs": ("source_family_structured_qa_lane_batch_reports",),
+            "source_rerun_workflow": SOURCE_FAMILY_STRUCTURED_QA_LANE_RERUN_WORKFLOW,
+            "batch_count": _int_or_zero(summary.get("batch_count")),
+            "ready_command_count": _int_or_zero(summary.get("ready_command_count")),
+            "missing_command_count": _int_or_zero(summary.get("missing_command_count")),
+            "source_backed_batch_count": _int_or_zero(
+                summary.get("source_backed_batch_count")
+            ),
+            "rule_only_batch_count": _int_or_zero(summary.get("rule_only_batch_count")),
+            "command_status_counts": dict(_mapping(summary.get("command_status_counts"))),
+            "request_type_counts": dict(_mapping(summary.get("request_type_counts"))),
+            "lane_counts": dict(_mapping(summary.get("lane_counts"))),
+            "reason": (
+                "structured-QA lane rerun queue is ready; execute reviewed "
+                "candidate collection and rule-stub batches before remapping claims"
+            ),
+        },
+    }
+
+
+def _lane_rerun_command(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        parts = tuple(str(item) for item in value if str(item))
+        return _shell_join(parts) if parts else ""
+    return ""
+
+
+def _lane_rerun_required_inputs(role: str) -> tuple[str, ...]:
+    return {
+        "collection_corpus": ("source_family_structured_qa_fact_collection_corpus",),
+        "lane_queue": ("source_family_structured_qa_lane_execution_queue",),
+        "source_catalog": ("source_family_source_catalog",),
+    }.get(str(role), ())
 
 
 def _unresolved_summary_actions(
@@ -1643,6 +1720,16 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             "task_source_family_counts": dict(
                 _mapping(metadata.get("task_source_family_counts"))
             ),
+            "batch_count": _int_or_zero(metadata.get("batch_count")),
+            "ready_command_count": _int_or_zero(metadata.get("ready_command_count")),
+            "missing_command_count": _int_or_zero(metadata.get("missing_command_count")),
+            "source_backed_batch_count": _int_or_zero(
+                metadata.get("source_backed_batch_count")
+            ),
+            "rule_only_batch_count": _int_or_zero(metadata.get("rule_only_batch_count")),
+            "command_status_counts": dict(_mapping(metadata.get("command_status_counts"))),
+            "request_type_counts": dict(_mapping(metadata.get("request_type_counts"))),
+            "lane_counts": dict(_mapping(metadata.get("lane_counts"))),
             "query_sweep_failure_reason_counts": dict(
                 _mapping(metadata.get("query_sweep_failure_reason_counts"))
             ),

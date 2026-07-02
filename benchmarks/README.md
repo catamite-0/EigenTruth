@@ -3691,6 +3691,20 @@ python benchmarks/plan_source_family_structured_qa_lane_reruns.py \
   --compact-json
 ```
 
+The resulting `source_family_structured_qa_lane_rerun_queue` can also be passed
+to the generic frontier command-plan handoff:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source "$RERUNS/lane-rerun-queue.json" \
+  --json "$RERUNS/frontier-command-plan.json" \
+  --artifact-manifest "$RERUNS/frontier-command-plan-manifest.json"
+```
+
+That keeps lane-batch execution under the same scaffold/bind/review/run control
+plane used by unresolved frontier summaries and source-family catalog
+collection plans.
+
 Replay the first disambiguation batch through the local source-family catalogs:
 
 ```bash
@@ -4341,6 +4355,9 @@ steps still require review before anything executes.
 The same planner also accepts `source_family_catalog_collection_plan` reports
 and lowers ready collection-task families into provider-specific catalog
 adapter command templates, keeping URL seeds and output artifacts review-bound.
+It also accepts `source_family_structured_qa_lane_rerun_queue` reports from
+`plan_source_family_structured_qa_lane_reruns.py`, turning lane-batch commands
+into reviewable frontier command-plan entries before local execution.
 Command-plan, bindings, approved-bindings, review-decision, and bound-plan
 files are treated as local control-plane artifacts by
 `plan_frontier_research_queue_input_collection.py` and can be staged with
