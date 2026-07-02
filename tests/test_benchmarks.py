@@ -55306,7 +55306,13 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "summary": {
             "task_count": 5,
             "rule_family_counts": {"causal_or_procedural": 2, "quantity_or_arithmetic": 3},
-            "missing_input_counts": {"numeric_value": 3, "source_citation": 1},
+            "missing_input_counts": {
+                "mechanism": 2,
+                "mechanism_status": 2,
+                "numeric_value": 3,
+                "precondition": 2,
+                "source_citation": 5,
+            },
         },
     }
     promotion = {
@@ -55360,11 +55366,32 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert payload["lanes"]["citation_evidence"]["blocking_reason_counts"] == {"query_sweep": 2}
     assert payload["lanes"]["world_model_rules"]["status"] == "partial"
     assert payload["lanes"]["world_model_rules"]["task_count"] == 5
+    assert payload["lanes"]["world_model_rules"]["remaining_task_count"] == 3
+    assert payload["lanes"]["world_model_rules"]["closed_rule_family_counts"] == {
+        "causal_or_procedural": 2
+    }
+    assert payload["lanes"]["world_model_rules"]["remaining_rule_family_counts"] == {
+        "quantity_or_arithmetic": 3
+    }
+    assert payload["lanes"]["world_model_rules"]["remaining_missing_input_counts"] == {
+        "numeric_value": 3,
+        "source_citation": 5,
+    }
     assert payload["lanes"]["world_model_rules"]["promoted_count"] == 2
     assert payload["lanes"]["world_model_rules"]["pending_count"] == 1
     action_ids = {action["action_id"] for action in payload["next_actions"]}
     assert "improve_unresolved_citation_alignment" in action_ids
     assert "fill_and_promote_remaining_world_model_rules" in action_ids
+    rule_action = next(
+        action
+        for action in payload["next_actions"]
+        if action["action_id"] == "fill_and_promote_remaining_world_model_rules"
+    )
+    assert rule_action["remaining_rule_family_counts"] == {"quantity_or_arithmetic": 3}
+    assert rule_action["missing_input_counts"] == {
+        "numeric_value": 3,
+        "source_citation": 5,
+    }
     assert payload["lanes"]["unresolved_queue"]["label_usage"] == {
         "requests_are_verifier_evidence": False
     }
@@ -55419,11 +55446,13 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert manifest["metadata"]["citation_status"] == "blocked"
     assert manifest["metadata"]["source_family_acquisition_status"] == "covered"
     assert manifest["metadata"]["world_model_rule_status"] == "partial"
+    assert manifest["metadata"]["world_model_rule_remaining_task_count"] == 3
     assert record.metadata["workflow"] == "unresolved_frontier_evidence_summary"
     assert record.metadata["unresolved_target_count"] == 3
     assert record.metadata["citation_status"] == "blocked"
     assert record.metadata["source_family_acquisition_status"] == "covered"
     assert record.metadata["world_model_rule_status"] == "partial"
+    assert record.metadata["world_model_rule_remaining_task_count"] == 3
     assert record.metadata["next_action_count"] == 2
     assert record.metadata["suite"] == "unit"
 

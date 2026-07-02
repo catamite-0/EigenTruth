@@ -1,0 +1,285 @@
+{
+  "lanes": {
+    "citation_evidence": {
+      "blocking_reason_counts": {
+        "query_sweep": 1,
+        "query_sweep_comparison": 1
+      },
+      "comparison_failed_count": 1,
+      "comparison_pass_count": 0,
+      "comparison_status_counts": {
+        "blocked": 1
+      },
+      "max_source_document_count": 780,
+      "provenance_failed_count": 0,
+      "provenance_pass_count": 1,
+      "provenance_status_counts": {
+        "pass": 1
+      },
+      "query_sweep_no_passing_strategy_count": 1,
+      "status": "blocked",
+      "status_counts": {
+        "blocked": 1
+      },
+      "workflow_count": 1,
+      "workflows": [
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 1,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "question_overlap_0p65",
+          "query_sweep_no_passing_strategy_count": 0,
+          "source_document_count": 780,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        }
+      ]
+    },
+    "source_family_acquisition": {
+      "audit_count": 1,
+      "audits": [
+        {
+          "acquisition_plan_count": 0,
+          "covered_target_source_family_counts": {
+            "news": 20,
+            "official": 52,
+            "official_statistics": 4,
+            "reference": 68,
+            "scholarly": 156
+          },
+          "index": 1,
+          "missing_target_source_family_counts": {},
+          "request_count": 260,
+          "request_missing_target_family_count": 0,
+          "request_with_results_count": 260,
+          "request_with_target_family_count": 260,
+          "status": "covered",
+          "workflow": "source_family_coverage_audit"
+        }
+      ],
+      "best_missing_target_family_count": 0,
+      "covered_audit_count": 1,
+      "covered_target_source_family_counts": {
+        "news": 20,
+        "official": 52,
+        "official_statistics": 4,
+        "reference": 68,
+        "scholarly": 156
+      },
+      "missing_target_source_family_counts": {},
+      "status": "covered"
+    },
+    "unresolved_queue": {
+      "adapter_family_counts": {
+        "counterfactual_probe_generator": 46,
+        "external_citation_search": 260,
+        "world_model_rule_authoring": 26
+      },
+      "adapter_request_count": 332,
+      "batch_count": 8,
+      "evidence_status_counts": {
+        "answer_entity_collision": 2,
+        "answer_value_supported": 4,
+        "generic_fact_only": 6,
+        "no_joined_facts": 41,
+        "subject_only_or_unsupported_property": 15,
+        "unmapped_low_relevance": 20
+      },
+      "label_usage": {
+        "labels_copied_to_queue": false,
+        "labels_used_for_queue_selection": false,
+        "requests_are_verifier_evidence": false
+      },
+      "request_type_counts": {
+        "counterfactual_probe": 46,
+        "external_citation": 260,
+        "world_model_or_calculator_rule": 26
+      },
+      "status": "ready_for_adapter_execution",
+      "target_count": 88,
+      "workflow": "unresolved_blind_spot_evidence_queue"
+    },
+    "world_model_rules": {
+      "blocked_count": 0,
+      "closed_rule_family_counts": {
+        "causal_or_procedural": 9
+      },
+      "mechanism_handoff_bundle_status": "promote",
+      "mechanism_handoff_target_count": 9,
+      "mechanism_handoff_trace_count": 9,
+      "missing_input_counts": {
+        "claim_time": 5,
+        "mechanism": 9,
+        "mechanism_status": 9,
+        "numeric_value": 12,
+        "precondition": 9,
+        "reference_time": 12,
+        "retrieved_at": 5,
+        "source_citation": 14,
+        "source_time": 5,
+        "unit": 12
+      },
+      "pending_count": 0,
+      "promoted_count": 9,
+      "promoted_rule_family_counts": {
+        "causal_or_procedural": 9
+      },
+      "promotion_report_count": 3,
+      "promotion_reports": [
+        {
+          "blocked_count": 0,
+          "executed_count": 1,
+          "index": 1,
+          "pending_count": 0,
+          "promoted_count": 1,
+          "promoted_rule_family_counts": {
+            "causal_or_procedural": 1
+          },
+          "status": "promote",
+          "status_counts": {
+            "supported": 1
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 4,
+          "index": 2,
+          "pending_count": 0,
+          "promoted_count": 4,
+          "promoted_rule_family_counts": {
+            "causal_or_procedural": 4
+          },
+          "status": "promote",
+          "status_counts": {
+            "supported": 4
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 4,
+          "index": 3,
+          "pending_count": 0,
+          "promoted_count": 4,
+          "promoted_rule_family_counts": {
+            "causal_or_procedural": 4
+          },
+          "status": "promote",
+          "status_counts": {
+            "refuted": 2,
+            "supported": 2
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        }
+      ],
+      "promotion_status_counts": {
+        "promote": 3
+      },
+      "remaining_missing_input_counts": {
+        "claim_time": 5,
+        "numeric_value": 12,
+        "reference_time": 12,
+        "retrieved_at": 5,
+        "source_citation": 14,
+        "source_time": 5,
+        "unit": 12
+      },
+      "remaining_rule_family_counts": {
+        "quantity_or_arithmetic": 12,
+        "temporal_consistency": 5
+      },
+      "remaining_task_count": 17,
+      "rule_family_counts": {
+        "causal_or_procedural": 9,
+        "quantity_or_arithmetic": 12,
+        "temporal_consistency": 5
+      },
+      "rule_input_plan_status": "ready_for_input_collection",
+      "status": "partial",
+      "task_count": 26
+    }
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "next_actions": [
+    {
+      "action_id": "improve_unresolved_citation_alignment",
+      "lane": "citation_evidence",
+      "priority": 88,
+      "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use"
+    },
+    {
+      "action_id": "fill_and_promote_remaining_world_model_rules",
+      "lane": "world_model_rules",
+      "missing_input_counts": {
+        "claim_time": 5,
+        "numeric_value": 12,
+        "reference_time": 12,
+        "retrieved_at": 5,
+        "source_citation": 14,
+        "source_time": 5,
+        "unit": 12
+      },
+      "priority": 85,
+      "reason": "world-model/calculator rule inputs are not fully promoted",
+      "remaining_rule_family_counts": {
+        "quantity_or_arithmetic": 12,
+        "temporal_consistency": 5
+      }
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/artifact-manifest.json",
+    "citation_workflows": [
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json"
+    ],
+    "mechanism_handoff_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
+    "rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
+    "rule_promotion_reports": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+    ],
+    "source_family_coverage_audits": [
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json"
+    ],
+    "summary_report": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+    "unresolved_queue": "artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json"
+  },
+  "schema_version": 1,
+  "scope": "Read-only closure summary for unresolved frontier blind-spot evidence lanes. Source discovery, rule-input rows, and adapter matches remain non-evidence until their downstream gates promote.",
+  "status": "needs_evidence",
+  "summary": {
+    "adapter_request_count": 332,
+    "blocked_lane_count": 2,
+    "citation_provenance_pass_count": 1,
+    "citation_workflow_count": 1,
+    "covered_or_promoted_lane_count": 1,
+    "lane_statuses": {
+      "citation_evidence": "blocked",
+      "source_family_acquisition": "covered",
+      "unresolved_queue": "ready_for_adapter_execution",
+      "world_model_rules": "partial"
+    },
+    "mechanism_handoff_trace_count": 9,
+    "missing_lane_count": 0,
+    "source_family_coverage_audit_count": 1,
+    "unresolved_target_count": 88,
+    "world_model_rule_promoted_count": 9,
+    "world_model_rule_remaining_task_count": 17,
+    "world_model_rule_task_count": 26
+  },
+  "workflow": "unresolved_frontier_evidence_summary"
+}

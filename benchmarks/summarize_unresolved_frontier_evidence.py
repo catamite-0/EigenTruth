@@ -27,6 +27,28 @@ from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
 WORKFLOW = "unresolved_frontier_evidence_summary"
+RULE_FAMILY_INPUT_FIELDS = {
+    "causal_or_procedural": frozenset({
+        "mechanism",
+        "mechanism_status",
+        "precondition",
+        "source_citation",
+    }),
+    "quantity_or_arithmetic": frozenset({
+        "calculation.expected",
+        "calculation.expression",
+        "numeric_value",
+        "reference_time",
+        "source_citation",
+        "unit",
+    }),
+    "temporal_consistency": frozenset({
+        "claim_time",
+        "retrieved_at",
+        "source_citation",
+        "source_time",
+    }),
+}
 
 
 def summarize_unresolved_frontier_evidence(
@@ -165,6 +187,9 @@ def run(
                     "source_family_acquisition"
                 ]["status"],
                 "world_model_rule_status": payload["lanes"]["world_model_rules"]["status"],
+                "world_model_rule_remaining_task_count": payload["lanes"][
+                    "world_model_rules"
+                ]["remaining_task_count"],
                 "next_action_count": len(payload["next_actions"]),
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
                 **dict(metadata or {}),
@@ -396,9 +421,18 @@ def _world_model_rule_lane(
     bundle_status = None if mechanism_handoff_bundle is None else mechanism_handoff_bundle.get("status")
     mechanism_trace_count = _int(bundle_summary.get("trace_count"))
     mechanism_target_count = _int(bundle_summary.get("target_count"))
+    closed_rule_family_counts, remaining_rule_family_counts = _rule_family_closure_counts(
+        rule_family_counts,
+        promoted_rule_families,
+    )
+    remaining_task_count = sum(remaining_rule_family_counts.values())
+    remaining_missing_input_counts = _remaining_missing_input_counts(
+        missing_input_counts,
+        remaining_rule_family_counts,
+    )
     if rule_input_plan is None and not promotion_rows and mechanism_handoff_bundle is None:
         status = "missing"
-    elif task_count and promoted_count < task_count:
+    elif remaining_task_count:
         status = "partial"
     elif blocked_count:
         status = "blocked"
@@ -414,6 +448,10 @@ def _world_model_rule_lane(
         "task_count": task_count,
         "rule_family_counts": rule_family_counts,
         "missing_input_counts": missing_input_counts,
+        "closed_rule_family_counts": dict(sorted(closed_rule_family_counts.items())),
+        "remaining_rule_family_counts": dict(sorted(remaining_rule_family_counts.items())),
+        "remaining_task_count": remaining_task_count,
+        "remaining_missing_input_counts": dict(sorted(remaining_missing_input_counts.items())),
         "promotion_report_count": len(promotion_rows),
         "promotion_status_counts": dict(sorted(status_counts.items())),
         "promoted_count": promoted_count,
@@ -457,7 +495,8 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "priority": 85,
             "lane": "world_model_rules",
             "reason": "world-model/calculator rule inputs are not fully promoted",
-            "missing_input_counts": rules.get("missing_input_counts", {}),
+            "remaining_rule_family_counts": rules.get("remaining_rule_family_counts", {}),
+            "missing_input_counts": rules.get("remaining_missing_input_counts", {}),
         })
     if _int(queue.get("target_count")) and not actions:
         actions.append({
@@ -482,6 +521,9 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
             lanes["source_family_acquisition"].get("audit_count")
         ),
         "world_model_rule_task_count": _int(lanes["world_model_rules"].get("task_count")),
+        "world_model_rule_remaining_task_count": _int(
+            lanes["world_model_rules"].get("remaining_task_count")
+        ),
         "world_model_rule_promoted_count": _int(
             lanes["world_model_rules"].get("promoted_count")
         ),
@@ -542,6 +584,12 @@ def _write_manifest(
                 payload, "lanes", "source_family_acquisition", "status"
             ),
             "world_model_rule_status": _nested(payload, "lanes", "world_model_rules", "status"),
+            "world_model_rule_remaining_task_count": _nested(
+                payload,
+                "lanes",
+                "world_model_rules",
+                "remaining_task_count",
+            ),
             "next_action_count": len(_sequence(payload.get("next_actions"))),
             **dict(metadata),
         },
@@ -594,6 +642,44 @@ def _int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _rule_family_closure_counts(
+    rule_family_counts: Mapping[str, int],
+    promoted_rule_families: Mapping[str, int],
+) -> tuple[dict[str, int], dict[str, int]]:
+    closed: dict[str, int] = {}
+    remaining: dict[str, int] = {}
+    for family, count in rule_family_counts.items():
+        closed_count = min(_int(count), _int(promoted_rule_families.get(family)))
+        remaining_count = max(_int(count) - closed_count, 0)
+        if closed_count:
+            closed[family] = closed_count
+        if remaining_count:
+            remaining[family] = remaining_count
+    for family, count in promoted_rule_families.items():
+        if family not in rule_family_counts and _int(count):
+            closed[family] = _int(count)
+    return closed, remaining
+
+
+def _remaining_missing_input_counts(
+    missing_input_counts: Mapping[str, int],
+    remaining_rule_family_counts: Mapping[str, int],
+) -> dict[str, int]:
+    if not remaining_rule_family_counts:
+        return {}
+    remaining_fields = set()
+    for family, count in remaining_rule_family_counts.items():
+        if _int(count):
+            remaining_fields.update(RULE_FAMILY_INPUT_FIELDS.get(family, ()))
+    if not remaining_fields:
+        return dict(missing_input_counts)
+    return {
+        field: count
+        for field, count in missing_input_counts.items()
+        if field in remaining_fields
+    }
 
 
 def _nested(payload: Mapping[str, Any], *keys: str) -> Any:

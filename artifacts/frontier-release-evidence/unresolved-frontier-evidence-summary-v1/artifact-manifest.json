@@ -1,0 +1,96 @@
+{
+  "artifacts": {
+    "citation_workflow_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "sha256": "d854247157220cf6a4cc1ed85cee65a94bf98c8dbc99464d91111c44d5bbbdf9",
+      "size_bytes": 7657
+    },
+    "mechanism_handoff_bundle": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
+      "sha256": "e9b6d1ec7a8fa0eaf7bd99bad688177901c1d33dda03022878fecb4593c76d75",
+      "size_bytes": 7016
+    },
+    "rule_input_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
+      "sha256": "5d8284a7253a0c1b51d0fa010403e875d6086d1610081b5e43cf6917aae06259",
+      "size_bytes": 96462
+    },
+    "rule_promotion_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "693881e4ec7ef742c02e27c12e26c0ee7ee71b9cabb5a078e560bcd4ae615a83",
+      "size_bytes": 5029
+    },
+    "rule_promotion_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "bf07d87e43b937c43c7dd7ffe63ef48f806f1d38e68683de141475f01ac3142d",
+      "size_bytes": 10147
+    },
+    "rule_promotion_report_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "b39592b07744c1b10e9b52af6e58b1b043db836951da281ddbf597554ede82e3",
+      "size_bytes": 10234
+    },
+    "source_family_coverage_audit_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json",
+      "sha256": "c48c062f69898b4d8121e3138f2869adc8e3f6013d85a95be276ffded6361b90",
+      "size_bytes": 23079
+    },
+    "unresolved_frontier_evidence_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-frontier-evidence-summary.json",
+      "sha256": "c8f4eb9b35a6b891111e57266838a7bf927d3af2a33e84d57ec0288740d07d34",
+      "size_bytes": 9822
+    },
+    "unresolved_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "citation_status": "blocked",
+    "model": "smollm2-l80",
+    "next_action_count": 2,
+    "source": "frontier-v4",
+    "source_family_acquisition_status": "covered",
+    "status": "needs_evidence",
+    "unresolved_target_count": 88,
+    "workflow": "unresolved_frontier_evidence_summary",
+    "world_model_rule_remaining_task_count": 17,
+    "world_model_rule_status": "partial"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}
