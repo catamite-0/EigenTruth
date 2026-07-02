@@ -904,6 +904,18 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             "workflow_keys": _workflow_keys(metadata),
             "required_input_count": len(required_inputs),
             "closure_output_count": len(closure_outputs),
+            "semantic_gap_candidate_count": _int_or_zero(
+                metadata.get("semantic_gap_candidate_count")
+            ),
+            "semantic_gap_fact_candidate_count": _int_or_zero(
+                metadata.get("semantic_gap_fact_candidate_count")
+            ),
+            "approved_source_document_count": _int_or_zero(
+                metadata.get("approved_source_document_count")
+            ),
+            "source_family_qa_document_count": _int_or_zero(
+                metadata.get("source_family_qa_document_count")
+            ),
             "remaining_rule_family_counts": dict(
                 _mapping(metadata.get("remaining_rule_family_counts"))
             ),

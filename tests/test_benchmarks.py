@@ -36603,6 +36603,111 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
     assert record.metadata["collection_request_count"] == 3
 
 
+def test_frontier_research_queue_input_collection_plan_maps_semantic_artifact_inputs(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    collection_module = importlib.import_module(
+        "benchmarks.plan_frontier_research_queue_input_collection"
+    )
+    plan_path = tmp_path / "semantic-command-plan.json"
+    scaffold_path = tmp_path / "semantic-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "semantic-staged-bindings.json"
+    bound_path = tmp_path / "semantic-bound-plan.json"
+    collection_requests_path = tmp_path / "semantic-collection-requests.jsonl"
+
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "next_actions": (
+                {
+                    "action_id": "complete_retrieval_semantic_gap_review",
+                    "lane": "semantic_gap_review",
+                    "priority": 87,
+                    "reason": "semantic gap workflow missing",
+                    "semantic_gap_candidate_count": 8,
+                    "semantic_gap_fact_candidate_count": 3,
+                    "approved_source_document_count": 2,
+                    "source_family_qa_document_count": 0,
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "registry.json",
+    )
+    stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+    )
+    bound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=plan_path,
+        bindings=staged_bindings_path,
+        json_path=bound_path,
+    )
+    payload = collection_module.plan_frontier_research_queue_input_collection(
+        bound_command_plan=bound_path,
+        collection_requests_path=collection_requests_path,
+    )
+    requests = [
+        json.loads(line)
+        for line in collection_requests_path.read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert bound["entries"][0]["unbound_inputs"] == (
+        "source_bound_verified_records_jsonl",
+        "detectability_blind_spot_record_indices_json",
+        "bound_command_template_values",
+    )
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["collection_request_count"] == 2
+    assert payload["summary"]["artifact_input_request_count"] == 2
+    assert payload["summary"]["source_backed_request_count"] == 0
+    assert payload["summary"]["review_request_count"] == 0
+    assert payload["summary"]["covered_input_count"] == 1
+    assert payload["summary"]["artifact_family_counts"] == {
+        "detectability_blind_spot_record_indices": 1,
+        "source_bound_verified_records_sidecar": 1,
+    }
+    assert {request["input_name"] for request in requests} == {
+        "source_bound_verified_records_jsonl",
+        "detectability_blind_spot_record_indices_json",
+    }
+    verified_request = next(
+        request for request in requests if request["input_name"] == "source_bound_verified_records_jsonl"
+    )
+    indices_request = next(
+        request
+        for request in requests
+        if request["input_name"] == "detectability_blind_spot_record_indices_json"
+    )
+    assert verified_request["input_category"] == "local_artifact"
+    assert verified_request["target_flag"] == "--verified-records-jsonl"
+    assert verified_request["recommended_review_skeleton"]["allowed_label_use"] == (
+        "semantic_gap_selection_only"
+    )
+    assert verified_request["metadata"]["semantic_gap_candidate_count"] == 8
+    assert indices_request["target_flag"] == "--record-indices-json"
+    assert indices_request["recommended_review_skeleton"]["allowed_label_use"] == (
+        "record_selection_only"
+    )
+    assert payload["covered_inputs"][0]["input_name"] == "bound_command_template_values"
+    assert payload["collection_requests"][0]["not_verifier_evidence"] is True
+
+
 def test_world_model_rule_entity_binding_plan_drafts_review_candidate():
     module = importlib.import_module("benchmarks.plan_world_model_rule_entity_bindings")
     payload = module.build_world_model_rule_entity_binding_plan(

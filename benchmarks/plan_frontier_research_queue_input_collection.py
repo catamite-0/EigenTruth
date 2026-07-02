@@ -190,6 +190,57 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
     },
 }
 
+ARTIFACT_INPUT_CONTRACTS: dict[str, dict[str, Any]] = {
+    "source_bound_verified_records_jsonl": {
+        "lane": "semantic_gap_review",
+        "artifact_family": "source_bound_verified_records_sidecar",
+        "target_flag": "--verified-records-jsonl",
+        "recommended_next_tools": (
+            "benchmarks/run_retrieval_semantic_gap_review_workflow.py",
+        ),
+        "required_review_fields": (
+            "artifact_path",
+            "source_workflow",
+            "artifact_manifest",
+            "allowed_label_use",
+            "review_status",
+            "not_verifier_evidence",
+        ),
+        "review_skeleton": {
+            "artifact_path": "",
+            "source_workflow": "eval_verifier_ensemble",
+            "artifact_manifest": "",
+            "allowed_label_use": "semantic_gap_selection_only",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        },
+    },
+    "detectability_blind_spot_record_indices_json": {
+        "lane": "semantic_gap_review",
+        "artifact_family": "detectability_blind_spot_record_indices",
+        "target_flag": "--record-indices-json",
+        "recommended_next_tools": (
+            "benchmarks/run_retrieval_semantic_gap_review_workflow.py",
+        ),
+        "required_review_fields": (
+            "artifact_path",
+            "source_workflow",
+            "artifact_manifest",
+            "allowed_label_use",
+            "review_status",
+            "not_verifier_evidence",
+        ),
+        "review_skeleton": {
+            "artifact_path": "",
+            "source_workflow": "analyze_detectability_blind_spots",
+            "artifact_manifest": "",
+            "allowed_label_use": "record_selection_only",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        },
+    },
+}
+
 REVIEW_CONTRACTS: dict[str, dict[str, Any]] = {
     "bound_command_template_values": {
         "review_family": "command_template_binding_review",
@@ -287,6 +338,7 @@ def plan_frontier_research_queue_input_collection(
         },
         "config": {
             "source_backed_contracts": tuple(SOURCE_BACKED_CONTRACTS),
+            "artifact_input_contracts": tuple(ARTIFACT_INPUT_CONTRACTS),
             "review_contracts": tuple(REVIEW_CONTRACTS),
         },
         "summary": summary,
@@ -333,6 +385,7 @@ def plan_frontier_research_queue_input_collection(
                 "collection_request_count": summary["collection_request_count"],
                 "review_request_count": summary["review_request_count"],
                 "source_backed_request_count": summary["source_backed_request_count"],
+                "artifact_input_request_count": summary["artifact_input_request_count"],
                 "covered_input_count": summary["covered_input_count"],
                 "actionable_entry_count": summary["actionable_entry_count"],
                 "manifest_summary": {} if manifest is None else manifest.get("summary", {}),
@@ -356,6 +409,16 @@ def _entry_requests(
     review_requests: list[dict[str, Any]] = []
     covered_inputs: list[dict[str, Any]] = []
     for input_name in unbound_inputs:
+        if input_name in ARTIFACT_INPUT_CONTRACTS:
+            collection_requests.append(
+                _artifact_input_request(
+                    entry,
+                    input_name=input_name,
+                    action_id=action_id,
+                    blocking_placeholders=placeholders_by_input.get(input_name, ()),
+                )
+            )
+            continue
         if input_name in SOURCE_BACKED_CONTRACTS or input_name.startswith("source_backed_"):
             collection_requests.append(
                 _collection_request(
@@ -412,6 +475,65 @@ def _entry_requests(
             )
         )
     return tuple(collection_requests), tuple(review_requests), tuple(covered_inputs)
+
+
+def _artifact_input_request(
+    entry: Mapping[str, Any],
+    *,
+    input_name: str,
+    action_id: str,
+    blocking_placeholders: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    contract = ARTIFACT_INPUT_CONTRACTS[input_name]
+    request_id = f"{_slug(action_id)}:{_slug(input_name)}"
+    return {
+        "schema_version": 1,
+        "workflow": WORKFLOW,
+        "request_id": request_id,
+        "action_id": action_id,
+        "entry_id": str(entry.get("entry_id") or action_id),
+        "title": str(entry.get("title") or action_id),
+        "input_name": input_name,
+        "input_category": "local_artifact",
+        "lane": str(contract.get("lane") or "frontier_research_queue"),
+        "collection_family": str(contract.get("artifact_family") or "local_artifact_review"),
+        "artifact_family": str(contract.get("artifact_family") or "local_artifact_review"),
+        "target_flag": str(contract.get("target_flag") or ""),
+        "recommended_next_tools": _string_tuple(contract.get("recommended_next_tools", ())),
+        "required_review_fields": _string_tuple(contract.get("required_review_fields", ())),
+        "recommended_review_skeleton": _mapping(contract.get("review_skeleton")),
+        "blocking_placeholders": tuple(blocking_placeholders),
+        "binding_review_status": str(entry.get("binding_review_status") or "untracked"),
+        "command_status": str(entry.get("command_status") or "unknown"),
+        "evidence_routes": _string_tuple(entry.get("evidence_routes", ())),
+        "source_gap_ids": _string_tuple(entry.get("source_gap_ids", ())),
+        "metadata": _artifact_input_metadata(entry, contract),
+        "review_required": True,
+        "not_verifier_evidence": True,
+        "blocks_bound_command_execution": True,
+    }
+
+
+def _artifact_input_metadata(
+    entry: Mapping[str, Any],
+    contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    entry_metadata = _mapping(entry.get("metadata"))
+    return {
+        "artifact_usage": str(contract.get("artifact_family") or "local_artifact_review"),
+        "semantic_gap_candidate_count": _int_or_zero(
+            entry_metadata.get("semantic_gap_candidate_count")
+        ),
+        "semantic_gap_fact_candidate_count": _int_or_zero(
+            entry_metadata.get("semantic_gap_fact_candidate_count")
+        ),
+        "approved_source_document_count": _int_or_zero(
+            entry_metadata.get("approved_source_document_count")
+        ),
+        "source_family_qa_document_count": _int_or_zero(
+            entry_metadata.get("source_family_qa_document_count")
+        ),
+    }
 
 
 def _collection_request(
@@ -596,9 +718,17 @@ def _summary(
     collection_family_counts = Counter(
         str(item.get("collection_family") or "") for item in collection_requests
     )
+    artifact_family_counts = Counter(
+        str(item.get("artifact_family") or "")
+        for item in collection_requests
+        if item.get("input_category") == "local_artifact"
+    )
     review_family_counts = Counter(str(item.get("review_family") or "") for item in review_requests)
     source_backed_requests = tuple(
         item for item in collection_requests if item.get("input_category") == "source_backed"
+    )
+    artifact_input_requests = tuple(
+        item for item in collection_requests if item.get("input_category") == "local_artifact"
     )
     action_ids = tuple(
         dict.fromkeys(
@@ -614,6 +744,7 @@ def _summary(
         "collection_request_count": len(collection_requests),
         "review_request_count": len(review_requests),
         "source_backed_request_count": len(source_backed_requests),
+        "artifact_input_request_count": len(artifact_input_requests),
         "covered_input_count": len(covered_inputs),
         "blocking_placeholder_count": sum(
             len(_mapping_sequence(item.get("blocking_placeholders", ())))
@@ -621,6 +752,7 @@ def _summary(
         ),
         "input_counts": _sorted_counter(input_counts),
         "collection_family_counts": _sorted_counter(collection_family_counts),
+        "artifact_family_counts": _sorted_counter(artifact_family_counts),
         "review_family_counts": _sorted_counter(review_family_counts),
         "binding_review_status_counts": _sorted_counter(binding_review_status_counts),
         "action_ids": action_ids,
@@ -707,6 +839,11 @@ def _write_manifest(
                 payload,
                 "summary",
                 "source_backed_request_count",
+            ),
+            "artifact_input_request_count": _nested(
+                payload,
+                "summary",
+                "artifact_input_request_count",
             ),
             "covered_input_count": _nested(payload, "summary", "covered_input_count"),
             **dict(metadata),

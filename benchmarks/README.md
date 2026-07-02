@@ -6995,10 +6995,14 @@ python benchmarks/plan_frontier_research_queue_input_collection.py \
 The preflight reads `unbound_inputs` plus still-unfilled command placeholders
 from the bound plan. Source-backed numeric, temporal, subject, and mechanism
 inputs become non-evidence collection requests with required sidecar fields and
-recommended downstream tools; unmapped `...` placeholders remain review
-requests, and actions that still lack command templates are surfaced as
-missing-template review requests. It does not approve bindings, execute
-commands, fetch evidence, or satisfy release gates.
+recommended downstream tools. Semantic-gap local artifacts such as
+`source_bound_verified_records_jsonl` and
+`detectability_blind_spot_record_indices_json` become separate non-evidence
+artifact review requests, because they may carry label-use provenance for gap
+selection. Unmapped `...` placeholders remain review requests, and actions that
+still lack command templates are surfaced as missing-template review requests.
+It does not approve bindings, execute commands, fetch evidence, or satisfy
+release gates.
 
 To prepare editable source-backed binding sidecars from that preflight:
 
