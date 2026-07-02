@@ -58415,6 +58415,33 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "status": "promote",
         "summary": {"trace_count": 2, "target_count": 2},
     }
+    semantic_ready = {
+        "workflow": "retrieval_semantic_gap_review_workflow",
+        "status": "ready_for_structured_qa",
+        "summary": {
+            "semantic_gap_candidate_count": 8,
+            "semantic_gap_fact_candidate_count": 3,
+            "fact_review_document_count": 2,
+            "approved_source_document_count": 2,
+            "source_family_qa_document_count": 0,
+            "covered_fact_route_status": "not_requested",
+        },
+    }
+    semantic_promoted = {
+        "workflow": "retrieval_semantic_gap_review_workflow",
+        "status": "covered_fact_route_promote",
+        "summary": {
+            "semantic_gap_candidate_count": 8,
+            "semantic_gap_fact_candidate_count": 3,
+            "fact_review_document_count": 2,
+            "approved_source_document_count": 2,
+            "source_family_qa_document_count": 2,
+            "covered_fact_route_status": "promote",
+            "covered_fact_route_n_records": 4,
+            "covered_fact_route_decision_accuracy": 1.0,
+            "covered_fact_route_false_refuted_rate": 1.0,
+        },
+    }
 
     payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
@@ -58435,6 +58462,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert payload["lanes"]["source_family_acquisition"]["covered_audit_count"] == 1
     assert payload["lanes"]["source_family_acquisition"]["best_missing_target_family_count"] == 0
     assert payload["lanes"]["citation_evidence"]["status"] == "blocked"
+    assert payload["lanes"]["semantic_gap_review"]["status"] == "not_configured"
     assert payload["lanes"]["citation_evidence"]["workflow_count"] == 2
     assert payload["lanes"]["citation_evidence"]["provenance_pass_count"] == 2
     assert payload["lanes"]["citation_evidence"]["provenance_failed_count"] == 1
@@ -58531,6 +58559,45 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert payload["lanes"]["unresolved_queue"]["label_usage"] == {
         "requests_are_verifier_evidence": False
     }
+
+    semantic_ready_payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation,),
+        source_family_coverage_audits=(covered_coverage,),
+        semantic_gap_review_workflows=(semantic_ready,),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+    semantic_ready_actions = {
+        action["action_id"] for action in semantic_ready_payload["next_actions"]
+    }
+    assert semantic_ready_payload["lanes"]["semantic_gap_review"]["status"] == (
+        "ready_for_covered_fact_route"
+    )
+    assert semantic_ready_payload["lanes"]["semantic_gap_review"]["approved_source_document_count"] == 2
+    assert semantic_ready_payload["summary"]["semantic_gap_review_workflow_count"] == 1
+    assert "complete_retrieval_semantic_gap_review" in semantic_ready_actions
+
+    semantic_promoted_payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation,),
+        source_family_coverage_audits=(covered_coverage,),
+        semantic_gap_review_workflows=(semantic_promoted,),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+    semantic_promoted_actions = {
+        action["action_id"] for action in semantic_promoted_payload["next_actions"]
+    }
+    assert semantic_promoted_payload["lanes"]["semantic_gap_review"]["status"] == "promote"
+    assert semantic_promoted_payload["lanes"]["semantic_gap_review"]["promoted_workflow_count"] == 1
+    assert semantic_promoted_payload["summary"]["semantic_gap_review_promoted_workflow_count"] == 1
+    assert (
+        semantic_promoted_payload["summary"]["semantic_gap_review_covered_fact_route_n_records"]
+        == 4
+    )
+    assert "improve_unresolved_citation_alignment" not in semantic_promoted_actions
+    assert "complete_retrieval_semantic_gap_review" not in semantic_promoted_actions
 
     requeued_payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
@@ -58682,6 +58749,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     requeued_plan_path = tmp_path / "requeued-plan.json"
     promotion_path = tmp_path / "promotion.json"
     bundle_path = tmp_path / "bundle.json"
+    semantic_path = tmp_path / "semantic-gap-review.json"
     report_path = tmp_path / "summary.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
@@ -58697,6 +58765,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         (requeued_plan_path, requeued_plan),
         (promotion_path, promotion),
         (bundle_path, bundle),
+        (semantic_path, semantic_promoted),
     ):
         path.write_text(json.dumps(data), encoding="utf-8")
 
@@ -58704,6 +58773,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         unresolved_queue_path=queue_path,
         citation_workflow_paths=(citation_path, citation_rollup_path),
         source_family_coverage_audit_paths=(missing_coverage_path, covered_coverage_path),
+        semantic_gap_review_workflow_paths=(semantic_path,),
         rule_input_plan_path=rule_plan_path,
         rule_input_audit_report_path=rule_audit_path,
         rule_stub_requeue_report_path=requeue_report_path,
@@ -58729,6 +58799,9 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert manifest["metadata"]["citation_status"] == "blocked"
     assert manifest["metadata"]["source_family_acquisition_status"] == "covered"
+    assert manifest["metadata"]["semantic_gap_review_status"] == "promote"
+    assert manifest["metadata"]["semantic_gap_review_promoted_workflow_count"] == 1
+    assert manifest["artifacts"]["semantic_gap_review_workflow_1"]["exists"] is True
     assert manifest["metadata"]["world_model_rule_status"] == "partial"
     assert manifest["metadata"]["world_model_rule_remaining_task_count"] == 3
     assert manifest["metadata"]["world_model_rule_audit_adjusted_remaining_task_count"] == 3
@@ -58738,12 +58811,16 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert record.metadata["unresolved_target_count"] == 3
     assert record.metadata["citation_status"] == "blocked"
     assert record.metadata["source_family_acquisition_status"] == "covered"
+    assert record.metadata["semantic_gap_review_status"] == "promote"
+    assert record.metadata["semantic_gap_review_workflow_count"] == 1
+    assert record.metadata["semantic_gap_review_promoted_workflow_count"] == 1
+    assert record.metadata["semantic_gap_review_approved_source_document_count"] == 2
     assert record.metadata["world_model_rule_status"] == "partial"
     assert record.metadata["world_model_rule_remaining_task_count"] == 3
     assert record.metadata["world_model_rule_audit_adjusted_remaining_task_count"] == 3
     assert record.metadata["world_model_rule_audit_requeue_suggestion_count"] == 1
     assert record.metadata["world_model_rule_requeue_outstanding_count"] == 0
-    assert record.metadata["next_action_count"] == 2
+    assert record.metadata["next_action_count"] == 1
     assert record.metadata["suite"] == "unit"
 
     cli_report_path = tmp_path / "cli-summary.json"

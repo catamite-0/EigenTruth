@@ -4233,8 +4233,9 @@ or by registry key; `frontier_audit` defaults to
 Aggregates the unresolved frontier lanes into one read-only closure summary. It
 does not run adapters, promote verifier evidence, or close a release gate; it
 combines queue counts, citation/source-family gate status, source acquisition
-coverage, world-model rule-input/promotion status, mechanism handoff coverage,
-and the next concrete actions.
+coverage, reviewed semantic-gap covered-fact route status,
+world-model rule-input/promotion status, mechanism handoff coverage, and the
+next concrete actions.
 
 ```bash
 OUT=artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1
@@ -4243,6 +4244,7 @@ python benchmarks/summarize_unresolved_frontier_evidence.py \
   --unresolved-queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
   --source-family-coverage-audit artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json \
   --citation-workflow artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json \
+  --semantic-gap-review-workflow artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1/retrieval-semantic-gap-review-workflow.json \
   --rule-input-plan artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json \
@@ -4267,6 +4269,14 @@ requeue. The broader `26`-task rule-input plan still has `17` raw remaining
 numeric/temporal rows, but the audit-adjusted actionable remainder is now `9`
 tasks: `6` quantity/arithmetic and `3` temporal-consistency rows that still need
 explicit source-backed inputs.
+
+When a semantic-gap review workflow is supplied, the summary records the
+reviewed source-document count, generated source-family QA count, covered-fact
+route record count, and best covered-fact route metrics. A promoted semantic-gap
+lane means only that the reviewed source-backed facts passed their scoped
+covered-fact route audit. It can suppress the generic citation-alignment next
+action for those reviewed facts, but it is not broad recall evidence and does
+not by itself close source-family, citation, or world-model lanes.
 
 The same summary can feed the generic frontier command-plan handoff:
 

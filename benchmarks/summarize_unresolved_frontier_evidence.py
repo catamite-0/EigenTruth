@@ -63,6 +63,7 @@ def summarize_unresolved_frontier_evidence(
     unresolved_queue: Mapping[str, Any] | None = None,
     citation_workflows: Sequence[Mapping[str, Any]] = (),
     source_family_coverage_audits: Sequence[Mapping[str, Any]] = (),
+    semantic_gap_review_workflows: Sequence[Mapping[str, Any]] = (),
     rule_input_plan: Mapping[str, Any] | None = None,
     rule_input_audit_report: Mapping[str, Any] | None = None,
     rule_stub_requeue_report: Mapping[str, Any] | None = None,
@@ -75,6 +76,7 @@ def summarize_unresolved_frontier_evidence(
     queue_lane = _queue_lane(unresolved_queue)
     source_lane = _source_family_coverage_lane(source_family_coverage_audits)
     citation_lane = _citation_lane(citation_workflows)
+    semantic_lane = _semantic_gap_review_lane(semantic_gap_review_workflows)
     rule_lane = _world_model_rule_lane(
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
@@ -87,6 +89,7 @@ def summarize_unresolved_frontier_evidence(
         "unresolved_queue": queue_lane,
         "source_family_acquisition": source_lane,
         "citation_evidence": citation_lane,
+        "semantic_gap_review": semantic_lane,
         "world_model_rules": rule_lane,
     }
     next_actions = _next_actions(lanes)
@@ -113,6 +116,7 @@ def run(
     unresolved_queue_path: str | Path | None = None,
     citation_workflow_paths: Sequence[str | Path] = (),
     source_family_coverage_audit_paths: Sequence[str | Path] = (),
+    semantic_gap_review_workflow_paths: Sequence[str | Path] = (),
     rule_input_plan_path: str | Path | None = None,
     rule_input_audit_report_path: str | Path | None = None,
     rule_stub_requeue_report_path: str | Path | None = None,
@@ -138,6 +142,7 @@ def run(
     unresolved_queue = _load_optional_mapping(unresolved_queue_path)
     citation_workflows = tuple(_load_mapping(path) for path in citation_workflow_paths)
     coverage_audits = tuple(_load_mapping(path) for path in source_family_coverage_audit_paths)
+    semantic_gap_reviews = tuple(_load_mapping(path) for path in semantic_gap_review_workflow_paths)
     rule_input_plan = _load_optional_mapping(rule_input_plan_path)
     rule_input_audit_report = _load_optional_mapping(rule_input_audit_report_path)
     rule_stub_requeue_report = _load_optional_mapping(rule_stub_requeue_report_path)
@@ -149,6 +154,7 @@ def run(
         unresolved_queue=unresolved_queue,
         citation_workflows=citation_workflows,
         source_family_coverage_audits=coverage_audits,
+        semantic_gap_review_workflows=semantic_gap_reviews,
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
         rule_stub_requeue_report=rule_stub_requeue_report,
@@ -167,6 +173,9 @@ def run(
         "citation_workflows": tuple(str(path) for path in citation_workflow_paths),
         "source_family_coverage_audits": tuple(
             str(path) for path in source_family_coverage_audit_paths
+        ),
+        "semantic_gap_review_workflows": tuple(
+            str(path) for path in semantic_gap_review_workflow_paths
         ),
         "rule_input_plan": None if rule_input_plan_path is None else str(rule_input_plan_path),
         "rule_input_audit_report": None
@@ -196,6 +205,7 @@ def run(
             unresolved_queue_path=unresolved_queue_path,
             citation_workflow_paths=citation_workflow_paths,
             source_family_coverage_audit_paths=source_family_coverage_audit_paths,
+            semantic_gap_review_workflow_paths=semantic_gap_review_workflow_paths,
             rule_input_plan_path=rule_input_plan_path,
             rule_input_audit_report_path=rule_input_audit_report_path,
             rule_stub_requeue_report_path=rule_stub_requeue_report_path,
@@ -221,6 +231,16 @@ def run(
                     "source_family_acquisition"
                 ]["status"],
                 "world_model_rule_status": payload["lanes"]["world_model_rules"]["status"],
+                "semantic_gap_review_status": payload["lanes"]["semantic_gap_review"]["status"],
+                "semantic_gap_review_workflow_count": payload["lanes"][
+                    "semantic_gap_review"
+                ]["workflow_count"],
+                "semantic_gap_review_promoted_workflow_count": payload["lanes"][
+                    "semantic_gap_review"
+                ]["promoted_workflow_count"],
+                "semantic_gap_review_approved_source_document_count": payload["lanes"][
+                    "semantic_gap_review"
+                ]["approved_source_document_count"],
                 "world_model_rule_remaining_task_count": payload["lanes"][
                     "world_model_rules"
                 ]["remaining_task_count"],
@@ -418,6 +438,105 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _semantic_gap_review_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    rows = []
+    status_counts: Counter[str] = Counter()
+    candidate_count = 0
+    fact_candidate_count = 0
+    fact_review_document_count = 0
+    approved_source_document_count = 0
+    source_family_qa_document_count = 0
+    covered_route_records = 0
+    promoted_count = 0
+    blocked_count = 0
+    skipped_route_count = 0
+    best_decision_accuracy: float | None = None
+    best_false_refuted_rate: float | None = None
+    for index, workflow in enumerate(workflows, start=1):
+        status = str(workflow.get("status") or "unknown")
+        summary = _mapping(workflow.get("summary"))
+        stage_status = _mapping(workflow.get("stage_status"))
+        route_status = str(
+            summary.get("covered_fact_route_status")
+            or stage_status.get("covered_fact_route")
+            or ""
+        )
+        status_counts[status] += 1
+        candidate_count += _int(summary.get("semantic_gap_candidate_count"))
+        fact_candidate_count += _int(summary.get("semantic_gap_fact_candidate_count"))
+        fact_review_document_count += _int(summary.get("fact_review_document_count"))
+        approved_source_document_count += _int(summary.get("approved_source_document_count"))
+        source_family_qa_document_count += _int(summary.get("source_family_qa_document_count"))
+        covered_route_records += _int(summary.get("covered_fact_route_n_records"))
+        decision_accuracy = _optional_float(summary.get("covered_fact_route_decision_accuracy"))
+        false_refuted_rate = _optional_float(summary.get("covered_fact_route_false_refuted_rate"))
+        if decision_accuracy is not None:
+            best_decision_accuracy = (
+                decision_accuracy
+                if best_decision_accuracy is None
+                else max(best_decision_accuracy, decision_accuracy)
+            )
+        if false_refuted_rate is not None:
+            best_false_refuted_rate = (
+                false_refuted_rate
+                if best_false_refuted_rate is None
+                else max(best_false_refuted_rate, false_refuted_rate)
+            )
+        promoted = status == "covered_fact_route_promote" or route_status == "promote"
+        if promoted:
+            promoted_count += 1
+        elif status in {"covered_fact_route_blocked", "blocked"}:
+            blocked_count += 1
+        elif (
+            status == "covered_fact_route_skipped"
+            or route_status == "insufficient_qa_documents"
+        ):
+            skipped_route_count += 1
+        rows.append({
+            "index": index,
+            "workflow": workflow.get("workflow"),
+            "status": status,
+            "covered_fact_route_status": route_status or None,
+            "semantic_gap_candidate_count": _int(summary.get("semantic_gap_candidate_count")),
+            "semantic_gap_fact_candidate_count": _int(
+                summary.get("semantic_gap_fact_candidate_count")
+            ),
+            "fact_review_document_count": _int(summary.get("fact_review_document_count")),
+            "approved_source_document_count": _int(summary.get("approved_source_document_count")),
+            "source_family_qa_document_count": _int(summary.get("source_family_qa_document_count")),
+            "covered_fact_route_n_records": _int(summary.get("covered_fact_route_n_records")),
+            "covered_fact_route_decision_accuracy": decision_accuracy,
+            "covered_fact_route_false_refuted_rate": false_refuted_rate,
+        })
+    if not rows:
+        status = "not_configured"
+    elif promoted_count:
+        status = "promote"
+    elif approved_source_document_count and not covered_route_records:
+        status = "ready_for_covered_fact_route"
+    elif fact_candidate_count or fact_review_document_count or blocked_count or skipped_route_count:
+        status = "needs_evidence"
+    else:
+        status = "missing"
+    return {
+        "status": status,
+        "workflow_count": len(rows),
+        "promoted_workflow_count": promoted_count,
+        "blocked_workflow_count": blocked_count,
+        "covered_fact_route_skipped_count": skipped_route_count,
+        "status_counts": dict(sorted(status_counts.items())),
+        "semantic_gap_candidate_count": candidate_count,
+        "semantic_gap_fact_candidate_count": fact_candidate_count,
+        "fact_review_document_count": fact_review_document_count,
+        "approved_source_document_count": approved_source_document_count,
+        "source_family_qa_document_count": source_family_qa_document_count,
+        "covered_fact_route_n_records": covered_route_records,
+        "best_covered_fact_route_decision_accuracy": best_decision_accuracy,
+        "best_covered_fact_route_false_refuted_rate": best_false_refuted_rate,
+        "workflows": tuple(rows),
+    }
+
+
 def _world_model_rule_lane(
     *,
     rule_input_plan: Mapping[str, Any] | None,
@@ -593,6 +712,7 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
     actions: list[dict[str, Any]] = []
     source = lanes["source_family_acquisition"]
     citation = lanes["citation_evidence"]
+    semantic = lanes["semantic_gap_review"]
     rules = lanes["world_model_rules"]
     queue = lanes["unresolved_queue"]
     if source.get("status") != "covered":
@@ -602,7 +722,11 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "lane": "source_family_acquisition",
             "reason": "source-family coverage is not complete for unresolved citation requests",
         })
-    if source.get("status") == "covered" and citation.get("status") != "promote":
+    if (
+        source.get("status") == "covered"
+        and citation.get("status") != "promote"
+        and semantic.get("status") != "promote"
+    ):
         actions.append({
             "action_id": "improve_unresolved_citation_alignment",
             "priority": 88,
@@ -612,6 +736,20 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 "still do not promote; inspect query alignment, claim mapping, or "
                 "route thresholds before release use"
             ),
+        })
+    if semantic.get("status") in {"ready_for_covered_fact_route", "needs_evidence", "missing"}:
+        actions.append({
+            "action_id": "complete_retrieval_semantic_gap_review",
+            "priority": 87,
+            "lane": "semantic_gap_review",
+            "reason": (
+                "retrieval semantic gaps have not yet produced promoted covered-fact "
+                "route evidence for reviewed source-backed facts"
+            ),
+            "semantic_gap_candidate_count": semantic.get("semantic_gap_candidate_count", 0),
+            "semantic_gap_fact_candidate_count": semantic.get("semantic_gap_fact_candidate_count", 0),
+            "approved_source_document_count": semantic.get("approved_source_document_count", 0),
+            "source_family_qa_document_count": semantic.get("source_family_qa_document_count", 0),
         })
     if _int(rules.get("rule_input_audit_requeue_outstanding_count")):
         actions.append({
@@ -687,6 +825,18 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "world_model_rule_promoted_count": _int(
             lanes["world_model_rules"].get("promoted_count")
         ),
+        "semantic_gap_review_workflow_count": _int(
+            lanes["semantic_gap_review"].get("workflow_count")
+        ),
+        "semantic_gap_review_promoted_workflow_count": _int(
+            lanes["semantic_gap_review"].get("promoted_workflow_count")
+        ),
+        "semantic_gap_review_approved_source_document_count": _int(
+            lanes["semantic_gap_review"].get("approved_source_document_count")
+        ),
+        "semantic_gap_review_covered_fact_route_n_records": _int(
+            lanes["semantic_gap_review"].get("covered_fact_route_n_records")
+        ),
         "mechanism_handoff_trace_count": _int(
             lanes["world_model_rules"].get("mechanism_handoff_trace_count")
         ),
@@ -710,6 +860,7 @@ def _write_manifest(
     unresolved_queue_path: str | Path | None,
     citation_workflow_paths: Sequence[str | Path],
     source_family_coverage_audit_paths: Sequence[str | Path],
+    semantic_gap_review_workflow_paths: Sequence[str | Path],
     rule_input_plan_path: str | Path | None,
     rule_input_audit_report_path: str | Path | None,
     rule_stub_requeue_report_path: str | Path | None,
@@ -737,6 +888,10 @@ def _write_manifest(
         for idx, path in enumerate(source_family_coverage_audit_paths, start=1)
     })
     artifacts.update({
+        f"semantic_gap_review_workflow_{idx}": path
+        for idx, path in enumerate(semantic_gap_review_workflow_paths, start=1)
+    })
+    artifacts.update({
         f"rule_promotion_report_{idx}": path
         for idx, path in enumerate(rule_promotion_report_paths, start=1)
     })
@@ -752,6 +907,18 @@ def _write_manifest(
                 payload, "lanes", "source_family_acquisition", "status"
             ),
             "world_model_rule_status": _nested(payload, "lanes", "world_model_rules", "status"),
+            "semantic_gap_review_status": _nested(
+                payload, "lanes", "semantic_gap_review", "status"
+            ),
+            "semantic_gap_review_workflow_count": _nested(
+                payload, "lanes", "semantic_gap_review", "workflow_count"
+            ),
+            "semantic_gap_review_promoted_workflow_count": _nested(
+                payload, "lanes", "semantic_gap_review", "promoted_workflow_count"
+            ),
+            "semantic_gap_review_approved_source_document_count": _nested(
+                payload, "lanes", "semantic_gap_review", "approved_source_document_count"
+            ),
             "world_model_rule_remaining_task_count": _nested(
                 payload,
                 "lanes",
@@ -838,6 +1005,18 @@ def _int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        if value is None:
+            return None
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    if number != number:
+        return None
+    return number
 
 
 def _rule_family_closure_counts(
@@ -956,6 +1135,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--unresolved-queue", default=None)
     parser.add_argument("--citation-workflow", action="append", default=[])
     parser.add_argument("--source-family-coverage-audit", action="append", default=[])
+    parser.add_argument("--semantic-gap-review-workflow", action="append", default=[])
     parser.add_argument("--rule-input-plan", default=None)
     parser.add_argument("--rule-input-audit-report", default=None)
     parser.add_argument("--rule-stub-requeue-report", default=None)
@@ -978,6 +1158,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         unresolved_queue_path=args.unresolved_queue,
         citation_workflow_paths=tuple(args.citation_workflow or ()),
         source_family_coverage_audit_paths=tuple(args.source_family_coverage_audit or ()),
+        semantic_gap_review_workflow_paths=tuple(args.semantic_gap_review_workflow or ()),
         rule_input_plan_path=args.rule_input_plan,
         rule_input_audit_report_path=args.rule_input_audit_report,
         rule_stub_requeue_report_path=args.rule_stub_requeue_report,
