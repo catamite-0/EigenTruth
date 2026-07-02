@@ -171,6 +171,8 @@ def _unresolved_summary_actions(
         action_id = str(action.get("action_id") or "")
         if action_id == "improve_unresolved_citation_alignment":
             actions.append(_unresolved_citation_alignment_action(payload, action, source_path=source_path))
+        elif action_id == "complete_retrieval_semantic_gap_review":
+            actions.append(_unresolved_semantic_gap_review_action(payload, action, source_path=source_path))
         elif action_id == "fill_and_promote_remaining_world_model_rules":
             actions.append(_unresolved_world_model_rules_action(payload, action, source_path=source_path))
         else:
@@ -304,6 +306,152 @@ def _citation_alignment_commands(
             parts.append("--adapter-diversify-source-families")
         commands.append(_shell_join(parts))
     return tuple(commands)
+
+
+def _unresolved_semantic_gap_review_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    workflow_paths = _string_tuple(_nested(payload, "paths", "semantic_gap_review_workflows"))
+    commands: list[str] = []
+    for workflow_path in workflow_paths:
+        commands.extend(
+            _semantic_gap_review_commands(
+                workflow_path,
+                source_path=source_path,
+            )
+        )
+    required_inputs: tuple[str, ...] = ()
+    if not commands:
+        commands.append(
+            _semantic_gap_review_command(
+                verified_records_jsonl=None,
+                record_indices_json=None,
+                config={},
+                include_record_indices_placeholder=True,
+            )
+        )
+        required_inputs = (
+            "source_bound_verified_records_jsonl",
+            "detectability_blind_spot_record_indices_json",
+        )
+    return {
+        **dict(action),
+        "title": "Complete retrieval semantic-gap covered-fact review",
+        "action_type": "workflow_plan",
+        "evidence_routes": (
+            "semantic_gap_review",
+            "retrieval_structured_qa",
+            "source_family_acquisition",
+        ),
+        "suggested_commands": tuple(commands),
+        "metadata": {
+            "required_inputs": required_inputs,
+            "closure_outputs": (
+                "semantic_gap_review_workflow_report",
+                "semantic_gap_review_artifact_manifest",
+                "semantic_gap_covered_fact_route_summary",
+                "semantic_gap_covered_fact_route_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "source_semantic_gap_workflow_count": len(workflow_paths),
+            "reason": str(action.get("reason") or ""),
+            "semantic_gap_candidate_count": _int_or_zero(
+                action.get("semantic_gap_candidate_count")
+            ),
+            "semantic_gap_fact_candidate_count": _int_or_zero(
+                action.get("semantic_gap_fact_candidate_count")
+            ),
+            "approved_source_document_count": _int_or_zero(
+                action.get("approved_source_document_count")
+            ),
+            "source_family_qa_document_count": _int_or_zero(
+                action.get("source_family_qa_document_count")
+            ),
+        },
+    }
+
+
+def _semantic_gap_review_commands(
+    workflow_path_value: str,
+    *,
+    source_path: Path | None,
+) -> tuple[str, ...]:
+    workflow_path = _resolve_path(workflow_path_value, base=source_path)
+    workflow = _load_optional_json(workflow_path)
+    workflow_paths = _mapping(workflow.get("paths"))
+    manifest_path = _resolve_path(workflow_paths.get("artifact_manifest"), base=workflow_path)
+    manifest = _load_optional_json(manifest_path)
+    artifacts = _mapping(manifest.get("artifacts"))
+    verified_records = _resolve_path(
+        _nested(workflow, "source", "verified_records_jsonl"),
+        base=workflow_path,
+    ) or _artifact_path(artifacts, "verified_records_jsonl", base=manifest_path)
+    record_indices = _resolve_path(
+        _nested(workflow, "source", "record_indices_json"),
+        base=workflow_path,
+    ) or _artifact_path(artifacts, "record_indices_json", base=manifest_path)
+    return (
+        _semantic_gap_review_command(
+            verified_records_jsonl=verified_records,
+            record_indices_json=record_indices,
+            config=_mapping(workflow.get("config")),
+            include_record_indices_placeholder=False,
+        ),
+    )
+
+
+def _semantic_gap_review_command(
+    *,
+    verified_records_jsonl: Path | None,
+    record_indices_json: Path | None,
+    config: Mapping[str, Any],
+    include_record_indices_placeholder: bool,
+) -> str:
+    parts: list[Any] = [
+        "python",
+        "benchmarks/run_retrieval_semantic_gap_review_workflow.py",
+        "--verified-records-jsonl",
+        "..." if verified_records_jsonl is None else str(verified_records_jsonl),
+        "--output-dir",
+        "...",
+        "--workflow-report",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+    ]
+    if record_indices_json is not None:
+        parts.extend(("--record-indices-json", str(record_indices_json)))
+    elif include_record_indices_placeholder:
+        parts.extend(("--record-indices-json", "..."))
+    _append_config_value(parts, "--mode", config.get("mode"))
+    _append_config_value(parts, "--min-hits", config.get("min_hits"))
+    _append_config_value(parts, "--max-targets", config.get("max_targets"))
+    _append_config_value(parts, "--max-hits-per-target", config.get("max_hits_per_target"))
+    _append_config_value(parts, "--min-confidence", config.get("min_confidence"))
+    _append_config_value(parts, "--reviewer", config.get("reviewer"))
+    _append_config_value(parts, "--reviewed-at", config.get("reviewed_at"))
+    parts.append("--run-covered-fact-route")
+    _append_config_value(parts, "--covered-fact-limit", config.get("covered_fact_limit"))
+    _append_config_value(parts, "--covered-fact-score-name", config.get("covered_fact_score_name"))
+    _append_config_value(parts, "--covered-fact-signal", config.get("covered_fact_signal"))
+    _append_config_value(parts, "--covered-fact-alpha", config.get("covered_fact_alpha"))
+    _append_config_value(parts, "--covered-fact-seed", config.get("covered_fact_seed"))
+    if config.get("skip_qid_values") is False:
+        parts.append("--keep-qid-values")
+    parts.extend((
+        "--metadata",
+        "closure_action=complete_retrieval_semantic_gap_review",
+    ))
+    return _shell_join(parts)
 
 
 def _unresolved_world_model_rules_action(
@@ -977,6 +1125,17 @@ def _slug(value: str) -> str:
 
 def _shell_join(parts: Sequence[Any]) -> str:
     return " ".join(shlex.quote(str(part)) for part in parts if str(part))
+
+
+def _append_config_value(parts: list[Any], flag: str, value: Any) -> None:
+    if value is None:
+        return
+    if isinstance(value, bool):
+        return
+    text = str(value)
+    if not text:
+        return
+    parts.extend((flag, text))
 
 
 def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) -> None:

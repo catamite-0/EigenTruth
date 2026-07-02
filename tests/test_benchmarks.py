@@ -35110,9 +35110,16 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     rule_dir = tmp_path / "rules"
     rule_dir.mkdir()
     rule_plan_path = rule_dir / "rule-input-collection-plan.json"
+    semantic_dir = tmp_path / "semantic-gap"
+    semantic_dir.mkdir()
+    semantic_workflow_path = semantic_dir / "retrieval-semantic-gap-review-workflow.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    record_indices_path = tmp_path / "blind-spots.json"
     queue_path = tmp_path / "queue" / "unresolved-evidence-queue.json"
     queue_path.parent.mkdir()
     queue_path.write_text("{}", encoding="utf-8")
+    verified_records_path.write_text("", encoding="utf-8")
+    record_indices_path.write_text("{}", encoding="utf-8")
     citation_workflow_path.write_text(
         json.dumps({
             "workflow": "source_family_citation_search_workflow",
@@ -35159,6 +35166,29 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
         }),
         encoding="utf-8",
     )
+    semantic_workflow_path.write_text(
+        json.dumps({
+            "workflow": "retrieval_semantic_gap_review_workflow",
+            "status": "ready_for_structured_qa",
+            "source": {
+                "verified_records_jsonl": str(verified_records_path),
+                "record_indices_json": str(record_indices_path),
+            },
+            "config": {
+                "mode": "false_negative_with_hits",
+                "min_hits": 1,
+                "max_hits_per_target": 3,
+                "min_confidence": 0.0,
+                "reviewer": "rule_based_alignment_fact_reviewer_v1",
+                "reviewed_at": "2026-07-02T00:00:00Z",
+                "covered_fact_alpha": 0.2,
+                "covered_fact_signal": "truth_proj",
+                "covered_fact_seed": 7,
+                "skip_qid_values": True,
+            },
+        }),
+        encoding="utf-8",
+    )
     summary_path.write_text(
         json.dumps({
             "workflow": "unresolved_frontier_evidence_summary",
@@ -35166,6 +35196,7 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
             "paths": {
                 "unresolved_queue": str(queue_path),
                 "citation_workflows": [str(citation_workflow_path)],
+                "semantic_gap_review_workflows": [str(semantic_workflow_path)],
                 "rule_input_plan": str(rule_plan_path),
             },
             "next_actions": [
@@ -35174,6 +35205,16 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
                     "lane": "citation_evidence",
                     "priority": 88,
                     "reason": "citation gate blocked",
+                },
+                {
+                    "action_id": "complete_retrieval_semantic_gap_review",
+                    "lane": "semantic_gap_review",
+                    "priority": 87,
+                    "reason": "covered-fact route not requested",
+                    "semantic_gap_candidate_count": 8,
+                    "semantic_gap_fact_candidate_count": 3,
+                    "approved_source_document_count": 2,
+                    "source_family_qa_document_count": 0,
                 },
                 {
                     "action_id": "fill_and_promote_remaining_world_model_rules",
@@ -35199,15 +35240,17 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
         "report:unresolved-frontier-command-plan:0.1"
     )
     citation_entry = payload["entries"][0]
-    rule_entry = payload["entries"][1]
+    semantic_entry = payload["entries"][1]
+    rule_entry = payload["entries"][2]
 
     assert payload["status"] == "needs_inputs"
     assert payload["source"]["workflow"] == "unresolved_frontier_evidence_summary"
-    assert payload["summary"]["entry_count"] == 2
-    assert payload["summary"]["command_count"] == 9
+    assert payload["summary"]["entry_count"] == 3
+    assert payload["summary"]["command_count"] == 10
     assert payload["summary"]["missing_command_template_count"] == 0
     assert payload["summary"]["action_ids"] == (
         "improve_unresolved_citation_alignment",
+        "complete_retrieval_semantic_gap_review",
         "fill_and_promote_remaining_world_model_rules",
     )
     assert citation_entry["command_status"] == "needs_inputs"
@@ -35216,6 +35259,17 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert "--query-mode question_and_query" in citation_entry["command_templates"][0]
     assert "--source-catalog" in citation_entry["command_templates"][0]
     assert "--controlled-sweep" in citation_entry["command_templates"][0]
+    assert semantic_entry["command_status"] == "needs_inputs"
+    assert semantic_entry["missing_inputs"] == ("bound_command_template_values",)
+    assert len(semantic_entry["command_templates"]) == 1
+    assert "run_retrieval_semantic_gap_review_workflow.py" in (
+        semantic_entry["command_templates"][0]
+    )
+    assert "--run-covered-fact-route" in semantic_entry["command_templates"][0]
+    assert "--covered-fact-alpha 0.2" in semantic_entry["command_templates"][0]
+    assert "closure_action=complete_retrieval_semantic_gap_review" in (
+        semantic_entry["command_templates"][0]
+    )
     assert rule_entry["command_status"] == "needs_inputs"
     assert rule_entry["missing_inputs"] == (
         "source_backed_numeric_bindings",
@@ -35235,6 +35289,11 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
         index=1,
         required_inputs=citation_entry["required_inputs"],
     )
+    semantic_requirements = requirements_module.frontier_command_requirement_summary(
+        semantic_entry["command_templates"][0],
+        index=1,
+        required_inputs=semantic_entry["required_inputs"],
+    )
     numeric_requirements = requirements_module.frontier_command_requirement_summary(
         rule_entry["command_templates"][0],
         index=1,
@@ -35249,6 +35308,10 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
         "benchmarks/run_source_family_citation_search_workflow.py"
     )
     assert citation_requirements["status"] == "ready"
+    assert semantic_requirements["script"] == (
+        "benchmarks/run_retrieval_semantic_gap_review_workflow.py"
+    )
+    assert semantic_requirements["status"] == "ready"
     assert numeric_requirements["script"] == (
         "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py"
     )
@@ -35263,7 +35326,7 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "frontier_research_queue_command_plan"
     assert record.metadata["source_workflow"] == "unresolved_frontier_evidence_summary"
-    assert record.metadata["entry_count"] == 2
+    assert record.metadata["entry_count"] == 3
 
     scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
         command_plan=plan_path,
@@ -35282,6 +35345,12 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
             "fill_and_promote_remaining_world_model_rules"
         ]["placeholder_records"]
     }
+    semantic_placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold_entries[
+            "complete_retrieval_semantic_gap_review"
+        ]["placeholder_records"]
+    }
     assert citation_placeholders[(1, "--output-dir")]["suggested_binding"] == {
         "path": "artifacts/improve-unresolved-citation-alignment/command-1",
         "source": "derived_command_output_dir",
@@ -35293,6 +35362,13 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert citation_placeholders[(1, "--artifact-manifest")]["suggested_binding"] == {
         "path": "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
         "source": "derived_manifest_path",
+    }
+    assert semantic_placeholders[(1, "--workflow-report")]["suggested_binding"] == {
+        "path": (
+            "artifacts/complete-retrieval-semantic-gap-review/command-1/"
+            "workflow-report.json"
+        ),
+        "source": "derived_command_report_path",
     }
     assert rule_placeholders[(1, "--rule-inputs-jsonl")]["suggested_binding"][
         "source"
@@ -35432,6 +35508,49 @@ def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_
         "benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py"
     )
     assert entity_citation_requirements["status"] == "ready"
+
+
+def test_frontier_research_queue_command_plan_templates_semantic_gap_without_prior_workflow():
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    summary = {
+        "workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_evidence",
+        "next_actions": [
+            {
+                "action_id": "complete_retrieval_semantic_gap_review",
+                "lane": "semantic_gap_review",
+                "priority": 87,
+                "reason": "semantic gap workflow missing",
+            }
+        ],
+    }
+
+    payload = plan_module.build_frontier_research_queue_command_plan(source=summary)
+    entry = payload["entries"][0]
+    command = entry["command_templates"][0]
+    requirements = requirements_module.frontier_command_requirement_summary(
+        command,
+        index=1,
+        required_inputs=entry["required_inputs"],
+    )
+
+    assert payload["status"] == "needs_inputs"
+    assert entry["action_id"] == "complete_retrieval_semantic_gap_review"
+    assert entry["required_inputs"] == (
+        "source_bound_verified_records_jsonl",
+        "detectability_blind_spot_record_indices_json",
+    )
+    assert entry["missing_inputs"] == (
+        "source_bound_verified_records_jsonl",
+        "detectability_blind_spot_record_indices_json",
+        "bound_command_template_values",
+    )
+    assert "--verified-records-jsonl ..." in command
+    assert "--record-indices-json ..." in command
+    assert "--run-covered-fact-route" in command
+    assert requirements["script"] == "benchmarks/run_retrieval_semantic_gap_review_workflow.py"
+    assert requirements["status"] == "ready"
 
 
 def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules(tmp_path):

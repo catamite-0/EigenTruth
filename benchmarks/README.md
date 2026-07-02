@@ -4291,10 +4291,11 @@ python benchmarks/plan_frontier_research_queue_commands.py \
 ```
 
 For unresolved summaries, the planner synthesizes reviewable command templates
-for citation query-mode replays plus numeric/temporal world-model rule
-fill/adapter/promotion chains. The templates keep output paths, registry keys,
-and source-backed binding sidecars as `...` placeholders, so the follow-up
-scaffold/bind/run steps still require review before anything executes.
+for semantic-gap covered-fact route completion, citation query-mode replays,
+and numeric/temporal world-model rule fill/adapter/promotion chains. The
+templates keep output paths, registry keys, and source-backed binding sidecars
+as `...` placeholders, so the follow-up scaffold/bind/run steps still require
+review before anything executes.
 
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:

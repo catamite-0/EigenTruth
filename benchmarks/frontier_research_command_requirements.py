@@ -29,6 +29,12 @@ REQUIRED_COMMAND_FLAGS = {
         "--workflow-report",
         "--artifact-manifest",
     ),
+    "benchmarks/run_retrieval_semantic_gap_review_workflow.py": (
+        "--verified-records-jsonl",
+        "--output-dir",
+        "--workflow-report",
+        "--artifact-manifest",
+    ),
     "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": (
         "--input-tasks",
         "--numeric-bindings",
@@ -103,6 +109,10 @@ REQUIRED_INPUT_FLAGS = {
     "benchmarks/run_product_runtime_baseline.py": {
         "product_trace_corpus": "--trace",
         "product_promotion_contract_source": "--promotion-contract",
+    },
+    "benchmarks/run_retrieval_semantic_gap_review_workflow.py": {
+        "source_bound_verified_records_jsonl": "--verified-records-jsonl",
+        "detectability_blind_spot_record_indices_json": "--record-indices-json",
     },
     "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": {
         "source_backed_numeric_bindings": "--numeric-bindings",
