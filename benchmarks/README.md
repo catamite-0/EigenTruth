@@ -7922,6 +7922,35 @@ useful source expansion must add broader fact predicates or a more structured
 Wikidata verifier; tuning lexical thresholds alone would not create refutation
 coverage.
 
+## `build_retrieval_semantic_gap_handoff.py`
+
+Turns retrieval route gaps into a concrete next-step queue once local evidence
+coverage exists. The script consumes the same `eval_verifier_ensemble.py
+--verified-records-jsonl` sidecar, selects records with retrieval hits that
+remain unresolved (by default false-label records that were not refuted), and
+writes handoff requests for claim/evidence alignment review, structured-fact
+normalization, world-model or calculator rule authoring, and query refinement
+when source binding or lexical overlap is weak. The handoff is explicitly not
+verifier evidence; it may use labels to identify false negatives, and it records
+that fact in `label_usage` for auditability.
+
+```bash
+python benchmarks/build_retrieval_semantic_gap_handoff.py \
+  --verified-records-jsonl artifacts/source-bound-sweep/verified-records.jsonl \
+  --record-indices-json artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --output artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.json \
+  --artifact-manifest artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name source-bound-retrieval-semantic-gap-handoff \
+  --version 0.1
+```
+
+Use this after source-bound citation sweeps when `records_with_retrieval_hits`
+is high but false-label refutation remains low. In that state, the bottleneck is
+usually semantic interpretation of good snippets rather than query coverage; the
+handoff makes that distinction reviewable before adding structured facts,
+world-model rules, or more aggressive verifier logic.
+
 ## `build_external_retrieval_corpus.py`
 
 Builds an explicit external-candidate retrieval corpus from caller-supplied

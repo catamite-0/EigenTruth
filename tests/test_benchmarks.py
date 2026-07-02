@@ -8082,6 +8082,161 @@ def test_analyze_retrieval_route_gaps_summarizes_verified_records(tmp_path):
     assert manifest["artifacts"]["gap_report"]["exists"] is True
 
 
+def test_build_retrieval_semantic_gap_handoff_targets_false_negative_hits(tmp_path):
+    module = importlib.import_module("benchmarks.build_retrieval_semantic_gap_handoff")
+    from eigentruth.registry import ArtifactRegistry
+
+    records_path = tmp_path / "verified-records.jsonl"
+    indices_path = tmp_path / "blind-spots.json"
+    output_path = tmp_path / "semantic-gap-handoff.json"
+    manifest_path = tmp_path / "semantic-gap-handoff.manifest.json"
+    registry_path = tmp_path / "registry.json"
+    alignment_payload = {
+        "records": [
+            {
+                "claim_id": "c1",
+                "status": "misaligned",
+                "evidence_count": 1,
+                "keyword_overlap": 0.8,
+                "number_recall": 0.0,
+                "entity_recall": 1.0,
+                "issue_codes": ["missing_claim_number"],
+                "claim_numbers": ["330"],
+                "evidence_numbers": ["42,647,492"],
+                "claim_entities": ["Afghanistan"],
+                "evidence_entities": ["Afghanistan"],
+            }
+        ]
+    }
+    rows = [
+        {
+            "schema_version": 1,
+            "run": "synthetic",
+            "score_path": "scores.json",
+            "signal": "truth_proj",
+            "record_index": 0,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "claim": {
+                    "text": "Afghanistan has population 330 million.",
+                    "claim_id": "c1",
+                    "metadata": {"features": {"has_number": True}},
+                },
+                "final": {
+                    "status": "insufficient_evidence",
+                    "explanation": "slots missing",
+                    "metadata": {
+                        "decision_rule": "slot_evidence_alignment",
+                        "evidence_alignment": alignment_payload,
+                    },
+                },
+                "route": {
+                    "selected_route": "retrieval_groundedness",
+                    "selected_verifier": "EvidenceAlignmentVerifier",
+                    "attempted_routes": ["groundedness", "retrieval_groundedness"],
+                    "used_retrieval": True,
+                },
+                "retrieval_hits": [
+                    {
+                        "text": "World Bank data lists Afghanistan population at 42,647,492 in 2024.",
+                        "source": "worldbank:SP.POP.TOTL:AFG",
+                        "score": 0.94,
+                        "metadata": {
+                            "statement_property": "SP.POP.TOTL",
+                            "country_name": "Afghanistan",
+                            "source_queue_request_sha256": ["abc"],
+                        },
+                    }
+                ],
+                "metadata": {
+                    "statement": {
+                        "question": "What is the population of Afghanistan?",
+                        "answer": "330 million",
+                        "question_type": "quantity",
+                    },
+                    "retrieval": {
+                        "source_binding": {
+                            "requested": True,
+                            "mode": "exact",
+                            "fallback": False,
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "schema_version": 1,
+            "record_index": 1,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "claim": {"text": "Paris is the capital of France.", "claim_id": "c2", "metadata": {}},
+                "final": {"status": "supported", "metadata": {"decision_rule": "exact_match"}},
+                "route": {"selected_route": "retrieval_groundedness", "used_retrieval": True},
+                "retrieval_hits": [{"text": "The capital of France is Paris.", "source": "wikidata:Q142:P36"}],
+            },
+        },
+        {
+            "schema_version": 1,
+            "record_index": 2,
+            "label": 1,
+            "score": 0.8,
+            "record": {
+                "claim": {"text": "Lyon is the capital of France.", "claim_id": "c3", "metadata": {}},
+                "final": {"status": "refuted", "metadata": {"decision_rule": "triple_object_mismatch"}},
+                "route": {"selected_route": "retrieval_triple_evidence", "used_retrieval": True},
+                "retrieval_hits": [{"text": "The capital of France is Paris.", "source": "wikidata:Q142:P36"}],
+            },
+        },
+    ]
+    records_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+    indices_path.write_text(
+        json.dumps({"records": [{"record_index": 0}, {"record_index": 2}]}),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        verified_records_jsonl=records_path,
+        output_path=output_path,
+        record_indices_json=indices_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="semantic-gap-handoff",
+        version="0.1",
+        metadata={"evidence": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(registry_path)
+
+    assert payload["workflow"] == "retrieval_semantic_gap_handoff"
+    assert payload["label_usage"]["labels_used_for_gap_selection"] is True
+    assert payload["config"]["record_index_filter_count"] == 2
+    assert payload["summary"]["source_record_count"] == 3
+    assert payload["summary"]["evaluated_source_record_count"] == 2
+    assert payload["summary"]["candidate_count"] == 1
+    assert payload["summary"]["skipped_reason_counts"] == {
+        "already_refuted": 1,
+        "outside_record_index_filter": 1,
+    }
+    assert payload["summary"]["recommended_lane_counts"] == {
+        "claim_evidence_alignment_review": 1,
+        "structured_fact_candidate": 1,
+        "world_model_rule_candidate": 1,
+    }
+    target = payload["targets"][0]
+    assert target["target_id"] == "record-0"
+    assert target["retrieval"]["source_binding"]["mode"] == "exact"
+    assert target["alignment"]["claim_numbers"] == ("330",)
+    assert saved["requests"]["structured_fact_candidate"][0]["request_id"] == "fact:record-0:1"
+    assert saved["requests"]["world_model_rule_candidate"][0]["features"]["has_number"] is True
+    assert manifest["artifacts"]["retrieval_semantic_gap_handoff"]["exists"] is True
+    assert registry.get("report:semantic-gap-handoff:0.1").metadata["workflow"] == (
+        "retrieval_semantic_gap_handoff"
+    )
+
+
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
     module = importlib.import_module("benchmarks.compare_manifold_distances")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")
