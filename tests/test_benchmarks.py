@@ -14148,6 +14148,71 @@ def _write_frontier_release_evidence_report(
     return report_path
 
 
+def _write_unresolved_frontier_evidence_summary(
+    output_dir: Path,
+    *,
+    status: str = "promote",
+    next_actions: Sequence[Mapping[str, Any]] = (),
+    lane_statuses: Mapping[str, str] | None = None,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "unresolved-frontier-evidence-summary.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    lane_status_payload = dict(lane_statuses or {
+        "unresolved_queue": "complete",
+        "source_family_acquisition": "covered",
+        "citation_evidence": "promote",
+        "world_model_rules": "promote",
+    })
+    payload = {
+        "schema_version": 1,
+        "workflow": "unresolved_frontier_evidence_summary",
+        "status": status,
+        "summary": {
+            "unresolved_target_count": 0,
+            "adapter_request_count": 0,
+            "citation_workflow_count": 1,
+            "citation_provenance_pass_count": 1,
+            "source_family_coverage_audit_count": 1,
+            "world_model_rule_task_count": 2,
+            "world_model_rule_promoted_count": 2,
+            "mechanism_handoff_trace_count": 2,
+            "lane_statuses": lane_status_payload,
+            "blocked_lane_count": sum(
+                1 for value in lane_status_payload.values() if value in {"blocked", "partial"}
+            ),
+            "missing_lane_count": sum(1 for value in lane_status_payload.values() if value == "missing"),
+            "covered_or_promoted_lane_count": sum(
+                1 for value in lane_status_payload.values() if value in {"covered", "promote"}
+            ),
+        },
+        "lanes": {
+            name: {"status": lane_status}
+            for name, lane_status in lane_status_payload.items()
+        },
+        "next_actions": list(next_actions),
+        "paths": {
+            "summary_report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"unresolved_frontier_evidence_summary": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "summarize_unresolved_frontier_evidence",
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": status,
+            "next_action_count": len(tuple(next_actions)),
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _write_world_model_signal_workflow_report(
     output_dir: Path,
     *,
@@ -17835,6 +17900,159 @@ def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
             "blocking_reasons"
         ]
     )
+
+
+def test_compare_release_candidates_can_require_unresolved_frontier_closure(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="frontier-closure-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="frontier-closure-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    registry.record_benchmark_manifest(
+        name="frontier-closure-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    promoted_summary_path = _write_unresolved_frontier_evidence_summary(
+        tmp_path / "unresolved-frontier-promote"
+    )
+    blocked_summary_path = _write_unresolved_frontier_evidence_summary(
+        tmp_path / "unresolved-frontier-blocked",
+        status="needs_evidence",
+        lane_statuses={
+            "unresolved_queue": "active",
+            "source_family_acquisition": "covered",
+            "citation_evidence": "blocked",
+            "world_model_rules": "partial",
+        },
+        next_actions=({
+            "action_id": "improve_unresolved_citation_alignment",
+            "lane": "citation_evidence",
+            "priority": 88,
+        },),
+    )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="unresolved-frontier-closure",
+        version="0.1",
+        path=promoted_summary_path,
+        metadata={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "promote",
+            "next_action_count": 0,
+        },
+    ).save_json()
+
+    missing = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        require_unresolved_frontier_evidence_closure=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        unresolved_frontier_evidence_summary_path=promoted_summary_path,
+        require_unresolved_frontier_evidence_closure=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        unresolved_frontier_evidence_summary_path=blocked_summary_path,
+        require_unresolved_frontier_evidence_closure=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        unresolved_frontier_evidence_summary_key=(
+            "report:unresolved-frontier-closure:0.1"
+        ),
+        require_unresolved_frontier_evidence_closure=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert missing["decision"]["status"] == "blocked"
+    assert missing["decision"]["unresolved_frontier_evidence_summary_status"] == "blocked"
+    assert missing["decision"]["blocking_reasons"][0]["gate"] == (
+        "unresolved_frontier_evidence_summary"
+    )
+    assert any(
+        "closure summary is required" in reason
+        for reason in missing["unresolved_frontier_evidence_summary_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["config"]["require_unresolved_frontier_evidence_closure"] is True
+    assert promoted["decision"]["unresolved_frontier_evidence_summary_status"] == "promote"
+    assert promoted["unresolved_frontier_evidence_summary_gate"]["gate"]["passed"] is True
+    assert promoted["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "next_action_count"
+    ] == 0
+    assert promoted["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "lane_statuses"
+    ]["citation_evidence"] == "promote"
+    assert "unresolved_frontier_evidence_summary_manifest" in (
+        promoted["release_candidate"]["manifests"]
+    )
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["unresolved_frontier_evidence_summary_status"] == "blocked"
+    assert blocked["unresolved_frontier_evidence_summary_gate"]["next_action_count"] == 1
+    assert any(
+        "status is 'needs_evidence'" in reason
+        for reason in blocked["unresolved_frontier_evidence_summary_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
+    assert any(
+        "still has 1 next action" in reason
+        for reason in blocked["unresolved_frontier_evidence_summary_gate"]["gate"][
+            "blocking_reasons"
+        ]
+    )
+    assert promoted_from_key["decision"]["status"] == "promote"
+    assert promoted_from_key["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "record_key"
+    ] == "report:unresolved-frontier-closure:0.1"
 
 
 def test_compare_release_candidates_gates_world_model_signal_workflow(tmp_path):
@@ -22503,6 +22721,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         supported_count=2,
         refuted_count=1,
     )
+    frontier_closure_summary = _write_unresolved_frontier_evidence_summary(
+        tmp_path / "frontier-unresolved-closure"
+    )
     ArtifactRegistry.load_json(registry_path).record_report(
         name="covered-facts-external-evidence-handoff",
         path=external_evidence_report,
@@ -22527,6 +22748,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
         adapter_family_matrix_path=adapter_matrix_path,
         product_runtime_drift_report_path=frontier_drift_report,
+        unresolved_frontier_evidence_summary_path=frontier_closure_summary,
     )
     required_gate = payload["required_route_baseline_gate"]
     required_rows = {
@@ -22639,6 +22861,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     )
     assert frontier_payload["config"]["require_product_runtime_drift_frontier_release_evidence"] is True
     assert frontier_payload["config"]["require_frontier_release_input_manifests"] is True
+    assert frontier_payload["config"]["require_unresolved_frontier_evidence_closure"] is True
     assert frontier_payload["config"]["require_product_trace_action_audit_gate"] is True
     assert frontier_payload["config"]["require_product_trace_action_execution_gate"] is True
     assert frontier_payload["config"]["external_evidence_baseline_comparison_key"] == (
@@ -22736,6 +22959,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "require_frontier_release_input_manifests"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_unresolved_frontier_evidence_closure"
+    ] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "require_product_trace_action_audit_gate"
     ] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
@@ -22825,6 +23051,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["release_candidate"]["mechanism_handoff_evidence_bundle"][
         "trace_count"
     ] == pytest.approx(3)
+    assert frontier_payload["release_candidate"]["unresolved_frontier_evidence_summary"][
+        "next_action_count"
+    ] == 0
     assert frontier_payload["triple_extraction_fixture_matrix_gate"]["gate"]["policy"][
         "min_mean_best_external_f1"
     ] == pytest.approx(0.90)
@@ -22840,6 +23069,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         external_evidence_baseline_comparison_path=external_evidence_report,
         triple_extraction_fixture_matrix_path=triple_matrix_report,
         mechanism_handoff_evidence_bundle_path=mechanism_bundle_report,
+        unresolved_frontier_evidence_summary_path=frontier_closure_summary,
     )
 
     assert frontier_path_payload["decision"]["status"] == "promote"
@@ -24214,6 +24444,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     )
     assert frontier_profile_config.require_product_runtime_drift_frontier_release_evidence is True
     assert frontier_profile_config.require_frontier_release_input_manifests is True
+    assert frontier_profile_config.require_unresolved_frontier_evidence_closure is True
     assert frontier_profile_config.require_product_trace_action_audit_gate is True
     assert frontier_profile_config.require_product_trace_action_execution_gate is True
     assert frontier_profile_config.external_evidence_baseline_comparison_key == (
@@ -24292,6 +24523,9 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_frontier_release_input_manifests"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_unresolved_frontier_evidence_closure"
     ] is True
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_product_trace_action_audit_gate"

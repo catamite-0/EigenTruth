@@ -261,6 +261,12 @@ def _apply_release_policy_profile_to_config(
             "require_frontier_release_input_manifests": (
                 config.require_frontier_release_input_manifests
             ),
+            "require_unresolved_frontier_evidence_closure": (
+                config.require_unresolved_frontier_evidence_closure
+            ),
+            "unresolved_frontier_evidence_summary_key": (
+                config.unresolved_frontier_evidence_summary_key
+            ),
             "require_product_trace_action_audit_gate": config.require_product_trace_action_audit_gate,
             "require_product_trace_action_execution_gate": (
                 config.require_product_trace_action_execution_gate
@@ -361,6 +367,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
     require_frontier_release_input_manifests: bool = False
+    unresolved_frontier_evidence_summary_path: Path | None = None
+    unresolved_frontier_evidence_summary_registry_path: Path | None = None
+    unresolved_frontier_evidence_summary_key: str | None = None
+    require_unresolved_frontier_evidence_closure: bool = False
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
@@ -571,6 +581,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "frontier_release_evidence_registry_path",
                 Path(self.frontier_release_evidence_registry_path),
+            )
+        if self.unresolved_frontier_evidence_summary_path is not None:
+            object.__setattr__(
+                self,
+                "unresolved_frontier_evidence_summary_path",
+                Path(self.unresolved_frontier_evidence_summary_path),
+            )
+        if self.unresolved_frontier_evidence_summary_registry_path is not None:
+            object.__setattr__(
+                self,
+                "unresolved_frontier_evidence_summary_registry_path",
+                Path(self.unresolved_frontier_evidence_summary_registry_path),
             )
         if self.world_model_signal_workflow_path is not None:
             object.__setattr__(
@@ -969,6 +991,18 @@ def run_release_candidate_registry_workflow(
         require_frontier_release_input_manifests=(
             config.require_frontier_release_input_manifests
         ),
+        unresolved_frontier_evidence_summary_path=(
+            config.unresolved_frontier_evidence_summary_path
+        ),
+        unresolved_frontier_evidence_summary_registry_path=(
+            config.unresolved_frontier_evidence_summary_registry_path
+        ),
+        unresolved_frontier_evidence_summary_key=(
+            config.unresolved_frontier_evidence_summary_key
+        ),
+        require_unresolved_frontier_evidence_closure=(
+            config.require_unresolved_frontier_evidence_closure
+        ),
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
@@ -1356,6 +1390,22 @@ def run_release_candidate_registry_workflow(
                 else str(config.frontier_release_evidence_registry_path)
             ),
             "frontier_release_evidence_key": config.frontier_release_evidence_key,
+            "unresolved_frontier_evidence_summary": (
+                None
+                if config.unresolved_frontier_evidence_summary_path is None
+                else str(config.unresolved_frontier_evidence_summary_path)
+            ),
+            "unresolved_frontier_evidence_summary_registry": (
+                None
+                if config.unresolved_frontier_evidence_summary_registry_path is None
+                else str(config.unresolved_frontier_evidence_summary_registry_path)
+            ),
+            "unresolved_frontier_evidence_summary_key": (
+                config.unresolved_frontier_evidence_summary_key
+            ),
+            "require_unresolved_frontier_evidence_closure": (
+                config.require_unresolved_frontier_evidence_closure
+            ),
             "world_model_signal_workflow": (
                 None
                 if config.world_model_signal_workflow_path is None
@@ -1869,6 +1919,24 @@ def _comparison_with_registry_config(
             if config.claim_factuality_probe_comparison_key is None
             else config.claim_factuality_probe_comparison_key
         ),
+        "unresolved_frontier_evidence_summary": (
+            comparison_config.get("unresolved_frontier_evidence_summary")
+            if config.unresolved_frontier_evidence_summary_path is None
+            else str(config.unresolved_frontier_evidence_summary_path)
+        ),
+        "unresolved_frontier_evidence_summary_registry": (
+            comparison_config.get("unresolved_frontier_evidence_summary_registry")
+            if config.unresolved_frontier_evidence_summary_registry_path is None
+            else str(config.unresolved_frontier_evidence_summary_registry_path)
+        ),
+        "unresolved_frontier_evidence_summary_key": (
+            comparison_config.get("unresolved_frontier_evidence_summary_key")
+            if config.unresolved_frontier_evidence_summary_key is None
+            else config.unresolved_frontier_evidence_summary_key
+        ),
+        "require_unresolved_frontier_evidence_closure": (
+            config.require_unresolved_frontier_evidence_closure
+        ),
     })
     payload["config"] = comparison_config
     return payload
@@ -1908,6 +1976,10 @@ def _write_artifact_manifest(
         or _nested(comparison, "claim_factuality_probe_comparison_gate", "manifest_path"),
         "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
+        "unresolved_frontier_evidence_summary_manifest": manifests.get(
+            "unresolved_frontier_evidence_summary_manifest"
+        )
+        or _nested(comparison, "unresolved_frontier_evidence_summary_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
         or _nested(comparison, "world_model_signal_workflow_gate", "manifest_path"),
         "context_sensitivity_workflow_manifest": manifests.get(
@@ -2114,6 +2186,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     frontier_release_evidence = dict(candidate.get("frontier_release_evidence") or {})
     if not frontier_release_evidence:
         frontier_release_evidence = dict(comparison.get("frontier_release_evidence_gate") or {})
+    unresolved_frontier_evidence_summary = dict(
+        candidate.get("unresolved_frontier_evidence_summary") or {}
+    )
+    if not unresolved_frontier_evidence_summary:
+        unresolved_frontier_evidence_summary = dict(
+            comparison.get("unresolved_frontier_evidence_summary_gate") or {}
+        )
     world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
     if not world_model_signal_workflow:
         world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
@@ -2155,6 +2234,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "release_frontier_release_evidence_status": decision.get(
             "frontier_release_evidence_status"
+        ),
+        "release_unresolved_frontier_evidence_summary_status": decision.get(
+            "unresolved_frontier_evidence_summary_status"
         ),
         "release_world_model_signal_workflow_status": decision.get(
             "world_model_signal_workflow_status"
@@ -2211,6 +2293,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
+        ),
+        "recommended_unresolved_frontier_evidence_summary_report": decision.get(
+            "recommended_unresolved_frontier_evidence_summary_report"
         ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
@@ -3162,6 +3247,34 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_input_manifest_failure_count": (
             frontier_release_evidence.get("input_manifest_failure_count")
         ),
+        "unresolved_frontier_evidence_summary_manifest": (
+            manifests.get("unresolved_frontier_evidence_summary_manifest")
+            or unresolved_frontier_evidence_summary.get("manifest_path")
+        ),
+        "unresolved_frontier_evidence_summary_report": (
+            unresolved_frontier_evidence_summary.get("report_path")
+        ),
+        "unresolved_frontier_evidence_summary_source": (
+            unresolved_frontier_evidence_summary.get("source")
+        ),
+        "unresolved_frontier_evidence_summary_registry": (
+            unresolved_frontier_evidence_summary.get("registry")
+        ),
+        "unresolved_frontier_evidence_summary_record": (
+            unresolved_frontier_evidence_summary.get("record_key")
+        ),
+        "unresolved_frontier_evidence_summary_required": (
+            unresolved_frontier_evidence_summary.get("require_closure")
+        ),
+        "unresolved_frontier_evidence_summary_status": (
+            unresolved_frontier_evidence_summary.get("report_status")
+        ),
+        "unresolved_frontier_evidence_summary_next_action_count": (
+            unresolved_frontier_evidence_summary.get("next_action_count")
+        ),
+        "unresolved_frontier_evidence_summary_lane_statuses": (
+            unresolved_frontier_evidence_summary.get("lane_statuses")
+        ),
         "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
         "world_model_signal_workflow_manifest": (
             manifests.get("world_model_signal_workflow_manifest")
@@ -3782,6 +3895,20 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         require_frontier_release_input_manifests=bool(
             args.require_frontier_release_input_manifests
         ),
+        unresolved_frontier_evidence_summary_path=(
+            None
+            if args.unresolved_frontier_evidence_summary is None
+            else Path(args.unresolved_frontier_evidence_summary)
+        ),
+        unresolved_frontier_evidence_summary_registry_path=(
+            None
+            if args.unresolved_frontier_evidence_summary_registry is None
+            else Path(args.unresolved_frontier_evidence_summary_registry)
+        ),
+        unresolved_frontier_evidence_summary_key=args.unresolved_frontier_evidence_summary_key,
+        require_unresolved_frontier_evidence_closure=bool(
+            args.require_unresolved_frontier_evidence_closure
+        ),
         world_model_signal_workflow_path=(
             None
             if args.world_model_signal_workflow is None
@@ -4250,6 +4377,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-frontier-release-input-manifests", action="store_true",
                         help="require frontier release evidence to prove all input artifact manifests "
                              "were required and verified")
+    parser.add_argument("--unresolved-frontier-evidence-summary", default=None,
+                        help="optional unresolved frontier evidence closure summary report")
+    parser.add_argument("--unresolved-frontier-evidence-summary-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--unresolved-frontier-evidence-summary-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--unresolved-frontier-evidence-summary-key", default=None,
+                        help="optional report:<name>:<version> registry key for an unresolved "
+                             "frontier evidence closure summary")
+    parser.add_argument("--require-unresolved-frontier-evidence-closure", action="store_true",
+                        help="require the unresolved frontier evidence summary to promote with "
+                             "zero next actions before release registration")
     parser.add_argument("--world-model-signal-workflow", default=None,
                         help="optional world-model signal calibration workflow report that must pass its "
                              "conflict/trace-gap release gate")

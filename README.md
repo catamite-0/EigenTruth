@@ -351,6 +351,13 @@ release evidence with required input manifests, the v1.9/v7 evidence handoff,
 and v1.16 product-runtime drift with pre-generation risk-telemetry,
 action-receipt, receipt-claim-support, trace-provenance, and
 citation-integrity gates.
+The stricter `frontier_audit` policy also requires an unresolved frontier
+evidence closure summary when materializing a new release candidate. Supply
+`--unresolved-frontier-evidence-summary` or
+`--unresolved-frontier-evidence-summary-key` together with
+`--require-unresolved-frontier-evidence-closure`; the gate fails closed when the
+summary is missing, is not `status=promote`, or still carries open
+`next_actions`.
 World-model action-gate telemetry is now also available as product-runtime
 baseline/drift evidence, so pre-action simulation coverage, pass/block rates,
 and postcondition failure codes can be compared before making it a required
@@ -641,6 +648,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `frontier_release_evidence_smoke.py` | Verifies the active product contract's promoted frontier release-evidence report, rerun-promoted detectability/multiple-testing tracks, optional input-manifest gates, and release-evidence manifest without loading a model. |
 | `frontier_artifact_reference_smoke.py` | Runs the active frontier artifact-reference audit over repository docs, verifying referenced v6/v1.9 artifacts and manifests are present and require no repair actions without touching the real release registry. |
 | `build_frontier_status_report.py` | Builds a read-only frontier status snapshot from a release candidate, ProductPromotionContract, and optional evidence-gap plan, separating productized promoted evidence from research queues, optionally refreshing stale research queues from their source report, recording queue lifecycle/source-alignment status so superseded historical gaps are not confused with current blockers, and optionally writing manifest/registry metadata. |
+| `summarize_unresolved_frontier_evidence.py` | Summarizes unresolved frontier evidence lanes into a read-only non-evidence closure artifact with lane statuses and next actions; `compare_release_candidates.py` and `run_release_candidate_registry_workflow.py` can require the summary to promote with zero open next actions before `frontier_audit` release candidates pass. |
 | `plan_frontier_research_queue_commands.py` | Converts a refreshed frontier status report, evidence-gap plan, or unresolved frontier evidence summary into a non-executing command plan with action provenance, queue lifecycle/source-alignment metadata, command templates, placeholder counts, required inputs, planned outputs, optional `--only-active-research-queue` filtering for closed/superseded status queues, and optional manifest/registry metadata. Unresolved summaries lower blocked citation alignment and partial world-model rule lanes into reviewable command templates without filling evidence values. |
 | `scaffold_frontier_research_queue_bindings.py` | Generates a review scaffold and unbound bindings skeleton from a frontier research queue command plan, including ordered placeholder/input review records plus command-level report, sidecar, output-dir, and manifest path suggestions without auto-binding values. |
 | `stage_frontier_research_queue_binding_suggestions.py` | Copies only non-review-required scaffold suggestions into partial `bound_commands` for review, optionally binding same-action upstream child-output links, while leaving source-backed inputs, review status, and execution gates unapproved. |
