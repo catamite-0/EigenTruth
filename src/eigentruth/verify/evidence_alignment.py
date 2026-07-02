@@ -78,6 +78,7 @@ class EvidenceAlignmentPolicy:
     """Lexical slot-coverage thresholds for claim/evidence alignment."""
 
     min_keyword_overlap: float = 0.2
+    min_refute_keyword_overlap: float = 0.5
     min_number_recall: float = 1.0
     min_entity_recall: float = 0.5
     require_cited_evidence: bool = False
@@ -95,6 +96,11 @@ class EvidenceAlignmentPolicy:
         )
         object.__setattr__(
             self,
+            "min_refute_keyword_overlap",
+            _rate_float(self.min_refute_keyword_overlap, name="min_refute_keyword_overlap"),
+        )
+        object.__setattr__(
+            self,
             "min_entity_recall",
             _rate_float(self.min_entity_recall, name="min_entity_recall"),
         )
@@ -108,6 +114,7 @@ class EvidenceAlignmentPolicy:
         """Build a policy from a JSON-like mapping."""
         return cls(
             min_keyword_overlap=float(data.get("min_keyword_overlap", 0.2)),
+            min_refute_keyword_overlap=float(data.get("min_refute_keyword_overlap", 0.5)),
             min_number_recall=float(data.get("min_number_recall", 1.0)),
             min_entity_recall=float(data.get("min_entity_recall", 0.5)),
             require_cited_evidence=_coerce_bool(
@@ -120,6 +127,7 @@ class EvidenceAlignmentPolicy:
         """Return a JSON-ready policy payload."""
         return {
             "min_keyword_overlap": self.min_keyword_overlap,
+            "min_refute_keyword_overlap": self.min_refute_keyword_overlap,
             "min_number_recall": self.min_number_recall,
             "min_entity_recall": self.min_entity_recall,
             "require_cited_evidence": self.require_cited_evidence,
@@ -510,10 +518,12 @@ def _alignment_record_for_claim(
     entity_recall = _recall(claim_features.entities, evidence_features.entities)
     missing_numbers = _missing_items(claim_features.numbers, evidence_features.numbers)
     missing_entities = _missing_items(claim_features.entities, evidence_features.entities)
+    alternate_numbers = _alternate_items(evidence_features.numbers, claim_features.numbers)
     best_overlap = _recall(claim_features.keywords, best_features.keywords) or 0.0
+    best_entity_recall = _recall(claim_features.entities, best_features.entities)
     negation_mismatch = (
         bool(claim_features.keywords)
-        and best_overlap >= policy.min_keyword_overlap
+        and best_overlap >= policy.min_refute_keyword_overlap
         and claim_features.negated != best_features.negated
     )
     issue_codes: list[str] = []
@@ -521,6 +531,10 @@ def _alignment_record_for_claim(
         issue_codes.append("low_keyword_overlap")
     if number_recall is not None and number_recall < policy.min_number_recall:
         issue_codes.append("missing_claim_number")
+        if best_overlap < policy.min_refute_keyword_overlap:
+            issue_codes.append("low_refute_keyword_overlap")
+        if not alternate_numbers:
+            issue_codes.append("no_alternate_evidence_number")
     if entity_recall is not None and entity_recall < policy.min_entity_recall:
         issue_codes.append("missing_claim_entity")
     if negation_mismatch:
@@ -552,7 +566,13 @@ def _alignment_record_for_claim(
         citation_references=references,
         matched_citation_references=matched_references,
         issue_codes=tuple(issue_codes),
-        metadata={"selected_evidence": tuple(_evidence_summary(item) for item in selected_evidence[:5])},
+        metadata={
+            "alternate_numbers": alternate_numbers,
+            "best_entity_recall": best_entity_recall,
+            "best_keyword_overlap": best_overlap,
+            "min_refute_keyword_overlap": policy.min_refute_keyword_overlap,
+            "selected_evidence": tuple(_evidence_summary(item) for item in selected_evidence[:5]),
+        },
     )
 
 
@@ -704,7 +724,15 @@ def _alignment_strength(record: EvidenceAlignmentRecord) -> float:
 
 def _strong_misalignment(record: EvidenceAlignmentRecord) -> bool:
     codes = set(record.issue_codes)
-    return bool(codes & {"missing_claim_number", "negation_mismatch", "missing_cited_evidence"})
+    if "negation_mismatch" in codes or "missing_cited_evidence" in codes:
+        return True
+    if "missing_claim_number" in codes:
+        return not (codes & {
+            "low_keyword_overlap",
+            "low_refute_keyword_overlap",
+            "no_alternate_evidence_number",
+        })
+    return False
 
 
 def _keyword_tokens(text: str) -> tuple[str, ...]:
@@ -751,6 +779,11 @@ def _recall(reference: Sequence[str], observed: Sequence[str]) -> float | None:
 def _missing_items(reference: Sequence[str], observed: Sequence[str]) -> tuple[str, ...]:
     observed_set = set(observed)
     return tuple(item for item in reference if item not in observed_set)
+
+
+def _alternate_items(observed: Sequence[str], reference: Sequence[str]) -> tuple[str, ...]:
+    reference_set = set(reference)
+    return tuple(item for item in observed if item not in reference_set)
 
 
 def _mean(values: Sequence[float]) -> float | None:
@@ -896,6 +929,7 @@ _STOPWORDS = {
     "have",
     "her",
     "his",
+    "how",
     "into",
     "its",
     "more",
@@ -918,7 +952,12 @@ _STOPWORDS = {
     "those",
     "was",
     "were",
+    "what",
+    "when",
+    "where",
     "which",
+    "who",
+    "why",
     "will",
     "with",
     "would",

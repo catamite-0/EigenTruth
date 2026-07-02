@@ -87,6 +87,13 @@ _VERIFIER_CACHE_KEY_MODES = {
 }
 _NUMBER_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_])-?\d+(?:,\d{3})*(?:\.\d+)?%?")
 _CITATION_TOKEN_RE = re.compile(r"\[[A-Za-z0-9_.:/#?=&%+-]{1,80}\]|(?:doi|arxiv):\S+", re.IGNORECASE)
+_RETRIEVAL_ALIGNMENT_POLICY = {
+    "min_keyword_overlap": 0.2,
+    "min_refute_keyword_overlap": 0.5,
+    "min_number_recall": 1.0,
+    "min_entity_recall": 0.5,
+    "require_cited_evidence": False,
+}
 
 
 @dataclass(frozen=True)
@@ -704,24 +711,14 @@ def _verify_records(
         key = stable_cache_key({
             "documents": documents,
             "verifier": "EvidenceAlignmentVerifier",
-            "policy": {
-                "min_keyword_overlap": 0.2,
-                "min_number_recall": 1.0,
-                "min_entity_recall": 0.5,
-                "require_cited_evidence": False,
-            },
+            "policy": _RETRIEVAL_ALIGNMENT_POLICY,
         })
         runner = retrieval_alignment_runners.get(key)
         if runner is None:
             runner = CachedVerifier(
                 EvidenceAlignmentVerifier(
                     evidence=documents,
-                    policy={
-                        "min_keyword_overlap": 0.2,
-                        "min_number_recall": 1.0,
-                        "min_entity_recall": 0.5,
-                        "require_cited_evidence": False,
-                    },
+                    policy=_RETRIEVAL_ALIGNMENT_POLICY,
                 ),
                 cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
@@ -1093,6 +1090,7 @@ def _verify_records(
                 )
                 hit_documents = tuple(hit.to_dict() for hit in hits)
             qa_documents = hit_documents
+            has_retrieval_alignment_signal = _record_has_retrieval_alignment_signal(record)
             if qa_documents and retrieval_qa_result is None:
                 runner = retrieval_qa_runner(qa_documents)
                 if runner is not None:
@@ -1120,7 +1118,7 @@ def _verify_records(
                 if final.status in {
                     VerificationStatus.INSUFFICIENT_EVIDENCE,
                     VerificationStatus.NOT_APPLICABLE,
-                } and hit_documents and _record_has_retrieval_alignment_signal(record):
+                } and hit_documents and has_retrieval_alignment_signal:
                     attempted_routes.append("retrieval_groundedness")
                     retrieval_alignment_result = _timed_verify(
                         route_timings,
@@ -1129,18 +1127,14 @@ def _verify_records(
                         claim=record.claim,
                         context={"statement": record.metadata.get("statement", {})},
                     )
-                    if retrieval_alignment_result.status in {
-                        VerificationStatus.SUPPORTED,
-                        VerificationStatus.REFUTED,
-                    }:
-                        final = retrieval_alignment_result
-                        selected_route = "retrieval_groundedness"
-                        selected_verifier = "EvidenceAlignmentVerifier"
-                        selected_retrieval_hits = hit_documents
+                    selected_route = "retrieval_groundedness"
+                    selected_verifier = "EvidenceAlignmentVerifier"
+                    selected_retrieval_hits = hit_documents
+                    final = retrieval_alignment_result
                 if final.status in {
                     VerificationStatus.INSUFFICIENT_EVIDENCE,
                     VerificationStatus.NOT_APPLICABLE,
-                } and hit_documents:
+                } and hit_documents and not has_retrieval_alignment_signal:
                     attempted_routes.append("retrieval_groundedness")
                     final_evidence = tuple(record.initial_evidence) + hit_documents
                     final = _timed_verify(
@@ -2314,12 +2308,7 @@ def _verification_trace_cache_key(
         "retrieval_alignment_verifier": {
             "type": "EvidenceAlignmentVerifier",
             "enabled_for_numeric_or_cited_answers": True,
-            "policy": {
-                "min_keyword_overlap": 0.2,
-                "min_number_recall": 1.0,
-                "min_entity_recall": 0.5,
-                "require_cited_evidence": False,
-            },
+            "policy": dict(_RETRIEVAL_ALIGNMENT_POLICY),
         },
         "transition_verifier": {
             "type": "StateTransitionVerifier",
@@ -3090,12 +3079,7 @@ def build_verifier_ensemble_report(
                 if isinstance(run.get("retrieval_alignment"), Mapping)
             ),
             "source": "retrieval_hits",
-            "policy": {
-                "min_keyword_overlap": 0.2,
-                "min_number_recall": 1.0,
-                "min_entity_recall": 0.5,
-                "require_cited_evidence": False,
-            },
+            "policy": dict(_RETRIEVAL_ALIGNMENT_POLICY),
             "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "state_verifier": {

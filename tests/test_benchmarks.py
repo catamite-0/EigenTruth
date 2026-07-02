@@ -9487,24 +9487,24 @@ def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(
             "scores": {"truth_proj": [0.1, 0.2, 0.3, 0.9]},
             "statements": [
                 {
-                    "question": "What is the population of the country?",
+                    "question": "What is the population of Afghanistan?",
                     "answer": "The population of the country is 42,647,492.",
-                    "text": "What is the population of the country? The population of the country is 42,647,492.",
+                    "text": "What is the population of Afghanistan? The population of Afghanistan is 42,647,492.",
                 },
                 {
-                    "question": "What is the population of the country?",
+                    "question": "What is the population of Afghanistan?",
                     "answer": "The population of the country is 42,647,492.",
-                    "text": "What is the population of the country? The population of the country is 42,647,492.",
+                    "text": "What is the population of Afghanistan? The population of Afghanistan is 42,647,492.",
                 },
                 {
-                    "question": "What is the population of the country?",
+                    "question": "What is the population of Afghanistan?",
                     "answer": "The population of the country is 42,647,492.",
-                    "text": "What is the population of the country? The population of the country is 42,647,492.",
+                    "text": "What is the population of Afghanistan? The population of Afghanistan is 42,647,492.",
                 },
                 {
-                    "question": "What is the population of the country?",
+                    "question": "What is the population of Afghanistan?",
                     "answer": "The population of the country is 330 million.",
-                    "text": "What is the population of the country? The population of the country is 330 million.",
+                    "text": "What is the population of Afghanistan? The population of Afghanistan is 330 million.",
                 },
             ],
         }),
@@ -9514,7 +9514,7 @@ def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(
         json.dumps({
             "records": [
                 {
-                    "claim": "What is the population of the country? The population of the country is 42,647,492.",
+                    "claim": "What is the population of Afghanistan? The population of Afghanistan is 42,647,492.",
                     "claim_id": "c1",
                     "retrieval_documents": [
                         {
@@ -9527,7 +9527,7 @@ def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(
                     ],
                 },
                 {
-                    "claim": "What is the population of the country? The population of the country is 42,647,492.",
+                    "claim": "What is the population of Afghanistan? The population of Afghanistan is 42,647,492.",
                     "claim_id": "c2",
                     "retrieval_documents": [
                         {
@@ -9540,7 +9540,7 @@ def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(
                     ],
                 },
                 {
-                    "claim": "What is the population of the country? The population of the country is 42,647,492.",
+                    "claim": "What is the population of Afghanistan? The population of Afghanistan is 42,647,492.",
                     "claim_id": "c3",
                     "retrieval_documents": [
                         {
@@ -9553,7 +9553,7 @@ def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(
                     ],
                 },
                 {
-                    "claim": "What is the population of the country? The population of the country is 330 million.",
+                    "claim": "What is the population of Afghanistan? The population of Afghanistan is 330 million.",
                     "claim_id": "c4",
                     "retrieval_documents": [
                         {
@@ -9585,9 +9585,119 @@ def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(
     route = run["route_summary"]["by_route"]["retrieval_groundedness"]
 
     assert payload["retrieval_alignment_verifier"]["enabled"] is True
-    assert run["retrieval_alignment"]["decided_records"] == 1
+    assert run["retrieval_alignment"]["decided_records"] == 4
     assert route["statuses"]["refuted"] == 1
+    assert route["statuses"]["supported"] == 3
     assert run["route_quality"]["retrieval_groundedness"]["false_refuted_rate"] == pytest.approx(1.0)
+    assert run["route_quality"]["retrieval_groundedness"]["true_supported_rate"] == pytest.approx(1.0)
+
+
+def test_verifier_ensemble_does_not_token_fallback_for_numeric_alignment_gap(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    verified_path = tmp_path / "verified.jsonl"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {
+                    "question": "What is the population of Atlantis?",
+                    "answer": "The population of Atlantis is 42.",
+                    "text": "What is the population of Atlantis? The population of Atlantis is 42.",
+                },
+                {
+                    "question": "What is the population of Atlantis?",
+                    "answer": "The population of Atlantis is 42.",
+                    "text": "What is the population of Atlantis? The population of Atlantis is 42.",
+                },
+                {
+                    "question": "What is the population of Atlantis?",
+                    "answer": "The population of Atlantis is 42.",
+                    "text": "What is the population of Atlantis? The population of Atlantis is 42.",
+                },
+                {
+                    "question": "What is the population of Atlantis?",
+                    "answer": "The population of Atlantis is 42.",
+                    "text": "What is the population of Atlantis? The population of Atlantis is 42.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "What is the population of Atlantis? The population of Atlantis is 42.",
+                    "claim_id": "c1",
+                    "retrieval_documents": [
+                        {
+                            "text": "The population of Atlantis is documented in local records.",
+                            "source": "synthetic:population",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the population of Atlantis? The population of Atlantis is 42.",
+                    "claim_id": "c2",
+                    "retrieval_documents": [
+                        {
+                            "text": "The population of Atlantis is documented in local records.",
+                            "source": "synthetic:population",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the population of Atlantis? The population of Atlantis is 42.",
+                    "claim_id": "c3",
+                    "retrieval_documents": [
+                        {
+                            "text": "The population of Atlantis is documented in local records.",
+                            "source": "synthetic:population",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the population of Atlantis? The population of Atlantis is 42.",
+                    "claim_id": "c4",
+                    "retrieval_documents": [
+                        {
+                            "text": "The population of Atlantis is documented in local records.",
+                            "source": "synthetic:population",
+                        },
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=0.0,
+        retrieval_limit=1,
+        verified_records_path=verified_path,
+    )
+    run = payload["runs"][0]
+    route = run["route_summary"]["by_route"]["retrieval_groundedness"]
+    records = [json.loads(line) for line in verified_path.read_text(encoding="utf-8").splitlines()]
+
+    assert run["retrieval_alignment"]["records_with_signal"] == 4
+    assert run["retrieval_alignment"]["decided_records"] == 0
+    assert route["statuses"]["insufficient_evidence"] == 4
+    assert {record["record"]["final"]["metadata"]["decision_rule"] for record in records} == {
+        "slot_evidence_alignment",
+    }
+    assert all(record["record"]["route"]["selected_verifier"] == "EvidenceAlignmentVerifier" for record in records)
 
 
 def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifier_path(tmp_path):

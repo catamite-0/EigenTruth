@@ -3135,6 +3135,48 @@ def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
     assert report["summary"]["misalignment_rate"] == pytest.approx(1.0)
 
 
+def test_evidence_alignment_verifier_does_not_refute_unrelated_numeric_evidence():
+    claim = Claim("AlphaCorp reported 42 stores in 2025.", claim_id="alpha")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "Unrelated health study table reports 41 participants in 2025.",
+                "source": "external:unrelated",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    record = report["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "low_keyword_overlap" in record["issue_codes"]
+    assert "low_refute_keyword_overlap" in record["issue_codes"]
+
+
+def test_evidence_alignment_verifier_does_not_refute_number_omission_without_alternate_number():
+    claim = Claim("AlphaCorp reported 42 stores in 2025.", claim_id="alpha")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "AlphaCorp reported stores across its retail segment in 2025.",
+                "source": "annual-report",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    record = report["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "no_alternate_evidence_number" in record["issue_codes"]
+    assert record["metadata"]["alternate_numbers"] == ()
+
+
 def test_audit_evidence_alignment_uses_context_retrieval_hits():
     claim = Claim("BetaLab had no offices in Paris.", claim_id="beta")
 
