@@ -1,0 +1,48 @@
+{
+  "config": {
+    "fetch_pages": true,
+    "max_seed_urls_per_task": null,
+    "max_tasks": null,
+    "max_text_chars": 6000,
+    "min_delay_seconds": 0.75,
+    "provider": "seeded_url_official",
+    "source_family": "official",
+    "timeout_seconds": 30.0
+  },
+  "errors": [],
+  "metadata": {
+    "stage": "external_entity_binding_official_url_seed"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-official-url-handoff-v1/official-source-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-official-url-handoff-v1/entity-binding-source-family-collection-tasks.jsonl",
+    "url_seeds": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-official-url-handoff-v1/official-url-seeds.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "domain_counts": {
+      "www.elongold.com": 1
+    },
+    "error_count": 0,
+    "fetch_status_counts": {
+      "fetched": 1
+    },
+    "fetched_page_count": 2,
+    "matched_seed_count": 2,
+    "provider_counts": {
+      "elongold_official_site": 1
+    },
+    "seed_count": 2,
+    "skipped_duplicate_count": 1,
+    "source_document_count": 1,
+    "source_family_counts": {
+      "official": 1
+    },
+    "task_count": 4,
+    "task_source_family_counts": {
+      "official": 4
+    }
+  },
+  "workflow": "seeded_url_source_family_catalog_adapter"
+}

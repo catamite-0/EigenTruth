@@ -1,0 +1,60 @@
+{
+  "artifacts": {
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-search-requests.jsonl",
+      "sha256": "6d3d7af489cd96976989246f5e7a5d8c39f1c97a5e21f7b097f07e3b82e777d0",
+      "size_bytes": 5186
+    },
+    "entity_binding_citation_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-search-handoff.json",
+      "sha256": "7f3e58b0d18ccbdde5ffdc0ef06efc0763a85b93741bbdf7a31feafe9f0bd536",
+      "size_bytes": 14946
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-citation-collection-v1/entity-binding-plan.json",
+      "sha256": "905931f723500dca23b1aafc02a4ba013b9aa3fe641fcf76c93ff8b63cd37d46",
+      "size_bytes": 58096
+    },
+    "source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-source-docs.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "source_family_collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-source-family-collection-tasks.jsonl",
+      "sha256": "abc83692f6ddc6ed09fd7e81f0706f388066dc93460a0af7f37b5dfd5075f534",
+      "size_bytes": 3864
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 4,
+    "corpus_document_count": 0,
+    "source_document_count": 0,
+    "stage": "external_entity_binding_official_url_seed",
+    "status": "ready_for_external_adapter",
+    "workflow": "world_model_rule_entity_binding_citation_search_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

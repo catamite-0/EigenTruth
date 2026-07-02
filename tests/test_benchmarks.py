@@ -35249,6 +35249,119 @@ def test_world_model_rule_entity_binding_citation_corpus_collector_fills_sesame_
     assert payload["label_usage"]["collector_approves_entity_bindings"] is False
 
 
+def test_world_model_rule_entity_binding_citation_handoff_feeds_collector():
+    handoff_module = importlib.import_module(
+        "benchmarks.build_world_model_rule_entity_binding_citation_handoff"
+    )
+    collector_module = importlib.import_module(
+        "benchmarks.collect_world_model_rule_entity_bindings_from_citation_corpus"
+    )
+    plan = {
+        "workflow": "world_model_rule_entity_binding_plan",
+        "status": "needs_collection",
+        "entity_binding_requests": (),
+        "candidate_entity_bindings": (
+            {
+                "binding_id": "candidate:entity:req-elon",
+                "request_id": "rule:record-516:1",
+                "target_id": "record-516",
+                "question": (
+                    "This American producer was born in the 70s and is a "
+                    "handsome multi-talented figure with a talent for comedy. "
+                    'His name is "Elon" what?'
+                ),
+                "subject_entity": "Elon",
+                "answer_entity": "Elon Musk",
+                "expected_entity": "",
+                "requested_role": "name_completion",
+                "source_citation": "",
+                "review_status": "needs_review",
+                "not_verifier_evidence": True,
+                "candidate_status": "needs_source_evidence",
+            },
+            {
+                "binding_id": "candidate:entity:req-boston",
+                "request_id": "rule:record-498:1",
+                "target_id": "record-498",
+                "question": (
+                    "Nicknamed the 'Pilgrims', this football team based in "
+                    "Boston plays in a national league and had a notable year "
+                    "in 2001. Name the team."
+                ),
+                "subject_entity": "Pilgrims",
+                "answer_entity": "The Patriots",
+                "expected_entity": "",
+                "requested_role": "team_name",
+                "source_citation": "",
+                "review_status": "needs_review",
+                "not_verifier_evidence": True,
+                "candidate_status": "needs_source_evidence",
+            },
+        ),
+        "skipped_bindings": (),
+    }
+    preflight = handoff_module.build_world_model_rule_entity_binding_citation_handoff(plan)
+    requests = preflight["adapter_requests"]
+    adapter_results = (
+        {
+            "request_id": requests[0]["request_id"],
+            "results": (
+                {
+                    "title": "Elon Gold",
+                    "text": (
+                        "Elon Gold is an American comedian, actor, writer, and "
+                        "producer born in 1970."
+                    ),
+                    "url": "https://example.org/elon-gold",
+                    "source": "wikipedia:en:unit-elon",
+                    "provider": "wikipedia_mediawiki",
+                    "rank": 1,
+                },
+            ),
+        },
+        {
+            "request_id": requests[1]["request_id"],
+            "results": (
+                {
+                    "title": "Boston United F.C.",
+                    "text": "Boston United Football Club is nicknamed the Pilgrims.",
+                    "url": "https://example.org/boston-united",
+                    "source": "wikipedia:en:unit-boston",
+                    "provider": "wikipedia_mediawiki",
+                    "rank": 1,
+                },
+            ),
+        },
+    )
+
+    handoff = handoff_module.build_world_model_rule_entity_binding_citation_handoff(
+        plan,
+        adapter_results=adapter_results,
+        max_results_per_request=1,
+    )
+    collected = collector_module.collect_world_model_rule_entity_bindings_from_citation_corpus(
+        plan,
+        citation_documents=handoff["source_documents"],
+    )
+    candidates = {item["binding_id"]: item for item in collected["candidate_entity_bindings"]}
+
+    assert preflight["status"] == "ready_for_external_adapter"
+    assert preflight["summary"]["adapter_request_count"] == 2
+    assert all("target_id" not in request for request in requests)
+    assert all("answer_entity" not in request for request in requests)
+    assert all("expected_entity" not in request for request in requests)
+    assert requests[0]["query"] == "Elon american producer born 70s 70 comedy"
+    assert requests[1]["query"] == "pilgrims football team boston national league 2001"
+    assert handoff["status"] == "collected"
+    assert handoff["summary"]["source_document_count"] == 2
+    assert handoff["source_documents"][0]["source_family"] == "reference"
+    assert "target_id" not in handoff["source_documents"][0]["metadata"]
+    assert "model_answer" not in handoff["source_documents"][0]["metadata"]
+    assert collected["summary"]["enriched_candidate_count"] == 2
+    assert candidates["candidate:entity:req-elon"]["expected_entity"] == "Elon Gold"
+    assert candidates["candidate:entity:req-boston"]["expected_entity"] == "Boston United"
+
+
 def test_world_model_rule_entity_binding_citation_corpus_collector_run_writes_manifest_and_registry(
     tmp_path,
 ):

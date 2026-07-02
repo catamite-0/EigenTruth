@@ -3858,16 +3858,21 @@ decision is `high/abstain`, and the action executor records a dry-run abstain
 result. The handoff remains target-specific and source-citation backed; pending
 rule-input rows remain non-evidence work items.
 
-The audited unresolved-rule requeue can now fill its four entity-role inputs
-from explicit source-backed bindings and pass the same adapter/promotion gate:
+The audited unresolved-rule requeue can now fill all eight entity-role inputs
+from explicit source-backed bindings and pass the same adapter/promotion gate.
+The external/official citation path keeps source discovery, review, fill, and
+promotion as separate boundaries:
 
 ```bash
 REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
 REQUEUED_STUBS=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
 ENTITY_BINDING_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-plan
-ENTITY_BINDING_CITATION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-citation-collection
-ENTITY_BINDING_REVIEW=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-review
-ENTITY_BINDING_GATE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-gate
+ENTITY_BINDING_LOCAL_CITATION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-citation-collection
+ENTITY_WIKI_HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-wikipedia-handoff
+ENTITY_OFFICIAL_HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-official-handoff
+ENTITY_BINDING_CITATION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-external-official-citation-collection
+ENTITY_BINDING_REVIEW=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-external-official-review
+ENTITY_BINDING_GATE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-external-official-gate
 ENTITY_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill
 ENTITY_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter
 ENTITY_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate
@@ -3880,6 +3885,57 @@ python benchmarks/plan_world_model_rule_entity_bindings.py \
 python benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py \
   --entity-binding-plan "$ENTITY_BINDING_PLAN/entity-binding-plan.json" \
   --citation-corpus artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json \
+  --output-dir "$ENTITY_BINDING_LOCAL_CITATION"
+
+python benchmarks/build_world_model_rule_entity_binding_citation_handoff.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --output-dir "$ENTITY_WIKI_HANDOFF" \
+  --max-results-per-request 3
+
+python benchmarks/run_wikipedia_citation_search_adapter.py \
+  --input "$ENTITY_WIKI_HANDOFF/entity-binding-citation-search-requests.jsonl" \
+  --output "$ENTITY_WIKI_HANDOFF/wikipedia-citation-search-results.jsonl" \
+  --max-results 3 \
+  --max-query-variants 4 \
+  --workers 2 \
+  --min-delay-seconds 0.75 \
+  --retries 4
+
+python benchmarks/build_world_model_rule_entity_binding_citation_handoff.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --adapter-results "$ENTITY_WIKI_HANDOFF/wikipedia-citation-search-results.jsonl" \
+  --output-dir "$ENTITY_WIKI_HANDOFF" \
+  --max-results-per-request 3
+
+python benchmarks/build_world_model_rule_entity_binding_citation_handoff.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --output-dir "$ENTITY_OFFICIAL_HANDOFF" \
+  --source-family official
+
+jq -c 'select((.query // "") | test("^Elon "; "i")) |
+  {task_id, url:"https://www.elongold.com/bio",
+   provider:"elongold_official_site",
+   source:"seeded_url:official:elongold-bio",
+   seed_key:"elongold-official-bio",
+   title:"BIO - Elon Gold",
+   matched_query:.query,
+   description:"Official Elon Gold biography page."}' \
+  "$ENTITY_OFFICIAL_HANDOFF/entity-binding-source-family-collection-tasks.jsonl" \
+  > "$ENTITY_OFFICIAL_HANDOFF/official-url-seeds.jsonl"
+
+python benchmarks/run_seeded_url_source_family_catalog_adapter.py \
+  --tasks "$ENTITY_OFFICIAL_HANDOFF/entity-binding-source-family-collection-tasks.jsonl" \
+  --seeds "$ENTITY_OFFICIAL_HANDOFF/official-url-seeds.jsonl" \
+  --output "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog.jsonl" \
+  --report-json "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog-report.json" \
+  --artifact-manifest "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog-manifest.json" \
+  --source-family official \
+  --provider seeded_url_official
+
+python benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --citation-corpus "$ENTITY_WIKI_HANDOFF/entity-binding-citation-source-docs.jsonl" \
+  --citation-corpus "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog.jsonl" \
   --output-dir "$ENTITY_BINDING_CITATION"
 
 python benchmarks/review_world_model_rule_entity_binding_candidates.py \
@@ -3887,7 +3943,7 @@ python benchmarks/review_world_model_rule_entity_binding_candidates.py \
   --output-dir "$ENTITY_BINDING_REVIEW"
 
 python benchmarks/promote_world_model_rule_entity_binding_candidates.py \
-  --entity-binding-plan "$ENTITY_BINDING_PLAN/entity-binding-plan.json" \
+  --entity-binding-plan "$ENTITY_BINDING_CITATION/entity-binding-plan.json" \
   --review-decisions "$ENTITY_BINDING_REVIEW/review-decisions.jsonl" \
   --output-dir "$ENTITY_BINDING_GATE"
 
@@ -3909,12 +3965,11 @@ python benchmarks/promote_world_model_rule_candidates.py \
 ```
 
 The registered requeued entity-binding chain is `filled -> observed -> promote`:
-`4/4` source-backed entity-role tasks are filled, `4/4` adapter stubs execute as
-candidate `refuted` rows, and the promotion gate promotes all four with `0`
-blocked and `0` pending. The two Sesame Street rows use the fictional-location
-citation, and the two Elon rows use the Elon Gold citation; both citation paths
-remain non-evidence adapter inputs until the promotion gate verifies matching
-source citations in the deterministic candidate evidence.
+`8/8` source-backed entity-role tasks are filled, `8/8` adapter stubs execute,
+and the promotion gate promotes all eight with `0` blocked and `0` pending. The
+source inputs remain non-evidence adapter inputs until the entity-binding review
+and promotion gates verify matching source citations in the deterministic
+candidate evidence.
 
 The entity-binding planner can use source-alignment records to draft
 `candidate-entity-bindings.jsonl`, but these rows stay `needs_review` and
@@ -3928,17 +3983,15 @@ review-decision template and only materializes `approved-entity-bindings.jsonl`
 after explicit approved review decisions; only that approved sidecar should be
 passed to the fill command.
 
-The current `frontier-release-evidence` citation-collection entity-binding run
-records that reviewed boundary explicitly:
-`unresolved-frontier-research-entity-binding-citation-collection-v1` enriches
-`2/8` candidates from local Wikidata citation-corpus snippets, raising
-ready-for-review candidates to `4/8`. Its rule review approves `4/8` and marks
-`4/8` as `needs_more_evidence`; the reviewed promotion gate materializes `4`
-approved sidecar rows; the fill/adapter/promotion chain then ends at
-`filled=4`, `executed=4`, `promoted=4`, `blocked=0`, and `pending=4`. The two
-newly promoted Sesame Street rows are `refuted` entity-role candidates, while
-the remaining four pending rows still need stronger external bindings for the
-Elon Gold and Boston United cases.
+The current `frontier-release-evidence` external/official entity-binding run
+records that reviewed boundary explicitly. Wikipedia citation search covers the
+two Boston United candidates, the official Elon Gold URL seed covers the two Elon
+Gold candidates, and
+`unresolved-frontier-research-entity-binding-external-official-citation-collection-v1`
+raises ready-for-review candidates to `8/8` with `enriched=4`. Its rule review
+approves `8/8`; the reviewed entity-binding promotion gate materializes `8`
+approved sidecar rows; the fill/adapter/rule-promotion chain ends at `filled=8`,
+`executed=8`, `promoted=8`, `blocked=0`, and `pending=0`.
 
 The unresolved numeric/calculator lane now has the same explicit fill boundary.
 It can accept an optional source-backed subject-binding sidecar to resolve only

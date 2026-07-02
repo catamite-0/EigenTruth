@@ -1,0 +1,69 @@
+{
+  "artifacts": {
+    "candidate_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidate-entity-bindings.jsonl",
+      "sha256": "4c55753a63735def2d4d917f02531b454e03d15a14fda2336dc1f9223ae0f03c",
+      "size_bytes": 18794
+    },
+    "citation_collection_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-collection-records.jsonl",
+      "sha256": "5813facd9e26fd965696743bb1a63af36ee3b89ba7315fa9ae38ac0e1fc5dee1",
+      "size_bytes": 4096
+    },
+    "citation_corpus_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-external-citation-handoff-v1/entity-binding-citation-source-docs.jsonl",
+      "sha256": "f9d6557d73ed3618de6f76ead68aa5a61e9cffd5a8740dfd8fa0b3158b8d0c34",
+      "size_bytes": 27948
+    },
+    "citation_corpus_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-official-url-handoff-v1/official-source-catalog.jsonl",
+      "sha256": "fbca475d85af77158ee097604b39eeeb4b5c781637c35ee8bad9ffff959b398b",
+      "size_bytes": 1312
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-plan.json",
+      "sha256": "b993390ae95a9be058755e59dc942cb9f8969efb140c3efc1c4add7dc8315333",
+      "size_bytes": 62579
+    },
+    "source_entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-citation-collection-v1/entity-binding-plan.json",
+      "sha256": "905931f723500dca23b1aafc02a4ba013b9aa3fe641fcf76c93ff8b63cd37d46",
+      "size_bytes": 58096
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 8,
+    "enriched_candidate_count": 4,
+    "output_workflow": "world_model_rule_entity_binding_plan",
+    "ready_for_review_candidate_count": 8,
+    "stage": "external_official_entity_binding_citation_collection",
+    "status": "ready_for_review",
+    "workflow": "world_model_rule_entity_binding_citation_corpus_collection"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

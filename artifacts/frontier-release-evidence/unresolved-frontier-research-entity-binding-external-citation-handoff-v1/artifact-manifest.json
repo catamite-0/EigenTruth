@@ -1,0 +1,76 @@
+{
+  "artifacts": {
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-search-requests.jsonl",
+      "sha256": "6d3d7af489cd96976989246f5e7a5d8c39f1c97a5e21f7b097f07e3b82e777d0",
+      "size_bytes": 5186
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikipedia-citation-search-results.jsonl",
+      "sha256": "12c13cbc2b32a12a746d09378d7d50a7e66093b3f146ef6299df008135b192c0",
+      "size_bytes": 24080
+    },
+    "entity_binding_citation_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-search-handoff.json",
+      "sha256": "ca17dd08d2ecaff16441b10ece74decd58f409a2e66f921d40d264e296a24365",
+      "size_bytes": 78650
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-citation-collection-v1/entity-binding-plan.json",
+      "sha256": "905931f723500dca23b1aafc02a4ba013b9aa3fe641fcf76c93ff8b63cd37d46",
+      "size_bytes": 58096
+    },
+    "external_retrieval_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-corpus.json",
+      "sha256": "d518b890a53a7818c7c6d16bac4e36ad146fabc48b11b267b0627f69e2f7b0ee",
+      "size_bytes": 32963
+    },
+    "source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-citation-source-docs.jsonl",
+      "sha256": "f9d6557d73ed3618de6f76ead68aa5a61e9cffd5a8740dfd8fa0b3158b8d0c34",
+      "size_bytes": 27948
+    },
+    "source_family_collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-source-family-collection-tasks.jsonl",
+      "sha256": "7c56565cd32de6629abafb4e3848791cae44d68f6b5163ecb9e9469e71e66155",
+      "size_bytes": 3868
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 4,
+    "corpus_document_count": 12,
+    "source_document_count": 12,
+    "stage": "external_entity_binding_citation_search",
+    "status": "collected",
+    "workflow": "world_model_rule_entity_binding_citation_search_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

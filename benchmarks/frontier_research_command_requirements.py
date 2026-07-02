@@ -50,6 +50,10 @@ REQUIRED_COMMAND_FLAGS = {
         "--citation-corpus",
         "--output-dir",
     ),
+    "benchmarks/build_world_model_rule_entity_binding_citation_handoff.py": (
+        "--entity-binding-plan",
+        "--output-dir",
+    ),
     "benchmarks/review_world_model_rule_entity_binding_candidates.py": (
         "--entity-binding-plan",
         "--output-dir",
