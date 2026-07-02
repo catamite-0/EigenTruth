@@ -65,6 +65,8 @@ _SOURCE_PREFIX_FAMILY_HINTS = (
     ("qa:", "reference"),
 )
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+_ANSWER_CAPITALIZED_SPAN_RE = re.compile(r"\b[A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*)*")
+_ANSWER_QUOTED_SPAN_RE = re.compile(r"[\"'“”‘’](?P<span>[^\"'“”‘’]{2,80})[\"'“”‘’]")
 _SLOT_NORMALIZE_RE = re.compile(r"[^a-z0-9\u4e00-\u9fff]+")
 _STRUCTURED_ENTITY_METADATA_KEYS = (
     "country_name",
@@ -125,6 +127,31 @@ _RERANK_STOPWORDS = {
     "whom",
     "whose",
     "why",
+}
+_ANSWER_SLOT_HINT_BLOCKLIST = {
+    "am",
+    "answer",
+    "country",
+    "data",
+    "he",
+    "i",
+    "it",
+    "it s",
+    "no",
+    "none",
+    "nothing",
+    "nowhere",
+    "population",
+    "she",
+    "sibling",
+    "siblings",
+    "statistics",
+    "there",
+    "there s",
+    "the country",
+    "total",
+    "unknown",
+    "yes",
 }
 
 
@@ -720,6 +747,7 @@ def _apply_source_family_filter(
         }
 
     plan = _source_family_plan(statement, query_field=query_field)
+    slot_binding = _statement_slot_binding_metadata(statement)
     unique_hits, duplicate_hit_count = _deduplicate_retrieval_hits(hits)
     if plan is None:
         kept = tuple(unique_hits[:limit])
@@ -732,6 +760,7 @@ def _apply_source_family_filter(
             "duplicate_hit_count": duplicate_hit_count,
             "kept_hit_count": len(kept),
             "dropped_hit_count": 0,
+            "slot_binding": slot_binding,
         }
 
     accepted_families = _compatible_source_families(plan)
@@ -791,6 +820,7 @@ def _apply_source_family_filter(
         "accepted_families": accepted_families,
         "official_source_preferred": bool(plan.official_source_preferred),
         "rationale": tuple(plan.rationale),
+        "slot_binding": slot_binding,
         "incompatible_hit_examples": tuple(incompatible_examples),
         "dropped_hit_examples": tuple(incompatible_examples),
     }
@@ -866,33 +896,49 @@ def _evidence_text_overlap(statement: Mapping[str, Any], hit: RetrievalHit) -> f
 
 def _structured_slot_match_score(statement: Mapping[str, Any], hit: RetrievalHit) -> float:
     """Score structured source metadata against the question-side fact slot."""
-    question_text = _statement_question_text(statement) or _statement_text(statement)
-    question_tokens = set(_rerank_tokens(question_text))
-    question_normalized = _normalize_slot_text(question_text)
+    slot_text = _statement_slot_text(statement)
+    slot_tokens = set(_rerank_tokens(slot_text))
+    slot_normalized = _normalize_slot_text(slot_text)
     metadata = dict(hit.metadata)
 
     entity_score = max(
         (
-            _slot_value_match_score(question_normalized, question_tokens, value)
+            _slot_value_match_score(slot_normalized, slot_tokens, value)
             for value in _metadata_slot_values(metadata, _STRUCTURED_ENTITY_METADATA_KEYS)
         ),
         default=0.0,
     )
     property_score = max(
         (
-            _property_slot_match_score(question_tokens, value)
+            _property_slot_match_score(slot_tokens, value)
             for value in _metadata_slot_values(metadata, _STRUCTURED_PROPERTY_METADATA_KEYS)
         ),
         default=0.0,
     )
     code_score = max(
         (
-            _code_slot_match_score(question_normalized, value)
+            _code_slot_match_score(slot_normalized, value)
             for value in _metadata_slot_values(metadata, _STRUCTURED_CODE_METADATA_KEYS)
         ),
         default=0.0,
     )
     return round(entity_score + property_score + code_score, 6)
+
+
+def _statement_slot_text(statement: Mapping[str, Any]) -> str:
+    question_text = _statement_question_text(statement) or _statement_text(statement)
+    answer_hints = _answer_slot_hints(statement, question_text=question_text)
+    return " ".join(part for part in (question_text, *answer_hints) if part)
+
+
+def _statement_slot_binding_metadata(statement: Mapping[str, Any]) -> dict[str, Any]:
+    question_text = _statement_question_text(statement) or _statement_text(statement)
+    answer_hints = _answer_slot_hints(statement, question_text=question_text)
+    return {
+        "answer_slot_hints": answer_hints,
+        "answer_slot_hint_count": len(answer_hints),
+        "mode": "question_plus_answer_entity_hints" if answer_hints else "question_only",
+    }
 
 
 def _statement_question_text(statement: Mapping[str, Any]) -> str:
@@ -903,6 +949,82 @@ def _statement_question_text(statement: Mapping[str, Any]) -> str:
     if isinstance(metadata, Mapping):
         return str(metadata.get("question", "")).strip()
     return ""
+
+
+def _answer_slot_hints(
+    statement: Mapping[str, Any],
+    *,
+    question_text: str,
+) -> tuple[str, ...]:
+    answer = str(statement.get("answer", "")).strip()
+    if not answer:
+        return ()
+    question_normalized = _normalize_slot_text(question_text)
+    question_tokens = set(_rerank_tokens(question_text))
+    hints: list[str] = []
+    for candidate in _answer_entity_candidates(answer, max_items=8):
+        normalized = _normalize_slot_text(candidate)
+        if not _valid_answer_slot_hint(
+            candidate,
+            normalized=normalized,
+            question_tokens=question_tokens,
+        ):
+            continue
+        if normalized and normalized in question_normalized:
+            continue
+        hints.append(candidate)
+    return _unique(hints)
+
+
+def _answer_entity_candidates(answer: str, *, max_items: int) -> tuple[str, ...]:
+    candidates: list[str] = []
+    for match in _ANSWER_QUOTED_SPAN_RE.finditer(answer):
+        candidates.append(_clean_answer_slot_candidate(match.group("span")))
+    for match in _ANSWER_CAPITALIZED_SPAN_RE.finditer(answer):
+        candidates.append(_strip_answer_leading_entity_words(_clean_answer_slot_candidate(match.group(0))))
+    return _unique(candidates)[: int(max_items)]
+
+
+def _clean_answer_slot_candidate(value: str) -> str:
+    return str(value).strip(" \t\r\n?.!,;:\"'()[]{}")
+
+
+def _strip_answer_leading_entity_words(value: str) -> str:
+    parts = value.split()
+    while len(parts) > 1 and parts[0].casefold() in {"a", "an", "the", "this", "that", "these", "those", "all"}:
+        parts.pop(0)
+    return " ".join(parts)
+
+
+def _valid_answer_slot_hint(
+    candidate: str,
+    *,
+    normalized: str,
+    question_tokens: set[str],
+) -> bool:
+    if not normalized or normalized in _ANSWER_SLOT_HINT_BLOCKLIST:
+        return False
+    if any(character.isdigit() for character in normalized):
+        return False
+    tokens = tuple(token for token in normalized.split() if token)
+    if not tokens:
+        return False
+    if all(token in _RERANK_STOPWORDS or token in _ANSWER_SLOT_HINT_BLOCKLIST for token in tokens):
+        return False
+    return _has_new_proper_entity_token(candidate, question_tokens=question_tokens)
+
+
+def _has_new_proper_entity_token(candidate: str, *, question_tokens: set[str]) -> bool:
+    for match in re.finditer(r"[A-Za-z][A-Za-z&.'-]*", str(candidate)):
+        raw_token = match.group(0).strip(".'-")
+        token = raw_token.casefold()
+        if not raw_token or len(token) <= 1:
+            continue
+        if token in question_tokens or token in _RERANK_STOPWORDS or token in _ANSWER_SLOT_HINT_BLOCKLIST:
+            continue
+        if raw_token[0].isupper():
+            return True
+    return False
 
 
 def _metadata_slot_values(metadata: Mapping[str, Any], keys: Sequence[str]) -> tuple[str, ...]:

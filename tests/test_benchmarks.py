@@ -9897,6 +9897,74 @@ def test_build_evidence_fixture_planned_rerank_prefers_structured_slot_match():
     assert slot_score > 0.0
 
 
+def test_build_evidence_fixture_planned_rerank_uses_answer_entity_slot_hint():
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [1],
+        "scores": {"truth_proj": [0.9]},
+        "statements": [
+            {
+                "question": "What is the population of the country?",
+                "answer": "The population of India is 330 million.",
+                "text": "What is the population of the country? The population of India is 330 million.",
+                "metadata": {"question_type": "quantity"},
+            },
+        ],
+    }
+    shared_index_text = (
+        "What is the population of the country? population country official statistics data "
+        "World Bank Population, total"
+    )
+    corpus = (
+        {
+            "text": "World Bank official statistics data: Population, total was 403,033 in 2024.",
+            "source": "worldbank:SP.POP.TOTL:BHS:2024",
+            "score": 1.0,
+            "metadata": {
+                "provider": "worldbank",
+                "source_family": "official_statistics",
+                "country_name": "Bahamas, The",
+                "indicator_name": "Population, total",
+                "retrieval_index_text": shared_index_text,
+            },
+        },
+        {
+            "text": "World Bank official statistics data: Population, total was 1,450,935,791 in 2024.",
+            "source": "worldbank:SP.POP.TOTL:IND:2024",
+            "score": 0.6,
+            "metadata": {
+                "provider": "worldbank",
+                "source_family": "official_statistics",
+                "country_name": "India",
+                "indicator_name": "Population, total",
+                "retrieval_index_text": shared_index_text,
+            },
+        },
+    )
+
+    fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.4,
+        retrieval_limit=1,
+        query_field="citation_question",
+        include_label_metadata=False,
+        source_family_filter="planned_rerank",
+    )
+
+    retrieval = fixture["records"][0]["metadata"]["retrieval"]
+    hit = fixture["records"][0]["retrieval_documents"][0]
+
+    assert hit["source"] == "worldbank:SP.POP.TOTL:IND:2024"
+    assert retrieval["source_family_filter"]["slot_binding"] == {
+        "answer_slot_hints": ("India",),
+        "answer_slot_hint_count": 1,
+        "mode": "question_plus_answer_entity_hints",
+    }
+    assert hit["metadata"]["source_family_filter"]["structured_slot_score"] > 0.0
+
+
 def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
