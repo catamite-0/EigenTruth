@@ -7960,6 +7960,37 @@ usually semantic interpretation of good snippets rather than query coverage; the
 handoff makes that distinction reviewable before adding structured facts,
 world-model rules, or more aggressive verifier logic.
 
+## `run_retrieval_semantic_gap_review_workflow.py`
+
+Runs the retrieval semantic-gap handoff through the existing alignment
+fact-review and promotion gates in one reproducible command. It builds the
+semantic-gap queue, converts emitted `fact_candidates` into a review-only
+alignment fact corpus, applies the deterministic Wikidata subject/property/value
+rule reviewer, and reruns the promotion gate with those explicit decisions. The
+workflow can emit approved source documents for later
+`build_source_family_qa_corpus.py` / covered-fact route audits, but it does not
+promote broad retrieval correction or treat handoff requests as verifier
+evidence.
+
+```bash
+OUT=artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1
+
+python benchmarks/run_retrieval_semantic_gap_review_workflow.py \
+  --verified-records-jsonl artifacts/source-bound-sweep/verified-records.jsonl \
+  --record-indices-json artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name source-bound-retrieval-semantic-gap-review-workflow \
+  --version 0.1
+```
+
+The top-level report summarizes candidate counts, fact-review accepted/skipped
+rows, rule-review approvals, and approved source-document count. A
+`ready_for_structured_qa` status means only that reviewed structured source
+documents exist; the route-quality claim still requires building a covered-fact
+QA corpus and running the structured-QA route workflow.
+
 ## `build_external_retrieval_corpus.py`
 
 Builds an explicit external-candidate retrieval corpus from caller-supplied

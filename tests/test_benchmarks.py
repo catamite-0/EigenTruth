@@ -8301,6 +8301,102 @@ def test_retrieval_semantic_gap_handoff_extracts_description_fact_candidates():
     assert review_payload["corpus"]["summary"]["accepted_document_count"] == 1
 
 
+def test_retrieval_semantic_gap_review_workflow_promotes_closed_description(tmp_path):
+    module = importlib.import_module("benchmarks.run_retrieval_semantic_gap_review_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    records_path = tmp_path / "verified-records.jsonl"
+    output_dir = tmp_path / "semantic-gap-review-workflow"
+    manifest_path = output_dir / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    rows = [
+        {
+            "schema_version": 1,
+            "run": "synthetic",
+            "score_path": "scores.json",
+            "signal": "truth_proj",
+            "record_index": 27,
+            "label": 1,
+            "score": 0.91,
+            "record": {
+                "claim": {
+                    "text": "Bill Gates is a livestock farmer.",
+                    "claim_id": "bill-gates-description",
+                    "metadata": {},
+                },
+                "final": {
+                    "status": "insufficient_evidence",
+                    "metadata": {"decision_rule": "low_overlap"},
+                },
+                "route": {
+                    "selected_route": "retrieval_groundedness",
+                    "selected_verifier": "GroundednessVerifier",
+                    "used_retrieval": True,
+                },
+                "retrieval_hits": [
+                    {
+                        "text": (
+                            "According to Wikidata entity metadata, Bill Gates is described as "
+                            "American businessman, investor, and philanthropist (born 1955)."
+                        ),
+                        "source": "wikidata:Q5284:description",
+                        "score": 1.0,
+                        "metadata": {
+                            "provider": "source_family_catalog",
+                            "source_family": "reference",
+                        },
+                    },
+                ],
+            },
+        }
+    ]
+    records_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    payload = module.run_retrieval_semantic_gap_review_workflow(
+        verified_records_jsonl=records_path,
+        output_dir=output_dir,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="semantic-gap-review-workflow-unit",
+        version="0.1",
+        reviewer="unit-rule-reviewer",
+        reviewed_at="2026-07-02T00:00:00Z",
+        metadata={"suite": "unit"},
+    )
+    approved_docs = json.loads(
+        (output_dir / "alignment-reviewed-promotion-gate" / "approved-source-documents.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    rule_review = json.loads(
+        (output_dir / "alignment-rule-review" / "review-report.json").read_text(encoding="utf-8")
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:semantic-gap-review-workflow-unit:0.1"
+    )
+
+    assert payload["workflow"] == "retrieval_semantic_gap_review_workflow"
+    assert payload["status"] == "ready_for_structured_qa"
+    assert payload["summary"]["semantic_gap_candidate_count"] == 1
+    assert payload["summary"]["semantic_gap_fact_candidate_count"] == 1
+    assert payload["summary"]["fact_review_document_count"] == 1
+    assert payload["summary"]["rule_review_approved_count"] == 1
+    assert payload["summary"]["approved_source_document_count"] == 1
+    assert payload["label_usage"]["labels_used_for_gap_selection"] is True
+    assert rule_review["summary"]["approved_property_counts"] == {"description": 1}
+    assert approved_docs["status"] == "ready"
+    assert approved_docs["documents"][0]["metadata"]["statement_property"] == "description"
+    assert approved_docs["documents"][0]["metadata"]["value"] == (
+        "American businessman, investor, and philanthropist (born 1955)"
+    )
+    assert "label" not in approved_docs["documents"][0]["metadata"]
+    assert "model_answer" not in approved_docs["documents"][0]["metadata"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "retrieval_semantic_gap_review_workflow"
+    assert record.metadata["approved_source_document_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
     module = importlib.import_module("benchmarks.compare_manifold_distances")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")
