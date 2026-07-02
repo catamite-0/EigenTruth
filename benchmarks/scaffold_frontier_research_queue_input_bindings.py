@@ -1,8 +1,8 @@
 """Scaffold source-backed binding sidecars for frontier input requests.
 
 This workflow consumes ``frontier_research_queue_input_collection_plan`` output
-and writes editable JSONL sidecars for numeric, temporal, subject, and
-mechanism bindings. It never fills evidence values, approves review, or
+and writes editable JSONL sidecars for numeric, temporal, subject, mechanism,
+and entity-role bindings. It never fills evidence values, approves review, or
 executes downstream rule-input fill commands.
 """
 
@@ -58,6 +58,13 @@ SIDECARES = {
         "task_collection_family": "mechanism_rule_input_collection",
         "downstream_tool": "benchmarks/fill_world_model_rule_inputs_from_mechanism_bindings.py",
         "flag": "--mechanism-bindings",
+    },
+    "source_backed_entity_bindings": {
+        "key": "entity_bindings",
+        "filename": "source-backed-entity-bindings.jsonl",
+        "task_collection_family": "entity_role_rule_input_collection",
+        "downstream_tool": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
+        "flag": "--entity-bindings",
     },
 }
 

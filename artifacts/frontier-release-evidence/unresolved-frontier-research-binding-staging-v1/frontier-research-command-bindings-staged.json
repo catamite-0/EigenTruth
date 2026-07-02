@@ -1,0 +1,2415 @@
+{
+  "bindings": {
+    "fill_and_promote_remaining_world_model_rules": {
+      "bound_commands": [
+        "python benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl --numeric-bindings ... --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-1 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report.json --rule-inputs-jsonl artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-rule-inputs.jsonl --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-1 --version 0.1 --metadata closure_action=fill_and_promote_remaining_world_model_rules",
+        "python benchmarks/run_world_model_rule_authoring_adapter.py --rule-stubs artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/world-model-rule-input-requests.jsonl --rule-inputs artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-rule-inputs.jsonl --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-2 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report.json --rule-results-jsonl artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-rule-results.jsonl --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-2 --version 0.1 --metadata closure_lane=numeric_rules",
+        "python benchmarks/promote_world_model_rule_candidates.py --rule-results artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-rule-results.jsonl --rule-inputs artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-rule-inputs.jsonl --adapter-report artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report.json --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-3 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-3 --version 0.1 --metadata closure_lane=numeric_rules",
+        "python benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl --temporal-bindings ... --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-4 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report.json --rule-inputs-jsonl artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-rule-inputs.jsonl --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-4 --version 0.1 --metadata closure_action=fill_and_promote_remaining_world_model_rules",
+        "python benchmarks/run_world_model_rule_authoring_adapter.py --rule-stubs artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/world-model-rule-input-requests.jsonl --rule-inputs artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-rule-inputs.jsonl --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-5 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report.json --rule-results-jsonl artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-rule-results.jsonl --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-5 --version 0.1 --metadata closure_lane=temporal_rules",
+        "python benchmarks/promote_world_model_rule_candidates.py --rule-results artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-rule-results.jsonl --rule-inputs artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-rule-inputs.jsonl --adapter-report artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report.json --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-6 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-6 --version 0.1 --metadata closure_lane=temporal_rules",
+        "python benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl --entity-bindings ... --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-7 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report.json --rule-inputs-jsonl artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-rule-inputs.jsonl --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-7 --version 0.1 --metadata closure_action=fill_and_promote_remaining_world_model_rules",
+        "python benchmarks/run_world_model_rule_authoring_adapter.py --rule-stubs artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-authoring-adapter-v1/world-model-rule-input-requests.jsonl --rule-inputs artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-rule-inputs.jsonl --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-8 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report.json --rule-results-jsonl artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report-rule-results.jsonl --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-8 --version 0.1 --metadata closure_lane=entity_role_rules",
+        "python benchmarks/promote_world_model_rule_candidates.py --rule-results artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report-rule-results.jsonl --rule-inputs artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-rule-inputs.jsonl --adapter-report artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report.json --output-dir artifacts/fill-and-promote-remaining-world-model-rules/command-9 --json artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-promotion-report.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-promotion-report-manifest.json --registry ... --name fill-and-promote-remaining-world-model-rules-command-9 --version 0.1 --metadata closure_lane=entity_role_rules"
+      ],
+      "command_requirement_issue_count": 0,
+      "command_requirements": [
+        {
+          "command_index": 1,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--input-tasks",
+            "--numeric-bindings",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [
+            {
+              "flag": "--numeric-bindings",
+              "input": "source_backed_numeric_bindings"
+            }
+          ],
+          "script": "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 2,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--rule-stubs",
+            "--rule-inputs",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_world_model_rule_authoring_adapter.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 3,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--rule-results",
+            "--rule-inputs",
+            "--adapter-report",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/promote_world_model_rule_candidates.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 4,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--input-tasks",
+            "--temporal-bindings",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [
+            {
+              "flag": "--temporal-bindings",
+              "input": "source_backed_temporal_bindings"
+            }
+          ],
+          "script": "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 5,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--rule-stubs",
+            "--rule-inputs",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_world_model_rule_authoring_adapter.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 6,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--rule-results",
+            "--rule-inputs",
+            "--adapter-report",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/promote_world_model_rule_candidates.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 7,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--input-tasks",
+            "--entity-bindings",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [
+            {
+              "flag": "--entity-bindings",
+              "input": "source_backed_entity_bindings"
+            }
+          ],
+          "script": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 8,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--rule-stubs",
+            "--rule-inputs",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_world_model_rule_authoring_adapter.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 9,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--rule-results",
+            "--rule-inputs",
+            "--adapter-report",
+            "--output-dir",
+            "--json"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/promote_world_model_rule_candidates.py",
+          "status": "ready"
+        }
+      ],
+      "command_template_values": [],
+      "input_reviews": [
+        {
+          "name": "source_backed_numeric_bindings",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "source_backed_numeric_bindings",
+            "review_required": true
+          }
+        },
+        {
+          "name": "source_backed_temporal_bindings",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "source_backed_temporal_bindings",
+            "review_required": true
+          }
+        },
+        {
+          "name": "source_backed_entity_bindings",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "source_backed_entity_bindings",
+            "review_required": true
+          }
+        }
+      ],
+      "placeholder_count": 75,
+      "placeholder_reviews": [
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
+              "--numeric-bindings"
+            ]
+          },
+          "flag": "--numeric-bindings",
+          "placeholder_index": 1,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--numeric-bindings",
+            "input_name": "source_backed_numeric_bindings",
+            "reason": "required_input_flag",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-1",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--rule-inputs-jsonl",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-inputs-jsonl"
+            ]
+          },
+          "flag": "--rule-inputs-jsonl",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-rule-inputs.jsonl",
+            "source": "derived_command_sidecar_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-fill-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 6,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 7,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-1"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_action=fill_and_promote_remaining_world_model_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/world-model-rule-input-requests.jsonl",
+              "--rule-inputs"
+            ]
+          },
+          "flag": "--rule-inputs",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-inputs",
+            "input_name_hint": "rule_inputs",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-2",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--rule-results-jsonl",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-results-jsonl"
+            ]
+          },
+          "flag": "--rule-results-jsonl",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-rule-results.jsonl",
+            "source": "derived_command_sidecar_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-adapter-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 6,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 7,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-2"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_lane=numeric_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--rule-inputs",
+              "..."
+            ],
+            "before": [
+              "benchmarks/promote_world_model_rule_candidates.py",
+              "--rule-results"
+            ]
+          },
+          "flag": "--rule-results",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-results",
+            "input_name_hint": "rule_results",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 3
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--adapter-report",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-inputs"
+            ]
+          },
+          "flag": "--rule-inputs",
+          "placeholder_index": 2,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-inputs",
+            "input_name_hint": "rule_inputs",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--adapter-report"
+            ]
+          },
+          "flag": "--adapter-report",
+          "placeholder_index": 3,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--adapter-report",
+            "input_name_hint": "adapter_report",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-3",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 7,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-3"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_lane=numeric_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 9,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
+              "--temporal-bindings"
+            ]
+          },
+          "flag": "--temporal-bindings",
+          "placeholder_index": 1,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--temporal-bindings",
+            "input_name": "source_backed_temporal_bindings",
+            "reason": "required_input_flag",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-4",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--rule-inputs-jsonl",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-inputs-jsonl"
+            ]
+          },
+          "flag": "--rule-inputs-jsonl",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-rule-inputs.jsonl",
+            "source": "derived_command_sidecar_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-fill-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 6,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 7,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-4"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 4,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_action=fill_and_promote_remaining_world_model_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/world-model-rule-input-requests.jsonl",
+              "--rule-inputs"
+            ]
+          },
+          "flag": "--rule-inputs",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-inputs",
+            "input_name_hint": "rule_inputs",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-5",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--rule-results-jsonl",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-results-jsonl"
+            ]
+          },
+          "flag": "--rule-results-jsonl",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-rule-results.jsonl",
+            "source": "derived_command_sidecar_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-adapter-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 6,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 7,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-5"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 5,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_lane=temporal_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--rule-inputs",
+              "..."
+            ],
+            "before": [
+              "benchmarks/promote_world_model_rule_candidates.py",
+              "--rule-results"
+            ]
+          },
+          "flag": "--rule-results",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-results",
+            "input_name_hint": "rule_results",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 3
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--adapter-report",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-inputs"
+            ]
+          },
+          "flag": "--rule-inputs",
+          "placeholder_index": 2,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-inputs",
+            "input_name_hint": "rule_inputs",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--adapter-report"
+            ]
+          },
+          "flag": "--adapter-report",
+          "placeholder_index": 3,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--adapter-report",
+            "input_name_hint": "adapter_report",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-6",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 7,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-6"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 6,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_lane=temporal_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 9,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl",
+              "--entity-bindings"
+            ]
+          },
+          "flag": "--entity-bindings",
+          "placeholder_index": 1,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--entity-bindings",
+            "input_name": "source_backed_entity_bindings",
+            "reason": "required_input_flag",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-7",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--rule-inputs-jsonl",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-inputs-jsonl"
+            ]
+          },
+          "flag": "--rule-inputs-jsonl",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-rule-inputs.jsonl",
+            "source": "derived_command_sidecar_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-fill-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 6,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 7,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-7"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 7,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_action=fill_and_promote_remaining_world_model_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-authoring-adapter-v1/world-model-rule-input-requests.jsonl",
+              "--rule-inputs"
+            ]
+          },
+          "flag": "--rule-inputs",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-inputs",
+            "input_name_hint": "rule_inputs",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-8",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--rule-results-jsonl",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-results-jsonl"
+            ]
+          },
+          "flag": "--rule-results-jsonl",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report-rule-results.jsonl",
+            "source": "derived_command_sidecar_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-adapter-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 6,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 7,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-8"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 8,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_lane=entity_role_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--rule-inputs",
+              "..."
+            ],
+            "before": [
+              "benchmarks/promote_world_model_rule_candidates.py",
+              "--rule-results"
+            ]
+          },
+          "flag": "--rule-results",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-results",
+            "input_name_hint": "rule_results",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 3
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--adapter-report",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--rule-inputs"
+            ]
+          },
+          "flag": "--rule-inputs",
+          "placeholder_index": 2,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--rule-inputs",
+            "input_name_hint": "rule_inputs",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--output-dir",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--adapter-report"
+            ]
+          },
+          "flag": "--adapter-report",
+          "placeholder_index": 3,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "flag": "--adapter-report",
+            "input_name_hint": "adapter_report",
+            "reason": "upstream_command_output",
+            "review_required": true
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/fill-and-promote-remaining-world-model-rules/command-9",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-promotion-report.json",
+            "source": "planned_output"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/entity-rule-promotion-report-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 7,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 8,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "fill-and-promote-remaining-world-model-rules-command-9"
+          },
+          "token_index": 17
+        },
+        {
+          "command_index": 9,
+          "context": {
+            "after": [
+              "--metadata",
+              "closure_lane=entity_role_rules"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 9,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 19
+        }
+      ],
+      "remaining_placeholder_count": 12,
+      "required_inputs": [
+        "source_backed_numeric_bindings",
+        "source_backed_temporal_bindings",
+        "source_backed_entity_bindings"
+      ],
+      "review_status": "needs_review",
+      "staged_placeholder_count": 63,
+      "staged_upstream_output_count": 12
+    },
+    "improve_unresolved_citation_alignment": {
+      "bound_commands": [
+        "python benchmarks/run_source_family_citation_search_workflow.py --queue artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-official-site-catalog-v1/official-site-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl --scores artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json --blind-spots artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json --controlled-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json --output-dir artifacts/improve-unresolved-citation-alignment/command-1 --workflow-report artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json --artifact-manifest artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json --registry ... --name improve-unresolved-citation-alignment-command-1 --version 0.1 --query-mode question_and_query --target-route retrieval_groundedness --query-fields question,question_answer --retriever-min-overlaps 0.95,0.8,0.65,0.5 --metadata closure_action=improve_unresolved_citation_alignment --adapter-diversify-source-families",
+        "python benchmarks/run_source_family_citation_search_workflow.py --queue artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-official-site-catalog-v1/official-site-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl --scores artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json --blind-spots artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json --controlled-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json --output-dir artifacts/improve-unresolved-citation-alignment/command-2 --workflow-report artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json --artifact-manifest artifacts/improve-unresolved-citation-alignment/command-2/artifact-manifest.json --registry ... --name improve-unresolved-citation-alignment-command-2 --version 0.1 --query-mode queue_query --target-route retrieval_groundedness --query-fields question,question_answer --retriever-min-overlaps 0.95,0.8,0.65,0.5 --metadata closure_action=improve_unresolved_citation_alignment --adapter-diversify-source-families",
+        "python benchmarks/run_source_family_citation_search_workflow.py --queue artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-official-site-catalog-v1/official-site-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl --scores artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json --blind-spots artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json --controlled-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json --output-dir artifacts/improve-unresolved-citation-alignment/command-3 --workflow-report artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json --artifact-manifest artifacts/improve-unresolved-citation-alignment/command-3/artifact-manifest.json --registry ... --name improve-unresolved-citation-alignment-command-3 --version 0.1 --query-mode question --target-route retrieval_groundedness --query-fields question,question_answer --retriever-min-overlaps 0.95,0.8,0.65,0.5 --metadata closure_action=improve_unresolved_citation_alignment --adapter-diversify-source-families"
+      ],
+      "command_requirement_issue_count": 0,
+      "command_requirements": [
+        {
+          "command_index": 1,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--queue",
+            "--source-catalog",
+            "--scores",
+            "--blind-spots",
+            "--output-dir",
+            "--workflow-report",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_source_family_citation_search_workflow.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 2,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--queue",
+            "--source-catalog",
+            "--scores",
+            "--blind-spots",
+            "--output-dir",
+            "--workflow-report",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_source_family_citation_search_workflow.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 3,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--queue",
+            "--source-catalog",
+            "--scores",
+            "--blind-spots",
+            "--output-dir",
+            "--workflow-report",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_source_family_citation_search_workflow.py",
+          "status": "ready"
+        }
+      ],
+      "command_template_values": [],
+      "input_reviews": [],
+      "placeholder_count": 18,
+      "placeholder_reviews": [
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--workflow-report",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 1,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-1",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 23
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--workflow-report"
+            ]
+          },
+          "flag": "--workflow-report",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+            "source": "derived_command_report_path"
+          },
+          "token_index": 25
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 27
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 4,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 29
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "improve-unresolved-citation-alignment-command-1"
+          },
+          "token_index": 31
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--query-mode",
+              "question_and_query"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 33
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--workflow-report",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 1,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-2",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 23
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--workflow-report"
+            ]
+          },
+          "flag": "--workflow-report",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+            "source": "derived_command_report_path"
+          },
+          "token_index": 25
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-2/artifact-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 27
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 4,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 29
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "improve-unresolved-citation-alignment-command-2"
+          },
+          "token_index": 31
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--query-mode",
+              "queue_query"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 33
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--workflow-report",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+              "--output-dir"
+            ]
+          },
+          "flag": "--output-dir",
+          "placeholder_index": 1,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-3",
+            "source": "derived_command_output_dir"
+          },
+          "token_index": 23
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--workflow-report"
+            ]
+          },
+          "flag": "--workflow-report",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json",
+            "source": "derived_command_report_path"
+          },
+          "token_index": 25
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/improve-unresolved-citation-alignment/command-3/artifact-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 27
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 4,
+          "stage_status": "needs_review",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "registry",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 29
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "improve-unresolved-citation-alignment-command-3"
+          },
+          "token_index": 31
+        },
+        {
+          "command_index": 3,
+          "context": {
+            "after": [
+              "--query-mode",
+              "question"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 33
+        }
+      ],
+      "remaining_placeholder_count": 3,
+      "required_inputs": [],
+      "review_status": "needs_review",
+      "staged_placeholder_count": 15,
+      "staged_upstream_output_count": 0
+    }
+  },
+  "config": {
+    "auto_approves_review": false,
+    "auto_binds_source_backed_inputs": false,
+    "stage_upstream_outputs": true
+  },
+  "generated_by": "frontier_research_queue_binding_suggestion_staging",
+  "inputs": {},
+  "metadata": {},
+  "review_summary": {
+    "entry_count": 2,
+    "missing_suggestion_placeholder_count": 0,
+    "placeholder_count": 93,
+    "remaining_placeholder_count": 15,
+    "required_input_count": 3,
+    "review_required_placeholder_count": 15,
+    "staged_placeholder_count": 78,
+    "staged_upstream_output_count": 12
+  },
+  "schema_version": 1,
+  "source": {
+    "binding_scaffold": "artifacts/frontier-release-evidence/unresolved-frontier-research-binding-scaffold-v1/frontier-research-binding-scaffold.json",
+    "binding_scaffold_workflow": "frontier_research_queue_binding_scaffold",
+    "command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json"
+  },
+  "staging_summary": {
+    "action_ids": [
+      "improve_unresolved_citation_alignment",
+      "fill_and_promote_remaining_world_model_rules"
+    ],
+    "command_count": 12,
+    "entry_count": 2,
+    "missing_suggestion_placeholder_count": 0,
+    "placeholder_count": 93,
+    "remaining_placeholder_count": 15,
+    "required_input_count": 3,
+    "review_required_placeholder_count": 15,
+    "staged_placeholder_count": 78,
+    "staged_upstream_output_count": 12
+  },
+  "status": "needs_review",
+  "workflow": "frontier_research_queue_command_bindings"
+}

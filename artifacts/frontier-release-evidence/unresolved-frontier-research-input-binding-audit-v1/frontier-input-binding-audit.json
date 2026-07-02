@@ -1,0 +1,737 @@
+{
+  "binding_audit_rows": [
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-190-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 1,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-190:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-190",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-199-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 2,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-199:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-199",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-223-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 3,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-223:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-223",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-485-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 4,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-485:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-485",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-516-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 5,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-516:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-516",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-11-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 6,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-11:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-11",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-120-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 7,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-120:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-120",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-16-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 8,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-16:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-16",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-182-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 9,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-182:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-182",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-239-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 10,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-239:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-239",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-498-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 11,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-498",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings:rule-record-517-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_unit",
+        "missing_reference_time",
+        "missing_source_citation",
+        "missing_or_invalid_candidate_numeric_value",
+        "missing_or_invalid_source_numeric_value"
+      ],
+      "line_no": 12,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-517:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "numeric_bindings",
+      "status": "blocked",
+      "subject_binding_applied": false,
+      "subject_binding_request_id": "",
+      "target_id": "record-517",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings:rule-record-326-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_claim_time",
+        "missing_source_time",
+        "missing_retrieved_at",
+        "missing_source_citation"
+      ],
+      "line_no": 1,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-326:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "temporal_bindings",
+      "status": "blocked",
+      "target_id": "record-326",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings:rule-record-175-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_claim_time",
+        "missing_source_time",
+        "missing_retrieved_at",
+        "missing_source_citation"
+      ],
+      "line_no": 2,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-175:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "temporal_bindings",
+      "status": "blocked",
+      "target_id": "record-175",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings:rule-record-25-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_claim_time",
+        "missing_source_time",
+        "missing_retrieved_at",
+        "missing_source_citation"
+      ],
+      "line_no": 3,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-25:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "temporal_bindings",
+      "status": "blocked",
+      "target_id": "record-25",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings:rule-record-498-2",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_claim_time",
+        "missing_source_time",
+        "missing_retrieved_at",
+        "missing_source_citation"
+      ],
+      "line_no": 4,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:2",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "temporal_bindings",
+      "status": "blocked",
+      "target_id": "record-498",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings:rule-record-517-2",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_claim_time",
+        "missing_source_time",
+        "missing_retrieved_at",
+        "missing_source_citation"
+      ],
+      "line_no": 5,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-517:2",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "temporal_bindings",
+      "status": "blocked",
+      "target_id": "record-517",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-199-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 1,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-199:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-199",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-223-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 2,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-223:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-223",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-485-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 3,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-485:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-485",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-516-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 4,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-516:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-516",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 5,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-498",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-2",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 6,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-498:2",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-498",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 7,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-517:1",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-517",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    },
+    {
+      "binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2",
+      "collection_request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "line_no": 8,
+      "not_verifier_evidence": true,
+      "request_id": "rule:record-517:2",
+      "reserved_fields": [],
+      "review_status": "needs_review",
+      "schema_version": 1,
+      "sidecar_key": "entity_bindings",
+      "status": "blocked",
+      "target_id": "record-517",
+      "workflow": "frontier_research_queue_input_binding_audit"
+    }
+  ],
+  "config": {
+    "ready_review_statuses": [
+      "<empty>",
+      "approved",
+      "ready"
+    ],
+    "subject_resolvable_review_statuses": [
+      "ambiguous_subject",
+      "subject_ambiguous"
+    ]
+  },
+  "downstream_commands": [
+    {
+      "blocked_binding_count": 12,
+      "command": "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl --numeric-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl --output-dir artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings --json artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings/rule-input-fill.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-numeric-bindings/artifact-manifest.json",
+      "executes_commands": false,
+      "input_name": "source_backed_numeric_bindings",
+      "ready_binding_count": 0,
+      "ready_for_fill": false,
+      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-numeric-bindings",
+      "sidecar_key": "numeric_bindings"
+    },
+    {
+      "blocked_binding_count": 5,
+      "command": "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl --temporal-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl --output-dir artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings --json artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings/rule-input-fill.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-temporal-bindings/artifact-manifest.json",
+      "executes_commands": false,
+      "input_name": "source_backed_temporal_bindings",
+      "ready_binding_count": 0,
+      "ready_for_fill": false,
+      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-temporal-bindings",
+      "sidecar_key": "temporal_bindings"
+    },
+    {
+      "blocked_binding_count": 8,
+      "command": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py --input-tasks artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl --entity-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl --output-dir artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings --json artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings/rule-input-fill.json --artifact-manifest artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/downstream/fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings/artifact-manifest.json",
+      "executes_commands": false,
+      "input_name": "source_backed_entity_bindings",
+      "ready_binding_count": 0,
+      "ready_for_fill": false,
+      "request_id": "fill-and-promote-remaining-world-model-rules:source-backed-entity-bindings",
+      "sidecar_key": "entity_bindings"
+    }
+  ],
+  "label_usage": {
+    "audit_executes_commands": false,
+    "bindings_are_verifier_evidence": false,
+    "labels_allowed_in_sidecars": false,
+    "labels_used_for_binding_audit": false,
+    "model_answers_allowed_in_sidecars": false
+  },
+  "metadata": {},
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/artifact-manifest.json",
+    "binding_audit_rows": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/binding-audit-rows.jsonl",
+    "entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+    "input_binding_scaffold": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
+    "mechanism_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-mechanism-bindings.jsonl",
+    "numeric_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/frontier-input-binding-audit.json",
+    "subject_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-subject-bindings.jsonl",
+    "temporal_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl"
+  },
+  "schema_version": 1,
+  "scope": "Pre-execution audit for edited source-backed frontier input bindings. Ready rows may be passed to typed rule-input fill scripts; blocked rows need review, source values, or corrected provenance first.",
+  "sidecar_files": {
+    "entity_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+      "row_count": 8
+    },
+    "mechanism_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-mechanism-bindings.jsonl",
+      "row_count": 0
+    },
+    "numeric_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
+      "row_count": 12
+    },
+    "subject_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-subject-bindings.jsonl",
+      "row_count": 0
+    },
+    "temporal_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl",
+      "row_count": 5
+    }
+  },
+  "source": {
+    "binding_skeleton_count": 25,
+    "input_binding_scaffold": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
+    "input_binding_scaffold_status": "needs_binding_values",
+    "input_binding_scaffold_workflow": "frontier_research_queue_input_binding_scaffold"
+  },
+  "status": "blocked",
+  "summary": {
+    "audit_row_count": 25,
+    "binding_row_count": 25,
+    "blocked_binding_count": 25,
+    "blocked_by_sidecar": {
+      "entity_bindings": 8,
+      "numeric_bindings": 12,
+      "temporal_bindings": 5
+    },
+    "downstream_command_count": 3,
+    "downstream_ready_command_count": 0,
+    "failure_counts": {
+      "binding_requires_review": 25,
+      "missing_answer_entity": 8,
+      "missing_claim_time": 5,
+      "missing_expected_entity": 8,
+      "missing_or_invalid_candidate_numeric_value": 12,
+      "missing_or_invalid_source_numeric_value": 12,
+      "missing_reference_time": 12,
+      "missing_requested_role": 8,
+      "missing_retrieved_at": 5,
+      "missing_source_citation": 25,
+      "missing_source_time": 5,
+      "missing_subject_entity": 20,
+      "missing_unit": 12
+    },
+    "missing_sidecar_count": 0,
+    "pending_review_count": 25,
+    "ready_binding_count": 0,
+    "ready_by_sidecar": {},
+    "reserved_field_count": 0,
+    "sidecar_counts": {
+      "entity_bindings": 8,
+      "mechanism_bindings": 0,
+      "numeric_bindings": 12,
+      "subject_bindings": 0,
+      "temporal_bindings": 5
+    },
+    "sidecar_status_counts": {
+      "entity_bindings": {
+        "blocked": 8,
+        "ready": 0
+      },
+      "numeric_bindings": {
+        "blocked": 12,
+        "ready": 0
+      },
+      "temporal_bindings": {
+        "blocked": 5,
+        "ready": 0
+      }
+    }
+  },
+  "workflow": "frontier_research_queue_input_binding_audit"
+}

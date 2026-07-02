@@ -41,6 +41,12 @@ REQUIRED_COMMAND_FLAGS = {
         "--output-dir",
         "--json",
     ),
+    "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py": (
+        "--input-tasks",
+        "--entity-bindings",
+        "--output-dir",
+        "--json",
+    ),
     "benchmarks/run_world_model_rule_authoring_adapter.py": (
         "--rule-stubs",
         "--rule-inputs",
@@ -83,6 +89,9 @@ REQUIRED_INPUT_FLAGS = {
     },
     "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py": {
         "source_backed_temporal_bindings": "--temporal-bindings",
+    },
+    "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py": {
+        "source_backed_entity_bindings": "--entity-bindings",
     },
 }
 

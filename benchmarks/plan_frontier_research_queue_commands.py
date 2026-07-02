@@ -317,7 +317,48 @@ def _unresolved_world_model_rules_action(
     rule_paths = _mapping(rule_plan.get("paths"))
     input_tasks = _resolve_path(rule_paths.get("input_tasks"), base=rule_plan_path)
     input_requests = _resolve_path(rule_paths.get("input_requests"), base=rule_plan_path)
-    commands = _world_model_rule_commands(input_tasks=input_tasks, input_requests=input_requests)
+    requeued_rule_plan_path = _resolve_path(
+        _nested(payload, "paths", "requeued_rule_input_plan"),
+        base=source_path,
+    )
+    requeued_rule_plan = _load_optional_json(requeued_rule_plan_path)
+    requeued_rule_paths = _mapping(requeued_rule_plan.get("paths"))
+    requeued_input_tasks = _resolve_path(
+        requeued_rule_paths.get("input_tasks"),
+        base=requeued_rule_plan_path,
+    )
+    requeued_input_requests = _resolve_path(
+        requeued_rule_paths.get("input_requests"),
+        base=requeued_rule_plan_path,
+    )
+    primary_commands = _world_model_rule_commands(input_tasks=input_tasks, input_requests=input_requests)
+    entity_commands = _entity_world_model_rule_commands(
+        input_tasks=requeued_input_tasks,
+        input_requests=requeued_input_requests,
+    )
+    required_inputs: list[str] = []
+    closure_outputs: list[str] = []
+    if primary_commands:
+        required_inputs.extend((
+            "source_backed_numeric_bindings",
+            "source_backed_temporal_bindings",
+        ))
+        closure_outputs.extend((
+            "numeric_rule_fill_report",
+            "numeric_rule_adapter_report",
+            "numeric_rule_promotion_report",
+            "temporal_rule_fill_report",
+            "temporal_rule_adapter_report",
+            "temporal_rule_promotion_report",
+        ))
+    if entity_commands:
+        required_inputs.append("source_backed_entity_bindings")
+        closure_outputs.extend((
+            "entity_rule_fill_report",
+            "entity_rule_adapter_report",
+            "entity_rule_promotion_report",
+        ))
+    commands = (*primary_commands, *entity_commands)
     return {
         **dict(action),
         "title": "Fill and promote remaining deterministic world-model rules",
@@ -325,20 +366,13 @@ def _unresolved_world_model_rules_action(
         "evidence_routes": ("world_model_rules",),
         "suggested_commands": commands,
         "metadata": {
-            "required_inputs": (
-                "source_backed_numeric_bindings",
-                "source_backed_temporal_bindings",
-            ),
-            "closure_outputs": (
-                "numeric_rule_fill_report",
-                "numeric_rule_adapter_report",
-                "numeric_rule_promotion_report",
-                "temporal_rule_fill_report",
-                "temporal_rule_adapter_report",
-                "temporal_rule_promotion_report",
-            ),
+            "required_inputs": tuple(required_inputs),
+            "closure_outputs": tuple(closure_outputs),
             "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
             "rule_input_plan": None if rule_plan_path is None else str(rule_plan_path),
+            "requeued_rule_input_plan": (
+                None if requeued_rule_plan_path is None else str(requeued_rule_plan_path)
+            ),
             "reason": str(action.get("reason") or ""),
             "missing_input_counts": dict(_mapping(action.get("missing_input_counts"))),
         },
@@ -496,6 +530,89 @@ def _world_model_rule_commands(
             "...",
             "--metadata",
             "closure_lane=temporal_rules",
+        )),
+    )
+
+
+def _entity_world_model_rule_commands(
+    *,
+    input_tasks: Path | None,
+    input_requests: Path | None,
+) -> tuple[str, ...]:
+    if input_tasks is None or input_requests is None:
+        return ()
+    return (
+        _shell_join((
+            "python",
+            "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
+            "--input-tasks",
+            str(input_tasks),
+            "--entity-bindings",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--rule-inputs-jsonl",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_action=fill_and_promote_remaining_world_model_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/run_world_model_rule_authoring_adapter.py",
+            "--rule-stubs",
+            str(input_requests),
+            "--rule-inputs",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--rule-results-jsonl",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_lane=entity_role_rules",
+        )),
+        _shell_join((
+            "python",
+            "benchmarks/promote_world_model_rule_candidates.py",
+            "--rule-results",
+            "...",
+            "--rule-inputs",
+            "...",
+            "--adapter-report",
+            "...",
+            "--output-dir",
+            "...",
+            "--json",
+            "...",
+            "--artifact-manifest",
+            "...",
+            "--registry",
+            "...",
+            "--name",
+            "...",
+            "--version",
+            "...",
+            "--metadata",
+            "closure_lane=entity_role_rules",
         )),
     )
 

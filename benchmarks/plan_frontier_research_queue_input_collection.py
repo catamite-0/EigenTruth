@@ -149,6 +149,36 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
             "not_verifier_evidence": True,
         },
     },
+    "source_backed_entity_bindings": {
+        "lane": "world_model_rules",
+        "collection_family": "entity_role_rule_input_binding_collection",
+        "recommended_next_tools": (
+            "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
+        ),
+        "target_flag": "--entity-bindings",
+        "required_binding_fields": (
+            "request_id",
+            "target_id",
+            "subject_entity",
+            "answer_entity",
+            "expected_entity",
+            "requested_role",
+            "source_citation",
+            "review_status",
+            "not_verifier_evidence",
+        ),
+        "binding_skeleton": {
+            "request_id": "",
+            "target_id": "",
+            "subject_entity": "",
+            "answer_entity": "",
+            "expected_entity": "",
+            "requested_role": "",
+            "source_citation": "",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        },
+    },
 }
 
 REVIEW_CONTRACTS: dict[str, dict[str, Any]] = {

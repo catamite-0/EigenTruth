@@ -33762,6 +33762,78 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     }
 
 
+def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_path):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    summary_path = tmp_path / "unresolved-summary.json"
+    requeued_dir = tmp_path / "requeued-rules"
+    requeued_dir.mkdir()
+    requeued_plan_path = requeued_dir / "rule-input-collection-plan.json"
+    requeued_plan_path.write_text(
+        json.dumps({
+            "workflow": "world_model_rule_input_collection_plan",
+            "status": "ready_for_input_collection",
+            "summary": {
+                "task_count": 2,
+                "rule_family_counts": {"entity_disambiguation": 2},
+                "collection_family_counts": {"entity_role_rule_input_collection": 2},
+            },
+            "paths": {
+                "input_tasks": "rule-input-tasks.jsonl",
+                "input_requests": "world-model-rule-input-requests.jsonl",
+            },
+        }),
+        encoding="utf-8",
+    )
+    summary_path.write_text(
+        json.dumps({
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {"requeued_rule_input_plan": str(requeued_plan_path)},
+            "next_actions": [
+                {
+                    "action_id": "fill_and_promote_remaining_world_model_rules",
+                    "lane": "world_model_rules",
+                    "priority": 85,
+                    "reason": "requeued entity bindings missing",
+                    "missing_input_counts": {"entity_role": 2},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(source=summary_path)
+    entry = payload["entries"][0]
+    entity_requirements = requirements_module.frontier_command_requirement_summary(
+        entry["command_templates"][0],
+        index=1,
+        required_inputs=entry["required_inputs"],
+    )
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["command_count"] == 3
+    assert entry["required_inputs"] == ("source_backed_entity_bindings",)
+    assert entry["missing_inputs"] == (
+        "source_backed_entity_bindings",
+        "bound_command_template_values",
+    )
+    assert [item["name"] for item in entry["planned_outputs"]] == [
+        "entity_rule_fill_report",
+        "entity_rule_adapter_report",
+        "entity_rule_promotion_report",
+    ]
+    assert "fill_world_model_rule_inputs_from_entity_bindings.py" in (
+        entry["command_templates"][0]
+    )
+    assert "--entity-bindings ..." in entry["command_templates"][0]
+    assert "closure_lane=entity_role_rules" in entry["command_templates"][1]
+    assert entity_requirements["script"] == (
+        "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py"
+    )
+    assert entity_requirements["status"] == "ready"
+
+
 def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(
@@ -34590,15 +34662,21 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
                         "--input-tasks artifacts/rule-input-tasks.jsonl "
                         "--temporal-bindings ... --output-dir ... --json ... "
                         "--rule-inputs-jsonl ... --artifact-manifest ...",
+                        "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py "
+                        "--input-tasks artifacts/rule-input-tasks.jsonl "
+                        "--entity-bindings ... --output-dir ... --json ... "
+                        "--rule-inputs-jsonl ... --artifact-manifest ...",
                     ),
                     "metadata": {
                         "required_inputs": (
                             "source_backed_numeric_bindings",
                             "source_backed_temporal_bindings",
+                            "source_backed_entity_bindings",
                         ),
                         "closure_outputs": (
                             "numeric_rule_fill_report",
                             "temporal_rule_fill_report",
+                            "entity_rule_fill_report",
                         ),
                     },
                 },
@@ -34642,20 +34720,23 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
     assert bound["entries"][0]["unbound_inputs"] == (
         "source_backed_numeric_bindings",
         "source_backed_temporal_bindings",
+        "source_backed_entity_bindings",
         "bound_command_template_values",
     )
     assert payload["workflow"] == "frontier_research_queue_input_collection_plan"
     assert payload["status"] == "ready_for_collection"
-    assert payload["summary"]["collection_request_count"] == 2
-    assert payload["summary"]["source_backed_request_count"] == 2
+    assert payload["summary"]["collection_request_count"] == 3
+    assert payload["summary"]["source_backed_request_count"] == 3
     assert payload["summary"]["review_request_count"] == 0
     assert payload["summary"]["covered_input_count"] == 1
     assert payload["summary"]["input_counts"]["bound_command_template_values"] == 1
     assert payload["summary"]["collection_family_counts"] == {
+        "entity_role_rule_input_binding_collection": 1,
         "numeric_rule_input_binding_collection": 1,
         "temporal_binding_collection": 1,
     }
     assert {request["input_name"] for request in requests} == {
+        "source_backed_entity_bindings",
         "source_backed_numeric_bindings",
         "source_backed_temporal_bindings",
     }
@@ -34665,15 +34746,20 @@ def test_frontier_research_queue_input_collection_plan_maps_source_backed_inputs
     temporal_request = next(
         request for request in requests if request["input_name"] == "source_backed_temporal_bindings"
     )
+    entity_request = next(
+        request for request in requests if request["input_name"] == "source_backed_entity_bindings"
+    )
     assert numeric_request["blocking_placeholders"][0]["flag"] == "--numeric-bindings"
     assert temporal_request["blocking_placeholders"][0]["flag"] == "--temporal-bindings"
+    assert entity_request["blocking_placeholders"][0]["flag"] == "--entity-bindings"
     assert "source_citation" in numeric_request["required_binding_fields"]
+    assert "expected_entity" in entity_request["required_binding_fields"]
     assert numeric_request["not_verifier_evidence"] is True
     assert review_lines == []
     assert payload["covered_inputs"][0]["input_name"] == "bound_command_template_values"
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "frontier_research_queue_input_collection_plan"
-    assert record.metadata["collection_request_count"] == 2
+    assert record.metadata["collection_request_count"] == 3
 
 
 def test_frontier_research_queue_input_collection_plan_surfaces_unmapped_placeholders():
@@ -34776,6 +34862,22 @@ def test_frontier_research_queue_input_binding_scaffold_expands_task_sidecars(
                     "not_verifier_evidence": True,
                     "model_answer": "reserved-should-not-copy",
                 },
+                {
+                    "task_id": "rule-input-task-3",
+                    "source_request_id": "rule:record-3:1",
+                    "target_id": "record-3",
+                    "collection_family": "entity_role_rule_input_collection",
+                    "rule_family": "entity_disambiguation",
+                    "question": "Who founded the company?",
+                    "missing_inputs": (
+                        "subject_entity",
+                        "answer_entity",
+                        "expected_entity",
+                        "requested_role",
+                    ),
+                    "not_verifier_evidence": True,
+                    "answer": "reserved-should-not-copy",
+                },
             )
         )
         + "\n",
@@ -34801,15 +34903,20 @@ def test_frontier_research_queue_input_binding_scaffold_expands_task_sidecars(
                         "benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py "
                         f"--input-tasks {task_path} --temporal-bindings ... "
                         "--output-dir ... --json ... --rule-inputs-jsonl ...",
+                        "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py "
+                        f"--input-tasks {task_path} --entity-bindings ... "
+                        "--output-dir ... --json ... --rule-inputs-jsonl ...",
                     ),
                     "metadata": {
                         "required_inputs": (
                             "source_backed_numeric_bindings",
                             "source_backed_temporal_bindings",
+                            "source_backed_entity_bindings",
                         ),
                         "closure_outputs": (
                             "numeric_rule_fill_report",
                             "temporal_rule_fill_report",
+                            "entity_rule_fill_report",
                         ),
                     },
                 },
@@ -34855,15 +34962,22 @@ def test_frontier_research_queue_input_binding_scaffold_expands_task_sidecars(
         .read_text(encoding="utf-8")
         .splitlines()
     ]
+    entity_rows = [
+        json.loads(line)
+        for line in (output_dir / "source-backed-entity-bindings.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
         "report:frontier-input-binding-scaffold:0.1"
     )
 
     assert payload["workflow"] == "frontier_research_queue_input_binding_scaffold"
     assert payload["status"] == "needs_binding_values"
-    assert payload["summary"]["binding_skeleton_count"] == 2
-    assert payload["summary"]["expanded_task_count"] == 2
+    assert payload["summary"]["binding_skeleton_count"] == 3
+    assert payload["summary"]["expanded_task_count"] == 3
     assert payload["summary"]["request_level_skeleton_count"] == 0
+    assert payload["summary"]["sidecar_counts"]["entity_bindings"] == 1
     assert payload["summary"]["sidecar_counts"]["numeric_bindings"] == 1
     assert payload["summary"]["sidecar_counts"]["temporal_bindings"] == 1
     assert numeric_rows[0]["request_id"] == "rule:record-1:1"
@@ -34877,13 +34991,18 @@ def test_frontier_research_queue_input_binding_scaffold_expands_task_sidecars(
     assert temporal_rows[0]["request_id"] == "rule:record-2:1"
     assert temporal_rows[0]["claim_time"] == ""
     assert "model_answer" not in temporal_rows[0]
+    assert entity_rows[0]["request_id"] == "rule:record-3:1"
+    assert entity_rows[0]["answer_entity"] == ""
+    assert entity_rows[0]["expected_entity"] == ""
+    assert entity_rows[0]["requested_role"] == ""
+    assert "answer" not in entity_rows[0]
     assert "fill_world_model_rule_inputs_from_numeric_bindings.py" in (
         payload["downstream_commands"][0]["command"]
     )
     assert registry_module.load_and_verify_artifact_manifest(
         output_dir / "artifact-manifest.json"
     ).passed is True
-    assert record.metadata["binding_skeleton_count"] == 2
+    assert record.metadata["binding_skeleton_count"] == 3
 
 
 def test_frontier_research_queue_input_binding_scaffold_can_skip_task_expansion(
@@ -35111,6 +35230,106 @@ def test_frontier_research_queue_input_binding_audit_accepts_subject_resolution(
     ).passed is True
     assert record.metadata["workflow"] == "frontier_research_queue_input_binding_audit"
     assert record.metadata["ready_binding_count"] == 2
+
+
+def test_frontier_research_queue_input_binding_audit_handles_entity_bindings(
+    tmp_path,
+):
+    audit_module = importlib.import_module(
+        "benchmarks.audit_frontier_research_queue_input_bindings"
+    )
+    blocked_entity_path = tmp_path / "blocked-source-backed-entity-bindings.jsonl"
+    ready_entity_path = tmp_path / "ready-source-backed-entity-bindings.jsonl"
+    blocked_entity_path.write_text(
+        json.dumps({
+            "binding_id": "entity:req-1",
+            "request_id": "rule:record-entity:1",
+            "source_request_id": "rule:record-entity:1",
+            "target_id": "record-entity",
+            "subject_entity": "Tesla",
+            "answer_entity": "",
+            "expected_entity": "",
+            "requested_role": "founder",
+            "source_citation": "",
+            "review_status": "needs_review",
+            "not_verifier_evidence": True,
+            "model_answer": "reserved-leak",
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    ready_entity_path.write_text(
+        json.dumps({
+            "binding_id": "entity:req-2",
+            "request_id": "rule:record-entity:2",
+            "source_request_id": "rule:record-entity:2",
+            "target_id": "record-entity",
+            "subject_entity": "Tesla",
+            "answer_entity": "Elon Musk",
+            "expected_entity": "Martin Eberhard",
+            "requested_role": "founder",
+            "source_citation": "company-register:tesla-founders",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+
+    blocked = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold={
+            "workflow": "frontier_research_queue_input_binding_scaffold",
+            "status": "needs_binding_values",
+            "summary": {"binding_skeleton_count": 1},
+            "paths": {"entity_bindings": str(blocked_entity_path)},
+            "downstream_commands": (
+                {
+                    "request_id": "action:source-backed-entity-bindings",
+                    "input_name": "source_backed_entity_bindings",
+                    "sidecar_key": "entity_bindings",
+                    "command": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py ...",
+                },
+            ),
+        },
+        output_dir=tmp_path / "blocked-entity-binding-audit",
+    )
+    ready = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold={
+            "workflow": "frontier_research_queue_input_binding_scaffold",
+            "status": "needs_binding_values",
+            "summary": {"binding_skeleton_count": 1},
+            "paths": {"entity_bindings": str(ready_entity_path)},
+            "downstream_commands": (
+                {
+                    "request_id": "action:source-backed-entity-bindings",
+                    "input_name": "source_backed_entity_bindings",
+                    "sidecar_key": "entity_bindings",
+                    "command": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py ...",
+                },
+            ),
+        },
+        output_dir=tmp_path / "ready-entity-binding-audit",
+    )
+    blocked_row = blocked["binding_audit_rows"][0]
+    ready_row = ready["binding_audit_rows"][0]
+
+    assert blocked["status"] == "blocked"
+    assert blocked["summary"]["blocked_binding_count"] == 1
+    assert blocked["summary"]["failure_counts"]["binding_requires_review"] == 1
+    assert blocked["summary"]["failure_counts"]["missing_answer_entity"] == 1
+    assert blocked["summary"]["failure_counts"]["missing_expected_entity"] == 1
+    assert blocked["summary"]["failure_counts"]["missing_source_citation"] == 1
+    assert blocked["summary"]["failure_counts"]["reserved_fields_present"] == 1
+    assert blocked_row["sidecar_key"] == "entity_bindings"
+    assert blocked_row["reserved_fields"] == ("model_answer",)
+    assert blocked["downstream_commands"][0]["ready_for_fill"] is False
+    assert ready["status"] == "ready"
+    assert ready["summary"]["ready_binding_count"] == 1
+    assert ready["summary"]["blocked_binding_count"] == 0
+    assert ready["summary"]["sidecar_counts"] == {"entity_bindings": 1}
+    assert ready_row["status"] == "ready"
+    assert ready_row["failures"] == ()
+    assert ready["downstream_commands"][0]["ready_for_fill"] is True
 
 
 def test_frontier_research_queue_input_fill_runner_blocks_execute_when_audit_not_ready(

@@ -1,0 +1,27 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/artifact-manifest.json",
+        "binding_skeleton_count": 25,
+        "downstream_command_count": 3,
+        "expanded_task_count": 25,
+        "input_collection_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
+        "manifest_summary": {
+          "artifact_count": 8,
+          "directory_count": 0,
+          "file_count": 8,
+          "missing_count": 0
+        },
+        "review_request_count": 2,
+        "status": "needs_binding_values",
+        "workflow": "frontier_research_queue_input_binding_scaffold"
+      },
+      "name": "unresolved-frontier-research-input-binding-scaffold",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

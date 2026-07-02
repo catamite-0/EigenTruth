@@ -73,6 +73,10 @@ SIDECAR_SPECS = {
         "path_key": "mechanism_bindings",
         "label": "source_backed_mechanism_bindings",
     },
+    "entity_bindings": {
+        "path_key": "entity_bindings",
+        "label": "source_backed_entity_bindings",
+    },
 }
 
 
@@ -111,24 +115,33 @@ def audit_frontier_research_queue_input_bindings(
         key for key, path in sidecar_paths.items() if path is None or not path.exists()
     )
 
-    subject_id_counts = _request_id_counts(loaded_sidecars["subject_bindings"])
+    subject_rows = loaded_sidecars.get("subject_bindings", ())
+    subject_id_counts = _request_id_counts(subject_rows)
     subject_audits = tuple(
         _audit_subject_binding(
             row,
             line_no=index,
             duplicate=_request_id(row) in subject_id_counts and subject_id_counts[_request_id(row)] > 1,
         )
-        for index, row in enumerate(loaded_sidecars["subject_bindings"], start=1)
+        for index, row in enumerate(subject_rows, start=1)
     )
     ready_subjects = {
-        str(item["request_id"]): loaded_sidecars["subject_bindings"][int(item["line_no"]) - 1]
+        str(item["request_id"]): subject_rows[int(item["line_no"]) - 1]
         for item in subject_audits
         if item["status"] == "ready" and item["request_id"]
     }
 
     audit_rows: list[dict[str, Any]] = []
-    for key in ("numeric_bindings", "subject_bindings", "temporal_bindings", "mechanism_bindings"):
-        rows = loaded_sidecars[key]
+    for key in (
+        "numeric_bindings",
+        "subject_bindings",
+        "temporal_bindings",
+        "mechanism_bindings",
+        "entity_bindings",
+    ):
+        if key not in loaded_sidecars:
+            continue
+        rows = loaded_sidecars.get(key, ())
         id_counts = _request_id_counts(rows)
         if key == "subject_bindings":
             audit_rows.extend(subject_audits)
@@ -148,6 +161,8 @@ def audit_frontier_research_queue_input_bindings(
                 audit_rows.append(_audit_temporal_binding(row, line_no=index, duplicate=duplicate))
             elif key == "mechanism_bindings":
                 audit_rows.append(_audit_mechanism_binding(row, line_no=index, duplicate=duplicate))
+            elif key == "entity_bindings":
+                audit_rows.append(_audit_entity_binding(row, line_no=index, duplicate=duplicate))
 
     for key in missing_sidecar_keys:
         audit_rows.append(_missing_sidecar_row(key, sidecar_paths.get(key)))
@@ -310,6 +325,14 @@ def _audit_mechanism_binding(row: Mapping[str, Any], *, line_no: int, duplicate:
     if _clean(row.get("mechanism_status")) and _normalize_mechanism_status(row.get("mechanism_status")) is None:
         failures.append("invalid_mechanism_status")
     return _audit_row(row, sidecar_key="mechanism_bindings", line_no=line_no, failures=failures)
+
+
+def _audit_entity_binding(row: Mapping[str, Any], *, line_no: int, duplicate: bool) -> dict[str, Any]:
+    failures = list(_base_failures(row, duplicate=duplicate, duplicate_reason="duplicate_entity_binding"))
+    for key in ("subject_entity", "answer_entity", "expected_entity", "requested_role", "source_citation"):
+        if not _clean(row.get(key)):
+            failures.append(f"missing_{key}")
+    return _audit_row(row, sidecar_key="entity_bindings", line_no=line_no, failures=failures)
 
 
 def _base_failures(row: Mapping[str, Any], *, duplicate: bool, duplicate_reason: str) -> tuple[str, ...]:
@@ -480,6 +503,8 @@ def _sidecar_paths(scaffold: Mapping[str, Any], *, scaffold_root: Path | None) -
     resolved = {}
     for key, spec in SIDECAR_SPECS.items():
         raw = paths.get(str(spec["path_key"]))
+        if str(spec["path_key"]) not in paths:
+            continue
         resolved[key] = None if not raw else _resolve_path(str(raw), source_root=scaffold_root)
     return resolved
 
