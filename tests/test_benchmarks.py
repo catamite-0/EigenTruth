@@ -37218,6 +37218,145 @@ def test_frontier_research_queue_artifact_input_bindings_stage_control_artifacts
     )
 
 
+def test_frontier_research_queue_execute_plan_stages_bound_plan_upstream_output(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_command_plan"
+    )
+    review_module = importlib.import_module(
+        "benchmarks.review_frontier_research_queue_command_bindings"
+    )
+    run_module = importlib.import_module(
+        "benchmarks.run_frontier_research_queue_bound_command_plan"
+    )
+
+    source_command_plan_path = tmp_path / "source-frontier-command-plan.json"
+    source_approved_bindings_path = tmp_path / "source-approved-command-bindings.json"
+    previous_bound_plan_path = tmp_path / "source-bound-command-plan.json"
+    review_report_path = tmp_path / "frontier-command-binding-review.json"
+    execute_plan_path = tmp_path / "execute-command-plan.json"
+    scaffold_path = tmp_path / "execute-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "execute-staged-bindings.json"
+    review_decisions_path = tmp_path / "execute-command-review-decisions.jsonl"
+    execute_approved_bindings_path = tmp_path / "execute-approved-bindings.json"
+
+    source_command_plan_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_command_plan",
+            "status": "ready",
+        }),
+        encoding="utf-8",
+    )
+    source_approved_bindings_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_command_bindings",
+            "status": "approved",
+        }),
+        encoding="utf-8",
+    )
+    previous_bound_plan_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_bound_command_plan",
+            "status": "ready",
+            "source": {"command_plan": str(source_command_plan_path)},
+        }),
+        encoding="utf-8",
+    )
+    review_report_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_command_binding_review",
+            "status": "ready_for_execution",
+            "source": {"bound_command_plan": str(previous_bound_plan_path)},
+            "paths": {"approved_bindings": str(source_approved_bindings_path)},
+        }),
+        encoding="utf-8",
+    )
+
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {"frontier_command_binding_reviews": [str(review_report_path)]},
+            "next_actions": (
+                {
+                    "action_id": "execute_reviewed_frontier_queue_command_plan",
+                    "lane": "frontier_queue_execution",
+                    "priority": 83,
+                    "reason": "reviewed plan not executed",
+                },
+            ),
+        },
+        json_path=execute_plan_path,
+    )
+    scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=execute_plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "registry.json",
+    )
+    staged = stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+        stage_upstream_outputs=True,
+    )
+    binding = staged["bindings"]["execute_reviewed_frontier_queue_command_plan"]
+    bind_command, run_command = binding["bound_commands"]
+
+    assert staged["staging_summary"]["staged_upstream_output_count"] == 1
+    assert staged["staging_summary"]["remaining_placeholder_count"] == 0
+    assert "bind_frontier_research_queue_command_plan.py" in bind_command
+    assert "run_frontier_research_queue_bound_command_plan.py" in run_command
+    assert "--bound-command-plan ..." not in run_command
+    assert "frontier-approved-bound-command-plan.json" in run_command
+
+    rebound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=execute_plan_path,
+        bindings=staged_bindings_path,
+    )
+    review_decisions_path.write_text(
+        json.dumps({
+            "action_id": "execute_reviewed_frontier_queue_command_plan",
+            "decision": "approved",
+            "reviewer": "unit-test",
+            "reviewed_at": "2026-07-02T00:00:00Z",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    review = review_module.review_frontier_research_queue_command_bindings(
+        bound_command_plan=rebound,
+        base_bindings=staged_bindings_path,
+        review_decisions=review_decisions_path,
+        output_dir=tmp_path / "execute-command-review",
+        approved_bindings_path=execute_approved_bindings_path,
+    )
+    approved_rebound = bind_module.build_frontier_research_queue_bound_command_plan(
+        command_plan=execute_plan_path,
+        bindings=execute_approved_bindings_path,
+    )
+    dry_run = run_module.run_frontier_research_queue_bound_command_plan(
+        bound_command_plan=approved_rebound,
+        dry_run=True,
+        require_reviewed_bindings=True,
+    )
+
+    assert rebound["status"] == "ready"
+    assert rebound["summary"]["unbound_placeholder_count"] == 0
+    assert rebound["entries"][0]["unbound_inputs"] == ()
+    assert review["status"] == "ready_for_execution"
+    assert approved_rebound["entries"][0]["binding_review_status"] == "approved"
+    assert dry_run["summary"]["binding_not_reviewed_count"] == 0
+    assert dry_run["summary"]["dry_run_count"] == 2
+
+
 def test_frontier_research_queue_artifact_input_bindings_stage_semantic_artifacts(
     tmp_path,
 ):

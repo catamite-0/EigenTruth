@@ -187,12 +187,9 @@ def _stage_entry(
             placeholder_index = _int_or_zero(record.get("placeholder_index"))
             replacement = _placeholder_sentinel(command_index, placeholder_index)
             stage_status = "needs_review"
-            if (
-                stage_upstream_outputs
-                and suggestion.get("reason") == "upstream_command_output"
-                and str(suggestion.get("input_name_hint") or "") in available_outputs
-            ):
-                replacement = available_outputs[str(suggestion.get("input_name_hint") or "")]
+            upstream_input = _suggestion_upstream_input(suggestion)
+            if stage_upstream_outputs and upstream_input in available_outputs:
+                replacement = available_outputs[upstream_input]
                 staged_count += 1
                 staged_upstream_count += 1
                 stage_status = "staged_upstream_output"
@@ -287,6 +284,16 @@ def _render_suggestion(suggestion: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _suggestion_upstream_input(suggestion: Mapping[str, Any]) -> str:
+    if not suggestion:
+        return ""
+    if suggestion.get("reason") in {"upstream_command_output", "input_or_report_path"}:
+        return str(suggestion.get("input_name_hint") or "")
+    if suggestion.get("reason") == "required_input_flag":
+        return str(suggestion.get("input_name") or "")
+    return ""
+
+
 def _remember_output(
     available_outputs: dict[str, str],
     *,
@@ -302,6 +309,9 @@ def _remember_output(
         available_outputs["rule_results"] = replacement
     elif flag == "json" and script == "benchmarks/run_world_model_rule_authoring_adapter.py":
         available_outputs["adapter_report"] = replacement
+    elif flag == "json" and script == "benchmarks/bind_frontier_research_queue_command_plan.py":
+        available_outputs["bound_command_plan"] = replacement
+        available_outputs["reviewed_frontier_bound_command_plan"] = replacement
 
 
 def _command_script(command: str) -> str | None:
