@@ -4246,7 +4246,10 @@ combines queue counts, citation/source-family gate status, source acquisition
 coverage, reviewed semantic-gap covered-fact route status,
 frontier queue command-binding review/run status, world-model
 rule-input/promotion status, mechanism handoff coverage, and the next concrete
-actions. It can also ingest a no-model `frontier_queue_execution_smoke.py`
+actions. The citation lane also carries blocked query-sweep failure counts,
+recommended remediation actions, and best-observed strategy diagnostics forward
+into the summary/action metadata. It can also ingest a no-model
+`frontier_queue_execution_smoke.py`
 report as a control-plane health signal; the smoke manifest is verified
 recursively and recorded in the summary manifest, but it does not replace
 real command-binding review or executed bound-command evidence.
@@ -4311,7 +4314,11 @@ For unresolved summaries, the planner synthesizes reviewable command templates
 for semantic-gap covered-fact route completion, citation query-mode replays,
 numeric/temporal world-model rule fill/adapter/promotion chains, and frontier
 queue command-binding review, approved re-bind, execution, or repair re-run
-steps. The templates keep output paths, registry keys, and source-backed
+steps. Citation templates use query-sweep diagnostics to lower retrieval
+overlap where no hits were found, try alternate target routes where route
+selection failed, tighten verifier overlap where false alarms dominate, and add
+source-family coverage audit/collection commands when corpus expansion is the
+recommended next action. The templates keep output paths, registry keys, and source-backed
 binding sidecars as `...` placeholders, so the follow-up scaffold/bind/run
 steps still require review before anything executes.
 Command-plan, bindings, approved-bindings, review-decision, and bound-plan

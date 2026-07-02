@@ -196,9 +196,16 @@ def _unresolved_citation_alignment_action(
 ) -> Mapping[str, Any]:
     command_templates: list[str] = []
     workflow_paths = _string_tuple(_nested(payload, "paths", "citation_workflows"))
+    diagnostic_next_actions = _mapping(action.get("query_sweep_recommended_next_action_counts"))
+    diagnostic_failure_counts = _mapping(action.get("query_sweep_failure_reason_counts"))
     for workflow_path in workflow_paths:
         command_templates.extend(
-            _citation_alignment_commands(workflow_path, payload=payload, source_path=source_path)
+            _citation_alignment_commands(
+                workflow_path,
+                payload=payload,
+                action=action,
+                source_path=source_path,
+            )
         )
     return {
         **dict(action),
@@ -211,10 +218,26 @@ def _unresolved_citation_alignment_action(
             "closure_outputs": (
                 "unresolved_citation_alignment_workflow_report",
                 "unresolved_citation_alignment_artifact_manifest",
+                "source_family_coverage_audit_report",
+                "source_family_catalog_collection_plan",
             ),
             "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
             "source_citation_workflow_count": len(workflow_paths),
             "reason": str(action.get("reason") or ""),
+            "query_sweep_failure_reason_counts": dict(diagnostic_failure_counts),
+            "query_sweep_recommended_next_action_counts": dict(diagnostic_next_actions),
+            "query_sweep_no_hit_strategy_count": _int_or_zero(
+                action.get("query_sweep_no_hit_strategy_count")
+            ),
+            "query_sweep_target_route_not_selected_strategy_count": _int_or_zero(
+                action.get("query_sweep_target_route_not_selected_strategy_count")
+            ),
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": _int_or_zero(
+                action.get("query_sweep_blind_refuted_rate_below_min_strategy_count")
+            ),
+            "query_sweep_verified_false_alarm_above_max_strategy_count": _int_or_zero(
+                action.get("query_sweep_verified_false_alarm_above_max_strategy_count")
+            ),
         },
     }
 
@@ -223,6 +246,7 @@ def _citation_alignment_commands(
     workflow_path_value: str,
     *,
     payload: Mapping[str, Any],
+    action: Mapping[str, Any],
     source_path: Path | None,
 ) -> tuple[str, ...]:
     workflow_path = _resolve_path(workflow_path_value, base=source_path)
@@ -261,19 +285,26 @@ def _citation_alignment_commands(
         )
         if path is not None
     )
+    requests = _resolve_path(workflow_paths.get("requests"), base=workflow_path)
+    adapter_results = _resolve_path(workflow_paths.get("adapter_results"), base=workflow_path)
     if not (queue and scores and blind_spots and source_catalogs):
         return ()
     config = _mapping(workflow.get("config"))
+    diagnostics = _citation_diagnostic_actions(action)
     current_mode = str(config.get("query_mode") or "claim_entity")
-    candidate_modes = tuple(
-        mode
-        for mode in ("question_and_query", "queue_query", "question", "claim_entity")
-        if mode != current_mode
-    )[:3]
+    candidate_modes = _citation_candidate_query_modes(
+        current_mode,
+        diagnostics=diagnostics,
+    )
     if not candidate_modes:
         candidate_modes = (current_mode,)
     commands = []
+    target_routes = _citation_candidate_target_routes(
+        str(config.get("target_route") or "retrieval_groundedness"),
+        diagnostics=diagnostics,
+    )
     for mode in candidate_modes:
+        target_route = target_routes[0]
         parts = [
             "python",
             "benchmarks/run_source_family_citation_search_workflow.py",
@@ -301,19 +332,193 @@ def _citation_alignment_commands(
             "--query-mode",
             mode,
             "--target-route",
-            str(config.get("target_route") or "retrieval_groundedness"),
+            target_route,
             "--query-fields",
             ",".join(_string_tuple(config.get("query_fields"))) or "question,question_answer",
             "--retriever-min-overlaps",
-            ",".join(str(item) for item in _sequence(config.get("retriever_min_overlaps")))
-            or "0.95,0.8,0.65,0.5",
+            _citation_retriever_min_overlaps(config, diagnostics=diagnostics),
+            "--retrieval-limit",
+            str(_citation_retrieval_limit(config, diagnostics=diagnostics)),
+            "--verifier-min-overlap",
+            _citation_verifier_min_overlap(config, diagnostics=diagnostics),
             "--metadata",
             "closure_action=improve_unresolved_citation_alignment",
+            "--metadata",
+            f"diagnostic_query_mode={mode}",
         ))
         if config.get("adapter_diversify_source_families") is True:
             parts.append("--adapter-diversify-source-families")
         commands.append(_shell_join(parts))
+    if "enable_or_repair_retrieval_route_selection" in diagnostics:
+        for route in target_routes[1:]:
+            parts = [
+                "python",
+                "benchmarks/run_source_family_citation_search_workflow.py",
+                "--queue",
+                str(queue),
+            ]
+            for catalog in source_catalogs:
+                parts.extend(("--source-catalog", str(catalog)))
+            parts.extend(("--scores", str(scores), "--blind-spots", str(blind_spots)))
+            for controlled_sweep in controlled_sweeps:
+                parts.extend(("--controlled-sweep", str(controlled_sweep)))
+            parts.extend((
+                "--output-dir",
+                "...",
+                "--workflow-report",
+                "...",
+                "--artifact-manifest",
+                "...",
+                "--registry",
+                "...",
+                "--name",
+                "...",
+                "--version",
+                "...",
+                "--query-mode",
+                current_mode,
+                "--target-route",
+                route,
+                "--query-fields",
+                ",".join(_string_tuple(config.get("query_fields"))) or "question,question_answer",
+                "--retriever-min-overlaps",
+                _citation_retriever_min_overlaps(config, diagnostics=diagnostics),
+                "--retrieval-limit",
+                str(_citation_retrieval_limit(config, diagnostics=diagnostics)),
+                "--metadata",
+                "closure_action=improve_unresolved_citation_alignment",
+                "--metadata",
+                f"diagnostic_target_route={route}",
+            ))
+            commands.append(_shell_join(parts))
+    if "expand_or_retarget_source_corpus" in diagnostics and requests and adapter_results:
+        commands.extend(_citation_source_family_gap_commands(requests, adapter_results))
     return tuple(commands)
+
+
+def _citation_diagnostic_actions(action: Mapping[str, Any]) -> tuple[str, ...]:
+    counts = _mapping(action.get("query_sweep_recommended_next_action_counts"))
+    actions = [str(key) for key, value in counts.items() if _int_or_zero(value) > 0]
+    if actions:
+        return tuple(dict.fromkeys(actions))
+    failure_counts = _mapping(action.get("query_sweep_failure_reason_counts"))
+    fallback = []
+    if _int_or_zero(failure_counts.get("no_retrieval_hits")):
+        fallback.append("expand_or_retarget_source_corpus")
+    if _int_or_zero(failure_counts.get("target_route_not_selected")):
+        fallback.append("enable_or_repair_retrieval_route_selection")
+    if _int_or_zero(failure_counts.get("blind_refuted_rate_below_min")):
+        fallback.append("improve_claim_intent_alignment_or_query_construction")
+    if _int_or_zero(failure_counts.get("verified_false_alarm_above_max")):
+        fallback.append("tighten_false_alarm_calibration")
+    return tuple(fallback)
+
+
+def _citation_candidate_query_modes(
+    current_mode: str,
+    *,
+    diagnostics: Sequence[str],
+) -> tuple[str, ...]:
+    if "improve_claim_intent_alignment_or_query_construction" in diagnostics:
+        ordered = ("question_and_query", "queue_query", "question", "claim_entity")
+    elif "expand_or_retarget_source_corpus" in diagnostics:
+        ordered = ("queue_query", "question_and_query", "claim_entity", "question")
+    else:
+        ordered = ("question_and_query", "queue_query", "question", "claim_entity")
+    return tuple(mode for mode in ordered if mode != current_mode)[:3]
+
+
+def _citation_candidate_target_routes(
+    current_route: str,
+    *,
+    diagnostics: Sequence[str],
+) -> tuple[str, ...]:
+    routes = [current_route]
+    if "enable_or_repair_retrieval_route_selection" in diagnostics:
+        routes.extend(("retrieval_groundedness", "groundedness", "retrieval_structured_qa"))
+    return tuple(dict.fromkeys(route for route in routes if route))
+
+
+def _citation_retriever_min_overlaps(
+    config: Mapping[str, Any],
+    *,
+    diagnostics: Sequence[str],
+) -> str:
+    if "expand_or_retarget_source_corpus" in diagnostics:
+        return "0.5,0.35,0.2"
+    values = ",".join(str(item) for item in _sequence(config.get("retriever_min_overlaps")))
+    return values or "0.95,0.8,0.65,0.5"
+
+
+def _citation_retrieval_limit(
+    config: Mapping[str, Any],
+    *,
+    diagnostics: Sequence[str],
+) -> int:
+    current = _int_or_zero(config.get("retrieval_limit")) or 3
+    if "expand_or_retarget_source_corpus" in diagnostics:
+        return max(current, 5)
+    return current
+
+
+def _citation_verifier_min_overlap(
+    config: Mapping[str, Any],
+    *,
+    diagnostics: Sequence[str],
+) -> str:
+    current = str(config.get("verifier_min_overlap") or "0.65")
+    if "tighten_false_alarm_calibration" in diagnostics:
+        return "0.8"
+    return current
+
+
+def _citation_source_family_gap_commands(
+    requests: Path,
+    adapter_results: Path,
+) -> tuple[str, ...]:
+    audit_parts = [
+        "python",
+        "benchmarks/audit_source_family_coverage.py",
+        "--requests",
+        str(requests),
+        "--adapter-results",
+        str(adapter_results),
+        "--json",
+        "...",
+        "--acquisition-plan-jsonl",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--metadata",
+        "closure_action=improve_unresolved_citation_alignment",
+    ]
+    collection_parts = [
+        "python",
+        "benchmarks/plan_source_family_catalog_collection.py",
+        "--acquisition-plan",
+        "...",
+        "--tasks-jsonl",
+        "...",
+        "--report-json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--metadata",
+        "closure_action=improve_unresolved_citation_alignment",
+    ]
+    return (_shell_join(audit_parts), _shell_join(collection_parts))
 
 
 def _unresolved_semantic_gap_review_action(
@@ -1224,6 +1429,24 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             ),
             "source_family_qa_document_count": _int_or_zero(
                 metadata.get("source_family_qa_document_count")
+            ),
+            "query_sweep_failure_reason_counts": dict(
+                _mapping(metadata.get("query_sweep_failure_reason_counts"))
+            ),
+            "query_sweep_recommended_next_action_counts": dict(
+                _mapping(metadata.get("query_sweep_recommended_next_action_counts"))
+            ),
+            "query_sweep_no_hit_strategy_count": _int_or_zero(
+                metadata.get("query_sweep_no_hit_strategy_count")
+            ),
+            "query_sweep_target_route_not_selected_strategy_count": _int_or_zero(
+                metadata.get("query_sweep_target_route_not_selected_strategy_count")
+            ),
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": _int_or_zero(
+                metadata.get("query_sweep_blind_refuted_rate_below_min_strategy_count")
+            ),
+            "query_sweep_verified_false_alarm_above_max_strategy_count": _int_or_zero(
+                metadata.get("query_sweep_verified_false_alarm_above_max_strategy_count")
             ),
             "remaining_rule_family_counts": dict(
                 _mapping(metadata.get("remaining_rule_family_counts"))

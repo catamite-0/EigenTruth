@@ -284,6 +284,28 @@ def run(
                 "status": payload["status"],
                 "unresolved_target_count": payload["summary"]["unresolved_target_count"],
                 "citation_status": payload["lanes"]["citation_evidence"]["status"],
+                "citation_query_sweep_failure_reason_counts": payload["lanes"][
+                    "citation_evidence"
+                ]["query_sweep_failure_reason_counts"],
+                "citation_query_sweep_recommended_next_action_counts": payload["lanes"][
+                    "citation_evidence"
+                ]["query_sweep_recommended_next_action_counts"],
+                "citation_query_sweep_no_hit_strategy_count": payload["lanes"][
+                    "citation_evidence"
+                ]["query_sweep_no_hit_strategy_count"],
+                "citation_query_sweep_target_route_not_selected_strategy_count": payload[
+                    "lanes"
+                ]["citation_evidence"]["query_sweep_target_route_not_selected_strategy_count"],
+                "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": (
+                    payload["lanes"]["citation_evidence"][
+                        "query_sweep_blind_refuted_rate_below_min_strategy_count"
+                    ]
+                ),
+                "citation_query_sweep_verified_false_alarm_above_max_strategy_count": (
+                    payload["lanes"]["citation_evidence"][
+                        "query_sweep_verified_false_alarm_above_max_strategy_count"
+                    ]
+                ),
                 "source_family_acquisition_status": payload["lanes"][
                     "source_family_acquisition"
                 ]["status"],
@@ -428,6 +450,15 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     comparison_failed_count = 0
     comparison_status_counts: Counter[str] = Counter()
     query_sweep_no_passing_strategy_count = 0
+    query_sweep_failure_reason_counts: Counter[str] = Counter()
+    query_sweep_recommended_next_action_counts: Counter[str] = Counter()
+    query_sweep_best_observed_strategy_counts: Counter[str] = Counter()
+    query_sweep_no_hit_strategy_count = 0
+    query_sweep_target_route_not_selected_strategy_count = 0
+    query_sweep_blind_refuted_rate_below_min_strategy_count = 0
+    query_sweep_verified_false_alarm_above_max_strategy_count = 0
+    best_observed_hit_counts: list[int] = []
+    best_observed_total_hits: list[int] = []
     max_source_docs = 0
     blocking_reasons: Counter[str] = Counter()
     for index, workflow in enumerate(workflows, start=1):
@@ -468,6 +499,41 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "query_sweep_best_passing_strategy"
         ):
             query_sweep_no_passing_strategy_count += 1
+        query_sweep_failure_reason_counts.update(
+            _int_mapping(evidence.get("query_sweep_failure_reason_counts"))
+        )
+        query_sweep_recommended_next_action_counts.update(
+            _int_mapping(evidence.get("query_sweep_recommended_next_action_counts"))
+        )
+        if not evidence.get("query_sweep_recommended_next_action_counts"):
+            query_sweep_recommended_next_action_counts.update(
+                str(action)
+                for action in _string_tuple(evidence.get("query_sweep_recommended_next_actions"))
+            )
+        query_sweep_no_hit_strategy_count += _int(
+            evidence.get("query_sweep_no_hit_strategy_count")
+        )
+        query_sweep_target_route_not_selected_strategy_count += _int(
+            evidence.get("query_sweep_target_route_not_selected_strategy_count")
+        )
+        query_sweep_blind_refuted_rate_below_min_strategy_count += _int(
+            evidence.get("query_sweep_blind_refuted_rate_below_min_strategy_count")
+        )
+        query_sweep_verified_false_alarm_above_max_strategy_count += _int(
+            evidence.get("query_sweep_verified_false_alarm_above_max_strategy_count")
+        )
+        if evidence.get("query_sweep_best_observed_strategy"):
+            query_sweep_best_observed_strategy_counts[
+                str(evidence.get("query_sweep_best_observed_strategy"))
+            ] += 1
+        if evidence.get("query_sweep_best_observed_records_with_hits") is not None:
+            best_observed_hit_counts.append(
+                _int(evidence.get("query_sweep_best_observed_records_with_hits"))
+            )
+        if evidence.get("query_sweep_best_observed_total_hits") is not None:
+            best_observed_total_hits.append(
+                _int(evidence.get("query_sweep_best_observed_total_hits"))
+            )
         max_source_docs = max(max_source_docs, _int(evidence.get("source_document_count")))
         for item in _mapping_sequence(gate.get("blocking_reasons")):
             reason = str(item.get("gate") or item.get("reason") or "unknown")
@@ -494,6 +560,30 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "query_sweep_best_passing_blind_refuted_count": evidence.get(
                 "query_sweep_best_passing_blind_refuted_count"
             ),
+            "query_sweep_failure_reason_counts": _int_mapping(
+                evidence.get("query_sweep_failure_reason_counts")
+            ),
+            "query_sweep_recommended_next_actions": _string_tuple(
+                evidence.get("query_sweep_recommended_next_actions")
+            ),
+            "query_sweep_no_hit_strategy_count": _int(
+                evidence.get("query_sweep_no_hit_strategy_count")
+            ),
+            "query_sweep_target_route_not_selected_strategy_count": _int(
+                evidence.get("query_sweep_target_route_not_selected_strategy_count")
+            ),
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": _int(
+                evidence.get("query_sweep_blind_refuted_rate_below_min_strategy_count")
+            ),
+            "query_sweep_verified_false_alarm_above_max_strategy_count": _int(
+                evidence.get("query_sweep_verified_false_alarm_above_max_strategy_count")
+            ),
+            "query_sweep_best_observed_strategy": evidence.get(
+                "query_sweep_best_observed_strategy"
+            ),
+            "query_sweep_best_observed_failure_reasons": _string_tuple(
+                evidence.get("query_sweep_best_observed_failure_reasons")
+            ),
         })
     if not rows:
         status = "missing"
@@ -512,6 +602,33 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "comparison_failed_count": comparison_failed_count,
         "comparison_status_counts": dict(sorted(comparison_status_counts.items())),
         "query_sweep_no_passing_strategy_count": query_sweep_no_passing_strategy_count,
+        "query_sweep_failure_reason_counts": dict(
+            sorted(query_sweep_failure_reason_counts.items())
+        ),
+        "query_sweep_recommended_next_action_counts": dict(
+            sorted(query_sweep_recommended_next_action_counts.items())
+        ),
+        "query_sweep_no_hit_strategy_count": query_sweep_no_hit_strategy_count,
+        "query_sweep_target_route_not_selected_strategy_count": (
+            query_sweep_target_route_not_selected_strategy_count
+        ),
+        "query_sweep_blind_refuted_rate_below_min_strategy_count": (
+            query_sweep_blind_refuted_rate_below_min_strategy_count
+        ),
+        "query_sweep_verified_false_alarm_above_max_strategy_count": (
+            query_sweep_verified_false_alarm_above_max_strategy_count
+        ),
+        "query_sweep_best_observed_strategy_counts": dict(
+            sorted(query_sweep_best_observed_strategy_counts.items())
+        ),
+        "query_sweep_best_observed_records_with_hits_sum": sum(best_observed_hit_counts),
+        "query_sweep_best_observed_records_with_hits_max": (
+            max(best_observed_hit_counts) if best_observed_hit_counts else None
+        ),
+        "query_sweep_best_observed_total_hits_sum": sum(best_observed_total_hits),
+        "query_sweep_best_observed_total_hits_max": (
+            max(best_observed_total_hits) if best_observed_total_hits else None
+        ),
         "max_source_document_count": max_source_docs,
         "blocking_reason_counts": dict(sorted(blocking_reasons.items())),
         "workflows": tuple(rows),
@@ -1093,6 +1210,27 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 "still do not promote; inspect query alignment, claim mapping, or "
                 "route thresholds before release use"
             ),
+            "query_sweep_failure_reason_counts": citation.get(
+                "query_sweep_failure_reason_counts", {}
+            ),
+            "query_sweep_recommended_next_action_counts": citation.get(
+                "query_sweep_recommended_next_action_counts", {}
+            ),
+            "query_sweep_no_hit_strategy_count": citation.get(
+                "query_sweep_no_hit_strategy_count", 0
+            ),
+            "query_sweep_target_route_not_selected_strategy_count": citation.get(
+                "query_sweep_target_route_not_selected_strategy_count", 0
+            ),
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": citation.get(
+                "query_sweep_blind_refuted_rate_below_min_strategy_count", 0
+            ),
+            "query_sweep_verified_false_alarm_above_max_strategy_count": citation.get(
+                "query_sweep_verified_false_alarm_above_max_strategy_count", 0
+            ),
+            "query_sweep_best_observed_strategy_counts": citation.get(
+                "query_sweep_best_observed_strategy_counts", {}
+            ),
         })
     if semantic.get("status") in {"ready_for_covered_fact_route", "needs_evidence", "missing"}:
         actions.append({
@@ -1241,6 +1379,34 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "citation_workflow_count": _int(lanes["citation_evidence"].get("workflow_count")),
         "citation_provenance_pass_count": _int(
             lanes["citation_evidence"].get("provenance_pass_count")
+        ),
+        "citation_query_sweep_failure_reason_counts": dict(
+            _mapping(lanes["citation_evidence"].get("query_sweep_failure_reason_counts"))
+        ),
+        "citation_query_sweep_recommended_next_action_counts": dict(
+            _mapping(
+                lanes["citation_evidence"].get(
+                    "query_sweep_recommended_next_action_counts"
+                )
+            )
+        ),
+        "citation_query_sweep_no_hit_strategy_count": _int(
+            lanes["citation_evidence"].get("query_sweep_no_hit_strategy_count")
+        ),
+        "citation_query_sweep_target_route_not_selected_strategy_count": _int(
+            lanes["citation_evidence"].get(
+                "query_sweep_target_route_not_selected_strategy_count"
+            )
+        ),
+        "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": _int(
+            lanes["citation_evidence"].get(
+                "query_sweep_blind_refuted_rate_below_min_strategy_count"
+            )
+        ),
+        "citation_query_sweep_verified_false_alarm_above_max_strategy_count": _int(
+            lanes["citation_evidence"].get(
+                "query_sweep_verified_false_alarm_above_max_strategy_count"
+            )
         ),
         "source_family_coverage_audit_count": _int(
             lanes["source_family_acquisition"].get("audit_count")
@@ -1407,6 +1573,42 @@ def _write_manifest(
             "status": payload.get("status"),
             "unresolved_target_count": _nested(payload, "summary", "unresolved_target_count"),
             "citation_status": _nested(payload, "lanes", "citation_evidence", "status"),
+            "citation_query_sweep_failure_reason_counts": _nested(
+                payload,
+                "lanes",
+                "citation_evidence",
+                "query_sweep_failure_reason_counts",
+            ),
+            "citation_query_sweep_recommended_next_action_counts": _nested(
+                payload,
+                "lanes",
+                "citation_evidence",
+                "query_sweep_recommended_next_action_counts",
+            ),
+            "citation_query_sweep_no_hit_strategy_count": _nested(
+                payload,
+                "lanes",
+                "citation_evidence",
+                "query_sweep_no_hit_strategy_count",
+            ),
+            "citation_query_sweep_target_route_not_selected_strategy_count": _nested(
+                payload,
+                "lanes",
+                "citation_evidence",
+                "query_sweep_target_route_not_selected_strategy_count",
+            ),
+            "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": _nested(
+                payload,
+                "lanes",
+                "citation_evidence",
+                "query_sweep_blind_refuted_rate_below_min_strategy_count",
+            ),
+            "citation_query_sweep_verified_false_alarm_above_max_strategy_count": _nested(
+                payload,
+                "lanes",
+                "citation_evidence",
+                "query_sweep_verified_false_alarm_above_max_strategy_count",
+            ),
             "source_family_acquisition_status": _nested(
                 payload, "lanes", "source_family_acquisition", "status"
             ),

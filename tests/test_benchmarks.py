@@ -35229,7 +35229,11 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
                 "target_route": "retrieval_groundedness",
                 "adapter_diversify_source_families": True,
             },
-            "paths": {"artifact_manifest": "artifact-manifest.json"},
+            "paths": {
+                "artifact_manifest": "artifact-manifest.json",
+                "requests": "source-family-citation-search-requests.jsonl",
+                "adapter_results": "source-family-citation-search-results.jsonl",
+            },
         }),
         encoding="utf-8",
     )
@@ -35242,6 +35246,8 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
                 "scores": {"path": "../scores/scores.manifest.json"},
                 "blind_spots": {"path": "../blind-spots.json"},
                 "controlled_sweep_1": {"path": "../controlled-sweep.json"},
+                "adapter_requests": {"path": "source-family-citation-search-requests.jsonl"},
+                "adapter_results": {"path": "source-family-citation-search-results.jsonl"},
             }
         }),
         encoding="utf-8",
@@ -35303,6 +35309,22 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
                     "lane": "citation_evidence",
                     "priority": 88,
                     "reason": "citation gate blocked",
+                    "query_sweep_failure_reason_counts": {
+                        "blind_refuted_rate_below_min": 3,
+                        "no_retrieval_hits": 2,
+                        "target_route_not_selected": 1,
+                        "verified_false_alarm_above_max": 1,
+                    },
+                    "query_sweep_recommended_next_action_counts": {
+                        "expand_or_retarget_source_corpus": 1,
+                        "enable_or_repair_retrieval_route_selection": 1,
+                        "improve_claim_intent_alignment_or_query_construction": 1,
+                        "tighten_false_alarm_calibration": 1,
+                    },
+                    "query_sweep_no_hit_strategy_count": 2,
+                    "query_sweep_target_route_not_selected_strategy_count": 1,
+                    "query_sweep_blind_refuted_rate_below_min_strategy_count": 3,
+                    "query_sweep_verified_false_alarm_above_max_strategy_count": 1,
                 },
                 {
                     "action_id": "complete_retrieval_semantic_gap_review",
@@ -35344,7 +35366,7 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert payload["status"] == "needs_inputs"
     assert payload["source"]["workflow"] == "unresolved_frontier_evidence_summary"
     assert payload["summary"]["entry_count"] == 3
-    assert payload["summary"]["command_count"] == 10
+    assert payload["summary"]["command_count"] == 14
     assert payload["summary"]["missing_command_template_count"] == 0
     assert payload["summary"]["action_ids"] == (
         "improve_unresolved_citation_alignment",
@@ -35353,10 +35375,25 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     )
     assert citation_entry["command_status"] == "needs_inputs"
     assert citation_entry["missing_inputs"] == ("bound_command_template_values",)
-    assert len(citation_entry["command_templates"]) == 3
+    assert len(citation_entry["command_templates"]) == 7
     assert "--query-mode question_and_query" in citation_entry["command_templates"][0]
     assert "--source-catalog" in citation_entry["command_templates"][0]
     assert "--controlled-sweep" in citation_entry["command_templates"][0]
+    assert "--retriever-min-overlaps 0.5,0.35,0.2" in (
+        citation_entry["command_templates"][0]
+    )
+    assert "--verifier-min-overlap 0.8" in citation_entry["command_templates"][0]
+    assert "diagnostic_target_route=groundedness" in citation_entry["command_templates"][3]
+    assert "audit_source_family_coverage.py" in citation_entry["command_templates"][5]
+    assert "--acquisition-plan-jsonl" in citation_entry["command_templates"][5]
+    assert "plan_source_family_catalog_collection.py" in citation_entry["command_templates"][6]
+    assert citation_entry["metadata"]["query_sweep_failure_reason_counts"] == {
+        "blind_refuted_rate_below_min": 3,
+        "no_retrieval_hits": 2,
+        "target_route_not_selected": 1,
+        "verified_false_alarm_above_max": 1,
+    }
+    assert citation_entry["metadata"]["query_sweep_no_hit_strategy_count"] == 2
     assert semantic_entry["command_status"] == "needs_inputs"
     assert semantic_entry["missing_inputs"] == ("bound_command_template_values",)
     assert len(semantic_entry["command_templates"]) == 1
@@ -59668,6 +59705,19 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "query_sweep_best_strategy": "question_overlap_0p65",
             "query_sweep_best_passing_strategy": None,
             "query_sweep_best_passing_blind_refuted_count": None,
+            "query_sweep_failure_reason_counts": {
+                "blind_refuted_rate_below_min": 2,
+                "no_retrieval_hits": 1,
+            },
+            "query_sweep_recommended_next_actions": [
+                "expand_or_retarget_source_corpus",
+                "improve_claim_intent_alignment_or_query_construction",
+            ],
+            "query_sweep_no_hit_strategy_count": 1,
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": 2,
+            "query_sweep_best_observed_strategy": "question_overlap_0p65",
+            "query_sweep_best_observed_records_with_hits": 0,
+            "query_sweep_best_observed_total_hits": 0,
         },
     }
     citation_rollup = {
@@ -59688,6 +59738,21 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "comparison_failed_count": 1,
             "comparison_status_counts": {"blocked": 1},
             "query_sweep_no_passing_strategy_count": 1,
+            "query_sweep_failure_reason_counts": {
+                "blind_refuted_rate_below_min": 1,
+                "target_route_not_selected": 1,
+            },
+            "query_sweep_recommended_next_action_counts": {
+                "enable_or_repair_retrieval_route_selection": 1,
+                "improve_claim_intent_alignment_or_query_construction": 1,
+            },
+            "query_sweep_target_route_not_selected_strategy_count": 1,
+            "query_sweep_blind_refuted_rate_below_min_strategy_count": 1,
+            "query_sweep_best_observed_strategy_counts": {
+                "question_answer_overlap_0p5": 1
+            },
+            "query_sweep_best_observed_records_with_hits_sum": 2,
+            "query_sweep_best_observed_total_hits_sum": 4,
             "query_sweep_best_strategy": "question_overlap_0p65",
             "query_sweep_best_passing_strategy": None,
             "query_sweep_best_passing_blind_refuted_count": 0,
@@ -59861,6 +59926,25 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "blocked": 2,
     }
     assert payload["lanes"]["citation_evidence"]["query_sweep_no_passing_strategy_count"] == 2
+    assert payload["lanes"]["citation_evidence"]["query_sweep_failure_reason_counts"] == {
+        "blind_refuted_rate_below_min": 3,
+        "no_retrieval_hits": 1,
+        "target_route_not_selected": 1,
+    }
+    assert payload["lanes"]["citation_evidence"]["query_sweep_recommended_next_action_counts"] == {
+        "enable_or_repair_retrieval_route_selection": 1,
+        "expand_or_retarget_source_corpus": 1,
+        "improve_claim_intent_alignment_or_query_construction": 2,
+    }
+    assert payload["summary"]["citation_query_sweep_no_hit_strategy_count"] == 1
+    assert (
+        payload["summary"]["citation_query_sweep_target_route_not_selected_strategy_count"]
+        == 1
+    )
+    assert (
+        payload["summary"]["citation_query_sweep_blind_refuted_rate_below_min_strategy_count"]
+        == 3
+    )
     assert payload["lanes"]["citation_evidence"]["blocking_reason_counts"] == {"query_sweep": 2}
     assert payload["lanes"]["world_model_rules"]["status"] == "needs_requeue"
     assert payload["lanes"]["world_model_rules"]["task_count"] == 5
@@ -59909,6 +59993,17 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert "improve_unresolved_citation_alignment" in action_ids
     assert "requeue_misaligned_world_model_rule_inputs" in action_ids
     assert "fill_and_promote_remaining_world_model_rules" in action_ids
+    citation_action = next(
+        action
+        for action in payload["next_actions"]
+        if action["action_id"] == "improve_unresolved_citation_alignment"
+    )
+    assert citation_action["query_sweep_failure_reason_counts"] == {
+        "blind_refuted_rate_below_min": 3,
+        "no_retrieval_hits": 1,
+        "target_route_not_selected": 1,
+    }
+    assert citation_action["query_sweep_no_hit_strategy_count"] == 1
     requeue_action = next(
         action
         for action in payload["next_actions"]
