@@ -267,7 +267,7 @@ def _placeholder_suggestion(
             "path": _command_output_dir(action_id, command_index),
             "source": "derived_command_output_dir",
         }, output_index, previous_report_path
-    if normalized in {"json", "audit_json"}:
+    if normalized in {"json", "audit_json", "report_json"}:
         if output_index < len(planned_outputs):
             path = _optional_str(planned_outputs[output_index].get("path"))
             output_index += 1
@@ -284,7 +284,12 @@ def _placeholder_suggestion(
             "path": path,
             "source": "derived_command_report_path",
         }, output_index, path
-    if normalized in {"rule_inputs_jsonl", "rule_results_jsonl"}:
+    if normalized in {
+        "acquisition_plan_jsonl",
+        "rule_inputs_jsonl",
+        "rule_results_jsonl",
+        "tasks_jsonl",
+    }:
         path = _sidecar_output_path(
             normalized,
             action_id=action_id,
@@ -313,6 +318,13 @@ def _placeholder_suggestion(
             "review_required": True,
             "reason": "required_input_flag",
             "input_name": required_input_name,
+            "flag": flag,
+        }, output_index, previous_report_path
+    if normalized == "acquisition_plan":
+        return {
+            "review_required": True,
+            "reason": "upstream_command_output",
+            "input_name_hint": "source_family_acquisition_plan",
             "flag": flag,
         }, output_index, previous_report_path
     if normalized in {"adapter_report", "rule_inputs", "rule_results"}:
@@ -365,8 +377,10 @@ def _sidecar_output_path(
     previous_report_path: str | None,
 ) -> str:
     filename = {
+        "acquisition_plan_jsonl": "source-family-acquisition-plan.jsonl",
         "rule_inputs_jsonl": "rule-inputs.jsonl",
         "rule_results_jsonl": "rule-results.jsonl",
+        "tasks_jsonl": "source-family-collection-tasks.jsonl",
     }.get(normalized_flag, f"{normalized_flag}.jsonl")
     if previous_report_path:
         report = Path(previous_report_path)

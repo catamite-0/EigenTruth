@@ -56,6 +56,19 @@ REQUIRED_COMMAND_FLAGS = {
         "--workflow-report",
         "--artifact-manifest",
     ),
+    "benchmarks/audit_source_family_coverage.py": (
+        "--requests",
+        "--adapter-results",
+        "--json",
+        "--acquisition-plan-jsonl",
+        "--artifact-manifest",
+    ),
+    "benchmarks/plan_source_family_catalog_collection.py": (
+        "--acquisition-plan",
+        "--tasks-jsonl",
+        "--report-json",
+        "--artifact-manifest",
+    ),
     "benchmarks/run_retrieval_semantic_gap_review_workflow.py": (
         "--verified-records-jsonl",
         "--output-dir",
@@ -152,6 +165,13 @@ REQUIRED_INPUT_FLAGS = {
     "benchmarks/run_retrieval_semantic_gap_review_workflow.py": {
         "source_bound_verified_records_jsonl": "--verified-records-jsonl",
         "detectability_blind_spot_record_indices_json": "--record-indices-json",
+    },
+    "benchmarks/audit_source_family_coverage.py": {
+        "source_family_citation_search_requests": "--requests",
+        "source_family_citation_search_adapter_results": "--adapter-results",
+    },
+    "benchmarks/plan_source_family_catalog_collection.py": {
+        "source_family_acquisition_plan": "--acquisition-plan",
     },
     "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": {
         "source_backed_numeric_bindings": "--numeric-bindings",

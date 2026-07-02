@@ -303,7 +303,9 @@ def _remember_output(
 ) -> None:
     if replacement.startswith("__EIGENTRUTH_UNBOUND_PLACEHOLDER_"):
         return
-    if flag == "rule_inputs_jsonl":
+    if flag == "acquisition_plan_jsonl":
+        available_outputs["source_family_acquisition_plan"] = replacement
+    elif flag == "rule_inputs_jsonl":
         available_outputs["rule_inputs"] = replacement
     elif flag == "rule_results_jsonl":
         available_outputs["rule_results"] = replacement

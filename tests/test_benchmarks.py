@@ -35714,6 +35714,17 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "--bound-command-plan approved-bound.json --json run.json "
             "--artifact-manifest manifest.json"
         ),
+        "source_family_audit": (
+            "python benchmarks/audit_source_family_coverage.py "
+            "--requests requests.jsonl --adapter-results results.jsonl "
+            "--json audit.json --acquisition-plan-jsonl acquisition.jsonl "
+            "--artifact-manifest manifest.json"
+        ),
+        "source_family_collection": (
+            "python benchmarks/plan_source_family_catalog_collection.py "
+            "--acquisition-plan acquisition.jsonl --tasks-jsonl tasks.jsonl "
+            "--report-json collection.json --artifact-manifest manifest.json"
+        ),
     }
 
     summaries = {
@@ -35728,18 +35739,50 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         ),
         index=5,
     )
+    source_family_audit_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["source_family_audit"],
+        index=6,
+        required_inputs=(
+            "source_family_citation_search_requests",
+            "source_family_citation_search_adapter_results",
+        ),
+    )
+    source_family_collection_inputs = (
+        requirements_module.frontier_command_requirement_summary(
+            commands["source_family_collection"],
+            index=7,
+            required_inputs=("source_family_acquisition_plan",),
+        )
+    )
 
     assert {name: summary["status"] for name, summary in summaries.items()} == {
         "bind": "ready",
         "artifact_bind": "ready",
         "review": "ready",
         "run": "ready",
+        "source_family_audit": "ready",
+        "source_family_collection": "ready",
     }
     assert summaries["review"]["script"] == (
         "benchmarks/review_frontier_research_queue_command_bindings.py"
     )
     assert missing_review["status"] == "needs_review"
     assert missing_review["missing_required_flags"] == ("--approved-bindings",)
+    assert summaries["source_family_audit"]["script"] == (
+        "benchmarks/audit_source_family_coverage.py"
+    )
+    assert summaries["source_family_audit"]["required_input_flags"] == ()
+    assert source_family_audit_inputs["required_input_flags"] == (
+        {"input": "source_family_citation_search_requests", "flag": "--requests"},
+        {
+            "input": "source_family_citation_search_adapter_results",
+            "flag": "--adapter-results",
+        },
+    )
+    assert summaries["source_family_collection"]["required_input_flags"] == ()
+    assert source_family_collection_inputs["required_input_flags"] == (
+        {"input": "source_family_acquisition_plan", "flag": "--acquisition-plan"},
+    )
 
 
 def test_frontier_research_queue_command_plan_templates_queue_execution_actions(tmp_path):
@@ -36879,6 +36922,98 @@ def test_frontier_research_queue_binding_suggestion_stager_can_stage_upstream_ou
     assert bound["entries"][0]["unbound_inputs"] == (
         "source_backed_numeric_bindings",
         "bound_command_template_values",
+    )
+
+
+def test_frontier_research_queue_binding_stager_chains_source_family_outputs(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    plan_path = tmp_path / "frontier-research-command-plan.json"
+    scaffold_path = tmp_path / "frontier-research-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "frontier-research-staged-bindings.json"
+    plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "evidence_gap_plan",
+            "actions": (
+                {
+                    "action_id": "expand_source_family_catalog",
+                    "suggested_commands": (
+                        "benchmarks/audit_source_family_coverage.py "
+                        "--requests artifacts/requests.jsonl "
+                        "--adapter-results artifacts/results.jsonl "
+                        "--json ... --acquisition-plan-jsonl ... "
+                        "--artifact-manifest ... --registry ... --name ... --version ...",
+                        "benchmarks/plan_source_family_catalog_collection.py "
+                        "--acquisition-plan ... --tasks-jsonl ... --report-json ... "
+                        "--artifact-manifest ... --registry ... --name ... --version ...",
+                    ),
+                    "metadata": {
+                        "closure_outputs": (
+                            "source_family_coverage_audit_report",
+                            "source_family_catalog_collection_plan",
+                        ),
+                    },
+                },
+            ),
+        },
+        json_path=plan_path,
+    )
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "review-registry.json",
+    )
+
+    staged = stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+        stage_upstream_outputs=True,
+    )
+
+    requirements = scaffold["entries"][0]["command_requirements"]
+    placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold["entries"][0]["placeholder_records"]
+    }
+    binding = staged["bindings"]["expand_source_family_catalog"]
+    audit_command, collection_command = binding["bound_commands"]
+
+    assert [item["script"] for item in requirements] == [
+        "benchmarks/audit_source_family_coverage.py",
+        "benchmarks/plan_source_family_catalog_collection.py",
+    ]
+    assert {item["status"] for item in requirements} == {"ready"}
+    assert placeholders[(1, "--acquisition-plan-jsonl")]["suggested_binding"][
+        "source"
+    ] == "derived_command_sidecar_path"
+    assert placeholders[(2, "--acquisition-plan")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "upstream_command_output",
+        "input_name_hint": "source_family_acquisition_plan",
+        "flag": "--acquisition-plan",
+    }
+    assert placeholders[(2, "--tasks-jsonl")]["suggested_binding"]["source"] == (
+        "derived_command_sidecar_path"
+    )
+    assert staged["staging_summary"]["placeholder_count"] == 13
+    assert staged["staging_summary"]["staged_placeholder_count"] == 13
+    assert staged["staging_summary"]["staged_upstream_output_count"] == 1
+    assert staged["staging_summary"]["remaining_placeholder_count"] == 0
+    assert "--acquisition-plan ..." not in collection_command
+    assert "source-family-acquisition-plan.jsonl" in audit_command
+    assert "source-family-acquisition-plan.jsonl" in collection_command
+    assert "source-family-collection-tasks.jsonl" in collection_command
+    assert any(
+        item["flag"] == "--acquisition-plan"
+        and item["stage_status"] == "staged_upstream_output"
+        for item in binding["placeholder_reviews"]
     )
 
 
