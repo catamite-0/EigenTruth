@@ -31,6 +31,64 @@ _NEGATION_TOKENS = {
     "错误",
     "不正确",
 }
+_CONTENT_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "by",
+    "can",
+    "could",
+    "did",
+    "do",
+    "does",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "he",
+    "her",
+    "his",
+    "how",
+    "i",
+    "in",
+    "is",
+    "it",
+    "its",
+    "more",
+    "most",
+    "of",
+    "on",
+    "or",
+    "she",
+    "that",
+    "the",
+    "their",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "why",
+    "will",
+    "with",
+    "you",
+    "your",
+}
+_MIN_NEGATION_CONTENT_ANCHORS = 2
+_MIN_STRONG_NEGATION_CONTENT_ANCHORS = 3
+_MIN_NEGATION_CONTENT_OVERLAP = 0.60
 
 
 @dataclass(frozen=True)
@@ -257,6 +315,8 @@ class EvidenceQualitySummary:
 class _DocumentMatch(NamedTuple):
     document: EvidenceDocument
     overlap: float
+    content_overlap: float
+    content_overlap_count: int
     exact: bool
     negation_mismatch: bool
 
@@ -264,6 +324,7 @@ class _DocumentMatch(NamedTuple):
 class _IndexedEvidenceDocument(NamedTuple):
     document: EvidenceDocument
     tokens: tuple[str, ...]
+    content_tokens: tuple[str, ...]
     key: str
     negated: bool
 
@@ -389,6 +450,8 @@ class GroundednessVerifier:
             "claim_key": claim_key,
             "claim_features": features,
             "best_overlap": best.overlap,
+            "best_content_overlap": best.content_overlap,
+            "best_content_overlap_count": best.content_overlap_count,
             "best_source": best.document.source,
             "min_overlap": self.min_overlap,
         }
@@ -400,6 +463,14 @@ class GroundednessVerifier:
         if quality.applied:
             metadata["evidence_quality"] = quality.to_dict()
         if best.negation_mismatch and best.overlap >= self.min_overlap:
+            if not _has_negation_content_anchor(best):
+                return VerificationResult(
+                    status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    confidence=max(0.2, 0.5 * best.overlap),
+                    evidence=evidence,
+                    explanation="best evidence has opposing negation but weak content-token alignment",
+                    metadata={**metadata, "decision_rule": "weak_negation_mismatch"},
+                )
             if not quality.passed:
                 return _quality_failure_result(evidence=evidence, metadata=metadata, quality=quality)
             return VerificationResult(
@@ -491,6 +562,7 @@ def _index_document(document: EvidenceDocument) -> _IndexedEvidenceDocument:
     return _IndexedEvidenceDocument(
         document=document,
         tokens=tokens,
+        content_tokens=_content_tokens(tokens),
         key=normalize_claim_text(document.text),
         negated=_has_negation(tokens),
     )
@@ -539,13 +611,25 @@ def _best_document_match(
         return None
     claim_key = normalize_claim_text(claim_text)
     claim_negated = _has_negation(claim_tokens)
+    claim_content_tokens = _content_tokens(claim_tokens)
     matches = []
     for indexed in documents:
         exact = claim_key in indexed.key
         overlap = _token_overlap(claim_tokens, indexed.tokens)
+        content_overlap_count = _content_overlap_count(claim_content_tokens, indexed.content_tokens)
+        content_overlap = _content_overlap(claim_content_tokens, indexed.content_tokens)
         negation_mismatch = claim_negated != indexed.negated
-        matches.append(_DocumentMatch(indexed.document, overlap, exact, negation_mismatch))
-    return max(matches, key=lambda match: (match.exact, match.overlap))
+        matches.append(
+            _DocumentMatch(
+                indexed.document,
+                overlap,
+                content_overlap,
+                content_overlap_count,
+                exact,
+                negation_mismatch,
+            )
+        )
+    return max(matches, key=lambda match: (match.exact, match.overlap, match.content_overlap_count))
 
 
 def _assess_evidence_quality(
@@ -707,6 +791,36 @@ def _token_overlap(claim_tokens: Sequence[str], evidence_tokens: Sequence[str]) 
         return 0.0
     covered = sum(1 for token in claim_tokens if token in evidence_set)
     return covered / len(claim_tokens)
+
+
+def _content_tokens(tokens: Sequence[str]) -> tuple[str, ...]:
+    return tuple(
+        token
+        for token in tokens
+        if len(token) >= 3 and token not in _CONTENT_STOPWORDS and token not in _NEGATION_TOKENS
+    )
+
+
+def _content_overlap_count(claim_tokens: Sequence[str], evidence_tokens: Sequence[str]) -> int:
+    if not claim_tokens or not evidence_tokens:
+        return 0
+    return len(set(claim_tokens).intersection(evidence_tokens))
+
+
+def _content_overlap(claim_tokens: Sequence[str], evidence_tokens: Sequence[str]) -> float:
+    claim_set = set(claim_tokens)
+    if not claim_set:
+        return 0.0
+    return _content_overlap_count(tuple(claim_set), evidence_tokens) / len(claim_set)
+
+
+def _has_negation_content_anchor(match: _DocumentMatch) -> bool:
+    if match.content_overlap_count >= _MIN_STRONG_NEGATION_CONTENT_ANCHORS:
+        return True
+    return (
+        match.content_overlap_count >= _MIN_NEGATION_CONTENT_ANCHORS
+        and match.content_overlap >= _MIN_NEGATION_CONTENT_OVERLAP
+    )
 
 
 def _has_negation(tokens: Sequence[str]) -> bool:

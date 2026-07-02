@@ -1664,6 +1664,33 @@ def test_groundedness_verifier_supports_refutes_and_reports_evidence():
     assert results[2].metadata["decision_rule"] == "configured_refutation"
 
 
+def test_groundedness_verifier_requires_content_anchor_for_negation_mismatch():
+    verifier = GroundednessVerifier(
+        evidence=(
+            EvidenceDocument(
+                (
+                    "A paper is not more useful in a physical universe, or a model is "
+                    "more useful in a theory."
+                ),
+                source="paper",
+            ),
+            EvidenceDocument("The moon is not made of cheese; lunar samples are rock.", source="nasa"),
+        ),
+        min_overlap=0.60,
+    )
+
+    weak = verifier.verify(Claim("A pen or a sword is more useful in a physical fight."))
+    anchored = verifier.verify(Claim("The moon is made of cheese."))
+
+    assert weak.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert weak.metadata["decision_rule"] == "weak_negation_mismatch"
+    assert weak.metadata["best_overlap"] >= 0.60
+    assert weak.metadata["best_content_overlap_count"] < 3
+    assert anchored.status is VerificationStatus.REFUTED
+    assert anchored.metadata["decision_rule"] == "negation_mismatch"
+    assert anchored.metadata["best_content_overlap_count"] >= 3
+
+
 def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
     verifier = GroundednessVerifier(
         evidence=({"text": "Paris is the capital of France.", "source": "atlas"},),
