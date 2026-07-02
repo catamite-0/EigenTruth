@@ -2,26 +2,27 @@
   "lanes": {
     "citation_evidence": {
       "blocking_reason_counts": {
+        "child_gate": 3,
         "query_sweep": 1,
         "query_sweep_comparison": 1
       },
-      "comparison_failed_count": 1,
+      "comparison_failed_count": 4,
       "comparison_pass_count": 0,
       "comparison_status_counts": {
-        "blocked": 1
+        "blocked": 4
       },
-      "max_source_document_count": 780,
+      "max_source_document_count": 2222,
       "provenance_failed_count": 0,
-      "provenance_pass_count": 1,
+      "provenance_pass_count": 4,
       "provenance_status_counts": {
-        "pass": 1
+        "pass": 4
       },
-      "query_sweep_no_passing_strategy_count": 1,
+      "query_sweep_no_passing_strategy_count": 4,
       "status": "blocked",
       "status_counts": {
-        "blocked": 1
+        "blocked": 2
       },
-      "workflow_count": 1,
+      "workflow_count": 2,
       "workflows": [
         {
           "adapter_request_count": 260,
@@ -41,6 +42,25 @@
           "source_document_count": 780,
           "status": "blocked",
           "workflow": "source_family_citation_search_workflow"
+        },
+        {
+          "adapter_request_count": 780,
+          "comparison_failed_count": 3,
+          "comparison_passed_count": 0,
+          "comparison_status": null,
+          "gate_passed": false,
+          "index": 2,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 3,
+          "provenance_status": null,
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": null,
+          "query_sweep_no_passing_strategy_count": 3,
+          "source_document_count": 2222,
+          "status": "blocked",
+          "workflow": "citation_search_batch_evidence_rollup"
         }
       ]
     },
@@ -375,9 +395,9 @@
     }
   },
   "metadata": {
-    "added_numeric_promotions": "6",
-    "added_temporal_promotions": "3",
-    "closure_action": "fill_and_promote_remaining_world_model_rules"
+    "includes_citation_alignment_rollup": "true",
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
   },
   "next_actions": [
     {
@@ -390,7 +410,8 @@
   "paths": {
     "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/artifact-manifest.json",
     "citation_workflows": [
-      "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json"
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json"
     ],
     "mechanism_handoff_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
     "requeued_rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
@@ -417,8 +438,8 @@
   "summary": {
     "adapter_request_count": 332,
     "blocked_lane_count": 1,
-    "citation_provenance_pass_count": 1,
-    "citation_workflow_count": 1,
+    "citation_provenance_pass_count": 4,
+    "citation_workflow_count": 2,
     "covered_or_promoted_lane_count": 2,
     "lane_statuses": {
       "citation_evidence": "blocked",

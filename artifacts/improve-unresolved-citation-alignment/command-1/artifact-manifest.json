@@ -1,0 +1,184 @@
+{
+  "artifacts": {
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "controlled_sweep_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json",
+      "sha256": "55ea8ff6f134ca28d26e42e552f5b2c4a120ed2de678e08c95209e770506c368",
+      "size_bytes": 162471
+    },
+    "evidence_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-gate/artifact-manifest.json",
+      "sha256": "86ff4e92ebcf395acc65ae95920f74e0f8bbeaa58ff8c0fee2a77191405fbe36",
+      "size_bytes": 5320
+    },
+    "evidence_workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-gate/citation-search-evidence-workflow.json",
+      "sha256": "4a3318be81193d36c2c3809cf19bf3c5232ffa4ed26b5ec94cf68b043ef7e281",
+      "size_bytes": 5254
+    },
+    "queue_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    },
+    "request_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "request-handoff/citation-search-request-handoff.json",
+      "sha256": "d3b9a947f847b8f97027df23e3bcd6b3ab92404c836f2e640b7111bb9fe0ad32",
+      "size_bytes": 521620
+    },
+    "request_handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "request-handoff/artifact-manifest.json",
+      "sha256": "d45ec995f2bc59a975f437a903c566d78d7863f291e7f728d5ede463e70d536c",
+      "size_bytes": 1757
+    },
+    "scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    },
+    "source_catalog_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+      "sha256": "ccab73bcb869741b2f0a98a8b41ca7a24e1c138b8e5b6bcc36c83b464516fa9d",
+      "size_bytes": 261438
+    },
+    "source_catalog_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl",
+      "sha256": "ff6ab3fa72178adaf85bc1dc663cab381797ba2c07323a3cc7be273f48a4808c",
+      "size_bytes": 378137
+    },
+    "source_catalog_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-official-site-catalog-v1/official-site-catalog.jsonl",
+      "sha256": "ff73267c1ee28106845c8659ccfd74cdb9cd74e9fac43bff6f91b750cc372903",
+      "size_bytes": 24368
+    },
+    "source_catalog_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl",
+      "sha256": "179c9713826a05aa6a4308f10a7530b1e362da82270f3421e7d4f811558f7a6e",
+      "size_bytes": 578396
+    },
+    "source_catalog_5": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl",
+      "sha256": "0db7b0d20d57b8c57c42aaaa374e6e4ba2b4c9895a7293b3d8f80229df23322b",
+      "size_bytes": 7987
+    },
+    "source_catalog_6": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl",
+      "sha256": "f0413b581ec8e75abfd908f04d398cddfb33292043c836226c4c9cad5ebd83bc",
+      "size_bytes": 10663
+    },
+    "source_family_adapter_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-manifest.json",
+      "sha256": "7c934f6fc605a3d852297bd08533920397ddf2fad3409dd8ffa234a3c242ba9f",
+      "size_bytes": 3462
+    },
+    "source_family_adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-report.json",
+      "sha256": "d5e5cbab6a970ebc6f8657b11280d9890918d9e6de9cc8068139970d9c405388",
+      "size_bytes": 3356
+    },
+    "source_family_citation_search_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-requests.jsonl",
+      "sha256": "6dfd87dfa8f828dd0c53b578097c034721e2685ce2434a9bb303a481480f69a3",
+      "size_bytes": 349356
+    },
+    "source_family_citation_search_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-results.jsonl",
+      "sha256": "0b9d7a0b9d3c09c3e4b9e90fd7587153038d24664fe8985c68e9dc43155cf8a6",
+      "size_bytes": 3420586
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "workflow-report.json",
+      "sha256": "a6cb195fbf8506be0033489a0957b1d855c01ce78a95864bf5aeee5f1098da69",
+      "size_bytes": 29790
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_gate_passed": true,
+    "adapter_gate_status": "complete",
+    "adapter_request_count": 260,
+    "adapter_request_coverage": 1.0,
+    "adapter_result_count": 741,
+    "catalog_source_document_count": 713,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_document_count": 741,
+    "evidence_gate_passed": false,
+    "evidence_source_document_count": 741,
+    "gate_passed": false,
+    "min_adapter_request_coverage": 1.0,
+    "promotion_ready": false,
+    "selected_batch_count": 0,
+    "selected_batch_ids": [],
+    "status": "blocked",
+    "target_route": "retrieval_groundedness",
+    "workflow": "source_family_citation_search_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 19,
+    "directory_count": 0,
+    "file_count": 19,
+    "missing_count": 0
+  }
+}

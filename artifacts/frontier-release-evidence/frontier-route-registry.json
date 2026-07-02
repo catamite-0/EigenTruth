@@ -1337,33 +1337,6 @@
     {
       "artifact_type": "report",
       "metadata": {
-        "citation_status": "blocked",
-        "manifest_summary": {
-          "artifact_count": 13,
-          "directory_count": 0,
-          "file_count": 13,
-          "missing_count": 0
-        },
-        "model": "smollm2-l80",
-        "next_action_count": 2,
-        "source": "frontier-v4",
-        "source_family_acquisition_status": "covered",
-        "status": "needs_evidence",
-        "unresolved_target_count": 88,
-        "workflow": "unresolved_frontier_evidence_summary",
-        "world_model_rule_audit_adjusted_remaining_task_count": 9,
-        "world_model_rule_audit_requeue_suggestion_count": 8,
-        "world_model_rule_remaining_task_count": 17,
-        "world_model_rule_requeue_outstanding_count": 0,
-        "world_model_rule_status": "partial"
-      },
-      "name": "smollm2-l80-frontier-v4-unresolved-frontier-evidence-summary",
-      "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
-      "version": "0.1"
-    },
-    {
-      "artifact_type": "report",
-      "metadata": {
         "command_count": 9,
         "entry_count": 2,
         "manifest_summary": {
@@ -1471,6 +1444,174 @@
       "name": "fill-and-promote-remaining-world-model-rules-command-6",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json",
       "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_gate_passed": true,
+        "adapter_gate_status": "complete",
+        "adapter_request_count": 260,
+        "adapter_request_coverage": 1.0,
+        "adapter_result_count": 741,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
+        "catalog_source_document_count": 713,
+        "closure_action": "improve_unresolved_citation_alignment",
+        "corpus_document_count": 741,
+        "evidence_gate_passed": false,
+        "evidence_source_document_count": 741,
+        "gate_passed": false,
+        "min_adapter_request_coverage": 1.0,
+        "promotion_ready": false,
+        "selected_batch_count": 0,
+        "selected_batch_ids": [],
+        "status": "blocked",
+        "target_route": "retrieval_groundedness",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "improve-unresolved-citation-alignment-command-1",
+      "path": "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_gate_passed": true,
+        "adapter_gate_status": "complete",
+        "adapter_request_count": 260,
+        "adapter_request_coverage": 1.0,
+        "adapter_result_count": 741,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/command-2/artifact-manifest.json",
+        "catalog_source_document_count": 713,
+        "closure_action": "improve_unresolved_citation_alignment",
+        "corpus_document_count": 741,
+        "evidence_gate_passed": false,
+        "evidence_source_document_count": 741,
+        "gate_passed": false,
+        "min_adapter_request_coverage": 1.0,
+        "promotion_ready": false,
+        "selected_batch_count": 0,
+        "selected_batch_ids": [],
+        "status": "blocked",
+        "target_route": "retrieval_groundedness",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "improve-unresolved-citation-alignment-command-2",
+      "path": "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_gate_passed": true,
+        "adapter_gate_status": "complete",
+        "adapter_request_count": 260,
+        "adapter_request_coverage": 1.0,
+        "adapter_result_count": 740,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/command-3/artifact-manifest.json",
+        "catalog_source_document_count": 713,
+        "closure_action": "improve_unresolved_citation_alignment",
+        "corpus_document_count": 740,
+        "evidence_gate_passed": false,
+        "evidence_source_document_count": 740,
+        "gate_passed": false,
+        "min_adapter_request_coverage": 1.0,
+        "promotion_ready": false,
+        "selected_batch_count": 0,
+        "selected_batch_ids": [],
+        "status": "blocked",
+        "target_route": "retrieval_groundedness",
+        "workflow": "source_family_citation_search_workflow"
+      },
+      "name": "improve-unresolved-citation-alignment-command-3",
+      "path": "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/bound-command-run-manifest.json",
+        "binding_not_reviewed_count": 0,
+        "bound_command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
+        "command_count": 3,
+        "dry_run": false,
+        "dry_run_count": 0,
+        "entry_count": 1,
+        "execution_mode": "sequential",
+        "failed_count": 0,
+        "invalid_command_count": 0,
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "materialized_output_count": 2,
+        "missing_output_count": 0,
+        "skipped_count": 0,
+        "status": "succeeded",
+        "succeeded_count": 3,
+        "workers": 1,
+        "workflow": "frontier_research_queue_bound_command_run_report"
+      },
+      "name": "improve-unresolved-citation-alignment-bound-command-run",
+      "path": "artifacts/improve-unresolved-citation-alignment/bound-command-run-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_gate_failed_count": 0,
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-artifact-manifest.json",
+        "blocked_report_count": 3,
+        "child_manifest_failed_count": 0,
+        "closure_action": "improve_unresolved_citation_alignment",
+        "comparison_failed_count": 3,
+        "comparison_passed_count": 0,
+        "expected_batch_count": 0,
+        "max_workers": 3,
+        "missing_expected_batch_count": 0,
+        "observed_batch_count": 0,
+        "passed": false,
+        "promotion_ready": false,
+        "provenance_failed_count": 0,
+        "provenance_passed_count": 3,
+        "query_sweep_no_passing_strategy_count": 3,
+        "report_count": 3,
+        "source_workflow": "frontier_research_bound_command_plan",
+        "status": "blocked",
+        "workflow": "citation_search_batch_evidence_rollup"
+      },
+      "name": "unresolved-citation-alignment-rollup",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "citation_status": "blocked",
+        "includes_citation_alignment_rollup": "true",
+        "manifest_summary": {
+          "artifact_count": 16,
+          "directory_count": 0,
+          "file_count": 16,
+          "missing_count": 0
+        },
+        "model": "smollm2-l80",
+        "next_action_count": 1,
+        "source": "frontier-v4",
+        "source_family_acquisition_status": "covered",
+        "status": "needs_evidence",
+        "unresolved_target_count": 88,
+        "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_adjusted_remaining_task_count": 0,
+        "world_model_rule_audit_requeue_suggestion_count": 8,
+        "world_model_rule_remaining_task_count": 8,
+        "world_model_rule_requeue_outstanding_count": 0,
+        "world_model_rule_status": "promote"
+      },
+      "name": "smollm2-l80-frontier-v4-unresolved-frontier-evidence-summary",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

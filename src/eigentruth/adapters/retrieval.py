@@ -29,7 +29,8 @@ from eigentruth.verify.groundedness import (
 )
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
-_FTS_SCHEMA_VERSION = "1"
+_FTS_SCHEMA_VERSION = "2"
+_RETRIEVAL_INDEX_TEXT_METADATA_KEY = "retrieval_index_text"
 
 
 @dataclass(frozen=True)
@@ -145,7 +146,10 @@ class InMemoryRetriever:
         object.__setattr__(
             self,
             "_indexed_documents",
-            tuple(_IndexedRetrievalDocument(document, _tokens(document.text)) for document in documents),
+            tuple(
+                _IndexedRetrievalDocument(document, _tokens(_retrieval_index_text(document)))
+                for document in documents
+            ),
         )
 
     def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
@@ -161,7 +165,7 @@ class InMemoryRetriever:
                 continue
             score = min(1.0, overlap * document.score)
             metadata = {
-                **dict(document.metadata),
+                **_retrieval_result_metadata(document),
                 "token_overlap": overlap,
                 "retriever": type(self).__name__,
             }
@@ -240,9 +244,9 @@ class SQLiteFTSRetriever:
         try:
             rows = tuple(self._connection.execute(  # type: ignore[union-attr]
                 """
-                SELECT text, source, metadata_json, base_score
+                SELECT text, index_text, source, metadata_json, base_score
                 FROM documents
-                WHERE text MATCH ?
+                WHERE index_text MATCH ?
                 """,
                 (fts_query,),
             ))
@@ -250,8 +254,8 @@ class SQLiteFTSRetriever:
             return tuple(self._fallback.retrieve(query, limit=limit))
 
         scored: list[tuple[float, RetrievalHit]] = []
-        for text, source, metadata_json, base_score in rows:
-            overlap = _token_overlap(query_tokens, _tokens(str(text)))
+        for text, index_text, source, metadata_json, base_score in rows:
+            overlap = _token_overlap(query_tokens, _tokens(str(index_text)))
             if overlap < self.min_overlap:
                 continue
             try:
@@ -260,8 +264,14 @@ class SQLiteFTSRetriever:
                 metadata = {}
             document_score = float(base_score)
             score = min(1.0, overlap * document_score)
+            document = RetrievalHit(
+                str(text),
+                None if source is None else str(source),
+                document_score,
+                metadata,
+            )
             hit_metadata = {
-                **metadata,
+                **_retrieval_result_metadata(document),
                 "token_overlap": overlap,
                 "retriever": type(self).__name__,
                 "retriever_backend": "sqlite_fts",
@@ -679,7 +689,8 @@ def _initialize_fts_connection(
     connection.execute(
         """
         CREATE VIRTUAL TABLE documents USING fts5(
-            text,
+            index_text,
+            text UNINDEXED,
             source UNINDEXED,
             metadata_json UNINDEXED,
             base_score UNINDEXED
@@ -688,9 +699,10 @@ def _initialize_fts_connection(
     )
     connection.execute("CREATE TABLE index_metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     connection.executemany(
-        "INSERT INTO documents(text, source, metadata_json, base_score) VALUES (?, ?, ?, ?)",
+        "INSERT INTO documents(index_text, text, source, metadata_json, base_score) VALUES (?, ?, ?, ?, ?)",
         (
             (
+                _retrieval_index_text(document),
                 document.text,
                 document.source,
                 _json_dumps_mapping(document.metadata),
@@ -723,6 +735,38 @@ def _documents_fingerprint(documents: Sequence[RetrievalHit]) -> str:
         )
         hasher.update(b"\n")
     return hasher.hexdigest()
+
+
+def _retrieval_index_text(document: RetrievalHit) -> str:
+    """Return text used for retrieval indexing without changing evidence text."""
+    raw_index_text = document.metadata.get(_RETRIEVAL_INDEX_TEXT_METADATA_KEY)
+    values: list[str] = [document.text]
+    if isinstance(raw_index_text, str):
+        stripped = raw_index_text.strip()
+        if stripped:
+            values.append(stripped)
+    elif isinstance(raw_index_text, Sequence) and not isinstance(raw_index_text, (bytes, bytearray)):
+        values.extend(str(item).strip() for item in raw_index_text if str(item).strip())
+    return " ".join(values)
+
+
+def _retrieval_result_metadata(document: RetrievalHit) -> dict[str, Any]:
+    metadata = dict(document.metadata)
+    index_text = metadata.pop(_RETRIEVAL_INDEX_TEXT_METADATA_KEY, None)
+    if index_text is None:
+        return metadata
+    if isinstance(index_text, str):
+        index_parts = (index_text,)
+    elif isinstance(index_text, Sequence) and not isinstance(index_text, (bytes, bytearray)):
+        index_parts = tuple(str(item) for item in index_text)
+    else:
+        index_parts = (str(index_text),)
+    joined = " ".join(part.strip() for part in index_parts if part.strip())
+    if joined:
+        metadata["retrieval_index_text_used"] = True
+        metadata["retrieval_index_text_sha256"] = sha256(joined.encode("utf-8")).hexdigest()
+        metadata["retrieval_index_text_chars"] = len(joined)
+    return metadata
 
 
 def _fts_query(tokens: Sequence[str]) -> str:

@@ -1,0 +1,369 @@
+{
+  "batch_reports": [
+    {
+      "adapter_gate_blocking_reason_count": 0,
+      "adapter_gate_min_request_coverage": 1.0,
+      "adapter_gate_passed": true,
+      "adapter_gate_present": true,
+      "adapter_gate_request_coverage": 1.0,
+      "adapter_gate_status": "complete",
+      "adapter_request_count": 260,
+      "adapter_result_count": 741,
+      "blocking_reason_count": 2,
+      "child_artifact_manifest": "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
+      "child_manifest_error": null,
+      "child_manifest_passed": true,
+      "child_manifest_verification": {
+        "checked": 19,
+        "failures": [],
+        "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
+        "nested": [
+          {
+            "checked": 16,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 6,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-handoff-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              {
+                "checked": 3,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-query-sweep-comparison-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              {
+                "checked": 4,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-query-sweep-manifest.json",
+                "nested": [],
+                "passed": true
+              }
+            ],
+            "passed": true
+          },
+          {
+            "checked": 4,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/request-handoff/artifact-manifest.json",
+            "nested": [],
+            "passed": true
+          },
+          {
+            "checked": 9,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-1/source-family-citation-search-adapter-manifest.json",
+            "nested": [],
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "comparison_passed": false,
+      "comparison_status": "blocked",
+      "corpus_document_count": 741,
+      "evidence_class": "external_candidate",
+      "gate_passed": false,
+      "path": "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "promotion_ready": false,
+      "provenance_passed": true,
+      "provenance_status": "pass",
+      "query_sweep_best_passing_blind_refuted_count": null,
+      "query_sweep_best_passing_strategy": null,
+      "query_sweep_best_strategy": "question_overlap_0p65",
+      "recommended_external_strategy": null,
+      "selected_batch_count": 0,
+      "selected_batch_ids": [],
+      "source_document_count": 741,
+      "status": "blocked",
+      "supported_workflow": true,
+      "workflow": "source_family_citation_search_workflow"
+    },
+    {
+      "adapter_gate_blocking_reason_count": 0,
+      "adapter_gate_min_request_coverage": 1.0,
+      "adapter_gate_passed": true,
+      "adapter_gate_present": true,
+      "adapter_gate_request_coverage": 1.0,
+      "adapter_gate_status": "complete",
+      "adapter_request_count": 260,
+      "adapter_result_count": 741,
+      "blocking_reason_count": 2,
+      "child_artifact_manifest": "artifacts/improve-unresolved-citation-alignment/command-2/artifact-manifest.json",
+      "child_manifest_error": null,
+      "child_manifest_passed": true,
+      "child_manifest_verification": {
+        "checked": 19,
+        "failures": [],
+        "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/artifact-manifest.json",
+        "nested": [
+          {
+            "checked": 16,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/evidence-gate/artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 6,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/evidence-gate/citation-search-handoff-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              {
+                "checked": 3,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/evidence-gate/citation-search-query-sweep-comparison-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              {
+                "checked": 4,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/evidence-gate/citation-search-query-sweep-manifest.json",
+                "nested": [],
+                "passed": true
+              }
+            ],
+            "passed": true
+          },
+          {
+            "checked": 4,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/request-handoff/artifact-manifest.json",
+            "nested": [],
+            "passed": true
+          },
+          {
+            "checked": 9,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-2/source-family-citation-search-adapter-manifest.json",
+            "nested": [],
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "comparison_passed": false,
+      "comparison_status": "blocked",
+      "corpus_document_count": 741,
+      "evidence_class": "external_candidate",
+      "gate_passed": false,
+      "path": "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "promotion_ready": false,
+      "provenance_passed": true,
+      "provenance_status": "pass",
+      "query_sweep_best_passing_blind_refuted_count": null,
+      "query_sweep_best_passing_strategy": null,
+      "query_sweep_best_strategy": "question_answer_overlap_0p65",
+      "recommended_external_strategy": null,
+      "selected_batch_count": 0,
+      "selected_batch_ids": [],
+      "source_document_count": 741,
+      "status": "blocked",
+      "supported_workflow": true,
+      "workflow": "source_family_citation_search_workflow"
+    },
+    {
+      "adapter_gate_blocking_reason_count": 0,
+      "adapter_gate_min_request_coverage": 1.0,
+      "adapter_gate_passed": true,
+      "adapter_gate_present": true,
+      "adapter_gate_request_coverage": 1.0,
+      "adapter_gate_status": "complete",
+      "adapter_request_count": 260,
+      "adapter_result_count": 740,
+      "blocking_reason_count": 2,
+      "child_artifact_manifest": "artifacts/improve-unresolved-citation-alignment/command-3/artifact-manifest.json",
+      "child_manifest_error": null,
+      "child_manifest_passed": true,
+      "child_manifest_verification": {
+        "checked": 19,
+        "failures": [],
+        "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/artifact-manifest.json",
+        "nested": [
+          {
+            "checked": 16,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/evidence-gate/artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 6,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/evidence-gate/citation-search-handoff-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              {
+                "checked": 3,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/evidence-gate/citation-search-query-sweep-comparison-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              {
+                "checked": 4,
+                "failures": [],
+                "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/evidence-gate/citation-search-query-sweep-manifest.json",
+                "nested": [],
+                "passed": true
+              }
+            ],
+            "passed": true
+          },
+          {
+            "checked": 4,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/request-handoff/artifact-manifest.json",
+            "nested": [],
+            "passed": true
+          },
+          {
+            "checked": 9,
+            "failures": [],
+            "manifest_path": "artifacts/improve-unresolved-citation-alignment/command-3/source-family-citation-search-adapter-manifest.json",
+            "nested": [],
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "comparison_passed": false,
+      "comparison_status": "blocked",
+      "corpus_document_count": 740,
+      "evidence_class": "external_candidate",
+      "gate_passed": false,
+      "path": "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json",
+      "promotion_ready": false,
+      "provenance_passed": true,
+      "provenance_status": "pass",
+      "query_sweep_best_passing_blind_refuted_count": null,
+      "query_sweep_best_passing_strategy": null,
+      "query_sweep_best_strategy": "question_answer_overlap_0p65",
+      "recommended_external_strategy": null,
+      "selected_batch_count": 0,
+      "selected_batch_ids": [],
+      "source_document_count": 740,
+      "status": "blocked",
+      "supported_workflow": true,
+      "workflow": "source_family_citation_search_workflow"
+    }
+  ],
+  "config": {
+    "expected_batch_ids": [],
+    "expected_request_type": "external_citation",
+    "max_workers": 3,
+    "recursive_child_manifest_verification": true,
+    "require_child_manifests": true
+  },
+  "execution": {
+    "max_workers": 3,
+    "parallel_child_report_count": 3
+  },
+  "gate": {
+    "blocking_reasons": [
+      {
+        "gate": "child_gate",
+        "path": "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+        "reason": "Child workflow status is 'blocked' and gate_passed is false."
+      },
+      {
+        "gate": "child_gate",
+        "path": "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+        "reason": "Child workflow status is 'blocked' and gate_passed is false."
+      },
+      {
+        "gate": "child_gate",
+        "path": "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json",
+        "reason": "Child workflow status is 'blocked' and gate_passed is false."
+      }
+    ],
+    "passed": false,
+    "promotion_ready": false
+  },
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "source_workflow": "frontier_research_bound_command_plan"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-artifact-manifest.json",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "expected_batch_source": "none",
+    "queue_report": null,
+    "reports": [
+      "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json"
+    ]
+  },
+  "status": "blocked",
+  "summary": {
+    "adapter_gate_failed_count": 0,
+    "adapter_gate_passed_count": 3,
+    "adapter_gate_present_count": 3,
+    "adapter_gate_status_counts": {
+      "complete": 3
+    },
+    "adapter_request_count": 780,
+    "adapter_result_count": 2222,
+    "blocked_report_count": 3,
+    "child_manifest_failed_count": 0,
+    "child_manifest_missing_count": 0,
+    "child_manifest_passed_count": 3,
+    "comparison_failed_count": 3,
+    "comparison_passed_count": 0,
+    "comparison_present_count": 3,
+    "comparison_status_counts": {
+      "blocked": 3
+    },
+    "corpus_document_count": 2222,
+    "duplicate_batch_count": 0,
+    "duplicate_batch_ids": [],
+    "evidence_class_counts": {
+      "external_candidate": 3
+    },
+    "expected_batch_count": 0,
+    "expected_batch_ids": [],
+    "gate_passed_count": 0,
+    "missing_expected_batch_count": 0,
+    "missing_expected_batch_ids": [],
+    "observed_batch_count": 0,
+    "observed_batch_ids": [],
+    "promotion_ready_count": 0,
+    "provenance_failed_count": 0,
+    "provenance_passed_count": 3,
+    "provenance_present_count": 3,
+    "provenance_status_counts": {
+      "pass": 3
+    },
+    "query_sweep_best_passing_blind_refuted_count_max": null,
+    "query_sweep_best_passing_blind_refuted_count_sum": 0,
+    "query_sweep_best_passing_strategy_counts": {},
+    "query_sweep_best_strategy_counts": {
+      "question_answer_overlap_0p65": 2,
+      "question_overlap_0p65": 1
+    },
+    "query_sweep_no_passing_strategy_count": 3,
+    "query_sweep_present_count": 3,
+    "report_count": 3,
+    "source_document_count": 2222,
+    "status_counts": {
+      "blocked": 3
+    },
+    "unbatched_report_count": 3,
+    "unexpected_batch_count": 0,
+    "unexpected_batch_ids": [],
+    "unsupported_workflow_count": 0,
+    "workflow_counts": {
+      "source_family_citation_search_workflow": 3
+    }
+  },
+  "workflow": "citation_search_batch_evidence_rollup"
+}

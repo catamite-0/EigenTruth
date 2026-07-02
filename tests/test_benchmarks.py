@@ -10951,6 +10951,40 @@ def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
         )
 
 
+def test_local_retrievers_use_retrieval_index_text_without_exposing_it(tmp_path):
+    adapters = importlib.import_module("eigentruth.adapters")
+
+    document_text = "The reference states Alpha Syndrome is a fictional condition."
+    documents = (
+        adapters.RetrievalHit(
+            text=document_text,
+            source="external:alpha",
+            metadata={"retrieval_index_text": "What is Alpha Syndrome? clinical reference"},
+        ),
+    )
+    query = adapters.RetrievalQuery(query="What is Alpha Syndrome?", claim_id="alpha")
+
+    memory_hits = adapters.InMemoryRetriever(documents, min_overlap=0.75).retrieve(query, limit=1)
+
+    assert len(memory_hits) == 1
+    assert memory_hits[0].text == document_text
+    assert "retrieval_index_text" not in memory_hits[0].metadata
+    assert memory_hits[0].metadata["retrieval_index_text_used"] is True
+    assert memory_hits[0].metadata["retriever"] == "InMemoryRetriever"
+
+    fts = adapters.SQLiteFTSRetriever(
+        documents,
+        min_overlap=0.75,
+        index_path=tmp_path / "retrieval-index.sqlite",
+    )
+    fts_hits = fts.retrieve(query, limit=1)
+
+    assert len(fts_hits) == 1
+    assert fts_hits[0].text == document_text
+    assert "retrieval_index_text" not in fts_hits[0].metadata
+    assert fts_hits[0].metadata["retrieval_index_text_used"] is True
+
+
 def test_build_evidence_fixture_applies_retrieval_provenance_filter(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     scores_path = tmp_path / "scores.json"
@@ -57278,6 +57312,11 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert "model_answer" not in requests[0]
     assert "target_id" not in requests[0]
     assert source_docs[0]["metadata"]["provider"] == "unit-search"
+    assert source_docs[0]["metadata"]["source_queue_request_sha256"] == requests[0]["metadata"][
+        "source_queue_request_sha256"
+    ]
+    assert "What is Alpha Syndrome?" in source_docs[0]["metadata"]["retrieval_index_text"]
+    assert "A moon" not in source_docs[0]["metadata"]["retrieval_index_text"]
     assert "record_index" not in source_docs[0]["metadata"]
     assert "target_id" not in source_docs[0]["metadata"]
     assert "model_answer" not in source_docs[0]["metadata"]
@@ -57285,6 +57324,10 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert corpus["summary"]["n_documents"] == 1
     assert corpus["label_usage"]["labels_used_for_documents"] is False
     assert corpus["documents"][0]["metadata"]["source_kind"] == "unit_citation_search_result"
+    assert corpus["documents"][0]["metadata"]["source_queue_request_sha256"] == requests[0]["metadata"][
+        "source_queue_request_sha256"
+    ]
+    assert "A moon" not in corpus["documents"][0]["metadata"]["retrieval_index_text"]
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "citation_search_adapter_handoff"
     assert record.metadata["source_document_count"] == 1
@@ -57621,6 +57664,67 @@ def test_source_family_citation_search_adapter_ranks_family_matches(tmp_path):
     assert record.metadata["status"] == "complete"
     assert record.metadata["gate_passed"] is True
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_citation_search_adapter_prefers_source_bound_documents(tmp_path):
+    module = importlib.import_module("benchmarks.run_source_family_citation_search_adapter")
+
+    requests_path = tmp_path / "requests.jsonl"
+    catalog_path = tmp_path / "source-catalog.jsonl"
+    results_path = tmp_path / "results.jsonl"
+    requests_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "request_id": "cite-search-alpha",
+            "adapter_family": "external_citation_search",
+            "query": "Alpha population official statistics",
+            "metadata": {"source_queue_request_sha256": "sha-alpha"},
+            "source_family_plan": {
+                "families": ["official_statistics", "scholarly"],
+                "query_hints": ["official statistics", "data"],
+            },
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    catalog_path.write_text(
+        "\n".join([
+            json.dumps({
+                "title": "Alpha population official statistics",
+                "text": "Alpha population official statistics unrelated broad background.",
+                "source": "scholarly:alpha-unbound",
+                "provider": "unit-scholarly-catalog",
+                "source_family": "scholarly",
+            }),
+            json.dumps({
+                "title": "Alpha official data",
+                "text": "Alpha official data are published by the national statistics office.",
+                "source": "official-statistics:alpha-bound",
+                "provider": "unit-official-catalog",
+                "source_family": "official_statistics",
+                "metadata": {"source_queue_request_sha256": ["sha-alpha"]},
+            }),
+        ])
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.run_source_family_citation_search_adapter(
+        input_path=requests_path,
+        output_path=results_path,
+        source_catalog_paths=(catalog_path,),
+        max_results=2,
+    )
+    rows = [json.loads(line) for line in results_path.read_text(encoding="utf-8").splitlines()]
+
+    assert payload["status"] == "complete"
+    assert rows[0]["metadata"]["source_binding_mode"] == "exact_match"
+    assert rows[0]["metadata"]["source_binding_key_count"] == 1
+    assert rows[0]["metadata"]["source_bound_document_count"] == 1
+    assert [result["source"] for result in rows[0]["results"]] == [
+        "official-statistics:alpha-bound"
+    ]
 
 
 def test_source_family_citation_search_adapter_reports_partial_coverage(tmp_path):

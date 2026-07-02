@@ -8,6 +8,14 @@
       "sha256": "d854247157220cf6a4cc1ed85cee65a94bf98c8dbc99464d91111c44d5bbbdf9",
       "size_bytes": 7657
     },
+    "citation_workflow_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
+      "sha256": "09930d7d19f1a3fd35f83a67640b4df991b7e72cbfa1aee6f9cf058b08fd6504",
+      "size_bytes": 14133
+    },
     "mechanism_handoff_bundle": {
       "exists": true,
       "file_count": 1,
@@ -109,8 +117,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "a61c09f3af0375509dc2df4ccadc763ca0cd59ed35da1430d05884aff04331b3",
-      "size_bytes": 15857
+      "sha256": "2351c9222d7ac44bcd7540caaec8ca12701b28d62921980212d33aa2e29adafc",
+      "size_bytes": 16792
     },
     "unresolved_queue": {
       "exists": true,
@@ -123,11 +131,11 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "added_numeric_promotions": "6",
-    "added_temporal_promotions": "3",
     "citation_status": "blocked",
-    "closure_action": "fill_and_promote_remaining_world_model_rules",
+    "includes_citation_alignment_rollup": "true",
+    "model": "smollm2-l80",
     "next_action_count": 1,
+    "source": "frontier-v4",
     "source_family_acquisition_status": "covered",
     "status": "needs_evidence",
     "unresolved_target_count": 88,
@@ -140,9 +148,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 15,
+    "artifact_count": 16,
     "directory_count": 0,
-    "file_count": 15,
+    "file_count": 16,
     "missing_count": 0
   }
 }

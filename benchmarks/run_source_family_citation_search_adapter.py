@@ -269,8 +269,19 @@ def _rank_request(
     plan = _source_family_plan(request)
     preferred_families = _preferred_families(plan)
     query_hint_tokens = _tokens(" ".join(_string_sequence(plan.get("query_hints", ()))))
+    request_source_keys = _source_binding_keys(_mapping(request.get("metadata")))
+    source_bound_catalog = (
+        tuple(
+            document
+            for document in catalog
+            if request_source_keys & _source_binding_keys(document.metadata)
+        )
+        if request_source_keys
+        else ()
+    )
+    candidate_catalog = source_bound_catalog or tuple(catalog)
     scored: list[tuple[float, dict[str, Any]]] = []
-    for document in catalog:
+    for document in candidate_catalog:
         score = _score_document(
             document,
             query_variants=query_variants,
@@ -308,6 +319,13 @@ def _rank_request(
             "freshness_required": bool(plan.get("freshness_required")),
             "official_source_preferred": bool(plan.get("official_source_preferred")),
             "catalog_document_count": len(catalog),
+            "source_binding_key_count": len(request_source_keys),
+            "source_bound_document_count": len(source_bound_catalog),
+            "source_binding_mode": (
+                "exact_match"
+                if source_bound_catalog
+                else ("fallback_all_catalog" if request_source_keys else "none")
+            ),
             "diversify_source_families": bool(diversify_source_families),
         },
     }
@@ -717,6 +735,24 @@ def _bool_metadata(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().casefold() in {"true", "1", "yes", "on"}
     return False
+
+
+def _source_binding_keys(metadata: Mapping[str, Any]) -> set[str]:
+    keys: set[str] = set()
+    for field_name in (
+        "source_queue_request_sha256",
+        "source_request_sha256",
+        "collection_request_sha256",
+    ):
+        value = metadata.get(field_name)
+        if isinstance(value, str):
+            values: Sequence[Any] = (value,)
+        elif isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+            values = value
+        else:
+            values = ()
+        keys.update(str(item).strip() for item in values if str(item).strip())
+    return keys
 
 
 def _normalize_family(value: Any) -> str:

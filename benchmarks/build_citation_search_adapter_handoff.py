@@ -512,6 +512,13 @@ def _source_document(
         "adapter_request_sha256": _sha256_json(request),
         "query_sha256": hashlib.sha256(str(request.get("query", "")).encode("utf-8")).hexdigest(),
         "result_sha256": _sha256_json(result),
+        "retrieval_index_text": _retrieval_index_text(
+            request=request,
+            title=title,
+            snippet=snippet,
+            content=content,
+        ),
+        **_source_binding_metadata(request=request, result=result),
     }
     metadata = {key: value for key, value in metadata.items() if value is not None and value != ""}
     _reject_reserved_metadata(metadata, source=source)
@@ -520,6 +527,44 @@ def _source_document(
         "source": source,
         "metadata": metadata,
     }
+
+
+def _retrieval_index_text(
+    *,
+    request: Mapping[str, Any],
+    title: str,
+    snippet: str,
+    content: str,
+) -> str:
+    """Return retrieval-only text that must not replace verifier evidence text."""
+    parts = [
+        str(request.get("query", "")).strip(),
+        *tuple(_string_sequence(request.get("alternate_queries", ()))),
+        title,
+        snippet,
+    ]
+    if not snippet and not content:
+        parts.append(title)
+    return _join_nonempty(parts)
+
+
+def _source_binding_metadata(
+    *,
+    request: Mapping[str, Any],
+    result: Mapping[str, Any],
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    request_metadata = _mapping(request.get("metadata"))
+    result_metadata = _mapping(result.get("metadata"))
+    for key in (
+        "source_queue_request_sha256",
+        "source_request_sha256",
+        "collection_request_sha256",
+    ):
+        value = result_metadata.get(key, request_metadata.get(key))
+        if value is not None:
+            metadata[key] = value
+    return metadata
 
 
 def _summary(

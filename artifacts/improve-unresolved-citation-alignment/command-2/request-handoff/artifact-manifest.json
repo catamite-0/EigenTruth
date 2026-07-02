@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "citation_search_adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../source-family-citation-search-requests.jsonl",
+      "sha256": "1857280a3aab8b0151aa8dd8e71852c020ed6f4d1d1dd1137bde85db0d1753e8",
+      "size_bytes": 334892
+    },
+    "citation_search_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-request-handoff.json",
+      "sha256": "dac6c6c063bd3b25524af59204e5d35099e4cbde89e90ec0d51db0fa0ce74fe5",
+      "size_bytes": 506109
+    },
+    "citation_search_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-source-docs.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 260,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_document_count": 0,
+    "selected_batch_count": 0,
+    "source_document_count": 0,
+    "source_workflow": "source_family_citation_search_workflow",
+    "status": "ready_for_external_adapter",
+    "workflow": "citation_search_adapter_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "artifacts": {
+    "batch_manifest_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/command-1/artifact-manifest.json",
+      "sha256": "c60cf5956122a0b274a6b6a22a822101e43503f34e8cfbe886cacd41937119e5",
+      "size_bytes": 6660
+    },
+    "batch_manifest_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/command-2/artifact-manifest.json",
+      "sha256": "3cf7e1f1c343ccce234d45c7a41a30de13626721a81213201abb65839e422dbc",
+      "size_bytes": 6660
+    },
+    "batch_manifest_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/command-3/artifact-manifest.json",
+      "sha256": "4a9edc2d3bff2932099542cb5a684892f87bbdac638d717058995c1c263624cc",
+      "size_bytes": 6660
+    },
+    "batch_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "sha256": "a6cb195fbf8506be0033489a0957b1d855c01ce78a95864bf5aeee5f1098da69",
+      "size_bytes": 29790
+    },
+    "batch_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "sha256": "9cd4e1122e4c1a59ed3ddfef5f708175dfe90bd4cd785643753f72455ebd8d1f",
+      "size_bytes": 29790
+    },
+    "batch_report_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/command-3/workflow-report.json",
+      "sha256": "bb7cdf8bedfcb4027d6ba87eeddc2d044d84746d225b72085fefe5c9bbdf77d3",
+      "size_bytes": 29787
+    },
+    "rollup_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-citation-alignment-workflow-report.json",
+      "sha256": "09930d7d19f1a3fd35f83a67640b4df991b7e72cbfa1aee6f9cf058b08fd6504",
+      "size_bytes": 14133
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_gate_failed_count": 0,
+    "blocked_report_count": 3,
+    "child_manifest_failed_count": 0,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "comparison_failed_count": 3,
+    "comparison_passed_count": 0,
+    "expected_batch_count": 0,
+    "max_workers": 3,
+    "missing_expected_batch_count": 0,
+    "observed_batch_count": 0,
+    "passed": false,
+    "promotion_ready": false,
+    "provenance_failed_count": 0,
+    "provenance_passed_count": 3,
+    "query_sweep_no_passing_strategy_count": 3,
+    "report_count": 3,
+    "source_workflow": "frontier_research_bound_command_plan",
+    "status": "blocked",
+    "workflow": "citation_search_batch_evidence_rollup"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}
