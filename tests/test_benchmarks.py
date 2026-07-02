@@ -10216,6 +10216,97 @@ def test_eval_verifier_ensemble_can_route_sensitive_claims_to_triple_evidence(tm
     assert run["cache_stats"]["groundedness_verifiers"]["requests"] == 0
 
 
+def test_eval_verifier_ensemble_uses_retrieval_triple_object_mismatch(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    verified_path = tmp_path / "verified.jsonl"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {"text": "What is the capital of France? Paris."},
+                {"text": "What is the capital of France? Paris."},
+                {"text": "What is the capital of France? Berlin."},
+                {"text": "What is the capital of France? Berlin."},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "What is the capital of France? Paris.",
+                    "claim_id": "capital_true",
+                    "retrieval_documents": [
+                        {"text": "The capital of France is Paris.", "source": "atlas:france"},
+                    ],
+                },
+                {
+                    "claim": "What is the capital of France? Paris.",
+                    "claim_id": "capital_true_repeat",
+                    "retrieval_documents": [
+                        {"text": "The capital of France is Paris.", "source": "atlas:france"},
+                    ],
+                },
+                {
+                    "claim": "What is the capital of France? Berlin.",
+                    "claim_id": "capital_false",
+                    "retrieval_documents": [
+                        {"text": "The capital of France is Paris.", "source": "atlas:france"},
+                    ],
+                },
+                {
+                    "claim": "What is the capital of France? Berlin.",
+                    "claim_id": "capital_false_repeat",
+                    "retrieval_documents": [
+                        {"text": "The capital of France is Paris.", "source": "atlas:france"},
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.95,
+        retriever_min_overlap=0.0,
+        retrieval_limit=1,
+        enable_triple_evidence=True,
+        triple_refute_object_mismatch=True,
+        verified_records_path=verified_path,
+    )
+    run = payload["runs"][0]
+    records = [json.loads(line)["record"] for line in verified_path.read_text(encoding="utf-8").splitlines()]
+
+    assert payload["triple_evidence_verifier"]["refute_object_mismatch"] is True
+    assert run["triple_evidence_verifier"]["records_with_retrieval_triple_route"] == 4
+    assert run["route_summary"]["selected_counts"] == {"retrieval_triple_evidence": 4}
+    assert [record["final"]["status"] for record in records] == [
+        "supported",
+        "supported",
+        "refuted",
+        "refuted",
+    ]
+    assert [record["route"]["selected_verifier"] for record in records] == [
+        "TripleEvidenceVerifier",
+        "TripleEvidenceVerifier",
+        "TripleEvidenceVerifier",
+        "TripleEvidenceVerifier",
+    ]
+    assert records[2]["final"]["metadata"]["decision_rule"] == "triple_object_mismatch"
+    assert records[2]["final"]["metadata"]["object_mismatches"][0]["evidence_object"] == "Paris"
+
+
 def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")

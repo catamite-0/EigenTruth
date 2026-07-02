@@ -73,6 +73,9 @@ def sweep_blind_spot_retrieval_queries(
     repeats: int = 1,
     seed: int = 0,
     verifier_min_overlap: float = 0.65,
+    enable_triple_evidence: bool = False,
+    triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     target_route: str = DEFAULT_TARGET_ROUTE,
     max_verified_false_alarm: float = 0.05,
     min_blind_refuted_rate: float = 0.50,
@@ -125,6 +128,9 @@ def sweep_blind_spot_retrieval_queries(
                         repeats=repeats,
                         seed=seed,
                         verifier_min_overlap=verifier_min_overlap,
+                        enable_triple_evidence=enable_triple_evidence,
+                        triple_min_slot_coverage=triple_min_slot_coverage,
+                        triple_refute_object_mismatch=triple_refute_object_mismatch,
                         target_route=target_route,
                         max_verified_false_alarm=max_verified_false_alarm,
                         min_blind_refuted_rate=min_blind_refuted_rate,
@@ -156,6 +162,9 @@ def sweep_blind_spot_retrieval_queries(
             "repeats": int(repeats),
             "seed": int(seed),
             "verifier_min_overlap": float(verifier_min_overlap),
+            "enable_triple_evidence": bool(enable_triple_evidence),
+            "triple_min_slot_coverage": float(triple_min_slot_coverage),
+            "triple_refute_object_mismatch": bool(triple_refute_object_mismatch),
             "target_route": target_route,
             "max_verified_false_alarm": max_verified_false_alarm,
             "min_blind_refuted_rate": min_blind_refuted_rate,
@@ -196,6 +205,9 @@ def run(
     repeats: int = 1,
     seed: int = 0,
     verifier_min_overlap: float = 0.65,
+    enable_triple_evidence: bool = False,
+    triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     target_route: str = DEFAULT_TARGET_ROUTE,
     max_verified_false_alarm: float = 0.05,
     min_blind_refuted_rate: float = 0.50,
@@ -223,6 +235,9 @@ def run(
         repeats=repeats,
         seed=seed,
         verifier_min_overlap=verifier_min_overlap,
+        enable_triple_evidence=enable_triple_evidence,
+        triple_min_slot_coverage=triple_min_slot_coverage,
+        triple_refute_object_mismatch=triple_refute_object_mismatch,
         target_route=target_route,
         max_verified_false_alarm=max_verified_false_alarm,
         min_blind_refuted_rate=min_blind_refuted_rate,
@@ -298,6 +313,9 @@ def _evaluate_strategy(
     repeats: int,
     seed: int,
     verifier_min_overlap: float,
+    enable_triple_evidence: bool,
+    triple_min_slot_coverage: float,
+    triple_refute_object_mismatch: bool,
     target_route: str,
     max_verified_false_alarm: float,
     min_blind_refuted_rate: float,
@@ -331,6 +349,9 @@ def _evaluate_strategy(
         verifier_min_overlap=float(verifier_min_overlap),
         retriever_min_overlap=float(retriever_min_overlap),
         retrieval_limit=int(retrieval_limit),
+        enable_triple_evidence=bool(enable_triple_evidence),
+        triple_min_slot_coverage=float(triple_min_slot_coverage),
+        triple_refute_object_mismatch=bool(triple_refute_object_mismatch),
         verified_records_path=verified_records_path,
     )
     run = verifier_report["runs"][0]
@@ -619,6 +640,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
+    parser.add_argument("--enable-triple-evidence", action="store_true")
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0)
+    parser.add_argument("--triple-refute-object-mismatch", action="store_true")
     parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
     parser.add_argument("--max-verified-false-alarm", type=float, default=0.05)
     parser.add_argument("--min-blind-refuted-rate", type=float, default=0.50)
@@ -647,6 +671,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         repeats=args.repeats,
         seed=args.seed,
         verifier_min_overlap=args.verifier_min_overlap,
+        enable_triple_evidence=bool(args.enable_triple_evidence),
+        triple_min_slot_coverage=float(args.triple_min_slot_coverage),
+        triple_refute_object_mismatch=bool(args.triple_refute_object_mismatch),
         target_route=args.target_route,
         max_verified_false_alarm=args.max_verified_false_alarm,
         min_blind_refuted_rate=args.min_blind_refuted_rate,

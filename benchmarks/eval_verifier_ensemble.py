@@ -66,6 +66,7 @@ from eigentruth.verify import (
     VerificationResult,
     VerificationStatus,
     claim_features,
+    extract_claim_triples,
     stable_cache_key,
 )
 from eigentruth.verify.features import flag_value_enabled
@@ -596,6 +597,7 @@ def _verify_records(
     fact_selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     qa_verifier: QuestionAnswerVerifier | None = None,
     fact_verifier: StructuredFactVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
@@ -682,6 +684,7 @@ def _verify_records(
         key = stable_cache_key({
             "evidence": evidence,
             "min_slot_coverage": triple_min_slot_coverage,
+            "refute_object_mismatch": triple_refute_object_mismatch,
         })
         runner = triple_evidence_runners.get(key)
         if runner is None:
@@ -689,6 +692,7 @@ def _verify_records(
                 TripleEvidenceVerifier(
                     evidence=evidence,
                     min_slot_coverage=triple_min_slot_coverage,
+                    refute_object_mismatch=triple_refute_object_mismatch,
                 ),
                 cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
@@ -825,6 +829,7 @@ def _verify_records(
         fact_selfcheck_result = None
         retrieval_qa_result = None
         retrieval_alignment_result = None
+        retrieval_triple_evidence_result = None
         attempted_routes = []
         route_timings: list[dict[str, Any]] = []
         if qa_runner is not None:
@@ -1123,6 +1128,31 @@ def _verify_records(
                 if final.status in {
                     VerificationStatus.INSUFFICIENT_EVIDENCE,
                     VerificationStatus.NOT_APPLICABLE,
+                } and hit_documents and enable_triple_evidence and _record_has_claim_triple(record):
+                    attempted_routes.append("retrieval_triple_evidence")
+                    retrieval_triple_evidence_result = _timed_verify(
+                        route_timings,
+                        route="retrieval_triple_evidence",
+                        runner=triple_evidence_runner(hit_documents),
+                        claim=record.claim,
+                    )
+                    if retrieval_triple_evidence_result.status in {
+                        VerificationStatus.SUPPORTED,
+                        VerificationStatus.REFUTED,
+                    }:
+                        final = retrieval_triple_evidence_result
+                        triple_result = retrieval_triple_evidence_result
+                        selected_route = "retrieval_triple_evidence"
+                        selected_verifier = "TripleEvidenceVerifier"
+                        selected_retrieval_hits = hit_documents
+                        _retag_retrieval_timings(
+                            route_timings,
+                            from_route="retrieval_groundedness",
+                            to_route="retrieval_triple_evidence",
+                        )
+                if final.status in {
+                    VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    VerificationStatus.NOT_APPLICABLE,
                 } and hit_documents and has_retrieval_alignment_signal:
                     attempted_routes.append("retrieval_groundedness")
                     retrieval_alignment_result = _timed_verify(
@@ -1172,6 +1202,11 @@ def _verify_records(
             "fact_selfcheck": None if fact_selfcheck_result is None else _verification_to_dict(fact_selfcheck_result),
             "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
             "retrieval_qa": None if retrieval_qa_result is None else _verification_to_dict(retrieval_qa_result),
+            "retrieval_triple_evidence": (
+                None
+                if retrieval_triple_evidence_result is None
+                else _verification_to_dict(retrieval_triple_evidence_result)
+            ),
             "retrieval_alignment": (
                 None if retrieval_alignment_result is None else _verification_to_dict(retrieval_alignment_result)
             ),
@@ -1312,6 +1347,13 @@ def _record_has_triple_evidence(record: ClaimEvidenceRecord) -> bool:
             for key in ("has_number", "has_citation", "is_time_sensitive")
         )
     return False
+
+
+def _record_has_claim_triple(record: ClaimEvidenceRecord) -> bool:
+    try:
+        return bool(extract_claim_triples(record.claim))
+    except ValueError:
+        return False
 
 
 def _record_has_retrieval_alignment_signal(record: ClaimEvidenceRecord) -> bool:
@@ -2280,6 +2322,7 @@ def _verification_trace_cache_key(
     fact_selfcheck_max_samples: int | None,
     enable_triple_evidence: bool,
     triple_min_slot_coverage: float,
+    triple_refute_object_mismatch: bool,
     min_world_model_confidence: float,
     staged_verification: bool,
     staged_alpha: float,
@@ -2289,7 +2332,7 @@ def _verification_trace_cache_key(
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v7",
+        "builder": "eval_verifier_ensemble:verified_records:v8",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -2336,6 +2379,7 @@ def _verification_trace_cache_key(
             "type": "TripleEvidenceVerifier",
             "enabled": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+            "refute_object_mismatch": bool(triple_refute_object_mismatch),
         },
         "retrieval_alignment_verifier": {
             "type": "EvidenceAlignmentVerifier",
@@ -2518,6 +2562,7 @@ def build_verifier_ensemble_report(
     fact_selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     min_world_model_confidence: float = 0.0,
     verification_cache_dir: Path | None = None,
     staged_verification: bool = False,
@@ -2693,7 +2738,10 @@ def build_verifier_ensemble_report(
             any_fact_selfcheck_enabled = any_fact_selfcheck_enabled or fact_selfcheck_enabled
             triple_evidence_enabled = bool(
                 enable_triple_evidence
-                and any(_record_has_triple_evidence(record) for record in records)
+                and (
+                    any(_record_has_triple_evidence(record) for record in records)
+                    or any(record.retrieval_documents and _record_has_claim_triple(record) for record in records)
+                )
             )
             any_triple_evidence_enabled = any_triple_evidence_enabled or triple_evidence_enabled
             transition_verifier = (
@@ -2742,6 +2790,7 @@ def build_verifier_ensemble_report(
                 fact_selfcheck_max_samples=resolved_fact_selfcheck_max_samples,
                 enable_triple_evidence=bool(enable_triple_evidence),
                 triple_min_slot_coverage=float(triple_min_slot_coverage),
+                triple_refute_object_mismatch=bool(triple_refute_object_mismatch),
                 min_world_model_confidence=float(min_world_model_confidence),
                 staged_verification=stage_policy is not None,
                 staged_alpha=float(staged_alpha),
@@ -2778,6 +2827,7 @@ def build_verifier_ensemble_report(
                     fact_selfcheck_max_samples=resolved_fact_selfcheck_max_samples,
                     enable_triple_evidence=bool(enable_triple_evidence),
                     triple_min_slot_coverage=float(triple_min_slot_coverage),
+                    triple_refute_object_mismatch=bool(triple_refute_object_mismatch),
                     qa_verifier=qa_verifier,
                     fact_verifier=fact_verifier,
                     state_verifier=state_verifier,
@@ -2986,9 +3036,14 @@ def build_verifier_ensemble_report(
                     "type": "TripleEvidenceVerifier",
                     "enabled": triple_evidence_enabled,
                     "min_slot_coverage": float(triple_min_slot_coverage),
+                    "refute_object_mismatch": bool(triple_refute_object_mismatch),
                     "records_with_triple_route": sum(
                         1 for record in records
                         if _record_has_triple_evidence(record)
+                    ),
+                    "records_with_retrieval_triple_route": sum(
+                        1 for record in records
+                        if record.retrieval_documents and _record_has_claim_triple(record)
                     ),
                     "decided_records": sum(
                         1 for record in verified_records
@@ -3079,6 +3134,7 @@ def build_verifier_ensemble_report(
             "enabled": any_triple_evidence_enabled,
             "requested": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+            "refute_object_mismatch": bool(triple_refute_object_mismatch),
             "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "qa_verifier": {
@@ -3192,6 +3248,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         fact_selfcheck_max_samples=getattr(args, "fact_selfcheck_max_samples", None),
         enable_triple_evidence=bool(getattr(args, "enable_triple_evidence", False)),
         triple_min_slot_coverage=float(getattr(args, "triple_min_slot_coverage", 1.0)),
+        triple_refute_object_mismatch=bool(getattr(args, "triple_refute_object_mismatch", False)),
         min_world_model_confidence=float(getattr(args, "min_world_model_confidence", 0.0)),
         verification_cache_dir=(
             None
@@ -3298,6 +3355,8 @@ def main() -> None:
                         help="enable strict subject-predicate-object evidence audits for sensitive factual claims")
     parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0,
                         help="minimum per-slot evidence coverage for triple-evidence audits")
+    parser.add_argument("--triple-refute-object-mismatch", action="store_true",
+                        help="refute when evidence matches a claim subject/predicate but gives a different object")
     parser.add_argument("--min-world-model-confidence", type=float, default=0.0,
                         help="minimum world-model prediction confidence required for state-transition postconditions")
     parser.add_argument("--verification-cache-dir", default=None,

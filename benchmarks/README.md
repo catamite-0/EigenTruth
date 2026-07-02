@@ -1561,6 +1561,9 @@ query plan; `planned_rerank` expands the candidate pool, deduplicates repeated
 sources, puts higher-priority compatible families first, boosts structured
 metadata slot matches such as World Bank `country_name`/`indicator_name`, and
 retains incompatible hits as fallback evidence.
+Use `--enable-triple-evidence --triple-refute-object-mismatch` with
+`--target-route retrieval_triple_evidence` when the sweep should measure linked
+subject-predicate-object evidence rather than lexical retrieval groundedness.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep
@@ -4455,6 +4458,11 @@ use `--triple-min-slot-coverage` to relax or tighten the per-slot evidence
 coverage threshold. Triple audit metadata records each slot's expected value,
 matched and missing tokens, source/evidence label, plus claim-level slot
 coverage summaries for release review.
+Add `--triple-refute-object-mismatch` for frontier audits where linked evidence
+covering the same subject and predicate should refute a different object slot,
+for example when retrieval says the capital of France is Paris but the claim
+answers Berlin. The flag is opt-in so production-style monitor-first runs keep
+the older insufficient-evidence behavior by default.
 Each run validates inputs through `eigentruth.eval.ScoreDump` or selected score
 views and records a `score_dump` summary plus SHA-256 fingerprint, so
 verifier-cache and route promotion evidence can be tied back to the exact score

@@ -57,6 +57,24 @@ _USES_CURRENCY_RE = re.compile(
     r"(?:its\s+|their\s+|the\s+)?currenc(?:y|ies)$",
     re.IGNORECASE,
 )
+_QA_CAPITAL_RE = re.compile(
+    r"^(?:what|which)\s+(?:is|was)\s+(?:the\s+)?capital\s+of\s+(?P<subject>.+?)\?\s*(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_QA_OFFICIAL_LANGUAGE_RE = re.compile(
+    r"^(?:what|which)\s+(?:is|are|was|were)\s+(?:an?\s+|one\s+)?official\s+languages?\s+of\s+"
+    r"(?P<subject>.+?)\?\s*(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_QA_CURRENCY_RE = re.compile(
+    r"^(?:what|which)\s+(?:is|are|was|were)\s+(?:the\s+)?currenc(?:y|ies)\s+of\s+"
+    r"(?P<subject>.+?)\?\s*(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_QA_USES_CURRENCY_RE = re.compile(
+    r"^(?:what|which)\s+currenc(?:y|ies)\s+(?:does|do|did)\s+(?P<subject>.+?)\s+use\?\s*(?P<object>.+)$",
+    re.IGNORECASE,
+)
 _LOCATED_IN_RE = re.compile(
     r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+(?:located\s+in|based\s+in)\s+(?P<object>.+)$",
     re.IGNORECASE,
@@ -244,6 +262,12 @@ class RuleBasedTripleExtractor:
             return ()
         if _contains_blocked_extraction_context(text):
             return ()
+
+        if "?" in text:
+            question_answer = _question_answer_triples(claim, text)
+            if question_answer:
+                return question_answer
+            return _answer_assertion_triples(claim, text)
 
         capital = _CAPITAL_OF_RE.match(text)
         if capital is not None:
@@ -745,11 +769,17 @@ class TripleEvidenceVerifier:
     evidence: Sequence[EvidenceDocument | Mapping[str, Any] | str] = ()
     extractor: ClaimTripleExtractor = field(default_factory=RuleBasedTripleExtractor)
     min_slot_coverage: float = 1.0
+    refute_object_mismatch: bool = False
 
     def __post_init__(self) -> None:
         min_slot_coverage = _coerce_probability(self.min_slot_coverage, name="min_slot_coverage")
         object.__setattr__(self, "evidence", tuple(_coerce_evidence(item) for item in self.evidence))
         object.__setattr__(self, "min_slot_coverage", min_slot_coverage)
+        object.__setattr__(
+            self,
+            "refute_object_mismatch",
+            _coerce_bool(self.refute_object_mismatch, name="refute_object_mismatch"),
+        )
 
     def audit(self, claim: Claim, context: Mapping[str, Any] | None = None) -> TripleEvidenceAuditReport:
         """Return a slot-level evidence audit for one claim."""
@@ -764,11 +794,24 @@ class TripleEvidenceVerifier:
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify a claim by requiring all extracted triple slots to be covered."""
         report = self.audit(claim, context=context)
+        documents = _documents_with_context(self.evidence, context)
+        object_mismatches = (
+            _object_mismatch_summaries(
+                report.audits,
+                documents,
+                extractor=self.extractor,
+                min_slot_coverage=self.min_slot_coverage,
+            )
+            if self.refute_object_mismatch
+            else ()
+        )
         metadata = {
             "verifier": "triple_evidence",
             "decision_rule": "triple_slot_coverage",
             "audit_report": report.to_dict(),
             "min_slot_coverage": self.min_slot_coverage,
+            "refute_object_mismatch": self.refute_object_mismatch,
+            "object_mismatches": object_mismatches,
         }
         if report.triple_count == 0:
             return VerificationResult(
@@ -784,6 +827,15 @@ class TripleEvidenceVerifier:
                 confidence=0.85,
                 evidence=evidence,
                 explanation="all extracted claim triples have subject, predicate, and object evidence coverage",
+                metadata=metadata,
+            )
+        if object_mismatches:
+            metadata["decision_rule"] = "triple_object_mismatch"
+            return VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.82,
+                evidence=_unique_mismatch_evidence(object_mismatches) or _unique_evidence_label(report.audits),
+                explanation="evidence agrees on the subject and predicate but gives a different object slot",
                 metadata=metadata,
             )
         explanation = "one or more extracted claim triples have missing evidence slots"
@@ -861,6 +913,76 @@ def _metadata_triples(claim: Claim) -> tuple[ClaimTriple, ...]:
         else:
             raise ValueError("claim metadata triples must contain mappings.")
     return tuple(triples)
+
+
+def _question_answer_triples(claim: Claim, text: str) -> tuple[ClaimTriple, ...]:
+    patterns = (
+        (_QA_CAPITAL_RE, "capital_of", "qa_capital_rule"),
+        (_QA_OFFICIAL_LANGUAGE_RE, "official_language_of", "qa_official_language_rule"),
+        (_QA_CURRENCY_RE, "currency_of", "qa_currency_rule"),
+        (_QA_USES_CURRENCY_RE, "currency_of", "qa_uses_currency_rule"),
+    )
+    for pattern, predicate, source in patterns:
+        match = pattern.match(text)
+        if match is None:
+            continue
+        answer = _clean_sentence(match.group("object"))
+        if not answer:
+            return ()
+        subject = match.group("subject")
+        return (_triple(
+            claim,
+            subject=subject,
+            predicate=predicate,
+            object_value=_normalize_question_answer_object(
+                answer,
+                subject=subject,
+                predicate=predicate,
+            ),
+            source=source,
+        ),)
+    return ()
+
+
+def _answer_assertion_triples(claim: Claim, text: str) -> tuple[ClaimTriple, ...]:
+    answer = _clean_sentence(text.rsplit("?", 1)[-1])
+    if not answer:
+        return ()
+    if _contains_blocked_extraction_context(answer):
+        return ()
+    answer_claim = Claim(text=answer, claim_id=claim.claim_id)
+    triples = []
+    for triple in RuleBasedTripleExtractor().extract(answer_claim):
+        metadata = dict(triple.metadata)
+        metadata.setdefault("source", "qa_answer_assertion_rule")
+        metadata["source_text"] = claim.text
+        triples.append(
+            ClaimTriple(
+                subject=triple.subject,
+                predicate=triple.predicate,
+                object=triple.object,
+                claim_id=claim.claim_id,
+                source_text=claim.text,
+                confidence=min(0.6, triple.confidence),
+                metadata=metadata,
+            )
+        )
+    return tuple(triples)
+
+
+def _normalize_question_answer_object(
+    answer: str,
+    *,
+    subject: str,
+    predicate: str,
+) -> str:
+    answer_claim = Claim(text=answer)
+    for triple in RuleBasedTripleExtractor().extract(answer_claim):
+        if _clean_predicate(triple.predicate) != _clean_predicate(predicate):
+            continue
+        if _slot_overlap_all(subject, triple.subject):
+            return triple.object
+    return answer
 
 
 def _coerce_prediction_triple_payloads(
@@ -1091,6 +1213,119 @@ def _aggregate_is_better(
     if aggregate_covered < best_covered:
         return False
     return sum(aggregate.slot_coverage.values()) > sum(best.slot_coverage.values())
+
+
+def _object_mismatch_summaries(
+    audits: Sequence[TripleEvidenceAudit],
+    documents: Sequence[EvidenceDocument],
+    *,
+    extractor: ClaimTripleExtractor,
+    min_slot_coverage: float,
+) -> tuple[dict[str, Any], ...]:
+    summaries = []
+    seen: set[tuple[str, str, str, str | None]] = set()
+    for audit in audits:
+        if "object" not in audit.missing_slots:
+            continue
+        if not {"subject", "predicate"} <= set(audit.covered_slots):
+            continue
+        for document in documents:
+            evidence_claim = Claim(text=document.text, claim_id=audit.triple.claim_id)
+            for evidence_triple in extractor.extract(evidence_claim):
+                if not _same_subject_predicate(
+                    audit.triple,
+                    evidence_triple,
+                    min_slot_coverage=min_slot_coverage,
+                ):
+                    continue
+                reason = _object_mismatch_reason(audit.triple.object, evidence_triple.object)
+                if reason is None:
+                    continue
+                key = (
+                    _metadata_key(audit.triple.object),
+                    _metadata_key(evidence_triple.object),
+                    document.text,
+                    document.source,
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                summaries.append({
+                    "reason": reason,
+                    "claim_triple": audit.triple.to_dict(),
+                    "evidence_triple": evidence_triple.to_dict(),
+                    "evidence": _evidence_label(document),
+                    "source": document.source,
+                    "claim_object": audit.triple.object,
+                    "evidence_object": evidence_triple.object,
+                    "claim_object_tokens": _slot_tokens(audit.triple.object),
+                    "evidence_object_tokens": _slot_tokens(evidence_triple.object),
+                })
+    return tuple(summaries)
+
+
+def _same_subject_predicate(
+    claim_triple: ClaimTriple,
+    evidence_triple: ClaimTriple,
+    *,
+    min_slot_coverage: float,
+) -> bool:
+    if _clean_predicate(claim_triple.predicate) != _clean_predicate(evidence_triple.predicate):
+        return False
+    claim_subject = set(_slot_tokens(claim_triple.subject))
+    evidence_subject = set(_slot_tokens(evidence_triple.subject))
+    if not claim_subject or not evidence_subject:
+        return False
+    return (
+        _slot_coverage(tuple(claim_subject), evidence_subject) >= min_slot_coverage
+        and _slot_coverage(tuple(evidence_subject), claim_subject) >= min_slot_coverage
+    )
+
+
+def _slot_overlap_all(left: str, right: str) -> bool:
+    left_tokens = set(_slot_tokens(left))
+    right_tokens = set(_slot_tokens(right))
+    if not left_tokens or not right_tokens:
+        return False
+    return left_tokens <= right_tokens or right_tokens <= left_tokens
+
+
+def _object_mismatch_reason(claim_object: str, evidence_object: str) -> str | None:
+    claim_numbers = set(_numeric_tokens(claim_object))
+    evidence_numbers = set(_numeric_tokens(evidence_object))
+    if claim_numbers or evidence_numbers:
+        if claim_numbers and evidence_numbers and claim_numbers != evidence_numbers:
+            return "number_mismatch"
+        return None
+
+    claim_tokens = set(_slot_tokens(claim_object))
+    evidence_tokens = set(_slot_tokens(evidence_object))
+    if not claim_tokens or not evidence_tokens:
+        return None
+    if claim_tokens <= evidence_tokens or evidence_tokens <= claim_tokens:
+        return None
+    if claim_tokens - evidence_tokens and evidence_tokens - claim_tokens:
+        return "alternate_object"
+    return None
+
+
+def _numeric_tokens(value: str) -> tuple[str, ...]:
+    return tuple(token for token in _tokens(value) if any(char.isdigit() for char in token))
+
+
+def _unique_mismatch_evidence(mismatches: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    labels = []
+    seen = set()
+    for mismatch in mismatches:
+        evidence = mismatch.get("evidence")
+        if evidence is None:
+            continue
+        text = str(evidence)
+        if text in seen:
+            continue
+        labels.append(text)
+        seen.add(text)
+    return tuple(labels)
 
 
 def _unique_slot_documents(documents: Sequence[EvidenceDocument]) -> tuple[EvidenceDocument, ...]:

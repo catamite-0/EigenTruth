@@ -963,6 +963,30 @@ def test_rule_based_claim_triples_extract_stated_predicate_for_confusion_claim()
     assert triple.object == "Paris"
 
 
+def test_rule_based_claim_triples_extract_question_answer_facts():
+    capital = extract_claim_triples(Claim("What is the capital of France? Berlin."))[0]
+    language = extract_claim_triples(Claim("What is an official language of Belgium? German."))[0]
+    currency = extract_claim_triples(Claim("What currency does Japan use? The currency of Japan is Japanese yen."))[0]
+    ribs = extract_claim_triples(Claim("How many ribs do humans have? Humans have 12 ribs."))[0]
+
+    assert capital.subject == "France"
+    assert capital.predicate == "capital_of"
+    assert capital.object == "Berlin"
+    assert language.subject == "Belgium"
+    assert language.predicate == "official_language_of"
+    assert language.object == "German"
+    assert currency.subject == "Japan"
+    assert currency.predicate == "currency_of"
+    assert currency.object == "Japanese yen"
+    assert ribs.subject == "Humans"
+    assert ribs.predicate == "have"
+    assert ribs.object == "12 ribs"
+
+
+def test_rule_based_claim_triples_do_not_parse_across_question_boundary():
+    assert extract_claim_triples(Claim("Do more than 20% of Americans have passports? No.")) == ()
+
+
 def test_triple_evidence_audit_can_combine_slots_across_documents():
     claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
     verifier = TripleEvidenceVerifier(
@@ -1026,6 +1050,24 @@ def test_triple_evidence_audit_rejects_unlinked_cross_document_slots():
     assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
     assert audit["metadata"]["evidence_link_passed"] is False
     assert audit["metadata"]["evidence_link_rule"] == "unlinked_multi_document_evidence"
+
+
+def test_triple_evidence_verifier_can_refute_object_mismatch_when_enabled():
+    claim = extract_claims("Berlin is the capital of France.")[0]
+    evidence = (EvidenceDocument("The capital of France is Paris.", source="atlas"),)
+
+    default_result = TripleEvidenceVerifier(evidence=evidence).verify(claim)
+    refuting_result = TripleEvidenceVerifier(
+        evidence=evidence,
+        refute_object_mismatch=True,
+    ).verify(claim)
+
+    assert default_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert refuting_result.status is VerificationStatus.REFUTED
+    assert refuting_result.metadata["decision_rule"] == "triple_object_mismatch"
+    assert refuting_result.metadata["object_mismatches"][0]["claim_object"] == "Berlin"
+    assert refuting_result.metadata["object_mismatches"][0]["evidence_object"] == "Paris"
+    assert refuting_result.evidence == ("atlas: The capital of France is Paris.",)
 
 
 def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
