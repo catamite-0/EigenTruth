@@ -9636,6 +9636,81 @@ def test_build_evidence_fixture_planned_rerank_deduplicates_candidate_sources():
     assert hits[0]["source"] == "worldbank:SP.POP.TOTL:IND"
 
 
+def test_build_evidence_fixture_planned_rerank_prefers_structured_slot_match():
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [1],
+        "scores": {"truth_proj": [0.9]},
+        "statements": [
+            {
+                "question": "What is the population of India?",
+                "answer": "The population of India is 330 million.",
+                "text": "What is the population of India? The population of India is 330 million.",
+                "metadata": {"question_type": "quantity"},
+            },
+        ],
+    }
+    shared_index_text = (
+        "What is the population of India? population India official statistics data "
+        "World Bank Population, total"
+    )
+    corpus = (
+        {
+            "text": (
+                "World Bank official statistics data for population country queries: "
+                "Bahamas, The had Population, total of 403,033 in 2024."
+            ),
+            "source": "worldbank:SP.POP.TOTL:BHS:2024",
+            "score": 1.0,
+            "metadata": {
+                "provider": "worldbank",
+                "source_family": "official_statistics",
+                "country_name": "Bahamas, The",
+                "indicator": "SP.POP.TOTL",
+                "indicator_name": "Population, total",
+                "reference_year": "2024",
+                "value": 403033,
+                "retrieval_index_text": shared_index_text,
+            },
+        },
+        {
+            "text": (
+                "World Bank official statistics data for population country queries: "
+                "India had Population, total of 1,450,935,791 in 2024."
+            ),
+            "source": "worldbank:SP.POP.TOTL:IND:2024",
+            "score": 0.6,
+            "metadata": {
+                "provider": "worldbank",
+                "source_family": "official_statistics",
+                "country_name": "India",
+                "indicator": "SP.POP.TOTL",
+                "indicator_name": "Population, total",
+                "reference_year": "2024",
+                "value": 1450935791,
+                "retrieval_index_text": shared_index_text,
+            },
+        },
+    )
+
+    fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.4,
+        retrieval_limit=1,
+        query_field="citation_question",
+        include_label_metadata=False,
+        source_family_filter="planned_rerank",
+    )
+
+    hit = fixture["records"][0]["retrieval_documents"][0]
+    slot_score = hit["metadata"]["source_family_filter"]["structured_slot_score"]
+
+    assert hit["source"] == "worldbank:SP.POP.TOTL:IND:2024"
+    assert slot_score > 0.0
+
+
 def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

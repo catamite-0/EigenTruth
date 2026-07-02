@@ -62,6 +62,40 @@ _SOURCE_PREFIX_FAMILY_HINTS = (
     ("qa:", "reference"),
 )
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+_SLOT_NORMALIZE_RE = re.compile(r"[^a-z0-9\u4e00-\u9fff]+")
+_STRUCTURED_ENTITY_METADATA_KEYS = (
+    "country_name",
+    "subject_label",
+    "subject",
+    "entity",
+    "entity_name",
+    "organization_name",
+    "location_name",
+)
+_STRUCTURED_PROPERTY_METADATA_KEYS = (
+    "indicator_name",
+    "statement_property_label",
+    "property_label",
+    "property",
+    "indicator",
+)
+_STRUCTURED_CODE_METADATA_KEYS = (
+    "country_code_iso3",
+    "country_code_iso2",
+    "subject_qid",
+)
+_SLOT_ALIASES = {
+    "united states": ("united states of america", "usa", "us", "u s", "america"),
+    "united kingdom": ("uk", "u k", "great britain", "britain"),
+    "russian federation": ("russia",),
+    "korea rep": ("south korea", "republic of korea"),
+    "iran islamic rep": ("iran",),
+    "egypt arab rep": ("egypt",),
+    "bahamas the": ("bahamas", "the bahamas"),
+    "gambia the": ("gambia", "the gambia"),
+    "hong kong sar china": ("hong kong",),
+    "macao sar china": ("macao", "macau"),
+}
 _RERANK_STOPWORDS = {
     "a",
     "an",
@@ -618,12 +652,14 @@ def _apply_source_family_filter(
     incompatible_examples: list[dict[str, Any]] = []
     for hit in unique_hits:
         hit_families = _hit_source_families(hit)
+        structured_slot_score = _structured_slot_match_score(statement, hit)
         if hit_families and any(family in accepted_families for family in hit_families):
             compatible.append(_annotate_source_family_hit(
                 hit,
                 mode=source_family_filter,
                 source_families=hit_families,
                 accepted_families=accepted_families,
+                structured_slot_score=structured_slot_score,
             ))
             continue
         incompatible.append(_annotate_source_family_hit(
@@ -631,12 +667,14 @@ def _apply_source_family_filter(
             mode=source_family_filter,
             source_families=hit_families,
             accepted_families=accepted_families,
+            structured_slot_score=structured_slot_score,
         ))
         if len(incompatible_examples) < 5:
             incompatible_examples.append({
                 "source": hit.source,
                 "source_families": hit_families,
                 "score": hit.score,
+                "structured_slot_score": structured_slot_score,
             })
 
     if source_family_filter == "planned_rerank":
@@ -704,6 +742,7 @@ def _source_family_ranked_hits(
         hits,
         key=lambda hit: (
             _source_family_rank(hit, family_order),
+            -_structured_slot_match_score(statement, hit),
             -_evidence_text_overlap(statement, hit),
             -float(hit.score),
             "" if hit.source is None else str(hit.source),
@@ -735,6 +774,139 @@ def _evidence_text_overlap(statement: Mapping[str, Any], hit: RetrievalHit) -> f
     if not evidence_tokens:
         return 0.0
     return len(set(claim_tokens) & evidence_tokens) / len(set(claim_tokens))
+
+
+def _structured_slot_match_score(statement: Mapping[str, Any], hit: RetrievalHit) -> float:
+    """Score structured source metadata against the question-side fact slot."""
+    question_text = _statement_question_text(statement) or _statement_text(statement)
+    question_tokens = set(_rerank_tokens(question_text))
+    question_normalized = _normalize_slot_text(question_text)
+    metadata = dict(hit.metadata)
+
+    entity_score = max(
+        (
+            _slot_value_match_score(question_normalized, question_tokens, value)
+            for value in _metadata_slot_values(metadata, _STRUCTURED_ENTITY_METADATA_KEYS)
+        ),
+        default=0.0,
+    )
+    property_score = max(
+        (
+            _property_slot_match_score(question_tokens, value)
+            for value in _metadata_slot_values(metadata, _STRUCTURED_PROPERTY_METADATA_KEYS)
+        ),
+        default=0.0,
+    )
+    code_score = max(
+        (
+            _code_slot_match_score(question_normalized, value)
+            for value in _metadata_slot_values(metadata, _STRUCTURED_CODE_METADATA_KEYS)
+        ),
+        default=0.0,
+    )
+    return round(entity_score + property_score + code_score, 6)
+
+
+def _statement_question_text(statement: Mapping[str, Any]) -> str:
+    question = str(statement.get("question", "")).strip()
+    if question:
+        return question
+    metadata = statement.get("metadata")
+    if isinstance(metadata, Mapping):
+        return str(metadata.get("question", "")).strip()
+    return ""
+
+
+def _metadata_slot_values(metadata: Mapping[str, Any], keys: Sequence[str]) -> tuple[str, ...]:
+    values: list[str] = []
+    for key in keys:
+        raw = metadata.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, str):
+            values.append(raw)
+        elif isinstance(raw, Sequence) and not isinstance(raw, (bytes, bytearray)):
+            values.extend(str(item) for item in raw if str(item).strip())
+        elif isinstance(raw, Mapping):
+            values.extend(str(item) for item in raw.values() if str(item).strip())
+        else:
+            values.append(str(raw))
+    return tuple(value.strip() for value in values if value.strip())
+
+
+def _slot_value_match_score(question_normalized: str, question_tokens: set[str], value: str) -> float:
+    aliases = _slot_aliases(value)
+    scores = []
+    for alias in aliases:
+        normalized = _normalize_slot_text(alias)
+        if not normalized:
+            continue
+        if normalized in question_normalized:
+            scores.append(2.0)
+            continue
+        alias_tokens = set(_rerank_tokens(alias))
+        if alias_tokens and alias_tokens <= question_tokens:
+            scores.append(1.5)
+        elif len(alias_tokens) > 1 and alias_tokens & question_tokens:
+            scores.append(len(alias_tokens & question_tokens) / len(alias_tokens))
+    return max(scores, default=0.0)
+
+
+def _property_slot_match_score(question_tokens: set[str], value: str) -> float:
+    property_tokens = set(_rerank_tokens(value))
+    if not property_tokens:
+        return 0.0
+    overlap = len(property_tokens & question_tokens) / len(property_tokens)
+    if overlap <= 0.0:
+        return 0.0
+    return min(1.0, max(0.25, overlap))
+
+
+def _code_slot_match_score(question_normalized: str, value: str) -> float:
+    normalized = _normalize_slot_text(value)
+    if len(normalized) < 2:
+        return 0.0
+    if len(normalized) == 2 and normalized not in {"uk", "us"}:
+        return 0.0
+    padded_question = f" {question_normalized} "
+    if f" {normalized} " in padded_question:
+        return 0.5
+    if normalized == "us" and " u s " in padded_question:
+        return 0.5
+    if normalized == "uk" and " u k " in padded_question:
+        return 0.5
+    return 0.0
+
+
+def _slot_aliases(value: str) -> tuple[str, ...]:
+    cleaned = str(value).strip()
+    if not cleaned:
+        return ()
+    aliases = [cleaned]
+    normalized = _normalize_slot_text(cleaned)
+    if normalized:
+        aliases.extend(_SLOT_ALIASES.get(normalized, ()))
+    if ", the" in cleaned.casefold():
+        aliases.append(cleaned.replace(", The", "").replace(", the", ""))
+        aliases.append(f"The {cleaned.split(',', 1)[0].strip()}")
+    return tuple(item for item in _unique(aliases) if str(item).strip())
+
+
+def _unique(values: Sequence[str]) -> tuple[str, ...]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in values:
+        key = str(value).casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(str(value))
+    return tuple(unique)
+
+
+def _normalize_slot_text(value: str) -> str:
+    normalized = _SLOT_NORMALIZE_RE.sub(" ", str(value).casefold())
+    return " ".join(normalized.split())
 
 
 def _rerank_tokens(text: str) -> tuple[str, ...]:
@@ -802,6 +974,7 @@ def _annotate_source_family_hit(
     mode: str,
     source_families: Sequence[str],
     accepted_families: Sequence[str],
+    structured_slot_score: float = 0.0,
 ) -> RetrievalHit:
     metadata = {
         **dict(hit.metadata),
@@ -809,6 +982,7 @@ def _annotate_source_family_hit(
             "mode": mode,
             "source_families": tuple(source_families),
             "accepted_families": tuple(accepted_families),
+            "structured_slot_score": float(structured_slot_score),
         },
     }
     return RetrievalHit(hit.text, hit.source, hit.score, metadata)
