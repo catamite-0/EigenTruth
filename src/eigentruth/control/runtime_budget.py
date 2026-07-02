@@ -29,6 +29,9 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
 )
@@ -4162,6 +4165,11 @@ def _promotion_contract_runtime_drift_from_metadata(
         contract_metadata=contract_metadata,
         prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
     )
+    world_model_rollout_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES,
+    )
     action_receipts_evidence = _promotion_contract_runtime_drift_evidence(
         metadata,
         contract_metadata=contract_metadata,
@@ -4228,6 +4236,9 @@ def _promotion_contract_runtime_drift_from_metadata(
         "action_gate_evidence_required": _optional_bool(
             value("product_runtime_drift_action_gate_evidence_required")
         ),
+        "world_model_rollout_evidence_required": _optional_bool(
+            value("product_runtime_drift_world_model_rollout_evidence_required")
+        ),
         "action_receipts_evidence_required": _optional_bool(
             value("product_runtime_drift_action_receipts_evidence_required")
         ),
@@ -4292,6 +4303,14 @@ def _promotion_contract_runtime_drift_from_metadata(
         "action_gate_evidence_blocked_metric_count": _finite_float(
             value("product_runtime_drift_action_gate_evidence_blocked_metric_count")
         ),
+        "world_model_rollout_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_world_model_rollout_evidence_metric_count")
+        ),
+        "world_model_rollout_evidence_blocked_metric_count": _finite_float(
+            value(
+                "product_runtime_drift_world_model_rollout_evidence_blocked_metric_count"
+            )
+        ),
         "action_receipts_evidence_metric_count": _finite_float(
             value("product_runtime_drift_action_receipts_evidence_metric_count")
         ),
@@ -4352,6 +4371,7 @@ def _promotion_contract_runtime_drift_from_metadata(
         "triple_audit_evidence": triple_audit_evidence,
         "covered_fact_property_evidence": covered_fact_property_evidence,
         "action_gate_evidence": action_gate_evidence,
+        "world_model_rollout_evidence": world_model_rollout_evidence,
         "action_receipts_evidence": action_receipts_evidence,
         "receipt_claim_support_evidence": receipt_claim_support_evidence,
         "trajectory_audit_evidence": trajectory_audit_evidence,
@@ -4373,6 +4393,7 @@ def _promotion_contract_runtime_drift_from_metadata(
             "triple_audit_evidence",
             "covered_fact_property_evidence",
             "action_gate_evidence",
+            "world_model_rollout_evidence",
             "action_receipts_evidence",
             "receipt_claim_support_evidence",
             "trajectory_audit_evidence",
@@ -4389,6 +4410,7 @@ def _promotion_contract_runtime_drift_from_metadata(
         triple_audit_evidence,
         covered_fact_property_evidence,
         action_gate_evidence,
+        world_model_rollout_evidence,
         action_receipts_evidence,
         receipt_claim_support_evidence,
         trajectory_audit_evidence,
@@ -4620,6 +4642,11 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             ] = _mapping(values).get(suffix)
     for prefix, values in _mapping(runtime_drift.get("action_gate_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(runtime_drift.get("world_model_rollout_evidence")).items():
         for suffix in ("baseline", "current", "status"):
             metrics[
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"

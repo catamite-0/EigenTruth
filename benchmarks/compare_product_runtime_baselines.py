@@ -561,6 +561,16 @@ _WORLD_MODEL_ACTION_GATE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
         "world_model_action_gate_postcondition_error_rate",
     ),
 )
+_WORLD_MODEL_ROLLOUT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("world_model_rollout.coverage_rate", "world_model_rollout_coverage_rate"),
+    ("world_model_rollout.sync_rate", "world_model_rollout_sync_rate"),
+    ("world_model_rollout.drift_rate", "world_model_rollout_drift_rate"),
+    ("world_model_rollout.trace_gap_rate", "world_model_rollout_trace_gap_rate"),
+    (
+        "world_model_rollout.path_mismatch_rate",
+        "world_model_rollout_path_mismatch_rate",
+    ),
+)
 _PRODUCT_TRACE_ACTION_RECEIPT_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
     ("action_receipts.coverage_rate", "product_trace_action_receipts_coverage_rate"),
     (
@@ -901,6 +911,41 @@ _WORLD_MODEL_ACTION_GATE_INCREASE_METRIC_SPECS: tuple[
         "world_model_action_gate.postcondition_error_rate",
         ("world_model_action_gate", "postcondition_error_rate"),
         "max_world_model_action_gate_postcondition_error_rate_increase",
+    ),
+)
+_WORLD_MODEL_ROLLOUT_MIN_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "world_model_rollout.coverage_rate",
+        ("world_model_rollout", "coverage_rate"),
+        "min_world_model_rollout_coverage_rate",
+    ),
+    (
+        "world_model_rollout.sync_rate",
+        ("world_model_rollout", "sync_rate"),
+        "min_world_model_rollout_sync_rate",
+    ),
+)
+_WORLD_MODEL_ROLLOUT_INCREASE_METRIC_SPECS: tuple[
+    tuple[str, tuple[str, ...], str],
+    ...
+] = (
+    (
+        "world_model_rollout.drift_rate",
+        ("world_model_rollout", "drift_rate"),
+        "max_world_model_rollout_drift_rate_increase",
+    ),
+    (
+        "world_model_rollout.trace_gap_rate",
+        ("world_model_rollout", "trace_gap_rate"),
+        "max_world_model_rollout_trace_gap_rate_increase",
+    ),
+    (
+        "world_model_rollout.path_mismatch_rate",
+        ("world_model_rollout", "path_mismatch_rate"),
+        "max_world_model_rollout_path_mismatch_rate_increase",
     ),
 )
 _PRODUCT_TRACE_RECEIPT_CLAIM_SUPPORT_RATE_METRIC_SPECS: tuple[
@@ -1569,6 +1614,11 @@ def compare_product_runtime_baselines(
         float | None
     ) = None,
     max_world_model_action_gate_postcondition_error_rate_increase: float | None = None,
+    min_world_model_rollout_coverage_rate: float | None = None,
+    min_world_model_rollout_sync_rate: float | None = None,
+    max_world_model_rollout_drift_rate_increase: float | None = None,
+    max_world_model_rollout_trace_gap_rate_increase: float | None = None,
+    max_world_model_rollout_path_mismatch_rate_increase: float | None = None,
     min_product_trace_action_receipts_coverage_rate: float | None = None,
     max_product_trace_action_receipts_missing_receipt_rate_increase: float | None = None,
     max_product_trace_action_receipts_invalid_receipt_rate_increase: float | None = None,
@@ -2137,6 +2187,21 @@ def compare_product_runtime_baselines(
                 max_world_model_action_gate_postcondition_error_rate_increase
             )
         ),
+        "min_world_model_rollout_coverage_rate": _optional_rate_float(
+            min_world_model_rollout_coverage_rate
+        ),
+        "min_world_model_rollout_sync_rate": _optional_rate_float(
+            min_world_model_rollout_sync_rate
+        ),
+        "max_world_model_rollout_drift_rate_increase": _optional_rate_float(
+            max_world_model_rollout_drift_rate_increase
+        ),
+        "max_world_model_rollout_trace_gap_rate_increase": _optional_rate_float(
+            max_world_model_rollout_trace_gap_rate_increase
+        ),
+        "max_world_model_rollout_path_mismatch_rate_increase": _optional_rate_float(
+            max_world_model_rollout_path_mismatch_rate_increase
+        ),
         "min_product_trace_action_receipts_coverage_rate": _optional_rate_float(
             min_product_trace_action_receipts_coverage_rate
         ),
@@ -2599,6 +2664,7 @@ def _comparison_metrics(
     metrics.extend(_covered_fact_property_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_gate_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_world_model_action_gate_metrics(baseline_summary, current_summary, gates=gates))
+    metrics.extend(_world_model_rollout_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(_product_trace_action_receipt_metrics(baseline_summary, current_summary, gates=gates))
     metrics.extend(
         _product_trace_receipt_claim_support_metrics(
@@ -3598,6 +3664,47 @@ def _world_model_action_gate_gate_enabled(gates: Mapping[str, Any]) -> bool:
         for _, _, gate_key in (
             _WORLD_MODEL_ACTION_GATE_MIN_METRIC_SPECS
             + _WORLD_MODEL_ACTION_GATE_INCREASE_METRIC_SPECS
+        )
+    )
+
+
+def _world_model_rollout_metrics(
+    baseline_summary: Mapping[str, Any],
+    current_summary: Mapping[str, Any],
+    *,
+    gates: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    if not _world_model_rollout_gate_enabled(gates):
+        return []
+    rows = [
+        _min_current_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in _WORLD_MODEL_ROLLOUT_MIN_METRIC_SPECS
+    ]
+    rows.extend(
+        _delta_metric(
+            metric_name,
+            _nested_float(baseline_summary, metric_path),
+            _nested_float(current_summary, metric_path),
+            gates.get(gate_key),
+        )
+        for metric_name, metric_path, gate_key in (
+            _WORLD_MODEL_ROLLOUT_INCREASE_METRIC_SPECS
+        )
+    )
+    return rows
+
+
+def _world_model_rollout_gate_enabled(gates: Mapping[str, Any]) -> bool:
+    return any(
+        gates.get(gate_key) is not None
+        for _, _, gate_key in (
+            _WORLD_MODEL_ROLLOUT_MIN_METRIC_SPECS
+            + _WORLD_MODEL_ROLLOUT_INCREASE_METRIC_SPECS
         )
     )
 
@@ -4725,6 +4832,7 @@ def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
         **_claim_risk_localization_metadata(report),
         **_product_trace_action_gate_metadata(report),
         **_world_model_action_gate_metadata(report),
+        **_world_model_rollout_metadata(report),
         **_product_trace_action_receipt_metadata(report),
         **_product_trace_receipt_claim_support_metadata(report),
         **_product_trace_trajectory_audit_metadata(report),
@@ -5019,6 +5127,25 @@ def _world_model_action_gate_metadata(report: Mapping[str, Any]) -> dict[str, An
         metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
         if metric is not None and metric.get("status") == "blocked":
             metadata["world_model_action_gate_blocked_metric_count"] += 1
+    return metadata
+
+
+def _world_model_rollout_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "world_model_rollout_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _WORLD_MODEL_ROLLOUT_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(
+            None if metric is None else metric.get("baseline")
+        )
+        metadata[f"{prefix}_current"] = _finite_float(
+            None if metric is None else metric.get("current")
+        )
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["world_model_rollout_blocked_metric_count"] += 1
     return metadata
 
 
@@ -5696,6 +5823,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_world_model_action_gate_postcondition_error_rate_increase=(
             args.max_world_model_action_gate_postcondition_error_rate_increase
         ),
+        min_world_model_rollout_coverage_rate=args.min_world_model_rollout_coverage_rate,
+        min_world_model_rollout_sync_rate=args.min_world_model_rollout_sync_rate,
+        max_world_model_rollout_drift_rate_increase=(
+            args.max_world_model_rollout_drift_rate_increase
+        ),
+        max_world_model_rollout_trace_gap_rate_increase=(
+            args.max_world_model_rollout_trace_gap_rate_increase
+        ),
+        max_world_model_rollout_path_mismatch_rate_increase=(
+            args.max_world_model_rollout_path_mismatch_rate_increase
+        ),
         min_product_trace_action_receipts_coverage_rate=(
             args.min_product_trace_action_receipts_coverage_rate
         ),
@@ -6327,6 +6465,23 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-world-model-action-gate-postcondition-error-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-world-model-rollout-coverage-rate", type=float, default=None)
+    parser.add_argument("--min-world-model-rollout-sync-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-world-model-rollout-drift-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-world-model-rollout-trace-gap-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-world-model-rollout-path-mismatch-rate-increase",
         type=float,
         default=None,
     )

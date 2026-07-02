@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 22
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 23
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -106,6 +106,13 @@ _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...
     "world_model_action_gate_postcondition_refuted_rate",
     "world_model_action_gate_postcondition_insufficient_evidence_rate",
     "world_model_action_gate_postcondition_error_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "world_model_rollout_coverage_rate",
+    "world_model_rollout_sync_rate",
+    "world_model_rollout_drift_rate",
+    "world_model_rollout_trace_gap_rate",
+    "world_model_rollout_path_mismatch_rate",
 )
 _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "product_trace_action_receipts_coverage_rate",
@@ -255,6 +262,7 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_triple_audit_evidence_required",
     "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required",
     "promotion_contract_product_runtime_drift_action_gate_evidence_required",
+    "promotion_contract_product_runtime_drift_world_model_rollout_evidence_required",
     "promotion_contract_product_runtime_drift_action_receipts_evidence_required",
     "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_required",
     "promotion_contract_product_runtime_drift_trajectory_audit_evidence_required",
@@ -281,6 +289,8 @@ _PROMOTION_CONTRACT_PRODUCT_RUNTIME_DRIFT_FIELDS: tuple[str, ...] = (
     "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_metric_count",
     "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count",
+    "promotion_contract_product_runtime_drift_world_model_rollout_evidence_metric_count",
+    "promotion_contract_product_runtime_drift_world_model_rollout_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count",
     "promotion_contract_product_runtime_drift_action_receipts_evidence_blocked_metric_count",
     "promotion_contract_product_runtime_drift_receipt_claim_support_evidence_metric_count",
@@ -1354,6 +1364,75 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "world_model_action_gate_counts_by_action": dict(
             _mapping(metrics.get("world_model_action_gate_counts_by_action"))
         ),
+        "world_model_rollout_summary": dict(
+            _mapping(metrics.get("world_model_rollout_summary"))
+        ),
+        "world_model_rollout_available": bool(metrics.get("world_model_rollout_available")),
+        "world_model_rollout_source": metrics.get("world_model_rollout_source"),
+        "world_model_rollout_result_count": metrics.get("world_model_rollout_result_count"),
+        "world_model_rollout_compared_count": metrics.get(
+            "world_model_rollout_compared_count"
+        ),
+        "world_model_rollout_coverage_rate": metrics.get(
+            "world_model_rollout_coverage_rate"
+        ),
+        "world_model_rollout_prediction_coverage_rate": metrics.get(
+            "world_model_rollout_prediction_coverage_rate"
+        ),
+        "world_model_rollout_observation_coverage_rate": metrics.get(
+            "world_model_rollout_observation_coverage_rate"
+        ),
+        "world_model_rollout_sync_rate": metrics.get("world_model_rollout_sync_rate"),
+        "world_model_rollout_drift_rate": metrics.get("world_model_rollout_drift_rate"),
+        "world_model_rollout_drifted_count": metrics.get(
+            "world_model_rollout_drifted_count"
+        ),
+        "world_model_rollout_trace_gap_count": metrics.get(
+            "world_model_rollout_trace_gap_count"
+        ),
+        "world_model_rollout_trace_gap_rate": metrics.get(
+            "world_model_rollout_trace_gap_rate"
+        ),
+        "world_model_rollout_compared_path_count": metrics.get(
+            "world_model_rollout_compared_path_count"
+        ),
+        "world_model_rollout_mismatch_count": metrics.get(
+            "world_model_rollout_mismatch_count"
+        ),
+        "world_model_rollout_path_mismatch_rate": metrics.get(
+            "world_model_rollout_path_mismatch_rate"
+        ),
+        "world_model_rollout_numeric_drift_count": metrics.get(
+            "world_model_rollout_numeric_drift_count"
+        ),
+        "world_model_rollout_categorical_drift_count": metrics.get(
+            "world_model_rollout_categorical_drift_count"
+        ),
+        "world_model_rollout_missing_predicted_path_count": metrics.get(
+            "world_model_rollout_missing_predicted_path_count"
+        ),
+        "world_model_rollout_missing_observed_path_count": metrics.get(
+            "world_model_rollout_missing_observed_path_count"
+        ),
+        "world_model_rollout_numeric_error_mean": metrics.get(
+            "world_model_rollout_numeric_error_mean"
+        ),
+        "world_model_rollout_numeric_error_max": metrics.get(
+            "world_model_rollout_numeric_error_max"
+        ),
+        "world_model_rollout_prediction_confidence_mean": metrics.get(
+            "world_model_rollout_prediction_confidence_mean"
+        ),
+        "world_model_rollout_prediction_confidence_min": metrics.get(
+            "world_model_rollout_prediction_confidence_min"
+        ),
+        "world_model_rollout_traceable": metrics.get("world_model_rollout_traceable"),
+        "world_model_rollout_counts_by_code": dict(
+            _mapping(metrics.get("world_model_rollout_counts_by_code"))
+        ),
+        "world_model_rollout_counts_by_action": dict(
+            _mapping(metrics.get("world_model_rollout_counts_by_action"))
+        ),
         "evidence_quality_summary": dict(_mapping(metrics.get("evidence_quality_summary"))),
         "evidence_quality_available": bool(metrics.get("evidence_quality_available")),
         "evidence_quality_source": metrics.get("evidence_quality_source"),
@@ -2187,6 +2266,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "pre_generation_risk": _aggregate_pre_generation_risk(metrics),
         "action_execution": _aggregate_action_execution(metrics),
         "world_model_action_gate": _aggregate_world_model_action_gate(metrics),
+        "world_model_rollout": _aggregate_world_model_rollout(metrics),
         "evidence_quality": _aggregate_evidence_quality(metrics),
         "metacognition": _aggregate_metacognition(metrics),
         "action_receipts": _aggregate_action_receipts(metrics),
@@ -3242,6 +3322,106 @@ def _aggregate_world_model_action_gate(metrics: Sequence[Mapping[str, Any]]) -> 
         ),
         "per_trace_blocked_rate": _numeric_summary(
             item.get("world_model_action_gate_blocked_rate") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_world_model_rollout(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("world_model_rollout_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(
+        1 for item in metrics if item.get("world_model_rollout_available") is True
+    )
+    result_count = _sum_float(metrics, "world_model_rollout_result_count") or 0.0
+    compared_count = _sum_float(metrics, "world_model_rollout_compared_count") or 0.0
+    drifted_count = _sum_float(metrics, "world_model_rollout_drifted_count") or 0.0
+    trace_gap_count = _sum_float(metrics, "world_model_rollout_trace_gap_count") or 0.0
+    compared_path_count = (
+        _sum_float(metrics, "world_model_rollout_compared_path_count") or 0.0
+    )
+    mismatch_count = _sum_float(metrics, "world_model_rollout_mismatch_count") or 0.0
+    numeric_drift_count = (
+        _sum_float(metrics, "world_model_rollout_numeric_drift_count") or 0.0
+    )
+    categorical_drift_count = (
+        _sum_float(metrics, "world_model_rollout_categorical_drift_count") or 0.0
+    )
+    missing_predicted_path_count = (
+        _sum_float(metrics, "world_model_rollout_missing_predicted_path_count") or 0.0
+    )
+    missing_observed_path_count = (
+        _sum_float(metrics, "world_model_rollout_missing_observed_path_count") or 0.0
+    )
+    counts_by_code: dict[str, int] = {}
+    counts_by_action: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(counts_by_code, _mapping(item.get("world_model_rollout_counts_by_code")))
+        _merge_counts(
+            counts_by_action,
+            _mapping(item.get("world_model_rollout_counts_by_action")),
+        )
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "trace_coverage_rate": _safe_div(available_count, n_traces),
+        "source_counts": _counts(item.get("world_model_rollout_source") for item in metrics),
+        "result_count": result_count,
+        "compared_count": compared_count,
+        "coverage_rate": _safe_div(compared_count, result_count),
+        "prediction_coverage_rate": _numeric_summary(
+            item.get("world_model_rollout_prediction_coverage_rate") for item in metrics
+        ),
+        "observation_coverage_rate": _numeric_summary(
+            item.get("world_model_rollout_observation_coverage_rate") for item in metrics
+        ),
+        "matched_count": compared_count - drifted_count,
+        "drifted_count": drifted_count,
+        "sync_rate": _safe_div(compared_count - drifted_count, compared_count),
+        "drift_rate": _safe_div(drifted_count, compared_count),
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, result_count),
+        "compared_path_count": compared_path_count,
+        "mismatch_count": mismatch_count,
+        "path_mismatch_rate": _safe_div(mismatch_count, compared_path_count),
+        "numeric_drift_count": numeric_drift_count,
+        "categorical_drift_count": categorical_drift_count,
+        "missing_predicted_path_count": missing_predicted_path_count,
+        "missing_observed_path_count": missing_observed_path_count,
+        "numeric_error_mean": _numeric_summary(
+            item.get("world_model_rollout_numeric_error_mean") for item in metrics
+        ),
+        "numeric_error_max": _numeric_summary(
+            item.get("world_model_rollout_numeric_error_max") for item in metrics
+        ),
+        "prediction_confidence_mean": _numeric_summary(
+            item.get("world_model_rollout_prediction_confidence_mean")
+            for item in metrics
+        ),
+        "prediction_confidence_min": _numeric_summary(
+            item.get("world_model_rollout_prediction_confidence_min") for item in metrics
+        ),
+        "traceable_counts": _counts(item.get("world_model_rollout_traceable") for item in metrics),
+        "counts_by_code": counts_by_code,
+        "counts_by_action": counts_by_action,
+        "per_trace_result_count": _numeric_summary(
+            item.get("world_model_rollout_result_count") for item in metrics
+        ),
+        "per_trace_compared_count": _numeric_summary(
+            item.get("world_model_rollout_compared_count") for item in metrics
+        ),
+        "per_trace_coverage_rate": _numeric_summary(
+            item.get("world_model_rollout_coverage_rate") for item in metrics
+        ),
+        "per_trace_sync_rate": _numeric_summary(
+            item.get("world_model_rollout_sync_rate") for item in metrics
+        ),
+        "per_trace_drift_rate": _numeric_summary(
+            item.get("world_model_rollout_drift_rate") for item in metrics
+        ),
+        "per_trace_trace_gap_rate": _numeric_summary(
+            item.get("world_model_rollout_trace_gap_rate") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }
@@ -5782,6 +5962,12 @@ def _aggregate_promotion_contract_product_runtime_drift(
             item.get("promotion_contract_product_runtime_drift_action_gate_evidence_required")
             for item in metrics
         ),
+        "world_model_rollout_evidence_required_counts": _counts(
+            item.get(
+                "promotion_contract_product_runtime_drift_world_model_rollout_evidence_required"
+            )
+            for item in metrics
+        ),
         "action_receipts_evidence_required_counts": _counts(
             item.get(
                 "promotion_contract_product_runtime_drift_action_receipts_evidence_required"
@@ -5915,6 +6101,18 @@ def _aggregate_promotion_contract_product_runtime_drift(
         "world_model_action_gate_evidence_blocked_metric_count": _numeric_summary(
             item.get(
                 "promotion_contract_product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count"
+            )
+            for item in metrics
+        ),
+        "world_model_rollout_evidence_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_world_model_rollout_evidence_metric_count"
+            )
+            for item in metrics
+        ),
+        "world_model_rollout_evidence_blocked_metric_count": _numeric_summary(
+            item.get(
+                "promotion_contract_product_runtime_drift_world_model_rollout_evidence_blocked_metric_count"
             )
             for item in metrics
         ),
@@ -6927,6 +7125,9 @@ def _promotion_contract_runtime_drift_flat_metadata(
         "promotion_contract_product_runtime_drift_action_gate_evidence_required_counts": dict(
             _mapping(drift.get("action_gate_evidence_required_counts"))
         ),
+        "promotion_contract_product_runtime_drift_world_model_rollout_evidence_required_counts": dict(
+            _mapping(drift.get("world_model_rollout_evidence_required_counts"))
+        ),
         "promotion_contract_product_runtime_drift_action_receipts_evidence_required_counts": dict(
             _mapping(drift.get("action_receipts_evidence_required_counts"))
         ),
@@ -7038,6 +7239,19 @@ def _promotion_contract_runtime_drift_flat_metadata(
         ): _nested(
             drift,
             "world_model_action_gate_evidence_blocked_metric_count",
+            "mean",
+        ),
+        "promotion_contract_product_runtime_drift_world_model_rollout_evidence_metric_count_mean": _nested(
+            drift,
+            "world_model_rollout_evidence_metric_count",
+            "mean",
+        ),
+        (
+            "promotion_contract_product_runtime_drift_"
+            "world_model_rollout_evidence_blocked_metric_count_mean"
+        ): _nested(
+            drift,
+            "world_model_rollout_evidence_blocked_metric_count",
             "mean",
         ),
         "promotion_contract_product_runtime_drift_action_receipts_evidence_metric_count_mean": _nested(

@@ -167,6 +167,11 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase: (
         float | None
     ) = None
+    min_runtime_drift_world_model_rollout_coverage_rate: float | None = None
+    min_runtime_drift_world_model_rollout_sync_rate: float | None = None
+    max_runtime_drift_world_model_rollout_drift_rate_increase: float | None = None
+    max_runtime_drift_world_model_rollout_trace_gap_rate_increase: float | None = None
+    max_runtime_drift_world_model_rollout_path_mismatch_rate_increase: float | None = None
     min_runtime_drift_context_sensitivity_participating_trace_rate: float | None = None
     min_runtime_drift_context_sensitivity_coverage_rate: float | None = None
     max_runtime_drift_context_sensitivity_flagged_result_rate_increase: float | None = None
@@ -471,6 +476,11 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_world_model_action_gate_postcondition_refuted_rate_increase,
                 self.max_runtime_drift_world_model_action_gate_postcondition_insufficient_evidence_rate_increase,
                 self.max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase,
+                self.min_runtime_drift_world_model_rollout_coverage_rate,
+                self.min_runtime_drift_world_model_rollout_sync_rate,
+                self.max_runtime_drift_world_model_rollout_drift_rate_increase,
+                self.max_runtime_drift_world_model_rollout_trace_gap_rate_increase,
+                self.max_runtime_drift_world_model_rollout_path_mismatch_rate_increase,
                 self.min_runtime_drift_context_sensitivity_participating_trace_rate,
                 self.min_runtime_drift_context_sensitivity_coverage_rate,
                 self.max_runtime_drift_context_sensitivity_flagged_result_rate_increase,
@@ -1729,6 +1739,11 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_world_model_action_gate_postcondition_refuted_rate_increase,
             config.max_runtime_drift_world_model_action_gate_postcondition_insufficient_evidence_rate_increase,
             config.max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase,
+            config.min_runtime_drift_world_model_rollout_coverage_rate,
+            config.min_runtime_drift_world_model_rollout_sync_rate,
+            config.max_runtime_drift_world_model_rollout_drift_rate_increase,
+            config.max_runtime_drift_world_model_rollout_trace_gap_rate_increase,
+            config.max_runtime_drift_world_model_rollout_path_mismatch_rate_increase,
             config.min_runtime_drift_context_sensitivity_participating_trace_rate,
             config.min_runtime_drift_context_sensitivity_coverage_rate,
             config.max_runtime_drift_context_sensitivity_flagged_result_rate_increase,
@@ -2029,6 +2044,21 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         ),
         "max_world_model_action_gate_postcondition_error_rate_increase": (
             config.max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase
+        ),
+        "min_world_model_rollout_coverage_rate": (
+            config.min_runtime_drift_world_model_rollout_coverage_rate
+        ),
+        "min_world_model_rollout_sync_rate": (
+            config.min_runtime_drift_world_model_rollout_sync_rate
+        ),
+        "max_world_model_rollout_drift_rate_increase": (
+            config.max_runtime_drift_world_model_rollout_drift_rate_increase
+        ),
+        "max_world_model_rollout_trace_gap_rate_increase": (
+            config.max_runtime_drift_world_model_rollout_trace_gap_rate_increase
+        ),
+        "max_world_model_rollout_path_mismatch_rate_increase": (
+            config.max_runtime_drift_world_model_rollout_path_mismatch_rate_increase
         ),
         "min_context_sensitivity_participating_trace_rate": (
             config.min_runtime_drift_context_sensitivity_participating_trace_rate
@@ -2642,6 +2672,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     )
     world_model = _world_model_metric_summary(runtime_drift)
     world_model_action_gate = _world_model_action_gate_metric_summary(runtime_drift)
+    world_model_rollout = _world_model_rollout_metric_summary(runtime_drift)
     pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
     claim_factuality_probe_comparison = _claim_factuality_probe_comparison_metric_summary(runtime_drift)
     counterfactual_verification = _counterfactual_verification_metric_summary(runtime_drift)
@@ -2709,6 +2740,10 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "world_model_blocked_metric_count": world_model["blocked_metric_count"],
         "world_model_action_gate_metric_count": world_model_action_gate["metric_count"],
         "world_model_action_gate_blocked_metric_count": world_model_action_gate[
+            "blocked_metric_count"
+        ],
+        "world_model_rollout_metric_count": world_model_rollout["metric_count"],
+        "world_model_rollout_blocked_metric_count": world_model_rollout[
             "blocked_metric_count"
         ],
         "context_sensitivity_metric_count": context_sensitivity["metric_count"],
@@ -2869,6 +2904,18 @@ def _world_model_action_gate_metric_summary(runtime_drift: Mapping[str, Any]) ->
         if str(_mapping(metric).get("metric") or "").startswith(
             "world_model_action_gate."
         )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _world_model_rollout_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith("world_model_rollout.")
     )
     return {
         "metric_count": len(metrics),
@@ -3503,6 +3550,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "world_model_action_gate_blocked_metric_count",
             ),
+            "runtime_drift_world_model_rollout_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_rollout_metric_count",
+            ),
+            "runtime_drift_world_model_rollout_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_rollout_blocked_metric_count",
+            ),
             "runtime_drift_context_sensitivity_metric_count": _nested(
                 report,
                 "runtime_drift",
@@ -3929,6 +3986,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "world_model_action_gate_blocked_metric_count",
+            ),
+            "runtime_drift_world_model_rollout_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_rollout_metric_count",
+            ),
+            "runtime_drift_world_model_rollout_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "world_model_rollout_blocked_metric_count",
             ),
             "runtime_drift_context_sensitivity_metric_count": _nested(
                 report,
@@ -4555,6 +4622,21 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase=(
             args.max_runtime_drift_world_model_action_gate_postcondition_error_rate_increase
         ),
+        min_runtime_drift_world_model_rollout_coverage_rate=(
+            args.min_runtime_drift_world_model_rollout_coverage_rate
+        ),
+        min_runtime_drift_world_model_rollout_sync_rate=(
+            args.min_runtime_drift_world_model_rollout_sync_rate
+        ),
+        max_runtime_drift_world_model_rollout_drift_rate_increase=(
+            args.max_runtime_drift_world_model_rollout_drift_rate_increase
+        ),
+        max_runtime_drift_world_model_rollout_trace_gap_rate_increase=(
+            args.max_runtime_drift_world_model_rollout_trace_gap_rate_increase
+        ),
+        max_runtime_drift_world_model_rollout_path_mismatch_rate_increase=(
+            args.max_runtime_drift_world_model_rollout_path_mismatch_rate_increase
+        ),
         min_runtime_drift_context_sensitivity_participating_trace_rate=(
             args.min_runtime_drift_context_sensitivity_participating_trace_rate
         ),
@@ -5133,6 +5215,23 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument(
         "--max-runtime-drift-world-model-action-gate-postcondition-error-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument("--min-runtime-drift-world-model-rollout-coverage-rate", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-world-model-rollout-sync-rate", type=float, default=None)
+    parser.add_argument(
+        "--max-runtime-drift-world-model-rollout-drift-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-world-model-rollout-trace-gap-rate-increase",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-world-model-rollout-path-mismatch-rate-increase",
         type=float,
         default=None,
     )

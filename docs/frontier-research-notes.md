@@ -123,6 +123,11 @@ Added post-action world-model rollout drift audits:
   `product_runtime_metrics(...)` turns it into runtime telemetry fields such as
   `world_model_rollout_drift_rate`, `world_model_rollout_trace_gap_rate`, and
   `world_model_rollout_numeric_drift_count`.
+- `run_product_runtime_baseline.py` aggregates rollout coverage, sync, drift,
+  trace-gap, path-mismatch, numeric-drift, and confidence fields; downstream
+  drift comparison can now gate rollout sync/drop and mismatch increases, and
+  `compare_release_candidates.py --require-product-runtime-drift-world-model-rollout-evidence`
+  makes those metrics a fail-closed release-candidate requirement.
 - This closes the next world-model safety loop: EigenTruth can use a world
   model to gate actions while also monitoring whether that world model's
   predicted transitions stay in sync with observed state.

@@ -67,6 +67,9 @@ _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
 )
@@ -216,6 +219,9 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_world_model_action_gate_evidence": (
                 config.require_product_runtime_drift_world_model_action_gate_evidence
             ),
+            "require_product_runtime_drift_world_model_rollout_evidence": (
+                config.require_product_runtime_drift_world_model_rollout_evidence
+            ),
             "require_product_runtime_drift_action_receipts_evidence": (
                 config.require_product_runtime_drift_action_receipts_evidence
             ),
@@ -328,6 +334,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_covered_fact_property_evidence: bool = False
     require_product_runtime_drift_action_gate_evidence: bool = False
     require_product_runtime_drift_world_model_action_gate_evidence: bool = False
+    require_product_runtime_drift_world_model_rollout_evidence: bool = False
     require_product_runtime_drift_action_receipts_evidence: bool = False
     require_product_runtime_drift_receipt_claim_support_evidence: bool = False
     require_product_runtime_drift_trajectory_audit_evidence: bool = False
@@ -893,6 +900,9 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_world_model_action_gate_evidence=(
             config.require_product_runtime_drift_world_model_action_gate_evidence
         ),
+        require_product_runtime_drift_world_model_rollout_evidence=(
+            config.require_product_runtime_drift_world_model_rollout_evidence
+        ),
         require_product_runtime_drift_action_receipts_evidence=(
             config.require_product_runtime_drift_action_receipts_evidence
         ),
@@ -1250,6 +1260,9 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_world_model_action_gate_evidence": (
                 config.require_product_runtime_drift_world_model_action_gate_evidence
+            ),
+            "require_product_runtime_drift_world_model_rollout_evidence": (
+                config.require_product_runtime_drift_world_model_rollout_evidence
             ),
             "require_product_runtime_drift_action_receipts_evidence": (
                 config.require_product_runtime_drift_action_receipts_evidence
@@ -2521,6 +2534,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_world_model_action_gate_evidence_required": config.get(
             "require_product_runtime_drift_world_model_action_gate_evidence"
         ),
+        "product_runtime_drift_world_model_rollout_evidence_required": config.get(
+            "require_product_runtime_drift_world_model_rollout_evidence"
+        ),
         "product_runtime_drift_action_receipts_evidence_required": config.get(
             "require_product_runtime_drift_action_receipts_evidence"
         ),
@@ -3312,6 +3328,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count": (
             summary.get("world_model_action_gate_evidence_blocked_metric_count")
         ),
+        "product_runtime_drift_world_model_rollout_evidence_metric_count": summary.get(
+            "world_model_rollout_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_rollout_evidence_blocked_metric_count": (
+            summary.get("world_model_rollout_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_action_receipts_evidence_metric_count": summary.get(
             "action_receipts_evidence_metric_count"
         ),
@@ -3410,6 +3432,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
@@ -3663,6 +3688,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_world_model_action_gate_evidence=bool(
             args.require_product_runtime_drift_world_model_action_gate_evidence
+        ),
+        require_product_runtime_drift_world_model_rollout_evidence=bool(
+            args.require_product_runtime_drift_world_model_rollout_evidence
         ),
         require_product_runtime_drift_action_receipts_evidence=bool(
             args.require_product_runtime_drift_action_receipts_evidence
@@ -4134,6 +4162,11 @@ def main(argv: Sequence[str] | None = None) -> None:
                         action="store_true",
                         help="require the product runtime drift report to include world-model "
                              "guarded-action coverage, pass/block, and failure-reason metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-rollout-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include post-action "
+                             "world-model rollout coverage, sync, drift, trace-gap, and "
+                             "path-mismatch metrics")
     parser.add_argument("--require-product-runtime-drift-action-receipts-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action receipt coverage, validity, signature, and fingerprint metrics")

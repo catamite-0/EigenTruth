@@ -20672,6 +20672,128 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     ] is True
 
 
+def test_compare_release_candidates_can_require_world_model_rollout_runtime_drift(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    rollout_report = _write_product_runtime_drift_report(
+        tmp_path / "world-model-rollout-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        world_model_rollout_evidence=True,
+    )
+    missing_report = _write_product_runtime_drift_report(
+        tmp_path / "missing-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
+    blocked_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-world-model-rollout-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        world_model_rollout_evidence=True,
+        world_model_rollout_blocked=True,
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=rollout_report,
+        require_product_runtime_drift_world_model_rollout_evidence=True,
+    )
+    missing = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_report,
+        require_product_runtime_drift_world_model_rollout_evidence=True,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_report,
+        require_product_runtime_drift_world_model_rollout_evidence=True,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert (
+        payload["config"][
+            "require_product_runtime_drift_world_model_rollout_evidence"
+        ]
+        is True
+    )
+    summary = payload["release_candidate"]["product_runtime_drift"]["summary"]
+    assert summary["world_model_rollout_evidence_required"] is True
+    assert summary["world_model_rollout_evidence_metric_count"] == 5
+    assert summary["world_model_rollout_evidence_blocked_metric_count"] == 0
+    assert summary["world_model_rollout_coverage_rate_current"] == pytest.approx(1.0)
+    assert summary["world_model_rollout_drift_rate_status"] == "pass"
+    assert missing["decision"]["status"] == "blocked"
+    assert missing["product_runtime_drift_gate"]["summary"][
+        "world_model_rollout_evidence_missing_metrics"
+    ] == (
+        "world_model_rollout.coverage_rate",
+        "world_model_rollout.sync_rate",
+        "world_model_rollout.drift_rate",
+        "world_model_rollout.trace_gap_rate",
+        "world_model_rollout.path_mismatch_rate",
+    )
+    assert any(
+        "world-model rollout evidence metrics are incomplete" in reason
+        for reason in missing["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["product_runtime_drift_gate"]["summary"][
+        "world_model_rollout_evidence_blocked_metric_count"
+    ] == 1
+    assert any(
+        "world-model rollout evidence blocked 1 metric" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_can_require_evidence_alignment_runtime_drift(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -22360,6 +22482,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         metacognition_evidence=True,
         evidence_handoff_evidence=True,
         world_model_evidence=True,
+        world_model_rollout_evidence=True,
         context_sensitivity_evidence=True,
         counterfactual_robustness_evidence=True,
         frontier_release_evidence=True,
@@ -28910,6 +29033,8 @@ def _write_product_runtime_drift_report(
     action_gate_blocked=False,
     world_model_action_gate_evidence=False,
     world_model_action_gate_blocked=False,
+    world_model_rollout_evidence=False,
+    world_model_rollout_blocked=False,
     action_receipts_evidence=False,
     action_receipts_blocked=False,
     receipt_claim_support_evidence=False,
@@ -30047,6 +30172,68 @@ def _write_product_runtime_drift_report(
             },
             {
                 "metric": "world_model_action_gate.postcondition_error_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+        ])
+    if world_model_rollout_evidence:
+        drift_status = "blocked" if world_model_rollout_blocked else "pass"
+        drift_current = 0.25 if world_model_rollout_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "world_model_rollout.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "world_model_rollout.sync_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "world_model_rollout.drift_rate",
+                "status": drift_status,
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": drift_current,
+                "absolute_delta": drift_current,
+                "absolute_increase": drift_current,
+                "threshold": 0.0,
+                "reason": (
+                    "world_model_rollout.drift_rate above gate"
+                    if world_model_rollout_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "world_model_rollout.trace_gap_rate",
+                "status": "pass",
+                "comparison": "max_increase",
+                "baseline": 0.0,
+                "current": 0.0,
+                "absolute_delta": 0.0,
+                "absolute_increase": 0.0,
+                "threshold": 0.0,
+                "reason": None,
+            },
+            {
+                "metric": "world_model_rollout.path_mismatch_rate",
                 "status": "pass",
                 "comparison": "max_increase",
                 "baseline": 0.0,
@@ -43157,7 +43344,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 22
+    assert cache_payload["schema_version"] == 23
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -43617,6 +43804,113 @@ def test_compare_product_runtime_baselines_gates_world_model_action_gate_drift(t
     assert record.metadata[
         "world_model_action_gate_postcondition_refuted_rate_current"
     ] == pytest.approx(1.0)
+
+
+def test_compare_product_runtime_baselines_gates_world_model_rollout_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    manifest_path = tmp_path / "drift-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    def write_rollout_trace(
+        path: Path,
+        *,
+        request_id: str,
+        observed_remaining: int,
+    ) -> None:
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "runtime_trace": {
+                    "total_seconds": 0.10,
+                    "phases": [{"name": "execute_action", "seconds": 0.01}],
+                },
+                "action_results": [
+                    {
+                        "action": "execute_tool",
+                        "status": "succeeded",
+                        "output": {
+                            "world_model_rollout": {
+                                "predicted_state": {"quota": {"remaining": 2}},
+                                "observed_state": {
+                                    "quota": {"remaining": observed_remaining}
+                                },
+                                "prediction_confidence": 0.9,
+                            }
+                        },
+                        "request_id": "action-1",
+                    }
+                ],
+            }),
+            encoding="utf-8",
+        )
+
+    write_rollout_trace(baseline_trace, request_id="baseline", observed_remaining=2)
+    write_rollout_trace(current_trace, request_id="current", observed_remaining=1)
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        report_path=drift_report,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="runtime-drift-world-model-rollout",
+        version="0.1",
+        min_world_model_rollout_coverage_rate=1.0,
+        min_world_model_rollout_sync_rate=1.0,
+        max_world_model_rollout_drift_rate_increase=0.0,
+        max_world_model_rollout_trace_gap_rate_increase=0.0,
+        max_world_model_rollout_path_mismatch_rate_increase=0.0,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift-world-model-rollout:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 3
+    assert _metric_by_name(payload, "world_model_rollout.coverage_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "world_model_rollout.sync_rate")[
+        "status"
+    ] == "blocked"
+    assert _metric_by_name(payload, "world_model_rollout.drift_rate")[
+        "absolute_delta"
+    ] == pytest.approx(1.0)
+    assert _metric_by_name(payload, "world_model_rollout.trace_gap_rate")[
+        "status"
+    ] == "pass"
+    assert _metric_by_name(payload, "world_model_rollout.path_mismatch_rate")[
+        "status"
+    ] == "blocked"
+    assert manifest["metadata"]["world_model_rollout_blocked_metric_count"] == 3
+    assert manifest["metadata"]["world_model_rollout_sync_rate_current"] == pytest.approx(
+        0.0
+    )
+    assert manifest["metadata"]["world_model_rollout_drift_rate_status"] == "blocked"
+    assert record.metadata["world_model_rollout_blocked_metric_count"] == 3
+    assert record.metadata["world_model_rollout_path_mismatch_rate_current"] == pytest.approx(
+        1.0
+    )
 
 
 def test_compare_product_runtime_baselines_gates_trajectory_audit_drift(tmp_path):
