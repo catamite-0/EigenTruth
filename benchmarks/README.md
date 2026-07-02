@@ -7154,11 +7154,50 @@ adapter ran, the candidate promotion gate passed, the ProductTrace/action-result
 handoff promoted, and the evidence bundle gate passed; the workflow report
 itself is still not verifier evidence.
 
+Before a filled frontier command binding can execute, run the command-binding
+review gate with explicit reviewer decisions:
+
+```bash
+python benchmarks/review_frontier_research_queue_command_bindings.py \
+  --bound-command-plan artifacts/frontier-research-queue-bound-command-plan.json \
+  --base-bindings artifacts/frontier-research-queue-artifact-input-stage/frontier-research-command-bindings.json \
+  --review-decisions artifacts/frontier-research-queue-command-binding-review-decisions.jsonl \
+  --output-dir artifacts/frontier-research-queue-command-binding-review \
+  --json artifacts/frontier-research-queue-command-binding-review/frontier-command-binding-review.json \
+  --approved-bindings artifacts/frontier-research-queue-command-binding-review/frontier-research-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-command-binding-review/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-command-binding-review \
+  --version 0.1
+```
+
+The review gate checks that every bound entry is ready, has no `...`
+placeholders, has clean known-command validation, has no reserved label or
+model-answer fields in inputs, and has approved local-artifact input reviews
+where present. Only actions with explicit `approved`/`reviewed` decisions,
+reviewer metadata, and `not_verifier_evidence=true` are marked approved in the
+output bindings. The review report remains non-evidence and executes no
+commands.
+
+Rebuild the bound command plan from the approved bindings before handing it to
+the runner:
+
+```bash
+python benchmarks/bind_frontier_research_queue_command_plan.py \
+  --command-plan artifacts/frontier-research-queue-command-plan.json \
+  --bindings artifacts/frontier-research-queue-command-binding-review/frontier-research-command-bindings.json \
+  --json artifacts/frontier-research-queue-approved-bound-command-plan.json \
+  --artifact-manifest artifacts/frontier-research-queue-approved-bound-command-plan-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-approved-bound-command-plan \
+  --version 0.1
+```
+
 Then dry-run the bound plan before any explicit execution:
 
 ```bash
 python benchmarks/run_frontier_research_queue_bound_command_plan.py \
-  --bound-command-plan artifacts/frontier-research-queue-bound-command-plan.json \
+  --bound-command-plan artifacts/frontier-research-queue-approved-bound-command-plan.json \
   --json artifacts/frontier-research-queue-bound-command-run.json \
   --artifact-manifest artifacts/frontier-research-queue-bound-command-run-manifest.json \
   --registry artifacts/local-release-registry.json \
