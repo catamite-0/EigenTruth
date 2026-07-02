@@ -39953,6 +39953,32 @@ def test_frontier_artifact_reference_smoke_fails_closed_on_blocked_audit():
         })
 
 
+def test_frontier_queue_execution_smoke_writes_manifest_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.frontier_queue_execution_smoke")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    payload = module.build_frontier_queue_execution_smoke(tmp_path)
+    registry = registry_module.ArtifactRegistry.load_json(tmp_path / "registry.json")
+    manifest_verification = registry_module.load_and_verify_artifact_manifest(
+        tmp_path / "artifact-manifest.json",
+        recursive=True,
+    )
+
+    assert payload["status"] == "pass"
+    assert payload["summary"]["staged_upstream_output_count"] == 1
+    assert payload["summary"]["remaining_placeholder_count"] == 0
+    assert payload["summary"]["dry_run_count"] == 2
+    assert payload["summary"]["binding_not_reviewed_count"] == 0
+    assert payload["label_usage"]["executes_child_commands"] is False
+    assert payload["manifest_verification"]["passed"] is True
+    assert manifest_verification.passed is True
+    assert Path(payload["paths"]["dry_run_report"]).exists()
+    assert payload["registry_record"] == module.SMOKE_RECORD_KEY
+    assert payload["registry_manifest_record"] == module.SMOKE_MANIFEST_RECORD_KEY
+    assert registry.get(module.SMOKE_RECORD_KEY).metadata["status"] == "pass"
+    assert registry.get(module.SMOKE_MANIFEST_RECORD_KEY).metadata["status"] == "pass"
+
+
 def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tmp_path):
     module = importlib.import_module("benchmarks.product_trace_replay_smoke")
     registry_module = importlib.import_module("eigentruth.registry")

@@ -6969,9 +6969,24 @@ marks the entry reviewed or approved.
 Add `--stage-upstream-outputs` when you also want to bind intra-action child
 outputs that the same staged plan already produced, such as a rule fill
 command's `--rule-inputs-jsonl` feeding the following adapter's `--rule-inputs`
-or an adapter's `--rule-results-jsonl`/report feeding promotion. This still
-does not fill source-backed numeric/temporal inputs and still leaves
+or an adapter's `--rule-results-jsonl`/report feeding promotion. The same
+mechanism now carries `bind_frontier_research_queue_command_plan.py --json`
+into the following `run_frontier_research_queue_bound_command_plan.py
+--bound-command-plan` placeholder for reviewed queue execution. This still does
+not fill source-backed numeric/temporal inputs and still leaves
 `review_status=needs_review`.
+
+For a no-model local fixture of the queue-execution control plane, run:
+
+```bash
+python benchmarks/frontier_queue_execution_smoke.py \
+  --output-dir artifacts/frontier-queue-execution-smoke
+```
+
+The smoke writes the unresolved summary, command plan, binding scaffold, staged
+bindings, reviewed bindings, approved bound plan, dry-run report, artifact
+manifest, and registry record. It verifies the manifest recursively and keeps
+all artifacts marked as non-evidence; no child frontier workflow is executed.
 After review, fill either ordered `command_template_values` or full
 `bound_commands` through that sidecar:
 
@@ -10641,6 +10656,7 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/frontier_status_smoke.py`,
 `benchmarks/frontier_release_evidence_smoke.py`,
 `benchmarks/frontier_artifact_reference_smoke.py`,
+`benchmarks/frontier_queue_execution_smoke.py`,
 `benchmarks/product_trace_replay_smoke.py`, and
 `benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
 payloads plus the checked-in v1.9 product handoff, the active v1.9/v7
