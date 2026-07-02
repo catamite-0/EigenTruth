@@ -52,6 +52,7 @@ QUERY_FIELDS = (
     "text",
     "citation_question",
     "citation_entity",
+    "triple_slot",
 )
 DEFAULT_MIN_OVERLAPS = (0.95, 0.80, 0.65, 0.50)
 DEFAULT_SOURCE_FAMILY_FILTERS = ("off",)

@@ -1564,6 +1564,10 @@ retains incompatible hits as fallback evidence.
 Use `--enable-triple-evidence --triple-refute-object-mismatch` with
 `--target-route retrieval_triple_evidence` when the sweep should measure linked
 subject-predicate-object evidence rather than lexical retrieval groundedness.
+Include `triple_slot` in `--query-fields` to generate answer-omitting
+subject/predicate queries from extracted claim triples, for example
+`capital of France` instead of a query containing the generated answer
+`Berlin`.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep
@@ -1572,7 +1576,7 @@ python benchmarks/sweep_blind_spot_retrieval_queries.py \
   --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
   --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
-  --query-fields answer,question,question_answer,text \
+  --query-fields answer,question,question_answer,text,triple_slot \
   --retriever-min-overlaps 0.95,0.8,0.65,0.5 \
   --source-family-filters off \
   --retrieval-limit 3 \
@@ -7974,6 +7978,10 @@ adapter audits where labels should remain only in the score dump used for
 evaluation. CLI-built fixtures include `input_provenance` with the score dump
 metadata, corpus fingerprints, optional retriever-index fingerprint, and the
 effective builder config.
+Set `--query-field triple_slot` for slot-aligned audits: the builder extracts
+claim triples from question+answer text, queries by subject/predicate while
+omitting the generated object, and records the triple-slot plan in per-record
+retrieval metadata.
 
 ```bash
 python benchmarks/build_evidence_fixture.py \

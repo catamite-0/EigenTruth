@@ -23,6 +23,7 @@ from eigentruth.adapters import (
     RetrievalHit,
     RetrievalQuery,
     SQLiteFTSRetriever,
+    plan_triple_slot_retrieval,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -32,6 +33,7 @@ from eigentruth.eval.score_dump import (
     load_score_dump as _load_validated_score_dump,
 )
 from eigentruth.registry import fingerprint_path
+from eigentruth.verify.protocols import Claim
 from eigentruth.verify.search_planning import SOURCE_FAMILY_NAMES, plan_citation_search_query
 
 RETRIEVER_BACKENDS = ("memory", "sqlite_fts", "auto")
@@ -43,6 +45,7 @@ QUERY_FIELDS = (
     "question_answer",
     "citation_question",
     "citation_entity",
+    "triple_slot",
 )
 CITATION_QUERY_FIELDS = ("citation_question", "citation_entity")
 _SOURCE_FAMILY_FILTER_FETCH_MULTIPLIER = 20
@@ -204,16 +207,27 @@ def build_evidence_fixture(
     total_source_family_filtered_hits = 0
     for idx, (label, statement) in enumerate(zip(labels, statements), start=1):
         claim_text = _statement_text(statement)
-        query_text = _query_text(statement, query_field=query_field)
         claim_id = str(statement.get("claim_id") or f"c{idx}")
+        retrieval_queries, query_metadata = _retrieval_query_bundle(
+            statement,
+            query_field=query_field,
+            claim_id=claim_id,
+        )
+        query_text = " | ".join(query.query for query in retrieval_queries)
         candidate_limit = _retrieval_candidate_limit(
             retrieval_limit,
             source_family_filter=source_family_filter,
         )
-        candidate_hits = tuple(retriever.retrieve(
-            RetrievalQuery(query=query_text, claim_id=claim_id),
-            limit=candidate_limit,
-        ))
+        raw_candidate_hits = tuple(
+            hit
+            for query in retrieval_queries
+            for hit in retriever.retrieve(query, limit=candidate_limit)
+        )
+        candidate_hits, duplicate_candidate_hits = (
+            _deduplicate_retrieval_hits(raw_candidate_hits)
+            if len(retrieval_queries) > 1
+            else (raw_candidate_hits, 0)
+        )
         hits, source_family_filter_metadata = _apply_source_family_filter(
             candidate_hits,
             statement=statement,
@@ -224,6 +238,12 @@ def build_evidence_fixture(
         total_candidate_hits += len(candidate_hits)
         total_hits += len(hits)
         total_source_family_filtered_hits += int(source_family_filter_metadata.get("dropped_hit_count", 0))
+        claim_metadata = dict(statement.get("metadata", {}))
+        triple_slot_plan = query_metadata.get("triple_slot_plan")
+        if isinstance(triple_slot_plan, Mapping) and triple_slot_plan.get("triples"):
+            claim_metadata.setdefault("claim_triples", tuple(triple_slot_plan.get("triples", ())))
+            claim_metadata.setdefault("triple_slot_query_plan", triple_slot_plan)
+
         record_metadata: dict[str, Any] = {
             "index": idx - 1,
             "statement": statement,
@@ -241,6 +261,11 @@ def build_evidence_fixture(
                 "limit": retrieval_limit,
                 "query_field": query_field,
                 "query": query_text,
+                "queries": tuple(query.to_dict() for query in retrieval_queries),
+                "query_count": len(retrieval_queries),
+                "raw_candidate_hit_count": len(raw_candidate_hits),
+                "duplicate_candidate_hit_count": duplicate_candidate_hits,
+                "query_plan": query_metadata,
                 "provenance_filter": retriever_info.get("provenance_filter"),
                 "source_family_filter": source_family_filter_metadata,
             },
@@ -250,7 +275,7 @@ def build_evidence_fixture(
         records.append({
             "claim": claim_text,
             "claim_id": claim_id,
-            "claim_metadata": dict(statement.get("metadata", {})),
+            "claim_metadata": claim_metadata,
             "retrieval_documents": [hit.to_dict() for hit in hits],
             "metadata": record_metadata,
         })
@@ -558,11 +583,74 @@ def _query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
         text = f"{statement.get('question', '')} {statement.get('answer', '')}".strip()
     elif query_field in CITATION_QUERY_FIELDS:
         text = _citation_query_text(statement, query_field=query_field)
+    elif query_field == "triple_slot":
+        text = _triple_slot_query_text(statement, claim_id=None)
     else:
         raise ValueError(f"query_field must be one of: {', '.join(QUERY_FIELDS)}.")
     if not text:
         raise ValueError(f"statement record is missing query field {query_field!r}.")
     return text
+
+
+def _retrieval_query_bundle(
+    statement: Mapping[str, Any],
+    *,
+    query_field: str,
+    claim_id: str,
+) -> tuple[tuple[RetrievalQuery, ...], dict[str, Any]]:
+    if query_field != "triple_slot":
+        query = RetrievalQuery(query=_query_text(statement, query_field=query_field), claim_id=claim_id)
+        return (query,), {
+            "query_type": query_field,
+            "fallback_query_field": None,
+            "triple_slot_plan": None,
+        }
+
+    claim = _triple_slot_claim(statement, claim_id=claim_id)
+    plan = plan_triple_slot_retrieval(claim)
+    if plan.queries:
+        return tuple(plan.queries), {
+            "query_type": "triple_slot",
+            "fallback_query_field": None,
+            "triple_slot_plan": plan.to_dict(),
+        }
+
+    fallback_field = _triple_slot_fallback_query_field(statement)
+    fallback_query = RetrievalQuery(
+        query=_query_text(statement, query_field=fallback_field),
+        claim_id=claim_id,
+        metadata={
+            "query_type": "triple_slot",
+            "fallback_query_field": fallback_field,
+            "triple_slot_plan": plan.to_dict(),
+        },
+    )
+    return (fallback_query,), {
+        "query_type": "triple_slot",
+        "fallback_query_field": fallback_field,
+        "triple_slot_plan": plan.to_dict(),
+    }
+
+
+def _triple_slot_query_text(statement: Mapping[str, Any], *, claim_id: str | None) -> str:
+    claim = _triple_slot_claim(statement, claim_id=claim_id)
+    plan = plan_triple_slot_retrieval(claim)
+    if plan.queries:
+        return " | ".join(query.query for query in plan.queries)
+    return _query_text(statement, query_field=_triple_slot_fallback_query_field(statement))
+
+
+def _triple_slot_claim(statement: Mapping[str, Any], *, claim_id: str | None) -> Claim:
+    question_answer = f"{statement.get('question', '')} {statement.get('answer', '')}".strip()
+    text = question_answer or _statement_text(statement)
+    metadata = dict(statement.get("metadata", {}))
+    return Claim(text=text, claim_id=claim_id, metadata=metadata)
+
+
+def _triple_slot_fallback_query_field(statement: Mapping[str, Any]) -> str:
+    if str(statement.get("question", "")).strip() and str(statement.get("answer", "")).strip():
+        return "question_answer"
+    return "text"
 
 
 def _citation_query_text(statement: Mapping[str, Any], *, query_field: str) -> str:

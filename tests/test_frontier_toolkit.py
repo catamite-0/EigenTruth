@@ -36,6 +36,8 @@ from eigentruth.adapters import (
     WorldModelPrediction,
     WorldModelReference,
     WorldModelRule,
+    bind_triple_slot_retrieval_hits,
+    plan_triple_slot_retrieval,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
@@ -2175,6 +2177,35 @@ def test_in_memory_retriever_preserves_mapping_metadata_fields():
     assert hits[0].metadata["question"] == "What shipping option is order R1 approved for?"
     assert hits[0].metadata["answer"] == "Order R1 is approved for expedited shipping."
     assert hits[0].metadata["retriever"] == "InMemoryRetriever"
+
+
+def test_triple_slot_retrieval_plan_omits_generated_object_and_binds_hits():
+    claim = Claim("What is the capital of France? Berlin.", claim_id="c1")
+    plan = plan_triple_slot_retrieval(claim)
+
+    assert plan.triple_count == 1
+    assert plan.query_count >= 1
+    assert plan.queries[0].query == "capital of France"
+    assert "Berlin" not in " ".join(query.query for query in plan.queries)
+    assert plan.queries[0].metadata["omitted_object"] == "Berlin"
+
+    retriever = InMemoryRetriever((
+        {"text": "The capital of France is Paris.", "source": "external:atlas"},
+    ), min_overlap=0.8)
+    hits = retriever.retrieve(plan.queries[0], limit=1)
+    binding = bind_triple_slot_retrieval_hits(
+        claim,
+        hits,
+        plan=plan,
+        refute_object_mismatch=True,
+    )
+    payload = binding.to_dict()
+
+    assert hits[0].text == "The capital of France is Paris."
+    assert payload["verification_result"]["status"] == "refuted"
+    assert payload["verification_result"]["metadata"]["decision_rule"] == "triple_object_mismatch"
+    assert payload["plan"]["queries"][0]["metadata"]["query_type"] == "triple_slot"
+    json.dumps(payload)
 
 
 def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():

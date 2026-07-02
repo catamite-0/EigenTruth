@@ -19,6 +19,11 @@ from eigentruth.adapters.retrieval import (
     RetrievalQuery,
     Retriever,
     SQLiteFTSRetriever,
+    TripleSlotRetrievalBindingReport,
+    TripleSlotRetrievalPlan,
+    bind_triple_slot_retrieval_hits,
+    plan_triple_slot_retrieval,
+    plan_triple_slot_retrieval_queries,
 )
 from eigentruth.adapters.state import (
     SQLiteStateQuery,
@@ -60,6 +65,8 @@ __all__ = [
     "RetrievalQuery",
     "Retriever",
     "SQLiteFTSRetriever",
+    "TripleSlotRetrievalBindingReport",
+    "TripleSlotRetrievalPlan",
     "SQLiteStateQuery",
     "SQLiteStateSource",
     "StateCheck",
@@ -77,5 +84,8 @@ __all__ = [
     "WorldModelReference",
     "WorldModelRule",
     "WorldModelView",
+    "bind_triple_slot_retrieval_hits",
     "combine_cache_stats",
+    "plan_triple_slot_retrieval",
+    "plan_triple_slot_retrieval_queries",
 ]

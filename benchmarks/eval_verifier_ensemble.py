@@ -1335,6 +1335,8 @@ def _record_has_state_check(record: ClaimEvidenceRecord, state_checks: Mapping[s
 
 
 def _record_has_triple_evidence(record: ClaimEvidenceRecord) -> bool:
+    if not record.initial_evidence:
+        return False
     metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
     if flag_value_enabled(metadata.get("requires_triple_audit")):
         return True

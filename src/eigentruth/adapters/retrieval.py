@@ -21,11 +21,21 @@ from eigentruth.control.actions import (
     DryRunActionExecutor,
 )
 from eigentruth.control.policy import ControlAction
+from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.groundedness import (
+    EvidenceDocument,
     EvidenceQualityAssessment,
     EvidenceQualityPolicy,
     EvidenceQualitySummary,
     summarize_evidence_quality,
+)
+from eigentruth.verify.protocols import Claim, VerificationResult
+from eigentruth.verify.triples import (
+    ClaimTriple,
+    ClaimTripleExtractor,
+    RuleBasedTripleExtractor,
+    TripleEvidenceVerifier,
+    extract_claim_triples,
 )
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
@@ -110,6 +120,98 @@ class RetrievalHit:
         )
 
 
+@dataclass(frozen=True)
+class TripleSlotRetrievalPlan:
+    """Slot-aware retrieval queries derived from extracted claim triples."""
+
+    claim_id: str | None
+    triples: Sequence[ClaimTriple | Mapping[str, Any]] = ()
+    queries: Sequence[RetrievalQuery | Mapping[str, Any]] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        claim_id = None if self.claim_id is None else str(self.claim_id)
+        triples = tuple(
+            item if isinstance(item, ClaimTriple) else ClaimTriple.from_dict(item)
+            for item in self.triples
+        )
+        queries = tuple(
+            item if isinstance(item, RetrievalQuery) else RetrievalQuery.from_dict(item)
+            for item in self.queries
+        )
+        object.__setattr__(self, "claim_id", claim_id)
+        object.__setattr__(self, "triples", triples)
+        object.__setattr__(self, "queries", queries)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def query_count(self) -> int:
+        """Return the number of planned retrieval queries."""
+        return len(self.queries)
+
+    @property
+    def triple_count(self) -> int:
+        """Return the number of extracted triples behind this plan."""
+        return len(self.triples)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready retrieval plan."""
+        return {
+            "claim_id": self.claim_id,
+            "triple_count": self.triple_count,
+            "query_count": self.query_count,
+            "triples": tuple(triple.to_dict() for triple in self.triples),
+            "queries": tuple(query.to_dict() for query in self.queries),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+
+@dataclass(frozen=True)
+class TripleSlotRetrievalBindingReport:
+    """Retrieved evidence bound back to the claim triple slots it can audit."""
+
+    claim_id: str | None
+    plan: TripleSlotRetrievalPlan | Mapping[str, Any]
+    hits: Sequence[RetrievalHit | Mapping[str, Any] | str] = ()
+    verification_result: VerificationResult | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        claim_id = None if self.claim_id is None else str(self.claim_id)
+        raw_plan = self.plan
+        plan = (
+            raw_plan
+            if isinstance(raw_plan, TripleSlotRetrievalPlan)
+            else TripleSlotRetrievalPlan(
+                claim_id=raw_plan.get("claim_id"),
+                triples=tuple(raw_plan.get("triples", ())),
+                queries=tuple(raw_plan.get("queries", ())),
+                metadata=dict(raw_plan.get("metadata", {})),
+            )
+        )
+        hits = tuple(_coerce_hit(hit) for hit in self.hits)
+        object.__setattr__(self, "claim_id", claim_id)
+        object.__setattr__(self, "plan", plan)
+        object.__setattr__(self, "hits", hits)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def hit_count(self) -> int:
+        """Return the number of retrieval hits considered by the binding."""
+        return len(self.hits)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready binding report."""
+        return {
+            "claim_id": self.claim_id,
+            "plan": self.plan.to_dict(),
+            "hit_count": self.hit_count,
+            "hits": tuple(hit.to_dict() for hit in self.hits),
+            "verification_result": _verification_result_to_dict(self.verification_result),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+
 class _IndexedRetrievalDocument(NamedTuple):
     hit: RetrievalHit
     tokens: tuple[str, ...]
@@ -129,6 +231,124 @@ class Retriever(Protocol):
     def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> Sequence[RetrievalHit]:
         """Return retrieval hits for one query."""
         ...
+
+
+def plan_triple_slot_retrieval(
+    claim: Claim,
+    *,
+    extractor: ClaimTripleExtractor | None = None,
+    include_object: bool = False,
+    max_queries_per_triple: int = 2,
+) -> TripleSlotRetrievalPlan:
+    """Return retrieval queries focused on a claim triple's subject/predicate slots.
+
+    The default plan intentionally omits the claim object from the query. That
+    helps retrieval find independent evidence for the property being claimed
+    instead of merely finding documents that repeat a generated answer.
+    """
+    if int(max_queries_per_triple) <= 0:
+        raise ValueError("max_queries_per_triple must be positive.")
+    active_extractor = RuleBasedTripleExtractor() if extractor is None else extractor
+    triples = tuple(extract_claim_triples(claim, extractor=active_extractor))
+    queries: list[RetrievalQuery] = []
+    seen: set[str] = set()
+    for triple_index, triple in enumerate(triples):
+        for query_index, (query_text, strategy) in enumerate(_triple_slot_query_variants(
+            triple,
+            include_object=include_object,
+        )):
+            if query_index >= int(max_queries_per_triple):
+                break
+            query_key = _query_dedupe_key(query_text)
+            if not query_key or query_key in seen:
+                continue
+            seen.add(query_key)
+            queries.append(RetrievalQuery(
+                query=query_text,
+                claim_id=claim.claim_id,
+                metadata={
+                    "query_type": "triple_slot",
+                    "strategy": strategy,
+                    "triple_index": triple_index,
+                    "triple": triple.to_dict(),
+                    "include_object": bool(include_object),
+                    "omitted_object": None if include_object else triple.object,
+                },
+            ))
+    return TripleSlotRetrievalPlan(
+        claim_id=claim.claim_id,
+        triples=triples,
+        queries=tuple(queries),
+        metadata={
+            "planner": "plan_triple_slot_retrieval",
+            "include_object": bool(include_object),
+            "max_queries_per_triple": int(max_queries_per_triple),
+        },
+    )
+
+
+def plan_triple_slot_retrieval_queries(
+    claim: Claim,
+    *,
+    extractor: ClaimTripleExtractor | None = None,
+    include_object: bool = False,
+    max_queries_per_triple: int = 2,
+) -> tuple[RetrievalQuery, ...]:
+    """Return just the queries from ``plan_triple_slot_retrieval``."""
+    return tuple(
+        plan_triple_slot_retrieval(
+            claim,
+            extractor=extractor,
+            include_object=include_object,
+            max_queries_per_triple=max_queries_per_triple,
+        ).queries
+    )
+
+
+def bind_triple_slot_retrieval_hits(
+    claim: Claim,
+    hits: Sequence[RetrievalHit | Mapping[str, Any] | str],
+    *,
+    plan: TripleSlotRetrievalPlan | Mapping[str, Any] | None = None,
+    extractor: ClaimTripleExtractor | None = None,
+    min_slot_coverage: float = 1.0,
+    refute_object_mismatch: bool = False,
+) -> TripleSlotRetrievalBindingReport:
+    """Bind retrieval hits back to claim triples and run a slot audit."""
+    active_plan = (
+        plan_triple_slot_retrieval(claim, extractor=extractor)
+        if plan is None
+        else (
+            plan
+            if isinstance(plan, TripleSlotRetrievalPlan)
+            else TripleSlotRetrievalPlan(
+                claim_id=plan.get("claim_id"),
+                triples=tuple(plan.get("triples", ())),
+                queries=tuple(plan.get("queries", ())),
+                metadata=dict(plan.get("metadata", {})),
+            )
+        )
+    )
+    active_extractor = RuleBasedTripleExtractor() if extractor is None else extractor
+    hit_objects = tuple(_coerce_hit(hit) for hit in hits)
+    verifier = TripleEvidenceVerifier(
+        evidence=tuple(_evidence_document_from_hit(hit) for hit in hit_objects),
+        extractor=active_extractor,
+        min_slot_coverage=min_slot_coverage,
+        refute_object_mismatch=refute_object_mismatch,
+    )
+    result = verifier.verify(claim)
+    return TripleSlotRetrievalBindingReport(
+        claim_id=claim.claim_id,
+        plan=active_plan,
+        hits=hit_objects,
+        verification_result=result,
+        metadata={
+            "binder": "bind_triple_slot_retrieval_hits",
+            "min_slot_coverage": float(min_slot_coverage),
+            "refute_object_mismatch": bool(refute_object_mismatch),
+        },
+    )
 
 
 @dataclass(frozen=True)
@@ -603,6 +823,95 @@ def _quality_features_from_query(query: RetrievalQuery) -> Mapping[str, Any]:
             if isinstance(target_metadata_features, Mapping):
                 return target_metadata_features
     return features if isinstance(features, Mapping) else {}
+
+
+def _triple_slot_query_variants(
+    triple: ClaimTriple,
+    *,
+    include_object: bool,
+) -> tuple[tuple[str, str], ...]:
+    subject = _clean_query_part(triple.subject)
+    predicate = _clean_query_part(_predicate_query_text(triple.predicate))
+    object_value = _clean_query_part(triple.object)
+    if not subject or not predicate:
+        return ()
+
+    variants: list[tuple[str, str]] = []
+    normalized_predicate = _normalized_predicate(triple.predicate)
+    if normalized_predicate in {"capital_of", "official_language_of", "currency_of"}:
+        variants.append((_clean_query_part(f"{predicate} of {subject}"), "property_of_subject"))
+    elif normalized_predicate == "located_in":
+        variants.append((_clean_query_part(f"{subject} located in"), "subject_predicate"))
+    elif normalized_predicate == "equals":
+        variants.append((_clean_query_part(f"{subject} equals"), "subject_predicate"))
+    else:
+        variants.append((_clean_query_part(f"{subject} {predicate}"), "subject_predicate"))
+
+    variants.append((_clean_query_part(f"{subject} {predicate}"), "subject_predicate_generic"))
+    if include_object and object_value:
+        variants.append((_clean_query_part(f"{subject} {predicate} {object_value}"), "full_triple"))
+    return tuple(
+        (query, strategy)
+        for query, strategy in _unique_query_variants(variants)
+        if query
+    )
+
+
+def _predicate_query_text(value: str) -> str:
+    normalized = _normalized_predicate(value)
+    mapping = {
+        "capital_of": "capital",
+        "official_language_of": "official language",
+        "currency_of": "currency",
+        "located_in": "located in",
+        "equals": "equals",
+    }
+    return mapping.get(normalized, normalized.replace("_", " "))
+
+
+def _normalized_predicate(value: str) -> str:
+    return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "_", str(value).casefold()).strip("_")
+
+
+def _clean_query_part(value: Any) -> str:
+    text = " ".join(str(value).replace("_", " ").split())
+    return text.strip(" \t\r\n,;:.!?\"'()[]{}")
+
+
+def _unique_query_variants(values: Sequence[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
+    unique: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for query, strategy in values:
+        key = _query_dedupe_key(query)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        unique.append((query, strategy))
+    return tuple(unique)
+
+
+def _query_dedupe_key(value: str) -> str:
+    return " ".join(_tokens(value))
+
+
+def _evidence_document_from_hit(hit: RetrievalHit) -> EvidenceDocument:
+    metadata = dict(hit.metadata)
+    metadata.setdefault("retrieval_score", hit.score)
+    if hit.source is not None:
+        metadata.setdefault("retrieval_source", hit.source)
+    return EvidenceDocument(hit.text, source=hit.source, metadata=metadata)
+
+
+def _verification_result_to_dict(result: VerificationResult | None) -> dict[str, Any] | None:
+    if result is None:
+        return None
+    return {
+        "status": result.status.value,
+        "confidence": result.confidence,
+        "evidence": tuple(result.evidence),
+        "explanation": result.explanation,
+        "metadata": to_jsonable(dict(result.metadata)),
+    }
 
 
 def _coerce_hit(value: RetrievalHit | Mapping[str, Any] | str) -> RetrievalHit:
