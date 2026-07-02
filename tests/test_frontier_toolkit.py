@@ -3350,6 +3350,51 @@ def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
     assert report["summary"]["misalignment_rate"] == pytest.approx(1.0)
 
 
+def test_evidence_alignment_verifier_does_not_refute_unbound_entity_numeric_slot():
+    claim = Claim("What is the population of the country? The population of the country is 330 million.")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "World Bank official statistics data for population country queries: "
+                    "Afghanistan had Population, total of 42,647,492 in 2024."
+                ),
+                "source": "worldbank:SP.POP.TOTL:AFG:2024",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "unbound_evidence_entity" in record["issue_codes"]
+    assert "afghanistan" in record["metadata"]["unbound_evidence_entities"]
+
+
+def test_evidence_alignment_verifier_refutes_bound_entity_numeric_slot():
+    claim = Claim("Afghanistan had Population, total of 330 million in 2024.")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "World Bank official statistics data for population country queries: "
+                    "Afghanistan had Population, total of 42,647,492 in 2024."
+                ),
+                "source": "worldbank:SP.POP.TOTL:AFG:2024",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "unbound_evidence_entity" not in record["issue_codes"]
+
+
 def test_evidence_alignment_verifier_does_not_refute_unrelated_numeric_long_text_with_negation():
     claim = Claim("How many ribs do humans have? Humans have 24 ribs.", claim_id="ribs")
     verifier = EvidenceAlignmentVerifier(

@@ -527,6 +527,7 @@ def _alignment_record_for_claim(
     missing_numbers = _missing_items(claim_features.numbers, evidence_features.numbers)
     missing_entities = _missing_items(claim_features.entities, evidence_features.entities)
     alternate_numbers = _alternate_items(evidence_features.numbers, claim_features.numbers)
+    unbound_evidence_entities = _unbound_evidence_entities(claim_features, evidence_features)
     best_overlap = _recall(claim_features.keywords, best_features.keywords) or 0.0
     best_entity_recall = _recall(claim_features.entities, best_features.entities)
     claim_negated = _negated_near_anchors(claim.text, claim_features.keywords + claim_features.entities)
@@ -545,6 +546,8 @@ def _alignment_record_for_claim(
             issue_codes.append("low_refute_keyword_overlap")
         if not alternate_numbers:
             issue_codes.append("no_alternate_evidence_number")
+        if unbound_evidence_entities:
+            issue_codes.append("unbound_evidence_entity")
     if entity_recall is not None and entity_recall < policy.min_entity_recall:
         issue_codes.append("missing_claim_entity")
     if negation_mismatch:
@@ -584,6 +587,7 @@ def _alignment_record_for_claim(
         issue_codes=tuple(issue_codes),
         metadata={
             "alternate_numbers": alternate_numbers,
+            "unbound_evidence_entities": unbound_evidence_entities,
             "best_entity_recall": best_entity_recall,
             "best_keyword_overlap": best_overlap,
             "claim_negated_for_alignment": claim_negated,
@@ -751,6 +755,7 @@ def _strong_misalignment(record: EvidenceAlignmentRecord) -> bool:
             "low_refute_keyword_overlap",
             "missing_claim_entity",
             "no_alternate_evidence_number",
+            "unbound_evidence_entity",
         })
     return False
 
@@ -760,6 +765,17 @@ def _has_only_keyword_support_slots(
     references: Sequence[Mapping[str, Any]],
 ) -> bool:
     return bool(features.keywords) and not features.numbers and not features.entities and not references
+
+
+def _unbound_evidence_entities(
+    claim_features: _TextFeatures,
+    evidence_features: _TextFeatures,
+) -> tuple[str, ...]:
+    if claim_features.entities:
+        return ()
+    if not claim_features.numbers:
+        return ()
+    return tuple(entity for entity in evidence_features.entities if entity not in _GENERIC_EVIDENCE_ENTITIES)
 
 
 def _keyword_tokens(text: str) -> tuple[str, ...]:
@@ -969,6 +985,18 @@ _NEGATION_TOKENS = {
     "arent",
     "wasnt",
     "werent",
+}
+_GENERIC_EVIDENCE_ENTITIES = {
+    "bank",
+    "data",
+    "development",
+    "indicator",
+    "indicators",
+    "official",
+    "population",
+    "source",
+    "statistics",
+    "world",
 }
 _STOPWORDS = {
     "about",
