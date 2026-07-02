@@ -70,6 +70,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 基于 prompt 与 metadata 风险标记，在生成前选择低成本 runtime profile，并可记录生成前 soft risk probability
 - 从 release-candidate evidence 导出紧凑的 product promotion summary，便于部署交接审查
 - 将风险决策编译成结构化 action request 与 dry-run 执行结果
+- 审计 world-model 预测状态与 action 后观测状态的 drift，避免把 world model 当成不可见真理源
 - 可选地在超过配置阈值时执行实验性激活引导
 
 ### What It Does Not Do
@@ -620,6 +621,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EnsembleWorldModelAdapter` | Aggregates multiple world-model adapters, degrades prediction confidence by agreement rate, and fail-closes state-transition checks when consensus falls below `min_agreement`. |
 | `WorldModelReference` / `WorldModelView` | Serializes the reference world-model contract and per-claim view used by state-transition verification, including viewed paths, state fingerprints, and assumptions. |
 | `StateTransitionVerifier` / `StateTransitionCheck` | Uses a world-model adapter to predict next state after an action, then checks structured postconditions; `min_prediction_confidence` can fail closed on low-confidence predictions, and verifier metadata includes `world_model_reference`, `world_model_view`, and refuted-postcondition `world_model_conflict` summaries. |
+| `WorldModelRolloutReport` / `audit_world_model_rollout` | Compares post-action observed states against world-model predicted states carried in `ActionResult` metadata or output, reporting sync/drift/trace-gap rates, path mismatches, numeric drift, and prediction confidence without executing actions or treating the world model as ground truth. `ProductTrace.world_model_rollout_summary()` and `product_runtime_metrics()` expose the audit for runtime telemetry. |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | Adds request-scoped in-memory caching and hit/miss stats for repeated verifier, retrieval, and state-source calls; `CachedVerifier(cache_key_mode="semantic")` normalizes claim text and ignores extractor-position noise while preserving verifier-relevant metadata, and verifier ensemble reports expose per-run `cache_key_mode` metadata for audit. |
 | `CompositeVerifier` / `RoutedVerifier` / `default_routed_verifier` | Compose deterministic tools with lexical, citation, retrieval, database, triple-evidence, or world-model verifiers; routing can use claim metadata, context, feature flags, or text patterns, cap route fanout, and record match reasons. The default route stack runs deterministic tools first, optional citation catalog checks when supplied, strict triple audits for sensitive factual claims next, and lexical groundedness as fallback. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |

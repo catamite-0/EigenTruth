@@ -162,6 +162,15 @@ from eigentruth.control.world_model_gate import (
     WorldModelGuardedActionExecutor,
     audit_world_model_action_gate,
 )
+from eigentruth.control.world_model_rollout import (
+    WorldModelRolloutIssue,
+    WorldModelRolloutPolicy,
+    WorldModelRolloutRecord,
+    WorldModelRolloutReport,
+    WorldModelRolloutSeverity,
+    WorldModelRolloutStatus,
+    audit_world_model_rollout,
+)
 
 __all__ = [
     "ActionExecutionStatus",
@@ -257,12 +266,19 @@ __all__ = [
     "WorldModelActionGateStatus",
     "WorldModelActionTransition",
     "WorldModelGuardedActionExecutor",
+    "WorldModelRolloutIssue",
+    "WorldModelRolloutPolicy",
+    "WorldModelRolloutRecord",
+    "WorldModelRolloutReport",
+    "WorldModelRolloutSeverity",
+    "WorldModelRolloutStatus",
     "audit_action_requests",
     "audit_evidence_graph_consistency",
     "audit_metacognitive_alignment",
     "audit_product_trace_trajectory",
     "audit_trace_provenance",
     "audit_world_model_action_gate",
+    "audit_world_model_rollout",
     "build_trace_provenance_graph",
     "audit_product_promotion_contract_evidence",
     "audit_receipt_claim_support",

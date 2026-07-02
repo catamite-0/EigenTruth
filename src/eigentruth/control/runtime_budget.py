@@ -528,6 +528,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_cache_metrics(trace))
         metrics.update(_action_execution_metrics(trace))
         metrics.update(_world_model_action_gate_metrics(trace))
+        metrics.update(_world_model_rollout_metrics(trace))
         metrics.update(_evidence_quality_metrics(trace))
         metrics.update(_metacognition_metrics(trace))
         metrics.update(_action_receipt_metrics(trace))
@@ -582,6 +583,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_cache_metrics(trace))
     metrics.update(_action_execution_metrics(trace))
     metrics.update(_world_model_action_gate_metrics(trace))
+    metrics.update(_world_model_rollout_metrics(trace))
     metrics.update(_evidence_quality_metrics(trace))
     metrics.update(_metacognition_metrics(trace))
     metrics.update(_action_receipt_metrics(trace))
@@ -1034,6 +1036,73 @@ def _world_model_action_gate_metrics(trace: ProductTrace | Mapping[str, Any]) ->
         ),
         "world_model_action_gate_counts_by_code": _int_mapping(counts_by_code),
         "world_model_action_gate_counts_by_action": _int_mapping(summary.get("counts_by_action")),
+    }
+
+
+def _world_model_rollout_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.world_model_rollout_summary()
+        source = "full_trace"
+    else:
+        payload = dict(trace)
+        summary = _mapping(_mapping(payload.get("summaries")).get("world_model_rollout"))
+        if summary:
+            source = "bounded_summary"
+        else:
+            summary = ProductTrace(
+                action_results=tuple(_sequence(payload.get("action_results", ()))),
+            ).world_model_rollout_summary()
+            source = "full_trace"
+    return {
+        "world_model_rollout_available": bool(summary.get("available")),
+        "world_model_rollout_source": source,
+        "world_model_rollout_summary": summary,
+        "world_model_rollout_result_count": _finite_float(summary.get("result_count")) or 0.0,
+        "world_model_rollout_compared_count": _finite_float(summary.get("compared_count")) or 0.0,
+        "world_model_rollout_coverage_rate": _finite_float(summary.get("coverage_rate")),
+        "world_model_rollout_prediction_coverage_rate": _finite_float(
+            summary.get("prediction_coverage_rate")
+        ),
+        "world_model_rollout_observation_coverage_rate": _finite_float(
+            summary.get("observation_coverage_rate")
+        ),
+        "world_model_rollout_sync_rate": _finite_float(summary.get("sync_rate")),
+        "world_model_rollout_drift_rate": _finite_float(summary.get("drift_rate")),
+        "world_model_rollout_drifted_count": _finite_float(summary.get("drifted_count")) or 0.0,
+        "world_model_rollout_trace_gap_count": _finite_float(summary.get("trace_gap_count")) or 0.0,
+        "world_model_rollout_trace_gap_rate": _finite_float(summary.get("trace_gap_rate")),
+        "world_model_rollout_compared_path_count": (
+            _finite_float(summary.get("compared_path_count")) or 0.0
+        ),
+        "world_model_rollout_mismatch_count": _finite_float(summary.get("mismatch_count")) or 0.0,
+        "world_model_rollout_path_mismatch_rate": _finite_float(
+            summary.get("path_mismatch_rate")
+        ),
+        "world_model_rollout_numeric_drift_count": (
+            _finite_float(summary.get("numeric_drift_count")) or 0.0
+        ),
+        "world_model_rollout_categorical_drift_count": (
+            _finite_float(summary.get("categorical_drift_count")) or 0.0
+        ),
+        "world_model_rollout_missing_predicted_path_count": (
+            _finite_float(summary.get("missing_predicted_path_count")) or 0.0
+        ),
+        "world_model_rollout_missing_observed_path_count": (
+            _finite_float(summary.get("missing_observed_path_count")) or 0.0
+        ),
+        "world_model_rollout_numeric_error_mean": _finite_float(
+            summary.get("numeric_error_mean")
+        ),
+        "world_model_rollout_numeric_error_max": _finite_float(summary.get("numeric_error_max")),
+        "world_model_rollout_prediction_confidence_mean": _finite_float(
+            summary.get("prediction_confidence_mean")
+        ),
+        "world_model_rollout_prediction_confidence_min": _finite_float(
+            summary.get("prediction_confidence_min")
+        ),
+        "world_model_rollout_traceable": _optional_bool(summary.get("traceable")),
+        "world_model_rollout_counts_by_code": _int_mapping(summary.get("counts_by_code")),
+        "world_model_rollout_counts_by_action": _int_mapping(summary.get("counts_by_action")),
     }
 
 

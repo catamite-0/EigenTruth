@@ -14,7 +14,10 @@ from eigentruth.control import (
     WorldModelActionGatePolicy,
     WorldModelActionGateStatus,
     WorldModelGuardedActionExecutor,
+    WorldModelRolloutPolicy,
+    WorldModelRolloutStatus,
     audit_world_model_action_gate,
+    audit_world_model_rollout,
 )
 from eigentruth.verify import InMemoryVerifier
 
@@ -192,3 +195,55 @@ def test_world_model_action_gate_policy_parses_strict_bool_strings():
 
     with pytest.raises(ValueError, match="require_transition"):
         WorldModelActionGatePolicy.from_dict({"require_transition": "maybe"})
+
+
+def test_world_model_rollout_audit_detects_observed_transition_drift():
+    result = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 2}},
+                "observed_state": {"quota": {"remaining": 1}},
+                "prediction_confidence": 0.9,
+            }
+        },
+        request_id="quota-rollout-1",
+    )
+
+    report = audit_world_model_rollout(
+        (result,),
+        policy=WorldModelRolloutPolicy(compare_paths=("quota.remaining",)),
+    )
+
+    assert report.status is WorldModelRolloutStatus.DRIFTED
+    assert report.available is True
+    assert report.records[0].numeric_drift_count == 1
+    assert report.records[0].issues[0].code == "numeric_drift"
+    assert report.summary()["drift_rate"] == pytest.approx(1.0)
+    assert report.summary()["numeric_error_max"] == pytest.approx(1.0)
+
+
+def test_world_model_rollout_audit_treats_empty_state_as_available():
+    result = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {},
+                "observed_state": {},
+                "prediction_confidence": 0.8,
+            }
+        },
+        request_id="empty-state-rollout",
+    )
+
+    report = audit_world_model_rollout((result,))
+
+    assert report.status is WorldModelRolloutStatus.PASSED
+    assert report.available is True
+    assert report.records[0].prediction_available is True
+    assert report.records[0].observation_available is True
+    assert report.records[0].compared is True
+    assert report.records[0].compared_path_count == 0
+    assert report.summary()["coverage_rate"] == pytest.approx(1.0)

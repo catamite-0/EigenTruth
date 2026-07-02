@@ -25,6 +25,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Internal Representations as Indicators of Hallucinations in Agent Tool Selection (arXiv:2601.05214) frames agent hallucination as incorrect tool selection, malformed parameters, and tool bypass. This supports keeping tool-route intent explicit in `ClaimVerificationPlan` instead of only checking final text.
 - World-Model-Augmented Web Agents with Action Correction (arXiv:2602.15384) uses consequence simulation and action correction before risky actions. This supports EigenTruth's world-model route as a post-draft verifier and pre-action correction adapter rather than a core dependency. The product-side implementation now exposes `ProductTrace.world_model_summary()` and bounded `summaries.world_model` fields so world-model evidence can be audited by adapter/reference, conflict path, low agreement, and trace-gap rates instead of only appearing as benchmark score columns.
 - Grounded Iterative Language Planning (arXiv:2606.27806, 2026) strengthens the same product-control position: a parameterized world-model backbone can supply valid actions, predicted state deltas, risk, and value, while the LLM drafts flexible actions and is revised when the two disagree. EigenTruth's dependency-free analog is a pre-action world-model gate over `ActionRequest` payloads: simulate, check postconditions, and block/correct before dispatch rather than treating action hallucination as a final-answer-only problem.
+- Hallucination in World Models is Predictable and Preventable (arXiv:2606.27326, 2026) is the caution on that route: world-model rollouts can remain fluent while drifting from ground-truth dynamics, especially in low-coverage state/action regions. EigenTruth should therefore audit the world model itself after execution by comparing predicted post-action state against observed tool/environment state, rather than using the world model as an invisible truth oracle.
 - TokenHD (arXiv:2605.12384) and related span/token-level work point toward finer localization of hallucinations. EigenTruth's current lightweight equivalent is claim-level risk localization, route budgeting, and trace evidence; learned token-level detectors remain out of scope until the dependency and training boundary is explicit.
 - Pre-generation hallucination detection with soft targets (arXiv:2606.21917) reinforces the current layer/sweep direction: hallucination risk is better treated as a probability estimated from internal representations than as a single hard decoded label.
 - Entropy Alone is Insufficient for Safe Selective Prediction in LLMs (arXiv:2603.21172) and the UQ-as-clustering critique (arXiv:2605.19220) both argue against relying on entropy/self-consistency alone. EigenTruth should keep combining internal geometry with correctness/verifier/world-model evidence and deployment-facing selective metrics.
@@ -107,6 +108,24 @@ Added pre-action world-model action gates:
   planning research: LLM creativity remains in drafting actions and language,
   while state-changing action dispatch gets an explicit predicted-consequence
   check.
+
+Added post-action world-model rollout drift audits:
+
+- `WorldModelRolloutPolicy`, `WorldModelRolloutIssue`,
+  `WorldModelRolloutRecord`, `WorldModelRolloutReport`, and
+  `audit_world_model_rollout(...)` compare predicted post-action states against
+  observed action-result states.
+- The audit records sync/drift/trace-gap rates, path mismatch rates, numeric
+  drift, categorical drift, missing predicted or observed paths, and prediction
+  confidence summaries while remaining dependency-free.
+- `ProductTrace.world_model_rollout_summary()` and bounded
+  `summaries.world_model_rollout` expose the audit, and
+  `product_runtime_metrics(...)` turns it into runtime telemetry fields such as
+  `world_model_rollout_drift_rate`, `world_model_rollout_trace_gap_rate`, and
+  `world_model_rollout_numeric_drift_count`.
+- This closes the next world-model safety loop: EigenTruth can use a world
+  model to gate actions while also monitoring whether that world model's
+  predicted transitions stay in sync with observed state.
 
 Added an anytime-valid feedback risk monitor for evidence acquisition:
 

@@ -14,6 +14,7 @@ from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.control.provenance import audit_evidence_graph_consistency, audit_trace_provenance
 from eigentruth.control.receipt_audit import audit_receipt_claim_support
 from eigentruth.control.receipts import action_receipt_summary_from_results
+from eigentruth.control.world_model_rollout import audit_world_model_rollout
 from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.citations import extract_citation_references
 from eigentruth.verify.localization import localize_claim_risk_spans
@@ -266,6 +267,9 @@ class ProductTrace:
             "world_model_action_gate": _world_model_action_gate_summary_from_action_results(
                 prepared.action_results,
             ),
+            "world_model_rollout": _world_model_rollout_summary_from_action_results(
+                prepared.action_results,
+            ),
             "metacognition": _metacognition_summary_from_payload(
                 diagnostics=prepared.diagnostics,
                 verification_results=prepared.verification_results,
@@ -420,6 +424,12 @@ class ProductTrace:
     def world_model_action_gate_summary(self) -> dict[str, Any]:
         """Summarize pre-action world-model gates attached to action results."""
         return _world_model_action_gate_summary_from_action_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def world_model_rollout_summary(self) -> dict[str, Any]:
+        """Summarize post-action world-model prediction drift."""
+        return _world_model_rollout_summary_from_action_results(
             tuple(_action_result_to_dict(result) for result in self.action_results)
         )
 
@@ -782,6 +792,12 @@ def _world_model_gate_summary_from_action_result(result: Mapping[str, Any]) -> d
         merged.update(metadata_gate)
         return merged
     return metadata_gate
+
+
+def _world_model_rollout_summary_from_action_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return audit_world_model_rollout(results).summary()
 
 
 def _metacognition_summary_from_payload(

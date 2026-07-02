@@ -1472,6 +1472,63 @@ def test_product_trace_world_model_action_gate_summary_feeds_runtime_metrics():
     assert bounded_metrics["world_model_action_gate_blocked_rate"] == pytest.approx(0.5)
 
 
+def test_product_trace_world_model_rollout_summary_feeds_runtime_metrics():
+    matching = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 2}},
+                "observed_state": {"quota": {"remaining": 2}},
+                "prediction_confidence": 0.95,
+            }
+        },
+        request_id="quota-ok",
+    )
+    drifted = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 2}},
+                "observed_state": {"quota": {"remaining": 1}},
+                "prediction_confidence": 0.85,
+            }
+        },
+        request_id="quota-drift",
+    )
+    trace_gap = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 4}},
+                "prediction_confidence": 0.7,
+            }
+        },
+        request_id="quota-gap",
+    )
+    trace = ProductTrace(action_results=(matching, drifted, trace_gap))
+
+    summary = trace.world_model_rollout_summary()
+    full_metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(trace.to_bounded_dict())
+
+    assert summary["available"] is True
+    assert summary["status"] == "drifted"
+    assert summary["compared_count"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["sync_rate"] == pytest.approx(0.5)
+    assert summary["drift_rate"] == pytest.approx(0.5)
+    assert summary["trace_gap_rate"] == pytest.approx(1 / 3)
+    assert full_metrics["world_model_rollout_source"] == "full_trace"
+    assert full_metrics["world_model_rollout_numeric_drift_count"] == pytest.approx(1.0)
+    assert full_metrics["world_model_rollout_numeric_error_max"] == pytest.approx(1.0)
+    assert full_metrics["world_model_rollout_prediction_confidence_min"] == pytest.approx(0.7)
+    assert bounded_metrics["world_model_rollout_source"] == "bounded_summary"
+    assert bounded_metrics["world_model_rollout_drift_rate"] == pytest.approx(0.5)
+
+
 def test_product_trace_evidence_quality_summary_feeds_runtime_metrics():
     trace = ProductTrace(
         action_results=(
