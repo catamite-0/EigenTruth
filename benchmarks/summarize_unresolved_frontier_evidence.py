@@ -24,7 +24,11 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactRegistry,
+    build_artifact_manifest,
+    load_and_verify_artifact_manifest,
+)
 
 WORKFLOW = "unresolved_frontier_evidence_summary"
 RULE_FAMILY_INPUT_FIELDS = {
@@ -66,6 +70,7 @@ def summarize_unresolved_frontier_evidence(
     semantic_gap_review_workflows: Sequence[Mapping[str, Any]] = (),
     frontier_command_binding_reviews: Sequence[Mapping[str, Any]] = (),
     frontier_bound_command_runs: Sequence[Mapping[str, Any]] = (),
+    frontier_queue_execution_smokes: Sequence[Mapping[str, Any]] = (),
     rule_input_plan: Mapping[str, Any] | None = None,
     rule_input_audit_report: Mapping[str, Any] | None = None,
     rule_stub_requeue_report: Mapping[str, Any] | None = None,
@@ -82,6 +87,7 @@ def summarize_unresolved_frontier_evidence(
     frontier_queue_lane = _frontier_queue_execution_lane(
         frontier_command_binding_reviews,
         frontier_bound_command_runs,
+        frontier_queue_execution_smokes,
     )
     rule_lane = _world_model_rule_lane(
         rule_input_plan=rule_input_plan,
@@ -126,6 +132,7 @@ def run(
     semantic_gap_review_workflow_paths: Sequence[str | Path] = (),
     frontier_command_binding_review_paths: Sequence[str | Path] = (),
     frontier_bound_command_run_paths: Sequence[str | Path] = (),
+    frontier_queue_execution_smoke_paths: Sequence[str | Path] = (),
     rule_input_plan_path: str | Path | None = None,
     rule_input_audit_report_path: str | Path | None = None,
     rule_stub_requeue_report_path: str | Path | None = None,
@@ -156,6 +163,24 @@ def run(
         _load_mapping(path) for path in frontier_command_binding_review_paths
     )
     frontier_command_runs = tuple(_load_mapping(path) for path in frontier_bound_command_run_paths)
+    frontier_queue_smokes = tuple(
+        _load_frontier_queue_execution_smoke(path) for path in frontier_queue_execution_smoke_paths
+    )
+    frontier_queue_smoke_manifests = tuple(
+        path
+        for path in (
+            _resolve_report_path(
+                _nested(report, "paths", "artifact_manifest"),
+                base_path=Path(source_path),
+            )
+            for source_path, report in zip(
+                frontier_queue_execution_smoke_paths,
+                frontier_queue_smokes,
+                strict=False,
+            )
+        )
+        if path is not None
+    )
     rule_input_plan = _load_optional_mapping(rule_input_plan_path)
     rule_input_audit_report = _load_optional_mapping(rule_input_audit_report_path)
     rule_stub_requeue_report = _load_optional_mapping(rule_stub_requeue_report_path)
@@ -170,6 +195,7 @@ def run(
         semantic_gap_review_workflows=semantic_gap_reviews,
         frontier_command_binding_reviews=frontier_command_reviews,
         frontier_bound_command_runs=frontier_command_runs,
+        frontier_queue_execution_smokes=frontier_queue_smokes,
         rule_input_plan=rule_input_plan,
         rule_input_audit_report=rule_input_audit_report,
         rule_stub_requeue_report=rule_stub_requeue_report,
@@ -197,6 +223,12 @@ def run(
         ),
         "frontier_bound_command_runs": tuple(
             str(path) for path in frontier_bound_command_run_paths
+        ),
+        "frontier_queue_execution_smokes": tuple(
+            str(path) for path in frontier_queue_execution_smoke_paths
+        ),
+        "frontier_queue_execution_smoke_manifests": tuple(
+            str(path) for path in frontier_queue_smoke_manifests
         ),
         "rule_input_plan": None if rule_input_plan_path is None else str(rule_input_plan_path),
         "rule_input_audit_report": None
@@ -229,6 +261,8 @@ def run(
             semantic_gap_review_workflow_paths=semantic_gap_review_workflow_paths,
             frontier_command_binding_review_paths=frontier_command_binding_review_paths,
             frontier_bound_command_run_paths=frontier_bound_command_run_paths,
+            frontier_queue_execution_smoke_paths=frontier_queue_execution_smoke_paths,
+            frontier_queue_execution_smoke_manifest_paths=frontier_queue_smoke_manifests,
             rule_input_plan_path=rule_input_plan_path,
             rule_input_audit_report_path=rule_input_audit_report_path,
             rule_stub_requeue_report_path=rule_stub_requeue_report_path,
@@ -276,6 +310,17 @@ def run(
                 "frontier_bound_command_succeeded_count": payload["lanes"][
                     "frontier_queue_execution"
                 ]["succeeded_count"],
+                "frontier_queue_execution_smoke_status": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["control_plane_smoke_status"],
+                "frontier_queue_execution_smoke_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["frontier_queue_execution_smoke_count"],
+                "frontier_queue_execution_smoke_manifest_verified_count": payload[
+                    "lanes"
+                ]["frontier_queue_execution"][
+                    "frontier_queue_execution_smoke_manifest_verified_count"
+                ],
                 "world_model_rule_remaining_task_count": payload["lanes"][
                     "world_model_rules"
                 ]["remaining_task_count"],
@@ -575,7 +620,31 @@ def _semantic_gap_review_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[st
 def _frontier_queue_execution_lane(
     command_binding_reviews: Sequence[Mapping[str, Any]],
     bound_command_runs: Sequence[Mapping[str, Any]],
+    queue_execution_smokes: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
+    smoke_rows = []
+    smoke_status_counts: Counter[str] = Counter()
+    smoke_passed_count = 0
+    smoke_failed_count = 0
+    smoke_unverified_count = 0
+    smoke_manifest_verified_count = 0
+    smoke_manifest_failed_count = 0
+    for index, report in enumerate(queue_execution_smokes, start=1):
+        row = _frontier_queue_execution_smoke_row(report, index=index)
+        smoke_rows.append(row)
+        status = str(row["status"] or "unknown")
+        smoke_status_counts[status] += 1
+        if row["manifest_verified"] is True:
+            smoke_manifest_verified_count += 1
+        elif row["manifest_verified"] is False:
+            smoke_manifest_failed_count += 1
+        if row["passed"] is True:
+            smoke_passed_count += 1
+        elif row["unverified"] is True:
+            smoke_unverified_count += 1
+        else:
+            smoke_failed_count += 1
+
     review_rows = []
     review_status_counts: Counter[str] = Counter()
     review_entry_count = 0
@@ -702,8 +771,33 @@ def _frontier_queue_execution_lane(
     else:
         status = "needs_execution"
 
+    smoke_health_status = "not_configured"
+    if smoke_rows:
+        if smoke_failed_count or smoke_manifest_failed_count:
+            smoke_health_status = "failed"
+        elif smoke_unverified_count:
+            smoke_health_status = "unverified"
+        elif smoke_passed_count == len(smoke_rows):
+            smoke_health_status = "pass"
+        else:
+            smoke_health_status = "unknown"
+
     return {
         "status": status,
+        "control_plane_smoke_status": smoke_health_status,
+        "frontier_queue_execution_smoke_count": len(smoke_rows),
+        "frontier_queue_execution_smoke_passed_count": smoke_passed_count,
+        "frontier_queue_execution_smoke_failed_count": smoke_failed_count,
+        "frontier_queue_execution_smoke_unverified_count": smoke_unverified_count,
+        "frontier_queue_execution_smoke_manifest_verified_count": (
+            smoke_manifest_verified_count
+        ),
+        "frontier_queue_execution_smoke_manifest_failed_count": (
+            smoke_manifest_failed_count
+        ),
+        "frontier_queue_execution_smoke_status_counts": dict(
+            sorted(smoke_status_counts.items())
+        ),
         "command_binding_review_count": len(review_rows),
         "ready_review_count": review_status_counts.get("ready_for_execution", 0),
         "review_status_counts": dict(sorted(review_status_counts.items())),
@@ -735,6 +829,67 @@ def _frontier_queue_execution_lane(
         "unchecked_output_count": unchecked_output_count,
         "command_binding_reviews": tuple(review_rows),
         "bound_command_runs": tuple(run_rows),
+        "frontier_queue_execution_smokes": tuple(smoke_rows),
+    }
+
+
+def _frontier_queue_execution_smoke_row(
+    report: Mapping[str, Any],
+    *,
+    index: int,
+) -> dict[str, Any]:
+    summary = _mapping(report.get("summary"))
+    label_usage = _mapping(report.get("label_usage"))
+    verification = _mapping(report.get("manifest_verification"))
+    paths = _mapping(report.get("paths"))
+    manifest_verified: bool | None = None
+    if verification:
+        manifest_verified = verification.get("passed") is True
+
+    failure_reasons: list[str] = []
+    if report.get("workflow") != "frontier_queue_execution_smoke":
+        failure_reasons.append("workflow is not frontier_queue_execution_smoke")
+    if report.get("status") != "pass":
+        failure_reasons.append("smoke status is not pass")
+    if _int(summary.get("staged_upstream_output_count")) < 1:
+        failure_reasons.append("no upstream output was staged")
+    if _int(summary.get("remaining_placeholder_count")):
+        failure_reasons.append("command placeholders remain unbound")
+    if _int(summary.get("dry_run_count")) < 1:
+        failure_reasons.append("dry-run did not cover any child command")
+    if _int(summary.get("binding_not_reviewed_count")):
+        failure_reasons.append("dry-run found unreviewed bindings")
+    if label_usage.get("artifacts_are_verifier_evidence") is not False:
+        failure_reasons.append("smoke artifacts are not explicitly marked non-evidence")
+    if label_usage.get("executes_child_commands") is not False:
+        failure_reasons.append("smoke did not explicitly avoid child command execution")
+    if manifest_verified is False:
+        failure_reasons.append("artifact manifest verification failed")
+    if manifest_verified is None:
+        failure_reasons.append("artifact manifest verification is missing")
+
+    unverified = failure_reasons == ["artifact manifest verification is missing"]
+    passed = not failure_reasons
+    return {
+        "index": index,
+        "workflow": report.get("workflow"),
+        "status": str(report.get("status") or "unknown"),
+        "passed": passed,
+        "unverified": unverified,
+        "manifest_verified": manifest_verified,
+        "failure_reasons": tuple(failure_reasons),
+        "staged_upstream_output_count": _int(summary.get("staged_upstream_output_count")),
+        "remaining_placeholder_count": _int(summary.get("remaining_placeholder_count")),
+        "review_approved_entry_count": _int(summary.get("review_approved_entry_count")),
+        "dry_run_count": _int(summary.get("dry_run_count")),
+        "binding_not_reviewed_count": _int(summary.get("binding_not_reviewed_count")),
+        "executes_child_commands": label_usage.get("executes_child_commands"),
+        "artifacts_are_verifier_evidence": label_usage.get(
+            "artifacts_are_verifier_evidence"
+        ),
+        "artifact_manifest": paths.get("artifact_manifest"),
+        "dry_run_report": paths.get("dry_run_report"),
+        "review_report": paths.get("review_report"),
     }
 
 
@@ -1041,6 +1196,33 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "invalid_command_count": frontier_queue.get("invalid_command_count", 0),
             "missing_output_count": frontier_queue.get("missing_output_count", 0),
         })
+    if frontier_queue.get("control_plane_smoke_status") in {"failed", "unverified"}:
+        actions.append({
+            "action_id": "repair_frontier_queue_execution_smoke",
+            "priority": 81,
+            "lane": "frontier_queue_execution",
+            "reason": (
+                "frontier queue execution smoke was supplied but did not pass "
+                "control-plane health checks or manifest verification"
+            ),
+            "control_plane_smoke_status": frontier_queue.get(
+                "control_plane_smoke_status"
+            ),
+            "frontier_queue_execution_smoke_count": frontier_queue.get(
+                "frontier_queue_execution_smoke_count", 0
+            ),
+            "frontier_queue_execution_smoke_failed_count": frontier_queue.get(
+                "frontier_queue_execution_smoke_failed_count", 0
+            ),
+            "frontier_queue_execution_smoke_unverified_count": frontier_queue.get(
+                "frontier_queue_execution_smoke_unverified_count", 0
+            ),
+            "frontier_queue_execution_smoke_manifest_failed_count": (
+                frontier_queue.get(
+                    "frontier_queue_execution_smoke_manifest_failed_count", 0
+                )
+            ),
+        })
     if _int(queue.get("target_count")) and not actions:
         actions.append({
             "action_id": "verify_unresolved_targets_are_closed",
@@ -1094,6 +1276,23 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "frontier_queue_execution_status": str(
             lanes["frontier_queue_execution"].get("status") or "unknown"
         ),
+        "frontier_queue_execution_smoke_status": str(
+            lanes["frontier_queue_execution"].get("control_plane_smoke_status")
+            or "unknown"
+        ),
+        "frontier_queue_execution_smoke_count": _int(
+            lanes["frontier_queue_execution"].get("frontier_queue_execution_smoke_count")
+        ),
+        "frontier_queue_execution_smoke_passed_count": _int(
+            lanes["frontier_queue_execution"].get(
+                "frontier_queue_execution_smoke_passed_count"
+            )
+        ),
+        "frontier_queue_execution_smoke_manifest_verified_count": _int(
+            lanes["frontier_queue_execution"].get(
+                "frontier_queue_execution_smoke_manifest_verified_count"
+            )
+        ),
         "frontier_command_binding_review_count": _int(
             lanes["frontier_queue_execution"].get("command_binding_review_count")
         ),
@@ -1145,6 +1344,8 @@ def _write_manifest(
     semantic_gap_review_workflow_paths: Sequence[str | Path],
     frontier_command_binding_review_paths: Sequence[str | Path],
     frontier_bound_command_run_paths: Sequence[str | Path],
+    frontier_queue_execution_smoke_paths: Sequence[str | Path],
+    frontier_queue_execution_smoke_manifest_paths: Sequence[str | Path],
     rule_input_plan_path: str | Path | None,
     rule_input_audit_report_path: str | Path | None,
     rule_stub_requeue_report_path: str | Path | None,
@@ -1182,6 +1383,17 @@ def _write_manifest(
     artifacts.update({
         f"frontier_bound_command_run_{idx}": path
         for idx, path in enumerate(frontier_bound_command_run_paths, start=1)
+    })
+    artifacts.update({
+        f"frontier_queue_execution_smoke_{idx}": path
+        for idx, path in enumerate(frontier_queue_execution_smoke_paths, start=1)
+    })
+    artifacts.update({
+        f"frontier_queue_execution_smoke_manifest_{idx}": path
+        for idx, path in enumerate(
+            frontier_queue_execution_smoke_manifest_paths,
+            start=1,
+        )
     })
     artifacts.update({
         f"rule_promotion_report_{idx}": path
@@ -1232,6 +1444,24 @@ def _write_manifest(
                 "frontier_queue_execution",
                 "succeeded_count",
             ),
+            "frontier_queue_execution_smoke_status": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "control_plane_smoke_status",
+            ),
+            "frontier_queue_execution_smoke_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "frontier_queue_execution_smoke_count",
+            ),
+            "frontier_queue_execution_smoke_manifest_verified_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "frontier_queue_execution_smoke_manifest_verified_count",
+            ),
             "world_model_rule_remaining_task_count": _nested(
                 payload,
                 "lanes",
@@ -1275,6 +1505,58 @@ def _load_mapping(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
         raise ValueError(f"{path} must contain a JSON object.")
     return dict(payload)
+
+
+def _load_frontier_queue_execution_smoke(path: str | Path) -> dict[str, Any]:
+    report_path = Path(path)
+    payload = _load_mapping(report_path)
+    manifest_path = _resolve_report_path(
+        _nested(payload, "paths", "artifact_manifest"),
+        base_path=report_path,
+    )
+    if manifest_path is None:
+        payload["manifest_verification"] = {
+            "manifest_path": None,
+            "passed": False,
+            "checked": 0,
+            "failures": [{
+                "name": "artifact_manifest",
+                "path": "",
+                "field": "path",
+                "expected": "present",
+                "actual": "missing",
+            }],
+            "nested": [],
+        }
+        return payload
+    try:
+        verification = load_and_verify_artifact_manifest(manifest_path, recursive=True)
+    except (OSError, ValueError) as exc:
+        payload["manifest_verification"] = {
+            "manifest_path": str(manifest_path),
+            "passed": False,
+            "checked": 0,
+            "failures": [{
+                "name": "artifact_manifest",
+                "path": str(manifest_path),
+                "field": "load_error",
+                "expected": "loadable manifest",
+                "actual": str(exc),
+            }],
+            "nested": [],
+        }
+        return payload
+    payload["manifest_verification"] = verification.to_dict()
+    return payload
+
+
+def _resolve_report_path(value: Any, *, base_path: Path) -> Path | None:
+    if value is None:
+        return None
+    candidate = Path(str(value))
+    if candidate.is_absolute() or candidate.exists():
+        return candidate
+    return base_path.parent / candidate
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -1451,6 +1733,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--semantic-gap-review-workflow", action="append", default=[])
     parser.add_argument("--frontier-command-binding-review", action="append", default=[])
     parser.add_argument("--frontier-bound-command-run", action="append", default=[])
+    parser.add_argument("--frontier-queue-execution-smoke", action="append", default=[])
     parser.add_argument("--rule-input-plan", default=None)
     parser.add_argument("--rule-input-audit-report", default=None)
     parser.add_argument("--rule-stub-requeue-report", default=None)
@@ -1478,6 +1761,9 @@ def main(argv: Sequence[str] | None = None) -> None:
             args.frontier_command_binding_review or ()
         ),
         frontier_bound_command_run_paths=tuple(args.frontier_bound_command_run or ()),
+        frontier_queue_execution_smoke_paths=tuple(
+            args.frontier_queue_execution_smoke or ()
+        ),
         rule_input_plan_path=args.rule_input_plan,
         rule_input_audit_report_path=args.rule_input_audit_report,
         rule_stub_requeue_report_path=args.rule_stub_requeue_report,

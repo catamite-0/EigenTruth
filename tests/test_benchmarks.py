@@ -59921,6 +59921,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
 
 def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_gate(tmp_path):
     module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
+    smoke_module = importlib.import_module("benchmarks.frontier_queue_execution_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
 
     ready_review = {
@@ -60071,16 +60072,45 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
     assert failed_payload["lanes"]["frontier_queue_execution"]["status"] == "blocked"
     assert "repair_frontier_queue_command_execution" in failed_actions
 
+    smoke_payload = smoke_module.build_frontier_queue_execution_smoke(tmp_path / "smoke")
+    smoke_only_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_queue_execution_smokes=(smoke_payload,),
+    )
+    smoke_lane = smoke_only_payload["lanes"]["frontier_queue_execution"]
+    smoke_action_ids = {action["action_id"] for action in smoke_only_payload["next_actions"]}
+    assert smoke_lane["status"] == "not_configured"
+    assert smoke_lane["control_plane_smoke_status"] == "pass"
+    assert smoke_lane["frontier_queue_execution_smoke_count"] == 1
+    assert smoke_lane["frontier_queue_execution_smoke_manifest_verified_count"] == 1
+    assert "repair_frontier_queue_execution_smoke" not in smoke_action_ids
+
+    broken_smoke = {
+        **smoke_payload,
+        "manifest_verification": {"passed": False, "failures": [{"field": "sha256"}]},
+    }
+    broken_smoke_payload = module.summarize_unresolved_frontier_evidence(
+        frontier_queue_execution_smokes=(broken_smoke,),
+    )
+    broken_smoke_lane = broken_smoke_payload["lanes"]["frontier_queue_execution"]
+    broken_action_ids = {
+        action["action_id"] for action in broken_smoke_payload["next_actions"]
+    }
+    assert broken_smoke_lane["control_plane_smoke_status"] == "failed"
+    assert broken_smoke_lane["frontier_queue_execution_smoke_manifest_failed_count"] == 1
+    assert "repair_frontier_queue_execution_smoke" in broken_action_ids
+
     review_path = tmp_path / "command-review.json"
     run_path = tmp_path / "bound-run.json"
     report_path = tmp_path / "summary.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
+    smoke_report_path = tmp_path / "smoke" / "frontier-queue-execution-smoke.json"
     review_path.write_text(json.dumps(ready_review), encoding="utf-8")
     run_path.write_text(json.dumps(succeeded_run), encoding="utf-8")
     saved = module.run(
         frontier_command_binding_review_paths=(review_path,),
         frontier_bound_command_run_paths=(run_path,),
+        frontier_queue_execution_smoke_paths=(smoke_report_path,),
         json_path=report_path,
         artifact_manifest_path=manifest_path,
         registry_path=registry_path,
@@ -60097,12 +60127,27 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
     assert manifest["metadata"]["frontier_queue_execution_status"] == "promote"
     assert manifest["metadata"]["frontier_command_binding_review_count"] == 1
     assert manifest["metadata"]["frontier_bound_command_run_count"] == 1
+    assert manifest["metadata"]["frontier_queue_execution_smoke_status"] == "pass"
+    assert manifest["metadata"]["frontier_queue_execution_smoke_count"] == 1
+    assert manifest["metadata"][
+        "frontier_queue_execution_smoke_manifest_verified_count"
+    ] == 1
     assert manifest["artifacts"]["frontier_command_binding_review_1"]["exists"] is True
     assert manifest["artifacts"]["frontier_bound_command_run_1"]["exists"] is True
+    assert manifest["artifacts"]["frontier_queue_execution_smoke_1"]["exists"] is True
+    assert (
+        manifest["artifacts"]["frontier_queue_execution_smoke_manifest_1"]["exists"]
+        is True
+    )
     assert record.metadata["frontier_queue_execution_status"] == "promote"
     assert record.metadata["frontier_command_binding_review_count"] == 1
     assert record.metadata["frontier_bound_command_run_count"] == 1
     assert record.metadata["frontier_bound_command_succeeded_count"] == 1
+    assert record.metadata["frontier_queue_execution_smoke_status"] == "pass"
+    assert record.metadata["frontier_queue_execution_smoke_count"] == 1
+    assert record.metadata[
+        "frontier_queue_execution_smoke_manifest_verified_count"
+    ] == 1
 
     cli_report_path = tmp_path / "cli-summary.json"
     module.main([
@@ -60110,11 +60155,17 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
         str(review_path),
         "--frontier-bound-command-run",
         str(run_path),
+        "--frontier-queue-execution-smoke",
+        str(smoke_report_path),
         "--json",
         str(cli_report_path),
     ])
     cli_payload = json.loads(cli_report_path.read_text(encoding="utf-8"))
     assert cli_payload["lanes"]["frontier_queue_execution"]["status"] == "promote"
+    assert (
+        cli_payload["lanes"]["frontier_queue_execution"]["control_plane_smoke_status"]
+        == "pass"
+    )
 
 
 def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(tmp_path):
