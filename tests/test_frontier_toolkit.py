@@ -3135,6 +3135,74 @@ def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
     assert report["summary"]["misalignment_rate"] == pytest.approx(1.0)
 
 
+def test_evidence_alignment_verifier_does_not_refute_unrelated_numeric_long_text_with_negation():
+    claim = Claim("How many ribs do humans have? Humans have 24 ribs.", claim_id="ribs")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Ecosystem management does not focus primarily on short-term deliverables. "
+                    "Many humans are ecosystem components, and the report lists goals (1), "
+                    "models (2), complexity (3), and accountability (4)."
+                ),
+                "source": "openalex:unrelated-ecosystem-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "low_refute_keyword_overlap" in record["issue_codes"]
+    assert "negation_mismatch" not in record["issue_codes"]
+    assert record["metadata"]["best_evidence_negated_for_alignment"] is False
+
+
+def test_evidence_alignment_verifier_does_not_refute_numeric_evidence_with_missing_entity():
+    claim = Claim("Diamonds last between 1 and 4 billion years.", claim_id="diamonds")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Sea level rise over the last 43 years includes observations from 1969 to 2011. "
+                    "The study does not discuss gemstones but reports projections by 2050."
+                ),
+                "source": "openalex:sea-level-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "missing_claim_entity" in record["issue_codes"]
+    assert "negation_mismatch" not in record["issue_codes"]
+
+
+def test_evidence_alignment_verifier_refutes_local_negation_mismatch():
+    claim = Claim("BetaLab had no offices in Paris.", claim_id="beta")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "BetaLab had offices in Paris.",
+                "source": "registry",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert "negation_mismatch" in record["issue_codes"]
+    assert record["metadata"]["claim_negated_for_alignment"] is True
+    assert record["metadata"]["best_evidence_negated_for_alignment"] is False
+
+
 def test_evidence_alignment_verifier_does_not_refute_unrelated_numeric_evidence():
     claim = Claim("AlphaCorp reported 42 stores in 2025.", claim_id="alpha")
     verifier = EvidenceAlignmentVerifier(

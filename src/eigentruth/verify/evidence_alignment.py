@@ -521,17 +521,19 @@ def _alignment_record_for_claim(
     alternate_numbers = _alternate_items(evidence_features.numbers, claim_features.numbers)
     best_overlap = _recall(claim_features.keywords, best_features.keywords) or 0.0
     best_entity_recall = _recall(claim_features.entities, best_features.entities)
+    claim_negated = _negated_near_anchors(claim.text, claim_features.keywords + claim_features.entities)
+    best_negated = _negated_near_anchors(best_evidence.text, claim_features.keywords + claim_features.entities)
     negation_mismatch = (
         bool(claim_features.keywords)
         and best_overlap >= policy.min_refute_keyword_overlap
-        and claim_features.negated != best_features.negated
+        and claim_negated != best_negated
     )
     issue_codes: list[str] = []
     if keyword_overlap is not None and keyword_overlap < policy.min_keyword_overlap:
         issue_codes.append("low_keyword_overlap")
     if number_recall is not None and number_recall < policy.min_number_recall:
         issue_codes.append("missing_claim_number")
-        if best_overlap < policy.min_refute_keyword_overlap:
+        if best_overlap <= policy.min_refute_keyword_overlap:
             issue_codes.append("low_refute_keyword_overlap")
         if not alternate_numbers:
             issue_codes.append("no_alternate_evidence_number")
@@ -570,6 +572,8 @@ def _alignment_record_for_claim(
             "alternate_numbers": alternate_numbers,
             "best_entity_recall": best_entity_recall,
             "best_keyword_overlap": best_overlap,
+            "claim_negated_for_alignment": claim_negated,
+            "best_evidence_negated_for_alignment": best_negated,
             "min_refute_keyword_overlap": policy.min_refute_keyword_overlap,
             "selected_evidence": tuple(_evidence_summary(item) for item in selected_evidence[:5]),
         },
@@ -730,6 +734,7 @@ def _strong_misalignment(record: EvidenceAlignmentRecord) -> bool:
         return not (codes & {
             "low_keyword_overlap",
             "low_refute_keyword_overlap",
+            "missing_claim_entity",
             "no_alternate_evidence_number",
         })
     return False
@@ -779,6 +784,45 @@ def _recall(reference: Sequence[str], observed: Sequence[str]) -> float | None:
 def _missing_items(reference: Sequence[str], observed: Sequence[str]) -> tuple[str, ...]:
     observed_set = set(observed)
     return tuple(item for item in reference if item not in observed_set)
+
+
+def _negated_near_anchors(text: str, anchors: Sequence[str], *, window: int = 5) -> bool:
+    token_matches = tuple(_WORD_RE.finditer(text))
+    negation_positions = [
+        index
+        for index, match in enumerate(token_matches)
+        if match.group(0).lower().strip("_-'") in _NEGATION_TOKENS
+    ]
+    if not negation_positions:
+        return False
+    anchor_set = {
+        token
+        for anchor in anchors
+        for token in _normalized_anchor_tokens(anchor)
+        if token
+    }
+    if not anchor_set:
+        return True
+    anchor_positions = [
+        index
+        for index, match in enumerate(token_matches)
+        if match.group(0).lower().strip("_-'") in anchor_set
+    ]
+    if not anchor_positions:
+        return False
+    return any(
+        abs(negation_index - anchor_index) <= window
+        for negation_index in negation_positions
+        for anchor_index in anchor_positions
+    )
+
+
+def _normalized_anchor_tokens(value: str) -> tuple[str, ...]:
+    return tuple(
+        token
+        for token in (_match.group(0).lower().strip("_-'") for _match in _WORD_RE.finditer(str(value)))
+        if token and token not in _STOPWORDS
+    )
 
 
 def _alternate_items(observed: Sequence[str], reference: Sequence[str]) -> tuple[str, ...]:
@@ -932,7 +976,9 @@ _STOPWORDS = {
     "how",
     "into",
     "its",
+    "many",
     "more",
+    "much",
     "not",
     "off",
     "onto",
