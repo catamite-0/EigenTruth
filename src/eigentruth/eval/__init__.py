@@ -47,7 +47,10 @@ from eigentruth.eval.context_sensitivity import (
     score_context_sensitivity,
     unsupported_context_shift,
 )
-from eigentruth.eval.escalation import uncertainty_escalation_report
+from eigentruth.eval.escalation import (
+    uncertainty_escalation_policy_sweep,
+    uncertainty_escalation_report,
+)
 from eigentruth.eval.hidden_evidence import (
     DEFAULT_STATEMENT_METADATA_KEYS,
     HiddenEvidenceCandidate,
@@ -125,6 +128,7 @@ __all__ = [
     "confidence_error_report",
     "youden_j_threshold",
     "deck_taxonomy_report",
+    "uncertainty_escalation_policy_sweep",
     "uncertainty_escalation_report",
     "DEFAULT_STATEMENT_METADATA_KEYS",
     "HiddenEvidenceCandidate",

@@ -4421,11 +4421,27 @@ python benchmarks/eval_uncertainty_escalation.py \
   --json artifacts/uncertainty-escalation-report.json
 ```
 
+To tune the "verify when uncertain" threshold from the same recorded stronger
+verifier outcomes, add a policy sweep. Each candidate threshold simulates
+keeping the initial decision for records above the threshold and using the
+recorded final decision for records below it:
+
+```bash
+python benchmarks/eval_uncertainty_escalation.py \
+  --results artifacts/uncertainty-escalation-workflow/verification-loop-results.jsonl \
+  --label-key label \
+  --sweep-min-confidence 0.5,0.6,0.65,0.7,0.75,0.8 \
+  --sweep-max-final-false-accept-rate 0.0 \
+  --sweep-max-trigger-rate 0.75 \
+  --json artifacts/uncertainty-escalation-policy-sweep-report.json
+```
+
 Rows may be raw loop-result payloads or wrappers such as
 `{"label": 0, "result": {...}}`. Labels are optional; when present, `0` means
 true/normal and `1` means false/anomalous. The report includes escalation trigger
 rates, selected route counts, retrieval request/success/evidence rates, decision
-transitions, and label-conditioned false-accept/selective-accuracy deltas.
+transitions, label-conditioned false-accept/selective-accuracy deltas, and
+optional `policy_sweep.recommended` metadata for the best passing threshold.
 
 ## `eval_verifier_stability.py`
 

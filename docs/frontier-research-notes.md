@@ -318,6 +318,7 @@ Added entity-sensitive uncertainty escalation:
 
 - `VerificationEscalationPolicy` now treats extracted `entity_candidates` as a bounded extra uncertainty signal: a supported preliminary result can still trigger second-stage verification when its confidence is below `min_confidence + entity_confidence_margin`.
 - Escalation route metadata and budget summaries preserve entity candidates and entity-trigger reasons, while `uncertainty_escalation_report()` aggregates entity-sensitive record, claim, and candidate totals.
+- `uncertainty_escalation_policy_sweep()` now turns a recorded strong-verifier replay into a "verify when uncertain" threshold frontier: candidate `min_confidence` values are scored by false-accept rate, selective accuracy, coverage, and verifier trigger rate so EigenTruth can recommend a second-stage verification threshold before changing control defaults.
 - This follows the current entity/span-level hallucination direction without adding a learned token detector or changing default verifier execution semantics.
 
 Added the covered-facts KG correction handoff:

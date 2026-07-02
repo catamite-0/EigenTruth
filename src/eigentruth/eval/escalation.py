@@ -55,6 +55,70 @@ def uncertainty_escalation_report(
     return to_jsonable(report)
 
 
+def uncertainty_escalation_policy_sweep(
+    loop_results: Sequence[Mapping[str, Any] | Any],
+    *,
+    labels: Sequence[int | bool | str] | None = None,
+    min_confidence_values: Sequence[float] = (0.5, 0.6, 0.65, 0.7, 0.75, 0.8),
+    uncertain_statuses: Sequence[str] = ("insufficient_evidence", "error"),
+    max_final_false_accept_rate: float | None = None,
+    min_final_selective_accuracy: float | None = None,
+    max_trigger_rate: float | None = None,
+    min_trigger_rate: float | None = None,
+) -> dict[str, Any]:
+    """Sweep second-stage verifier trigger thresholds over recorded loop results.
+
+    The input should come from a run where the stronger verifier outcome is
+    available for every record that might be selected. For each candidate
+    ``min_confidence`` value, records whose preliminary verification status is
+    uncertain or whose confidence falls below the value use the recorded final
+    decision; the remaining records keep their initial decision. This gives a
+    dependency-free what-if frontier over safety, coverage, and verifier cost.
+    """
+    records, embedded_labels = _normalize_loop_records(loop_results)
+    resolved_labels = _resolve_labels(embedded_labels, labels, expected_count=len(records))
+    thresholds = _sweep_thresholds(min_confidence_values)
+    uncertain = {str(status).strip().lower() for status in uncertain_statuses if str(status).strip()}
+    if not uncertain:
+        raise ValueError("uncertain_statuses must contain at least one status.")
+    constraints = {
+        "max_final_false_accept_rate": _optional_unit_float(
+            max_final_false_accept_rate,
+            name="max_final_false_accept_rate",
+        ),
+        "min_final_selective_accuracy": _optional_unit_float(
+            min_final_selective_accuracy,
+            name="min_final_selective_accuracy",
+        ),
+        "max_trigger_rate": _optional_unit_float(max_trigger_rate, name="max_trigger_rate"),
+        "min_trigger_rate": _optional_unit_float(min_trigger_rate, name="min_trigger_rate"),
+    }
+    rows = tuple(
+        _policy_sweep_row(
+            records,
+            labels=resolved_labels,
+            min_confidence=threshold,
+            uncertain_statuses=uncertain,
+            constraints=constraints,
+        )
+        for threshold in thresholds
+    )
+    recommended = _recommended_policy_sweep_row(rows)
+    return to_jsonable({
+        "workflow": "uncertainty_escalation_policy_sweep",
+        "schema_version": 1,
+        "n_total": len(records),
+        "config": {
+            "min_confidence_values": thresholds,
+            "uncertain_statuses": tuple(sorted(uncertain)),
+            **constraints,
+        },
+        "status": "promote" if recommended.get("gate", {}).get("passed") is True else "blocked",
+        "recommended": recommended,
+        "sweep": rows,
+    })
+
+
 def _normalize_loop_records(
     loop_results: Sequence[Mapping[str, Any] | Any],
 ) -> tuple[tuple[Mapping[str, Any], ...], tuple[Any | None, ...]]:
@@ -337,6 +401,207 @@ def _acceptance_quality(actions: Sequence[str], labels: Sequence[int]) -> dict[s
         "false_accept_rate": binomial_confidence_interval(accepted_false, false_count),
         "false_routing_rate": binomial_confidence_interval(routed_false, false_count),
     }
+
+
+def _policy_sweep_row(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    labels: Sequence[int] | None,
+    min_confidence: float,
+    uncertain_statuses: set[str],
+    constraints: Mapping[str, float | None],
+) -> dict[str, Any]:
+    simulated_records: list[Mapping[str, Any]] = []
+    triggered_record_indexes: list[int] = []
+    trigger_reason_counts: Counter[str] = Counter()
+    for index, record in enumerate(records):
+        triggered, reasons = _record_would_trigger_escalation(
+            record,
+            min_confidence=min_confidence,
+            uncertain_statuses=uncertain_statuses,
+        )
+        trigger_reason_counts.update(reasons)
+        if triggered:
+            triggered_record_indexes.append(index)
+            simulated_records.append(record)
+        else:
+            simulated_records.append(_record_without_escalation(record))
+
+    report = uncertainty_escalation_report(simulated_records, labels=labels)
+    quality = _optional_mapping(report.get("quality"))
+    final_quality = _optional_mapping(quality.get("final")) if quality is not None else None
+    action_execution = _optional_mapping(report.get("action_execution")) or {}
+    escalation = _optional_mapping(report.get("uncertainty_escalation")) or {}
+    trigger_rate = _estimate_from_interval(escalation.get("trigger_rate"))
+    final_false_accept_rate = _estimate_from_interval(
+        None if final_quality is None else final_quality.get("false_accept_rate")
+    )
+    final_selective_accuracy = _estimate_from_interval(
+        None if final_quality is None else final_quality.get("selective_accuracy")
+    )
+    final_coverage = _estimate_from_interval(
+        None if final_quality is None else final_quality.get("coverage")
+    )
+    retrieval_evidence_rate = _estimate_from_interval(
+        action_execution.get("retrieval_evidence_rate")
+    )
+    gate = _policy_sweep_gate(
+        final_false_accept_rate=final_false_accept_rate,
+        final_selective_accuracy=final_selective_accuracy,
+        trigger_rate=trigger_rate,
+        constraints=constraints,
+    )
+    return {
+        "min_confidence": min_confidence,
+        "status": "promote" if gate["passed"] else "blocked",
+        "gate": gate,
+        "triggered_records": len(triggered_record_indexes),
+        "triggered_record_indexes": tuple(triggered_record_indexes),
+        "trigger_rate": trigger_rate,
+        "trigger_reason_counts": dict(sorted(trigger_reason_counts.items())),
+        "retrieval_evidence_rate": retrieval_evidence_rate,
+        "final_coverage": final_coverage,
+        "final_selective_accuracy": final_selective_accuracy,
+        "final_false_accept_rate": final_false_accept_rate,
+        "final_accepted_records": None if final_quality is None else final_quality.get("accepted_records"),
+        "final_accepted_false": None if final_quality is None else final_quality.get("accepted_false"),
+        "final_accepted_true": None if final_quality is None else final_quality.get("accepted_true"),
+        "report": report,
+    }
+
+
+def _record_would_trigger_escalation(
+    record: Mapping[str, Any],
+    *,
+    min_confidence: float,
+    uncertain_statuses: set[str],
+) -> tuple[bool, tuple[str, ...]]:
+    reasons: list[str] = []
+    preliminary_results = _sequence_of_mappings(record.get("initial_verification_results"))
+    if not preliminary_results:
+        return True, ("missing_preliminary_result",)
+    for result in preliminary_results:
+        status = str(result.get("status", "")).strip().lower()
+        if status in uncertain_statuses:
+            reasons.append(f"status:{status}")
+        confidence = _finite_float(result.get("confidence"))
+        if confidence is None:
+            reasons.append("confidence_missing")
+        elif confidence < min_confidence:
+            reasons.append(f"confidence_below:{min_confidence:g}")
+    return bool(reasons), tuple(dict.fromkeys(reasons))
+
+
+def _record_without_escalation(record: Mapping[str, Any]) -> dict[str, Any]:
+    simulated = dict(record)
+    simulated["final_decision"] = record.get("initial_decision")
+    simulated["final_verification_results"] = record.get("initial_verification_results", ())
+    simulated["uncertainty_escalation_plan"] = None
+    simulated["action_requests"] = ()
+    simulated["action_results"] = ()
+    simulated["retrieval_evidence"] = {}
+    return simulated
+
+
+def _policy_sweep_gate(
+    *,
+    final_false_accept_rate: float | None,
+    final_selective_accuracy: float | None,
+    trigger_rate: float | None,
+    constraints: Mapping[str, float | None],
+) -> dict[str, Any]:
+    failures: list[str] = []
+    max_false_accept = constraints.get("max_final_false_accept_rate")
+    min_selective_accuracy = constraints.get("min_final_selective_accuracy")
+    max_trigger = constraints.get("max_trigger_rate")
+    min_trigger = constraints.get("min_trigger_rate")
+    if max_false_accept is not None:
+        if final_false_accept_rate is None:
+            failures.append("final_false_accept_rate is unavailable")
+        elif final_false_accept_rate > max_false_accept:
+            failures.append(
+                f"final_false_accept_rate {final_false_accept_rate:.6g} "
+                f"above {max_false_accept:.6g}"
+            )
+    if min_selective_accuracy is not None:
+        if final_selective_accuracy is None:
+            failures.append("final_selective_accuracy is unavailable")
+        elif final_selective_accuracy < min_selective_accuracy:
+            failures.append(
+                f"final_selective_accuracy {final_selective_accuracy:.6g} "
+                f"below {min_selective_accuracy:.6g}"
+            )
+    if max_trigger is not None:
+        if trigger_rate is None:
+            failures.append("trigger_rate is unavailable")
+        elif trigger_rate > max_trigger:
+            failures.append(f"trigger_rate {trigger_rate:.6g} above {max_trigger:.6g}")
+    if min_trigger is not None:
+        if trigger_rate is None:
+            failures.append("trigger_rate is unavailable")
+        elif trigger_rate < min_trigger:
+            failures.append(f"trigger_rate {trigger_rate:.6g} below {min_trigger:.6g}")
+    return {"passed": not failures, "blocking_reasons": tuple(failures)}
+
+
+def _recommended_policy_sweep_row(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {}
+    passing = tuple(
+        row
+        for row in rows
+        if (_optional_mapping(row.get("gate")) or {}).get("passed")
+    )
+    candidates = passing or tuple(rows)
+    recommended = min(candidates, key=_policy_sweep_sort_key)
+    payload = {
+        key: value
+        for key, value in recommended.items()
+        if key != "report"
+    }
+    payload["selected_from_passing_rows"] = bool(passing)
+    return payload
+
+
+def _policy_sweep_sort_key(row: Mapping[str, Any]) -> tuple[float, float, float, float, float]:
+    false_accept = _none_as(row.get("final_false_accept_rate"), 2.0)
+    selective_accuracy = _none_as(row.get("final_selective_accuracy"), -1.0)
+    coverage = _none_as(row.get("final_coverage"), -1.0)
+    trigger_rate = _none_as(row.get("trigger_rate"), 2.0)
+    threshold = _none_as(row.get("min_confidence"), 2.0)
+    return (false_accept, -selective_accuracy, -coverage, trigger_rate, threshold)
+
+
+def _sweep_thresholds(values: Sequence[float]) -> tuple[float, ...]:
+    thresholds = tuple(sorted({_unit_float(value, name="min_confidence_values") for value in values}))
+    if not thresholds:
+        raise ValueError("min_confidence_values must contain at least one value.")
+    return thresholds
+
+
+def _unit_float(value: Any, *, name: str) -> float:
+    number = _finite_float(value)
+    if number is None or not (0.0 <= number <= 1.0):
+        raise ValueError(f"{name} must contain values in [0, 1].")
+    return number
+
+
+def _optional_unit_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    return _unit_float(value, name=name)
+
+
+def _estimate_from_interval(value: Any) -> float | None:
+    mapping = _optional_mapping(value)
+    if mapping is None:
+        return None
+    return _finite_float(mapping.get("estimate"))
+
+
+def _none_as(value: Any, fallback: float) -> float:
+    number = _finite_float(value)
+    return fallback if number is None else number
 
 
 def _to_mapping(item: Mapping[str, Any] | Any) -> Mapping[str, Any]:
