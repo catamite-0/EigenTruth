@@ -226,6 +226,56 @@ _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_FIELDS: tuple[tuple[str, str], ..
         "counterfactual_verification_flip_success_count",
     ),
 )
+_PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    (
+        "promotion_contract.fact_selfcheck_gate.coverage_rate",
+        "fact_selfcheck_gate_coverage_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.report_present_rate",
+        "fact_selfcheck_gate_report_present_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.manifest_present_rate",
+        "fact_selfcheck_gate_manifest_present_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.manifest_verified_rate",
+        "fact_selfcheck_gate_manifest_verified_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.passed_rate",
+        "fact_selfcheck_gate_passed_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.run_count.mean",
+        "fact_selfcheck_gate_run_count",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.failed_run_count.mean",
+        "fact_selfcheck_gate_failed_run_count",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_executed_rate.mean",
+        "fact_selfcheck_gate_min_executed_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_decided_rate.mean",
+        "fact_selfcheck_gate_min_decided_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean",
+        "fact_selfcheck_gate_max_not_applicable_rate",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_claim_triples_per_record.mean",
+        "fact_selfcheck_gate_min_claim_triples_per_record",
+    ),
+    (
+        "promotion_contract.fact_selfcheck_gate.min_sample_triples_per_record.mean",
+        "fact_selfcheck_gate_min_sample_triples_per_record",
+    ),
+)
 _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
     ("triple_coverage.claim_triple_coverage_rate", "triple_claim_coverage_rate"),
     ("triple_coverage.audit_claim_coverage_rate", "triple_audit_claim_coverage_rate"),
@@ -692,6 +742,7 @@ def compare_release_candidates(
     require_product_runtime_drift_claim_factuality_evidence: bool = False,
     require_product_runtime_drift_claim_risk_localization_evidence: bool = False,
     require_product_runtime_drift_counterfactual_evidence: bool = False,
+    require_product_runtime_drift_fact_selfcheck_gate_evidence: bool = False,
     require_product_runtime_drift_triple_audit_evidence: bool = False,
     require_product_runtime_drift_covered_fact_property_evidence: bool = False,
     require_product_runtime_drift_action_gate_evidence: bool = False,
@@ -945,6 +996,9 @@ def compare_release_candidates(
                 "require_product_runtime_drift_counterfactual_evidence": (
                     require_product_runtime_drift_counterfactual_evidence
                 ),
+                "require_product_runtime_drift_fact_selfcheck_gate_evidence": (
+                    require_product_runtime_drift_fact_selfcheck_gate_evidence
+                ),
                 "require_product_runtime_drift_triple_audit_evidence": (
                     require_product_runtime_drift_triple_audit_evidence
                 ),
@@ -1111,6 +1165,12 @@ def compare_release_candidates(
     )
     require_product_runtime_drift_counterfactual_evidence = bool(
         release_policy_values["require_product_runtime_drift_counterfactual_evidence"]
+    )
+    require_product_runtime_drift_fact_selfcheck_gate_evidence = bool(
+        release_policy_values.get(
+            "require_product_runtime_drift_fact_selfcheck_gate_evidence",
+            False,
+        )
     )
     require_product_runtime_drift_triple_audit_evidence = bool(
         release_policy_values["require_product_runtime_drift_triple_audit_evidence"]
@@ -1753,6 +1813,9 @@ def compare_release_candidates(
             require_product_runtime_drift_claim_risk_localization_evidence
         ),
         require_counterfactual_evidence=require_product_runtime_drift_counterfactual_evidence,
+        require_fact_selfcheck_gate_evidence=(
+            require_product_runtime_drift_fact_selfcheck_gate_evidence
+        ),
         require_triple_audit_evidence=require_product_runtime_drift_triple_audit_evidence,
         require_covered_fact_property_evidence=(
             require_product_runtime_drift_covered_fact_property_evidence
@@ -2032,6 +2095,9 @@ def compare_release_candidates(
             ),
             "require_product_runtime_drift_counterfactual_evidence": bool(
                 require_product_runtime_drift_counterfactual_evidence
+            ),
+            "require_product_runtime_drift_fact_selfcheck_gate_evidence": bool(
+                require_product_runtime_drift_fact_selfcheck_gate_evidence
             ),
             "require_product_runtime_drift_triple_audit_evidence": bool(
                 require_product_runtime_drift_triple_audit_evidence
@@ -7064,6 +7130,7 @@ def _product_runtime_drift_gate(
     require_claim_factuality_evidence: bool,
     require_claim_risk_localization_evidence: bool,
     require_counterfactual_evidence: bool,
+    require_fact_selfcheck_gate_evidence: bool,
     require_triple_audit_evidence: bool,
     require_covered_fact_property_evidence: bool,
     require_action_gate_evidence: bool,
@@ -7092,6 +7159,7 @@ def _product_runtime_drift_gate(
             or require_claim_factuality_evidence
             or require_claim_risk_localization_evidence
             or require_counterfactual_evidence
+            or require_fact_selfcheck_gate_evidence
             or require_triple_audit_evidence
             or require_covered_fact_property_evidence
             or require_action_gate_evidence
@@ -7177,6 +7245,17 @@ def _product_runtime_drift_gate(
                         )
                     ) if require_counterfactual_evidence else (),
                     "counterfactual_evidence_blocked_metric_count": 0,
+                    "fact_selfcheck_gate_evidence_required": bool(
+                        require_fact_selfcheck_gate_evidence
+                    ),
+                    "fact_selfcheck_gate_evidence_metric_count": 0,
+                    "fact_selfcheck_gate_evidence_missing_metrics": tuple(
+                        metric_name
+                        for metric_name, _prefix in (
+                            _PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_FIELDS
+                        )
+                    ) if require_fact_selfcheck_gate_evidence else (),
+                    "fact_selfcheck_gate_evidence_blocked_metric_count": 0,
                     "triple_audit_evidence_required": bool(require_triple_audit_evidence),
                     "triple_audit_evidence_metric_count": 0,
                     "triple_audit_evidence_missing_metrics": tuple(
@@ -7388,6 +7467,12 @@ def _product_runtime_drift_gate(
         metrics,
         required=require_counterfactual_evidence,
     )
+    fact_selfcheck_gate_evidence_summary = (
+        _product_runtime_drift_fact_selfcheck_gate_evidence_summary(
+            metrics,
+            required=require_fact_selfcheck_gate_evidence,
+        )
+    )
     triple_audit_evidence_summary = _product_runtime_drift_triple_audit_evidence_summary(
         metrics,
         required=require_triple_audit_evidence,
@@ -7495,6 +7580,8 @@ def _product_runtime_drift_gate(
         ),
         counterfactual_evidence_summary=counterfactual_evidence_summary,
         require_counterfactual_evidence=require_counterfactual_evidence,
+        fact_selfcheck_gate_evidence_summary=fact_selfcheck_gate_evidence_summary,
+        require_fact_selfcheck_gate_evidence=require_fact_selfcheck_gate_evidence,
         triple_audit_evidence_summary=triple_audit_evidence_summary,
         require_triple_audit_evidence=require_triple_audit_evidence,
         covered_fact_property_evidence_summary=covered_fact_property_evidence_summary,
@@ -7556,6 +7643,7 @@ def _product_runtime_drift_gate(
             **claim_factuality_evidence_summary,
             **claim_risk_localization_evidence_summary,
             **counterfactual_evidence_summary,
+            **fact_selfcheck_gate_evidence_summary,
             **triple_audit_evidence_summary,
             **covered_fact_property_evidence_summary,
             **action_gate_evidence_summary,
@@ -7595,6 +7683,8 @@ def _product_runtime_drift_report_gate(
     require_claim_risk_localization_evidence: bool,
     counterfactual_evidence_summary: Mapping[str, Any],
     require_counterfactual_evidence: bool,
+    fact_selfcheck_gate_evidence_summary: Mapping[str, Any],
+    require_fact_selfcheck_gate_evidence: bool,
     triple_audit_evidence_summary: Mapping[str, Any],
     require_triple_audit_evidence: bool,
     covered_fact_property_evidence_summary: Mapping[str, Any],
@@ -7738,6 +7828,28 @@ def _product_runtime_drift_report_gate(
         if blocked_metric_count is not None and blocked_metric_count > 0:
             failures.append(
                 "product runtime drift counterfactual evidence blocked "
+                f"{int(blocked_metric_count)} metric(s)"
+            )
+    if require_fact_selfcheck_gate_evidence:
+        missing_metrics = tuple(
+            fact_selfcheck_gate_evidence_summary.get(
+                "fact_selfcheck_gate_evidence_missing_metrics"
+            ) or ()
+        )
+        if missing_metrics:
+            failures.append(
+                "product runtime drift fact-selfcheck gate evidence metrics are "
+                "incomplete: "
+                + ", ".join(str(metric) for metric in missing_metrics)
+            )
+        blocked_metric_count = _float_or_none(
+            fact_selfcheck_gate_evidence_summary.get(
+                "fact_selfcheck_gate_evidence_blocked_metric_count"
+            )
+        )
+        if blocked_metric_count is not None and blocked_metric_count > 0:
+            failures.append(
+                "product runtime drift fact-selfcheck gate evidence blocked "
                 f"{int(blocked_metric_count)} metric(s)"
             )
     if require_triple_audit_evidence:
@@ -8270,6 +8382,19 @@ def _product_runtime_drift_counterfactual_evidence_summary(
     summary["counterfactual_evidence_metric_count"] = metric_count
     summary["counterfactual_evidence_missing_metrics"] = tuple(missing_metrics)
     return summary
+
+
+def _product_runtime_drift_fact_selfcheck_gate_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    required: bool = False,
+) -> dict[str, Any]:
+    return _product_runtime_drift_named_evidence_summary(
+        metrics,
+        fields=_PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_FIELDS,
+        evidence_prefix="fact_selfcheck_gate",
+        required=required,
+    )
 
 
 def _product_runtime_drift_triple_audit_evidence_summary(
@@ -10234,6 +10359,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_product_runtime_drift_counterfactual_evidence=bool(
             args.require_product_runtime_drift_counterfactual_evidence
         ),
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=bool(
+            args.require_product_runtime_drift_fact_selfcheck_gate_evidence
+        ),
         require_product_runtime_drift_triple_audit_evidence=bool(
             args.require_product_runtime_drift_triple_audit_evidence
         ),
@@ -10564,6 +10692,11 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="require the product runtime drift report to include counterfactual "
                              "verifier-audit coverage, manifest, pass-rate, false-invariance, "
                              "and flip-success metrics")
+    parser.add_argument("--require-product-runtime-drift-fact-selfcheck-gate-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include fact-selfcheck "
+                             "signal-fusion gate coverage, manifest, pass, run, and "
+                             "triple-count metrics")
     parser.add_argument("--require-product-runtime-drift-triple-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "triple coverage, audit coverage, audit pass-rate, and slot coverage metrics")

@@ -18840,6 +18840,12 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         counterfactual_evidence=True,
     )
+    fact_selfcheck_gate_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "fact-selfcheck-gate-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        fact_selfcheck_gate_evidence=True,
+    )
     missing_evidence_drift_report = _write_product_runtime_drift_report(
         tmp_path / "missing-evidence-runtime-drift",
         status="promote",
@@ -18872,6 +18878,13 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         counterfactual_evidence=True,
         counterfactual_blocked=True,
+    )
+    blocked_fact_selfcheck_gate_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-fact-selfcheck-gate-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        fact_selfcheck_gate_evidence=True,
+        fact_selfcheck_gate_blocked=True,
     )
     blocked_triple_audit_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-triple-audit-runtime-drift",
@@ -19218,6 +19231,39 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=blocked_counterfactual_drift_report,
         require_product_runtime_drift_counterfactual_evidence=True,
+    )
+    fact_selfcheck_gate = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=fact_selfcheck_gate_drift_report,
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=True,
+    )
+    missing_fact_selfcheck_gate = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=True,
+    )
+    blocked_fact_selfcheck_gate = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_fact_selfcheck_gate_drift_report,
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=True,
     )
     triple_audit = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -19945,6 +19991,55 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert any(
         "counterfactual evidence blocked 2 metric" in reason
         for reason in blocked_counterfactual["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert fact_selfcheck_gate["decision"]["status"] == "promote"
+    assert fact_selfcheck_gate["config"][
+        "require_product_runtime_drift_fact_selfcheck_gate_evidence"
+    ] is True
+    fact_selfcheck_summary = fact_selfcheck_gate["release_candidate"][
+        "product_runtime_drift"
+    ]["summary"]
+    assert fact_selfcheck_summary["fact_selfcheck_gate_evidence_required"] is True
+    assert fact_selfcheck_summary["fact_selfcheck_gate_evidence_metric_count"] == 12
+    assert fact_selfcheck_summary[
+        "fact_selfcheck_gate_evidence_blocked_metric_count"
+    ] == 0
+    assert fact_selfcheck_summary[
+        "fact_selfcheck_gate_manifest_verified_rate_current"
+    ] == pytest.approx(1.0)
+    assert fact_selfcheck_summary["fact_selfcheck_gate_passed_rate_status"] == "pass"
+    assert missing_fact_selfcheck_gate["decision"]["status"] == "blocked"
+    assert missing_fact_selfcheck_gate["product_runtime_drift_gate"]["summary"][
+        "fact_selfcheck_gate_evidence_missing_metrics"
+    ] == (
+        "promotion_contract.fact_selfcheck_gate.coverage_rate",
+        "promotion_contract.fact_selfcheck_gate.report_present_rate",
+        "promotion_contract.fact_selfcheck_gate.manifest_present_rate",
+        "promotion_contract.fact_selfcheck_gate.manifest_verified_rate",
+        "promotion_contract.fact_selfcheck_gate.passed_rate",
+        "promotion_contract.fact_selfcheck_gate.run_count.mean",
+        "promotion_contract.fact_selfcheck_gate.failed_run_count.mean",
+        "promotion_contract.fact_selfcheck_gate.min_executed_rate.mean",
+        "promotion_contract.fact_selfcheck_gate.min_decided_rate.mean",
+        "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean",
+        "promotion_contract.fact_selfcheck_gate.min_claim_triples_per_record.mean",
+        "promotion_contract.fact_selfcheck_gate.min_sample_triples_per_record.mean",
+    )
+    assert any(
+        "fact-selfcheck gate evidence metrics are incomplete" in reason
+        for reason in missing_fact_selfcheck_gate["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
+    )
+    assert blocked_fact_selfcheck_gate["decision"]["status"] == "blocked"
+    assert blocked_fact_selfcheck_gate["product_runtime_drift_gate"]["summary"][
+        "fact_selfcheck_gate_evidence_blocked_metric_count"
+    ] == 4
+    assert any(
+        "fact-selfcheck gate evidence blocked 4 metric" in reason
+        for reason in blocked_fact_selfcheck_gate["decision"]["blocking_reasons"][0][
+            "reasons"
+        ]
     )
     assert triple_audit["decision"]["status"] == "promote"
     assert triple_audit["config"]["require_product_runtime_drift_triple_audit_evidence"] is True
@@ -24683,6 +24778,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         promotion_evidence=True,
         pre_generation_evidence=True,
         counterfactual_evidence=True,
+        fact_selfcheck_gate_evidence=True,
         triple_audit_evidence=True,
         action_gate_evidence=True,
         world_model_action_gate_evidence=True,
@@ -24817,6 +24913,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         require_product_runtime_drift_promotion_evidence=True,
         require_product_runtime_drift_pre_generation_evidence=True,
         require_product_runtime_drift_counterfactual_evidence=True,
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=True,
         require_product_runtime_drift_triple_audit_evidence=True,
         require_product_runtime_drift_action_gate_evidence=True,
         require_product_runtime_drift_world_model_action_gate_evidence=True,
@@ -25049,6 +25146,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_fact_selfcheck_gate_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
     assert (
@@ -25065,7 +25163,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_evidence_quality_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_metacognition_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 106
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 118
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -25073,6 +25171,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
     assert manifest["metadata"]["product_runtime_drift_counterfactual_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_fact_selfcheck_gate_evidence_metric_count"] == 12
+    assert (
+        manifest["metadata"]["product_runtime_drift_fact_selfcheck_gate_evidence_blocked_metric_count"]
+        == 0
+    )
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_metric_count"] == 10
@@ -25135,6 +25238,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_counterfactual_verification_false_invariance_rate_status"] == (
         "pass"
     )
+    assert manifest["metadata"]["product_runtime_drift_fact_selfcheck_gate_passed_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["product_runtime_drift_fact_selfcheck_gate_failed_run_count_status"] == "pass"
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == (
         pytest.approx(1.0)
     )
@@ -25468,6 +25575,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert (
         payload["release_candidate_comparison"]["config"][
+            "require_product_runtime_drift_fact_selfcheck_gate_evidence"
+        ]
+        is True
+    )
+    assert (
+        payload["release_candidate_comparison"]["config"][
             "require_product_runtime_drift_metacognition_evidence"
         ]
         is True
@@ -25576,6 +25689,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_promotion_evidence_required"] is True
     assert record.metadata["product_runtime_drift_pre_generation_evidence_required"] is True
     assert record.metadata["product_runtime_drift_counterfactual_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_fact_selfcheck_gate_evidence_required"] is True
     assert record.metadata["product_runtime_drift_triple_audit_evidence_required"] is True
     assert record.metadata["product_runtime_drift_action_gate_evidence_required"] is True
     assert (
@@ -25597,6 +25711,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_pre_generation_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_counterfactual_evidence_metric_count"] == 6
     assert record.metadata["product_runtime_drift_counterfactual_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_fact_selfcheck_gate_evidence_metric_count"] == 12
+    assert (
+        record.metadata[
+            "product_runtime_drift_fact_selfcheck_gate_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
     assert record.metadata["product_runtime_drift_triple_audit_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_triple_audit_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_action_gate_evidence_metric_count"] == 10
@@ -25634,6 +25755,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_runtime_drift_counterfactual_verification_pass_rate_current"] == (
         pytest.approx(1.0)
     )
+    assert record.metadata["product_runtime_drift_fact_selfcheck_gate_passed_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert record.metadata["product_runtime_drift_fact_selfcheck_gate_failed_run_count_status"] == "pass"
     assert record.metadata["product_runtime_drift_triple_audit_pass_rate_current"] == pytest.approx(1.0)
     assert record.metadata["product_runtime_drift_triple_slot_coverage_rate_status"] == "pass"
     assert record.metadata["product_runtime_drift_product_trace_action_audit_error_rate_current"] == (
@@ -28653,6 +28778,8 @@ def _write_product_runtime_drift_report(
     claim_risk_localization_blocked=False,
     counterfactual_evidence=False,
     counterfactual_blocked=False,
+    fact_selfcheck_gate_evidence=False,
+    fact_selfcheck_gate_blocked=False,
     triple_audit_evidence=False,
     triple_audit_blocked=False,
     covered_fact_property_evidence=False,
@@ -29247,6 +29374,159 @@ def _write_product_runtime_drift_report(
                 "current": 12.0,
                 "absolute_delta": 0.0,
                 "absolute_drop": 0.0,
+                "threshold": 2.0,
+                "reason": None,
+            },
+        ])
+    if fact_selfcheck_gate_evidence:
+        manifest_status = "blocked" if fact_selfcheck_gate_blocked else "pass"
+        manifest_current = 0.0 if fact_selfcheck_gate_blocked else 1.0
+        passed_status = "blocked" if fact_selfcheck_gate_blocked else "pass"
+        passed_current = 0.75 if fact_selfcheck_gate_blocked else 1.0
+        failed_run_status = "blocked" if fact_selfcheck_gate_blocked else "pass"
+        failed_run_current = 1.0 if fact_selfcheck_gate_blocked else 0.0
+        not_applicable_status = "blocked" if fact_selfcheck_gate_blocked else "pass"
+        not_applicable_current = 0.30 if fact_selfcheck_gate_blocked else 0.0
+        metrics.extend([
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.report_present_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.manifest_present_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.manifest_verified_rate",
+                "status": manifest_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": manifest_current,
+                "absolute_delta": manifest_current - 1.0,
+                "threshold": 1.0,
+                "reason": (
+                    "promotion_contract.fact_selfcheck_gate.manifest_verified_rate below gate"
+                    if fact_selfcheck_gate_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.passed_rate",
+                "status": passed_status,
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": passed_current,
+                "absolute_delta": passed_current - 1.0,
+                "threshold": 1.0,
+                "reason": (
+                    "promotion_contract.fact_selfcheck_gate.passed_rate below gate"
+                    if fact_selfcheck_gate_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.run_count.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.failed_run_count.mean",
+                "status": failed_run_status,
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": failed_run_current,
+                "absolute_delta": failed_run_current,
+                "threshold": 0.0,
+                "reason": (
+                    "promotion_contract.fact_selfcheck_gate.failed_run_count.mean above gate"
+                    if fact_selfcheck_gate_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.min_executed_rate.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 0.95,
+                "current": 0.95,
+                "absolute_delta": 0.0,
+                "threshold": 0.90,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.min_decided_rate.mean",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 0.90,
+                "current": 0.90,
+                "absolute_delta": 0.0,
+                "threshold": 0.85,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean",
+                "status": not_applicable_status,
+                "comparison": "max_current",
+                "baseline": 0.0,
+                "current": not_applicable_current,
+                "absolute_delta": not_applicable_current,
+                "threshold": 0.10,
+                "reason": (
+                    "promotion_contract.fact_selfcheck_gate.max_not_applicable_rate.mean above gate"
+                    if fact_selfcheck_gate_blocked
+                    else None
+                ),
+            },
+            {
+                "metric": (
+                    "promotion_contract.fact_selfcheck_gate."
+                    "min_claim_triples_per_record.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": (
+                    "promotion_contract.fact_selfcheck_gate."
+                    "min_sample_triples_per_record.mean"
+                ),
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 2.0,
+                "current": 2.0,
+                "absolute_delta": 0.0,
                 "threshold": 2.0,
                 "reason": None,
             },
