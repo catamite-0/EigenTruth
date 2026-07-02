@@ -26633,6 +26633,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "require_product_runtime_drift_action_receipts_evidence": True,
                 "require_product_runtime_drift_receipt_claim_support_evidence": True,
                 "require_product_runtime_drift_trajectory_audit_evidence": True,
+                "require_product_runtime_drift_metacognition_evidence": True,
                 "require_product_runtime_drift_evidence_handoff_evidence": True,
                 "require_product_trace_action_audit_gate": True,
                 "require_product_trace_action_execution_gate": True,
@@ -26814,6 +26815,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "receipt_claim_support_evidence_blocked_metric_count": 0,
                         "trajectory_audit_evidence_metric_count": 8,
                         "trajectory_audit_evidence_blocked_metric_count": 0,
+                        "metacognition_evidence_metric_count": 4,
+                        "metacognition_evidence_blocked_metric_count": 0,
                         "evidence_handoff_evidence_metric_count": 7,
                         "evidence_handoff_evidence_blocked_metric_count": 0,
                         "promotion_contract_coverage_rate_current": 1.0,
@@ -26874,6 +26877,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "product_trace_trajectory_audit_error_rate_status": "pass",
                         "product_trace_trajectory_audit_scope_rate_current": 0.0,
                         "product_trace_trajectory_audit_scope_rate_status": "pass",
+                        "product_trace_metacognition_trace_coverage_rate_current": 1.0,
+                        "product_trace_metacognition_trace_coverage_rate_status": "pass",
+                        "product_trace_metacognition_pass_rate_current": 0.98,
+                        "product_trace_metacognition_pass_rate_status": "pass",
+                        "product_trace_metacognition_overconfident_risk_rate_current": 0.0,
+                        "product_trace_metacognition_overconfident_risk_rate_status": "pass",
+                        "product_trace_metacognition_miscalibration_score_mean_current": 0.02,
+                        "product_trace_metacognition_miscalibration_score_mean_status": "pass",
                         "evidence_handoff_coverage_rate_current": 1.0,
                         "evidence_handoff_coverage_rate_status": "pass",
                         "evidence_handoff_manifest_verified_rate_current": 1.0,
@@ -27444,6 +27455,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_action_receipts_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
+    assert contract["metadata"]["product_runtime_drift_metacognition_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
@@ -27464,6 +27476,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     ] == 0
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
     assert contract["metadata"]["product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_metacognition_evidence_metric_count"] == 4
+    assert contract["metadata"]["product_runtime_drift_metacognition_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
@@ -27504,6 +27518,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["product_runtime_drift_product_trace_trajectory_audit_scope_rate_status"] == (
         "pass"
     )
+    assert contract["metadata"]["product_runtime_drift_product_trace_metacognition_pass_rate_current"] == (
+        0.98
+    )
+    assert contract["metadata"][
+        "product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_status"
+    ] == "pass"
     assert contract["metadata"]["product_runtime_drift_evidence_handoff_manifest_verified_rate_current"] == (
         1.0
     )
@@ -27561,6 +27581,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_action_gate_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_required"] is True
+    assert manifest["metadata"]["product_runtime_drift_metacognition_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_pre_generation_evidence_required"] is True
@@ -27570,6 +27591,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
     assert manifest["metadata"]["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
+    assert manifest["metadata"]["product_runtime_drift_metacognition_evidence_metric_count"] == 4
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
     assert manifest["metadata"]["product_runtime_drift_triple_audit_pass_rate_current"] == 1.0
     assert manifest["metadata"]["product_runtime_drift_counterfactual_verification_pass_rate_status"] == (
@@ -27586,6 +27608,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     ] == "pass"
     assert manifest["metadata"]["product_runtime_drift_product_trace_trajectory_audit_scope_rate_status"] == (
         "pass"
+    )
+    assert manifest["metadata"]["product_runtime_drift_product_trace_metacognition_pass_rate_current"] == (
+        0.98
     )
     assert manifest["metadata"]["product_runtime_drift_evidence_handoff_present_metric_rate_current"] == 1.0
     assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
@@ -27691,6 +27716,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_action_receipts_evidence_required"] is True
     assert record.metadata["product_runtime_drift_receipt_claim_support_evidence_required"] is True
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_required"] is True
+    assert record.metadata["product_runtime_drift_metacognition_evidence_required"] is True
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_required"] is True
     assert record.metadata["product_runtime_drift_promotion_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_pre_generation_evidence_required"] is True
@@ -27700,7 +27726,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_runtime_drift_action_receipts_evidence_metric_count"] == 5
     assert record.metadata["product_runtime_drift_receipt_claim_support_evidence_metric_count"] == 7
     assert record.metadata["product_runtime_drift_trajectory_audit_evidence_metric_count"] == 8
+    assert record.metadata["product_runtime_drift_metacognition_evidence_metric_count"] == 4
     assert record.metadata["product_runtime_drift_evidence_handoff_evidence_metric_count"] == 7
+    assert record.metadata["product_runtime_drift_product_trace_metacognition_pass_rate_current"] == (
+        pytest.approx(0.98)
+    )
     assert record.metadata[
         "product_runtime_drift_pre_generation_probe_comparison_best_redline_margin_current"
     ] == pytest.approx(0.08)

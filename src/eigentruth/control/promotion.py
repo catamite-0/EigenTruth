@@ -18,50 +18,11 @@ from eigentruth.registry import (
     load_and_verify_artifact_manifest,
 )
 
-_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS
 )
-_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS
 )
 
 _PROMOTED_GATE_STATUSES = frozenset({
@@ -117,22 +78,12 @@ _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS = (
     "citation_batch_comparison_status_counts",
 )
 
-_PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = (
-    ("promotion", "promotion"),
-    ("pre_generation", "pre_generation"),
-    ("claim_factuality", "claim_factuality"),
-    ("counterfactual", "counterfactual"),
-    ("triple_audit", "triple_audit"),
-    ("covered_fact_property", "covered_fact_property"),
-    ("action_gate", "action_gate"),
-    ("action_receipts", "action_receipts"),
-    ("receipt_claim_support", "receipt_claim_support"),
-    ("trajectory_audit", "trajectory_audit"),
-    ("evidence_handoff", "evidence_handoff"),
-    ("world_model", "world_model"),
-    ("context_sensitivity", "context_sensitivity"),
-    ("counterfactual_robustness", "counterfactual_robustness"),
-    ("frontier_release_evidence", "frontier_release"),
+_PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = tuple(
+    (
+        group_name,
+        "frontier_release" if group_name == "frontier_release_evidence" else group_name,
+    )
+    for group_name in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS
 )
 
 
@@ -1155,69 +1106,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_baseline_path": product_runtime_drift_baseline.get("path"),
                 "product_runtime_drift_current_path": product_runtime_drift_current.get("path"),
                 "product_runtime_drift_gate_enabled": product_runtime_drift_summary.get("gate_enabled"),
-                "product_runtime_drift_promotion_evidence_required": config.get(
-                    "require_product_runtime_drift_promotion_evidence"
-                ),
-                "product_runtime_drift_pre_generation_evidence_required": config.get(
-                    "require_product_runtime_drift_pre_generation_evidence"
-                ),
-                "product_runtime_drift_claim_factuality_evidence_required": config.get(
-                    "require_product_runtime_drift_claim_factuality_evidence"
-                ),
-                "product_runtime_drift_counterfactual_evidence_required": config.get(
-                    "require_product_runtime_drift_counterfactual_evidence"
-                ),
-                "product_runtime_drift_triple_audit_evidence_required": config.get(
-                    "require_product_runtime_drift_triple_audit_evidence"
-                ),
-                "product_runtime_drift_covered_fact_property_evidence_required": config.get(
-                    "require_product_runtime_drift_covered_fact_property_evidence"
-                ),
-                "product_runtime_drift_action_gate_evidence_required": config.get(
-                    "require_product_runtime_drift_action_gate_evidence"
-                ),
-                "product_runtime_drift_world_model_action_gate_evidence_required": config.get(
-                    "require_product_runtime_drift_world_model_action_gate_evidence",
-                    product_runtime_drift_summary.get(
-                        "world_model_action_gate_evidence_required"
-                    ),
-                ),
-                "product_runtime_drift_action_receipts_evidence_required": config.get(
-                    "require_product_runtime_drift_action_receipts_evidence",
-                    product_runtime_drift_summary.get(
-                        "action_receipts_evidence_required"
-                    ),
-                ),
-                "product_runtime_drift_receipt_claim_support_evidence_required": config.get(
-                    "require_product_runtime_drift_receipt_claim_support_evidence",
-                    product_runtime_drift_summary.get(
-                        "receipt_claim_support_evidence_required"
-                    ),
-                ),
-                "product_runtime_drift_trajectory_audit_evidence_required": config.get(
-                    "require_product_runtime_drift_trajectory_audit_evidence"
-                ),
-                "product_runtime_drift_evidence_handoff_evidence_required": config.get(
-                    "require_product_runtime_drift_evidence_handoff_evidence"
-                ),
-                "product_runtime_drift_world_model_evidence_required": config.get(
-                    "require_product_runtime_drift_world_model_evidence",
-                    product_runtime_drift_summary.get("world_model_evidence_required"),
-                ),
-                "product_runtime_drift_context_sensitivity_evidence_required": config.get(
-                    "require_product_runtime_drift_context_sensitivity_evidence",
-                    product_runtime_drift_summary.get(
-                        "context_sensitivity_evidence_required"
-                    ),
-                ),
-                "product_runtime_drift_counterfactual_robustness_evidence_required": config.get(
-                    "require_product_runtime_drift_counterfactual_robustness_evidence",
-                    product_runtime_drift_summary.get(
-                        "counterfactual_robustness_evidence_required"
-                    ),
-                ),
-                "product_runtime_drift_frontier_release_evidence_required": config.get(
-                    "require_product_runtime_drift_frontier_release_evidence"
+                **_product_runtime_drift_required_metadata(
+                    config,
+                    product_runtime_drift_summary,
                 ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
@@ -1517,6 +1408,19 @@ def _promotion_contract_evidence_group_summaries(
     return groups
 
 
+def _product_runtime_drift_required_metadata(
+    config: Mapping[str, Any],
+    summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        metadata[f"product_runtime_drift_{prefix}_evidence_required"] = _first_present(
+            config.get(f"require_product_runtime_drift_{prefix}_evidence"),
+            summary.get(f"{prefix}_evidence_required"),
+        )
+    return metadata
+
+
 def _promotion_contract_runtime_summary(
     contract: ProductPromotionContract,
     metadata: Mapping[str, Any],
@@ -1625,147 +1529,15 @@ class LoadedProductPromotionContract:
 
 
 def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
-    metadata = {
-        "product_runtime_drift_promotion_evidence_metric_count": summary.get(
-            "promotion_evidence_metric_count"
-        ),
-        "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
-            "promotion_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_metric_count": summary.get(
-            "pre_generation_evidence_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_blocked_metric_count": summary.get(
-            "pre_generation_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_claim_factuality_evidence_metric_count": summary.get(
-            "claim_factuality_evidence_metric_count"
-        ),
-        "product_runtime_drift_claim_factuality_evidence_blocked_metric_count": summary.get(
-            "claim_factuality_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_metric_count": summary.get(
-            "counterfactual_evidence_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_blocked_metric_count": summary.get(
-            "counterfactual_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
-            "triple_audit_evidence_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_blocked_metric_count": summary.get(
-            "triple_audit_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_metric_count": summary.get(
-            "covered_fact_property_evidence_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": summary.get(
-            "covered_fact_property_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_metric_count": summary.get(
-            "action_gate_evidence_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
-            "action_gate_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_world_model_action_gate_evidence_metric_count": summary.get(
-            "world_model_action_gate_evidence_metric_count"
-        ),
-        "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count": (
-            summary.get("world_model_action_gate_evidence_blocked_metric_count")
-        ),
-        "product_runtime_drift_action_receipts_evidence_metric_count": summary.get(
-            "action_receipts_evidence_metric_count"
-        ),
-        "product_runtime_drift_action_receipts_evidence_blocked_metric_count": (
-            summary.get("action_receipts_evidence_blocked_metric_count")
-        ),
-        "product_runtime_drift_receipt_claim_support_evidence_metric_count": (
-            summary.get("receipt_claim_support_evidence_metric_count")
-        ),
-        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": (
-            summary.get("receipt_claim_support_evidence_blocked_metric_count")
-        ),
-        "product_runtime_drift_trajectory_audit_evidence_metric_count": summary.get(
-            "trajectory_audit_evidence_metric_count"
-        ),
-        "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count": summary.get(
-            "trajectory_audit_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_evidence_handoff_evidence_metric_count": summary.get(
-            "evidence_handoff_evidence_metric_count"
-        ),
-        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": summary.get(
-            "evidence_handoff_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_world_model_evidence_metric_count": summary.get(
-            "world_model_evidence_metric_count"
-        ),
-        "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
-            "world_model_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_context_sensitivity_evidence_metric_count": summary.get(
-            "context_sensitivity_evidence_metric_count"
-        ),
-        "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": summary.get(
-            "context_sensitivity_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_robustness_evidence_metric_count": summary.get(
-            "counterfactual_robustness_evidence_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count": summary.get(
-            "counterfactual_robustness_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
-            "frontier_release_evidence_metric_count"
-        ),
-        "product_runtime_drift_frontier_release_evidence_blocked_metric_count": summary.get(
-            "frontier_release_evidence_blocked_metric_count"
-        ),
-    }
-    for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
+    metadata: dict[str, Any] = {}
+    for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        metadata[f"product_runtime_drift_{prefix}_evidence_metric_count"] = summary.get(
+            f"{prefix}_evidence_metric_count"
+        )
+        metadata[f"product_runtime_drift_{prefix}_evidence_blocked_metric_count"] = (
+            summary.get(f"{prefix}_evidence_blocked_metric_count")
+        )
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -3812,80 +3584,20 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_baseline_path",
         "product_runtime_drift_current_path",
         "product_runtime_drift_gate_enabled",
-        "product_runtime_drift_promotion_evidence_required",
-        "product_runtime_drift_pre_generation_evidence_required",
-        "product_runtime_drift_claim_factuality_evidence_required",
-        "product_runtime_drift_counterfactual_evidence_required",
-        "product_runtime_drift_triple_audit_evidence_required",
-        "product_runtime_drift_covered_fact_property_evidence_required",
-        "product_runtime_drift_action_gate_evidence_required",
-        "product_runtime_drift_world_model_action_gate_evidence_required",
-        "product_runtime_drift_action_receipts_evidence_required",
-        "product_runtime_drift_receipt_claim_support_evidence_required",
-        "product_runtime_drift_trajectory_audit_evidence_required",
-        "product_runtime_drift_evidence_handoff_evidence_required",
-        "product_runtime_drift_world_model_evidence_required",
-        "product_runtime_drift_context_sensitivity_evidence_required",
-        "product_runtime_drift_counterfactual_robustness_evidence_required",
-        "product_runtime_drift_frontier_release_evidence_required",
         "product_runtime_drift_compared_metric_count",
         "product_runtime_drift_blocked_metric_count",
-        "product_runtime_drift_promotion_evidence_metric_count",
-        "product_runtime_drift_promotion_evidence_blocked_metric_count",
-        "product_runtime_drift_pre_generation_evidence_metric_count",
-        "product_runtime_drift_pre_generation_evidence_blocked_metric_count",
-        "product_runtime_drift_claim_factuality_evidence_metric_count",
-        "product_runtime_drift_claim_factuality_evidence_blocked_metric_count",
-        "product_runtime_drift_counterfactual_evidence_metric_count",
-        "product_runtime_drift_counterfactual_evidence_blocked_metric_count",
-        "product_runtime_drift_triple_audit_evidence_metric_count",
-        "product_runtime_drift_triple_audit_evidence_blocked_metric_count",
-        "product_runtime_drift_covered_fact_property_evidence_metric_count",
-        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
-        "product_runtime_drift_action_gate_evidence_metric_count",
-        "product_runtime_drift_action_gate_evidence_blocked_metric_count",
-        "product_runtime_drift_world_model_action_gate_evidence_metric_count",
-        "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count",
-        "product_runtime_drift_action_receipts_evidence_metric_count",
-        "product_runtime_drift_action_receipts_evidence_blocked_metric_count",
-        "product_runtime_drift_receipt_claim_support_evidence_metric_count",
-        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count",
-        "product_runtime_drift_trajectory_audit_evidence_metric_count",
-        "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count",
-        "product_runtime_drift_evidence_handoff_evidence_metric_count",
-        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count",
-        "product_runtime_drift_world_model_evidence_metric_count",
-        "product_runtime_drift_world_model_evidence_blocked_metric_count",
-        "product_runtime_drift_context_sensitivity_evidence_metric_count",
-        "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count",
-        "product_runtime_drift_counterfactual_robustness_evidence_metric_count",
-        "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count",
-        "product_runtime_drift_frontier_release_evidence_metric_count",
-        "product_runtime_drift_frontier_release_evidence_blocked_metric_count",
+        *(
+            f"product_runtime_drift_{prefix}_evidence_{suffix}"
+            for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS
+            for suffix in ("required", "metric_count", "blocked_metric_count")
+        ),
     )
     flattened: dict[str, Any] = {
         f"promotion_contract_{key}": metadata.get(key)
         for key in scalar_fields
         if key in metadata
     }
-    evidence_prefixes = (
-        *_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES,
-    )
-    for prefix in evidence_prefixes:
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             key = f"product_runtime_drift_{prefix}_{suffix}"
             if key in metadata:

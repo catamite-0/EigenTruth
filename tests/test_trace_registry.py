@@ -4460,6 +4460,13 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "product_runtime_drift_counterfactual_robustness_false_invariance_rate_baseline": 0.0,
             "product_runtime_drift_counterfactual_robustness_false_invariance_rate_current": 0.0,
             "product_runtime_drift_counterfactual_robustness_false_invariance_rate_status": "pass",
+            "product_runtime_drift_metacognition_evidence_required": True,
+            "product_runtime_drift_metacognition_evidence_metric_count": 4,
+            "product_runtime_drift_metacognition_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_product_trace_metacognition_pass_rate_current": 0.98,
+            "product_runtime_drift_product_trace_metacognition_pass_rate_status": "pass",
+            "product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_current": 0.02,
+            "product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_status": "pass",
             "product_runtime_drift_covered_fact_recommended_route_min_records_baseline": 16,
             "product_runtime_drift_covered_fact_recommended_route_min_records_current": 15,
             "product_runtime_drift_covered_fact_recommended_route_min_records_status": "pass",
@@ -4858,6 +4865,21 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     ] == 1.0
     assert metadata[
         "promotion_contract_product_runtime_drift_counterfactual_robustness_false_invariance_rate_status"
+    ] == "pass"
+    assert metadata[
+        "promotion_contract_product_runtime_drift_metacognition_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_metacognition_evidence_metric_count"
+    ] == 4
+    assert metadata[
+        "promotion_contract_product_runtime_drift_metacognition_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_product_trace_metacognition_pass_rate_current"
+    ] == 0.98
+    assert metadata[
+        "promotion_contract_product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_status"
     ] == "pass"
     assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current"

@@ -16,9 +16,20 @@ if str(REPO_ROOT) not in sys.path:
 
 from eigentruth.control import ProductPromotionContract  # noqa: E402
 from eigentruth.control.runtime_drift_keys import (  # noqa: E402
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS as _PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS,
+)
+from eigentruth.control.runtime_drift_keys import (  # noqa: E402
     PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS as _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES,
 )
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+
+_PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = tuple(
+    (
+        group_name,
+        "frontier_release" if group_name == "frontier_release_evidence" else group_name,
+    )
+    for group_name in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS
+)
 
 
 def export_product_promotion_contract(
@@ -985,124 +996,11 @@ def _product_runtime_drift_flat_metadata(metadata: Mapping[str, Any]) -> dict[st
         "product_runtime_drift_gate_enabled": metadata.get(
             "product_runtime_drift_gate_enabled"
         ),
-        "product_runtime_drift_promotion_evidence_required": metadata.get(
-            "product_runtime_drift_promotion_evidence_required"
-        ),
-        "product_runtime_drift_promotion_evidence_metric_count": metadata.get(
-            "product_runtime_drift_promotion_evidence_metric_count"
-        ),
-        "product_runtime_drift_promotion_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_promotion_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_required": metadata.get(
-            "product_runtime_drift_pre_generation_evidence_required"
-        ),
-        "product_runtime_drift_pre_generation_evidence_metric_count": metadata.get(
-            "product_runtime_drift_pre_generation_evidence_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_pre_generation_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_claim_risk_localization_evidence_required": metadata.get(
-            "product_runtime_drift_claim_risk_localization_evidence_required"
-        ),
-        "product_runtime_drift_claim_risk_localization_evidence_metric_count": metadata.get(
-            "product_runtime_drift_claim_risk_localization_evidence_metric_count"
-        ),
-        "product_runtime_drift_claim_risk_localization_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_claim_risk_localization_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_required": metadata.get(
-            "product_runtime_drift_counterfactual_evidence_required"
-        ),
-        "product_runtime_drift_counterfactual_evidence_metric_count": metadata.get(
-            "product_runtime_drift_counterfactual_evidence_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_counterfactual_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_required": metadata.get(
-            "product_runtime_drift_triple_audit_evidence_required"
-        ),
-        "product_runtime_drift_triple_audit_evidence_metric_count": metadata.get(
-            "product_runtime_drift_triple_audit_evidence_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_triple_audit_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_required": metadata.get(
-            "product_runtime_drift_covered_fact_property_evidence_required"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_metric_count": metadata.get(
-            "product_runtime_drift_covered_fact_property_evidence_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_required": metadata.get(
-            "product_runtime_drift_action_gate_evidence_required"
-        ),
-        "product_runtime_drift_action_gate_evidence_metric_count": metadata.get(
-            "product_runtime_drift_action_gate_evidence_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_action_gate_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_world_model_action_gate_evidence_required": metadata.get(
-            "product_runtime_drift_world_model_action_gate_evidence_required"
-        ),
-        "product_runtime_drift_world_model_action_gate_evidence_metric_count": metadata.get(
-            "product_runtime_drift_world_model_action_gate_evidence_metric_count"
-        ),
-        "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_action_receipts_evidence_required": metadata.get(
-            "product_runtime_drift_action_receipts_evidence_required"
-        ),
-        "product_runtime_drift_action_receipts_evidence_metric_count": metadata.get(
-            "product_runtime_drift_action_receipts_evidence_metric_count"
-        ),
-        "product_runtime_drift_action_receipts_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_action_receipts_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_receipt_claim_support_evidence_required": metadata.get(
-            "product_runtime_drift_receipt_claim_support_evidence_required"
-        ),
-        "product_runtime_drift_receipt_claim_support_evidence_metric_count": metadata.get(
-            "product_runtime_drift_receipt_claim_support_evidence_metric_count"
-        ),
-        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_trajectory_audit_evidence_required": metadata.get(
-            "product_runtime_drift_trajectory_audit_evidence_required"
-        ),
-        "product_runtime_drift_trajectory_audit_evidence_metric_count": metadata.get(
-            "product_runtime_drift_trajectory_audit_evidence_metric_count"
-        ),
-        "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_evidence_handoff_evidence_required": metadata.get(
-            "product_runtime_drift_evidence_handoff_evidence_required"
-        ),
-        "product_runtime_drift_evidence_handoff_evidence_metric_count": metadata.get(
-            "product_runtime_drift_evidence_handoff_evidence_metric_count"
-        ),
-        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_frontier_release_evidence_required": metadata.get(
-            "product_runtime_drift_frontier_release_evidence_required"
-        ),
-        "product_runtime_drift_frontier_release_evidence_metric_count": metadata.get(
-            "product_runtime_drift_frontier_release_evidence_metric_count"
-        ),
-        "product_runtime_drift_frontier_release_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_frontier_release_evidence_blocked_metric_count"
-        ),
     }
+    for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        for suffix in ("required", "metric_count", "blocked_metric_count"):
+            key = f"product_runtime_drift_{prefix}_evidence_{suffix}"
+            fields[key] = metadata.get(key)
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             key = f"product_runtime_drift_{prefix}_{suffix}"
