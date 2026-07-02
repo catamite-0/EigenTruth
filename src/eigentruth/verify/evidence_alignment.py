@@ -78,6 +78,7 @@ class EvidenceAlignmentPolicy:
     """Lexical slot-coverage thresholds for claim/evidence alignment."""
 
     min_keyword_overlap: float = 0.2
+    min_support_keyword_overlap: float = 0.65
     min_refute_keyword_overlap: float = 0.5
     min_number_recall: float = 1.0
     min_entity_recall: float = 0.5
@@ -88,6 +89,11 @@ class EvidenceAlignmentPolicy:
             self,
             "min_keyword_overlap",
             _rate_float(self.min_keyword_overlap, name="min_keyword_overlap"),
+        )
+        object.__setattr__(
+            self,
+            "min_support_keyword_overlap",
+            _rate_float(self.min_support_keyword_overlap, name="min_support_keyword_overlap"),
         )
         object.__setattr__(
             self,
@@ -114,6 +120,7 @@ class EvidenceAlignmentPolicy:
         """Build a policy from a JSON-like mapping."""
         return cls(
             min_keyword_overlap=float(data.get("min_keyword_overlap", 0.2)),
+            min_support_keyword_overlap=float(data.get("min_support_keyword_overlap", 0.65)),
             min_refute_keyword_overlap=float(data.get("min_refute_keyword_overlap", 0.5)),
             min_number_recall=float(data.get("min_number_recall", 1.0)),
             min_entity_recall=float(data.get("min_entity_recall", 0.5)),
@@ -127,6 +134,7 @@ class EvidenceAlignmentPolicy:
         """Return a JSON-ready policy payload."""
         return {
             "min_keyword_overlap": self.min_keyword_overlap,
+            "min_support_keyword_overlap": self.min_support_keyword_overlap,
             "min_refute_keyword_overlap": self.min_refute_keyword_overlap,
             "min_number_recall": self.min_number_recall,
             "min_entity_recall": self.min_entity_recall,
@@ -543,8 +551,14 @@ def _alignment_record_for_claim(
         issue_codes.append("negation_mismatch")
     if policy.require_cited_evidence and references and not cited_evidence:
         issue_codes.append("missing_cited_evidence")
+    if (
+        not issue_codes
+        and _has_only_keyword_support_slots(claim_features, references)
+        and best_overlap < policy.min_support_keyword_overlap
+    ):
+        issue_codes.append("weak_keyword_only_support")
     status = "aligned" if not issue_codes else "misaligned"
-    if issue_codes == ["low_keyword_overlap"]:
+    if issue_codes in (["low_keyword_overlap"], ["weak_keyword_only_support"]):
         status = "insufficient_evidence"
     return EvidenceAlignmentRecord(
         claim_id=claim_id,
@@ -575,6 +589,7 @@ def _alignment_record_for_claim(
             "claim_negated_for_alignment": claim_negated,
             "best_evidence_negated_for_alignment": best_negated,
             "min_refute_keyword_overlap": policy.min_refute_keyword_overlap,
+            "min_support_keyword_overlap": policy.min_support_keyword_overlap,
             "selected_evidence": tuple(_evidence_summary(item) for item in selected_evidence[:5]),
         },
     )
@@ -738,6 +753,13 @@ def _strong_misalignment(record: EvidenceAlignmentRecord) -> bool:
             "no_alternate_evidence_number",
         })
     return False
+
+
+def _has_only_keyword_support_slots(
+    features: _TextFeatures,
+    references: Sequence[Mapping[str, Any]],
+) -> bool:
+    return bool(features.keywords) and not features.numbers and not features.entities and not references
 
 
 def _keyword_tokens(text: str) -> tuple[str, ...]:
@@ -974,6 +996,7 @@ _STOPWORDS = {
     "her",
     "his",
     "how",
+    "if",
     "into",
     "its",
     "many",

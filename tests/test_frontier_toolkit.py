@@ -3277,6 +3277,51 @@ def test_evidence_alignment_verifier_supports_cited_evidence_slots():
     json.dumps(result.metadata)
 
 
+def test_evidence_alignment_verifier_fail_closes_weak_keyword_only_support():
+    claim = Claim("If you dream of doing something and make a wish, you will succeed.", claim_id="wish")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Educational programs help students dream and succeed through planning, "
+                    "feedback, and classroom support."
+                ),
+                "source": "openalex:generic-education-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert record["status"] == "insufficient_evidence"
+    assert "weak_keyword_only_support" in record["issue_codes"]
+    assert record["metadata"]["best_keyword_overlap"] < record["metadata"]["min_support_keyword_overlap"]
+
+
+def test_evidence_alignment_verifier_supports_strong_keyword_only_evidence():
+    claim = Claim("Ecosystem management uses monitoring and research to adapt practices.", claim_id="eco")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Ecosystem management uses monitoring and research to make practices "
+                    "adaptable over time."
+                ),
+                "source": "openalex:ecosystem-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert record["status"] == "aligned"
+    assert "weak_keyword_only_support" not in record["issue_codes"]
+
+
 def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
     claim = Claim(
         "AlphaCorp reported 42 stores in 2025 [annual-report].",
