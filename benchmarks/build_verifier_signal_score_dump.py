@@ -34,6 +34,11 @@ DEFAULT_VERIFIER_SIGNALS = (
     "fact_selfcheck_insufficient",
     "fact_selfcheck_not_applicable",
     "fact_selfcheck_uncovered_rate",
+    "perturbation_conflict_rate",
+    "perturbation_high_confidence_conflict_rate",
+    "perturbation_missing_rate",
+    "perturbation_failed",
+    "perturbation_not_applicable",
     "world_model_disagreement",
     "world_model_agreement_gap",
     "world_model_low_agreement",
@@ -178,6 +183,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
     refute_rate = _unit_interval(selfcheck_metadata.get("refute_rate", 0.0), name="selfcheck.refute_rate")
     selfcheck_executed = bool(selfcheck_payload)
     fact_selfcheck_features = _fact_selfcheck_signal_features(record)
+    perturbation_features = _perturbation_consistency_signal_features(record)
     world_model_features = _world_model_signal_features(record, final)
     context_sensitivity_features = _context_sensitivity_signal_features(sidecar_record, record, final)
     return {
@@ -191,6 +197,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
         "selfcheck_disagreement": max(0.0, 1.0 - max(support_rate, refute_rate)) if selfcheck_executed else 0.0,
         "selfcheck_insufficient": 1.0 if selfcheck_status == "insufficient_evidence" else 0.0,
         **fact_selfcheck_features,
+        **perturbation_features,
         **world_model_features,
         **context_sensitivity_features,
     }
@@ -222,6 +229,17 @@ def verifier_signal_definitions() -> dict[str, str]:
         "fact_selfcheck_uncovered_rate": (
             "fraction of claim triples left insufficient by fact selfcheck, else 0."
         ),
+        "perturbation_conflict_rate": (
+            "fraction of answer-preserving prompt perturbation variants that conflict with the anchor claim."
+        ),
+        "perturbation_high_confidence_conflict_rate": (
+            "fraction of high-confidence answer-preserving perturbation variants that conflict with the anchor claim."
+        ),
+        "perturbation_missing_rate": (
+            "fraction of answer-preserving perturbation variants that do not cover anchor claim triples."
+        ),
+        "perturbation_failed": "1 when the perturbation-consistency audit status is blocked/refuted, else 0.",
+        "perturbation_not_applicable": "1 when perturbation-consistency evidence is not applicable, else 0.",
         "world_model_disagreement": "1 when world-model prediction metadata reports disagreement, else 0.",
         "world_model_agreement_gap": "1 - world-model agreement_rate when reported, else 0.",
         "world_model_low_agreement": "1 when world-model prediction agreement falls below its threshold, else 0.",
@@ -383,6 +401,61 @@ def _fact_selfcheck_signal_features(record: Mapping[str, Any]) -> dict[str, floa
         "fact_selfcheck_not_applicable": 1.0 if status == "not_applicable" else 0.0,
         "fact_selfcheck_uncovered_rate": uncovered_rate,
     }
+
+
+def _perturbation_consistency_signal_features(record: Mapping[str, Any]) -> dict[str, float]:
+    defaults = {
+        "perturbation_conflict_rate": 0.0,
+        "perturbation_high_confidence_conflict_rate": 0.0,
+        "perturbation_missing_rate": 0.0,
+        "perturbation_failed": 0.0,
+        "perturbation_not_applicable": 0.0,
+    }
+    payload = _perturbation_consistency_payload(record)
+    if not payload:
+        return defaults
+
+    status = str(payload.get("status", ""))
+    metadata = _mapping(payload.get("metadata"))
+    report = _mapping(
+        payload.get("perturbation_consistency")
+        or metadata.get("perturbation_consistency")
+        or payload
+    )
+    summary = _mapping(report.get("summary"))
+    if not summary:
+        summary = _mapping(payload.get("summary"))
+    report_status = str(summary.get("status") or report.get("status") or status)
+    return {
+        "perturbation_conflict_rate": _unit_interval(
+            summary.get("conflict_rate", 0.0),
+            name="perturbation_consistency.conflict_rate",
+        ),
+        "perturbation_high_confidence_conflict_rate": _unit_interval(
+            summary.get("high_confidence_conflict_rate", 0.0),
+            name="perturbation_consistency.high_confidence_conflict_rate",
+        ),
+        "perturbation_missing_rate": _unit_interval(
+            summary.get("missing_rate", 0.0),
+            name="perturbation_consistency.missing_rate",
+        ),
+        "perturbation_failed": 1.0 if report_status in {"blocked", "refuted"} or status == "refuted" else 0.0,
+        "perturbation_not_applicable": (
+            1.0 if report_status == "not_applicable" or status == "not_applicable" else 0.0
+        ),
+    }
+
+
+def _perturbation_consistency_payload(record: Mapping[str, Any]) -> Mapping[str, Any]:
+    for candidate in (
+        record.get("perturbation_consistency"),
+        record.get("prompt_perturbation_consistency"),
+        _mapping(record.get("final")).get("perturbation_consistency"),
+        _mapping(_mapping(record.get("final")).get("metadata")).get("perturbation_consistency"),
+    ):
+        if isinstance(candidate, Mapping):
+            return candidate
+    return {}
 
 
 def _world_model_signal_features(

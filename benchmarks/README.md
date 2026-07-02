@@ -4880,6 +4880,11 @@ also be passed to `build_verifier_signal_score_dump.py`, which emits
 `fact_selfcheck_support_rate`, `fact_selfcheck_refute_rate`,
 `fact_selfcheck_disagreement`, `fact_selfcheck_insufficient`,
 `fact_selfcheck_not_applicable`, and `fact_selfcheck_uncovered_rate` columns.
+Verified-record sidecars can also carry a `perturbation_consistency` report for
+answer-preserving prompt variants; the converter emits
+`perturbation_conflict_rate`, `perturbation_high_confidence_conflict_rate`,
+`perturbation_missing_rate`, `perturbation_failed`, and
+`perturbation_not_applicable` columns for CHOKE-style calibration experiments.
 `run_verifier_signal_fusion_workflow.py --enable-fact-selfcheck` now runs that
 same bridge end to end: generated selfcheck fixtures preserve statement-level
 `claim_triples` / `triples`, external sample records may provide sample-level

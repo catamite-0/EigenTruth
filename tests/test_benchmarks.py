@@ -58316,6 +58316,112 @@ def test_build_verifier_signal_score_dump_includes_fact_selfcheck_signals(tmp_pa
     assert DEFAULT_SCORE_DIRECTIONS["fact_selfcheck_uncovered_rate"] == "higher"
 
 
+def test_build_verifier_signal_score_dump_includes_perturbation_consistency_signals(tmp_path):
+    module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    output_path = tmp_path / "enhanced.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    records = [
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "final": {"status": "supported", "confidence": 0.9},
+                "perturbation_consistency": {
+                    "status": "supported",
+                    "confidence": 0.95,
+                    "metadata": {
+                        "perturbation_consistency": {
+                            "status": "passed",
+                            "summary": {
+                                "status": "passed",
+                                "conflict_rate": 0.0,
+                                "high_confidence_conflict_rate": 0.0,
+                                "missing_rate": 0.0,
+                            },
+                        }
+                    },
+                },
+            },
+        },
+        {
+            "run": "synthetic",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "final": {"status": "refuted", "confidence": 0.8},
+                "perturbation_consistency": {
+                    "status": "refuted",
+                    "confidence": 0.8,
+                    "metadata": {
+                        "perturbation_consistency": {
+                            "status": "blocked",
+                            "summary": {
+                                "status": "blocked",
+                                "conflict_rate": 0.5,
+                                "high_confidence_conflict_rate": 1.0,
+                                "missing_rate": 0.25,
+                            },
+                        }
+                    },
+                },
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            verified_records_jsonl=str(verified_records_path),
+            run_name="synthetic",
+            keep_signals="truth_proj",
+            verifier_signals=(
+                "perturbation_conflict_rate,"
+                "perturbation_high_confidence_conflict_rate,"
+                "perturbation_missing_rate,perturbation_failed,"
+                "perturbation_not_applicable"
+            ),
+            output=str(output_path),
+            output_format="json",
+            json=None,
+        )
+    )
+    enhanced = load_score_dump(
+        output_path,
+        required_scores=(
+            "perturbation_conflict_rate",
+            "perturbation_high_confidence_conflict_rate",
+        ),
+    )
+
+    assert enhanced.scores["perturbation_conflict_rate"] == pytest.approx((0.0, 0.5))
+    assert enhanced.scores["perturbation_high_confidence_conflict_rate"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["perturbation_missing_rate"] == pytest.approx((0.0, 0.25))
+    assert enhanced.scores["perturbation_failed"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["perturbation_not_applicable"] == pytest.approx((0.0, 0.0))
+    assert DEFAULT_SCORE_DIRECTIONS["perturbation_conflict_rate"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["perturbation_high_confidence_conflict_rate"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["perturbation_missing_rate"] == "higher"
+
+
 def test_context_sensitivity_sidecar_enrichment_feeds_verifier_signal_score_dump(tmp_path):
     enricher = importlib.import_module("benchmarks.enrich_context_sensitivity_sidecar")
     signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")

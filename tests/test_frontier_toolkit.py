@@ -97,6 +97,9 @@ from eigentruth.verify import (
     InMemoryVerifier,
     JsonTraceCache,
     LookupTripleExtractor,
+    PerturbationConsistencyPolicy,
+    PerturbationConsistencyVerifier,
+    PerturbationVariant,
     RegexTripleExtractor,
     RegexTriplePattern,
     RoutedVerifier,
@@ -112,6 +115,7 @@ from eigentruth.verify import (
     apply_claim_coherence,
     audit_claim_triples,
     audit_counterfactual_verification,
+    audit_perturbation_consistency,
     default_routed_verifier,
     default_verifier_routes,
     extract_calculation,
@@ -1876,6 +1880,72 @@ def test_fact_self_consistency_verifier_is_not_applicable_without_claim_triples(
     assert result.confidence == pytest.approx(1.0)
     assert result.metadata["decision_rule"] == "no_claim_triples"
     assert result.metadata["triple_count"] == 0
+
+
+def test_perturbation_consistency_audit_flags_high_confidence_conflicts():
+    claim = Claim("Paris is the capital of France.", claim_id="capital")
+    report = audit_perturbation_consistency(
+        claim,
+        (
+            PerturbationVariant(
+                "Paris is the capital of France.",
+                variant_id="plain",
+                perturbation_type="paraphrase",
+                confidence=0.92,
+            ),
+            PerturbationVariant(
+                "Lyon is the capital of France.",
+                variant_id="perturbed",
+                perturbation_type="format_change",
+                confidence=0.93,
+            ),
+        ),
+        policy=PerturbationConsistencyPolicy(
+            min_variants=2,
+            high_confidence_threshold=0.80,
+            max_conflict_rate=0.0,
+        ),
+    )
+
+    summary = report.summary()
+    assert report.status == "blocked"
+    assert report.passed is False
+    assert summary["anchor_triple_count"] == 1
+    assert summary["conflict_count"] == 1
+    assert summary["conflict_rate"] == pytest.approx(0.5)
+    assert summary["high_confidence_variant_count"] == 2
+    assert summary["high_confidence_conflict_rate"] == pytest.approx(0.5)
+    assert report.records[1].status is VerificationStatus.REFUTED
+    assert report.records[1].reason == "subject_predicate_object_conflict"
+    assert report.to_dict()["workflow"] == "perturbation_consistency_audit"
+
+
+def test_perturbation_consistency_verifier_uses_context_variants():
+    claim = Claim("The capital of France is Paris.", claim_id="capital")
+    verifier = PerturbationConsistencyVerifier(
+        variants=(),
+        policy={"min_variants": 2, "max_missing_rate": 0.0},
+    )
+
+    missing = verifier.verify(claim)
+    result = verifier.verify(
+        claim,
+        context={
+            "choke_variants": [
+                {"text": "Paris is the capital of France.", "confidence": 0.9, "source": "sample-1"},
+                {"text": "France's capital is Paris.", "confidence": 0.88, "source": "sample-2"},
+            ]
+        },
+    )
+
+    assert missing.status is VerificationStatus.NOT_APPLICABLE
+    assert missing.metadata["decision_rule"] == "too_few_expected_consistent_variants"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["verifier"] == "perturbation_consistency"
+    perturbation = result.metadata["perturbation_consistency"]
+    assert perturbation["summary"]["variant_count"] == 2
+    assert perturbation["summary"]["conflict_rate"] == pytest.approx(0.0)
+    assert perturbation["summary"]["missing_rate"] == pytest.approx(0.0)
 
 
 def test_cached_verifier_reuses_identical_claim_context_results():

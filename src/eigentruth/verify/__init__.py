@@ -55,6 +55,14 @@ from eigentruth.verify.localization import (
     ClaimRiskSpan,
     localize_claim_risk_spans,
 )
+from eigentruth.verify.perturbation import (
+    PerturbationConsistencyPolicy,
+    PerturbationConsistencyRecord,
+    PerturbationConsistencyReport,
+    PerturbationConsistencyVerifier,
+    PerturbationVariant,
+    audit_perturbation_consistency,
+)
 from eigentruth.verify.planning import (
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
@@ -136,6 +144,11 @@ __all__ = [
     "InMemoryVerifier",
     "JsonTraceCache",
     "LookupTripleExtractor",
+    "PerturbationConsistencyPolicy",
+    "PerturbationConsistencyRecord",
+    "PerturbationConsistencyReport",
+    "PerturbationConsistencyVerifier",
+    "PerturbationVariant",
     "RegexTripleExtractor",
     "RegexTriplePattern",
     "RuleBasedTripleExtractor",
@@ -160,6 +173,7 @@ __all__ = [
     "SourceFamilyPlan",
     "apply_claim_coherence",
     "audit_counterfactual_verification",
+    "audit_perturbation_consistency",
     "assess_evidence_quality",
     "generate_counterfactual_probes",
     "audit_claim_triples",
