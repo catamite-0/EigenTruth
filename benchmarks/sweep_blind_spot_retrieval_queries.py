@@ -66,6 +66,7 @@ def sweep_blind_spot_retrieval_queries(
     corpus_paths: Sequence[str | Path],
     blind_spots_path: str | Path,
     source_binding_queue_path: str | Path | None = None,
+    use_precomputed_retrieval_hits: bool | None = None,
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
@@ -110,6 +111,11 @@ def sweep_blind_spot_retrieval_queries(
     documents = load_corpus(corpus_input_paths)
     blind_spots = load_blind_spot_records(blind_path)
     source_binding_queue = None if source_binding_path is None else _load_json_object(source_binding_path)
+    resolved_use_precomputed_hits = (
+        source_binding_queue is not None
+        if use_precomputed_retrieval_hits is None
+        else bool(use_precomputed_retrieval_hits)
+    )
     corpus_provenance = _corpus_provenance(corpus_input_paths)
     strategies = []
 
@@ -124,6 +130,7 @@ def sweep_blind_spot_retrieval_queries(
                         scores_path=score_path,
                         blind_spots=blind_spots,
                         source_binding_queue=source_binding_queue,
+                        use_precomputed_retrieval_hits=resolved_use_precomputed_hits,
                         query_field=query_field,
                         retriever_min_overlap=min_overlap,
                         source_family_filter=source_family_filter,
@@ -176,6 +183,7 @@ def sweep_blind_spot_retrieval_queries(
             "min_blind_refuted_rate": min_blind_refuted_rate,
             "max_examples_per_bucket": int(max_examples_per_bucket),
             "source_binding_enabled": source_binding_path is not None,
+            "use_precomputed_retrieval_hits": resolved_use_precomputed_hits,
         },
         "summary": {
             "strategy_count": len(strategies),
@@ -204,6 +212,7 @@ def run(
     blind_spots_path: str | Path,
     output_path: str | Path,
     source_binding_queue_path: str | Path | None = None,
+    use_precomputed_retrieval_hits: bool | None = None,
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
@@ -235,6 +244,7 @@ def run(
         corpus_paths=corpus_paths,
         blind_spots_path=blind_spots_path,
         source_binding_queue_path=source_binding_queue_path,
+        use_precomputed_retrieval_hits=use_precomputed_retrieval_hits,
         query_fields=query_fields,
         retriever_min_overlaps=retriever_min_overlaps,
         source_family_filters=source_family_filters,
@@ -315,6 +325,7 @@ def _evaluate_strategy(
     scores_path: Path,
     blind_spots: Sequence[Mapping[str, Any]],
     source_binding_queue: Mapping[str, Any] | None,
+    use_precomputed_retrieval_hits: bool,
     query_field: str,
     retriever_min_overlap: float,
     source_family_filter: str,
@@ -347,6 +358,7 @@ def _evaluate_strategy(
         include_label_metadata=False,
         source_family_filter=source_family_filter,
         source_binding_queue=source_binding_queue,
+        use_precomputed_retrieval_hits=bool(use_precomputed_retrieval_hits),
     )
     claims_path = temp_root / f"{key}-claims.json"
     verified_records_path = temp_root / f"{key}-verified-records.jsonl"
@@ -644,6 +656,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--blind-spots", required=True, help="detectability blind-spot report JSON")
     parser.add_argument("--source-binding-queue", default=None,
                         help="optional evidence queue JSON used to bind retrieval to matching source requests")
+    precomputed_group = parser.add_mutually_exclusive_group()
+    precomputed_group.add_argument("--use-precomputed-retrieval-hits", dest="use_precomputed_retrieval_hits",
+                                   action="store_true", default=None,
+                                   help="treat fixture retrieval documents as already retrieved by the query strategy")
+    precomputed_group.add_argument("--no-use-precomputed-retrieval-hits", dest="use_precomputed_retrieval_hits",
+                                   action="store_false",
+                                   help="force verifier ensemble to re-retrieve from fixture documents")
     parser.add_argument("--query-fields", default=",".join(QUERY_FIELDS))
     parser.add_argument("--retriever-min-overlaps", default=",".join(str(value) for value in DEFAULT_MIN_OVERLAPS))
     parser.add_argument("--source-family-filters", default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
@@ -675,6 +694,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         blind_spots_path=args.blind_spots,
         output_path=args.json,
         source_binding_queue_path=args.source_binding_queue,
+        use_precomputed_retrieval_hits=args.use_precomputed_retrieval_hits,
         query_fields=_parse_csv(args.query_fields, default=QUERY_FIELDS),
         retriever_min_overlaps=_parse_float_csv(args.retriever_min_overlaps, default=DEFAULT_MIN_OVERLAPS),
         source_family_filters=_source_family_filters(

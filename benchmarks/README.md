@@ -1561,6 +1561,13 @@ query plan; `planned_rerank` expands the candidate pool, deduplicates repeated
 sources, puts higher-priority compatible families first, boosts structured
 metadata slot matches such as World Bank `country_name`/`indicator_name`, and
 retains incompatible hits as fallback evidence.
+When the corpus was produced from a citation/search queue, pass
+`--source-binding-queue` to bind each score row back to source documents whose
+metadata carries the same `source_queue_request_sha256`. Source-bound sweeps
+use the fixture's already-selected retrieval hits by default, avoiding a second
+claim-text retrieval pass that can discard valid citation snippets with low
+lexical overlap against the generated answer. Override this only for diagnostic
+comparisons with `--no-use-precomputed-retrieval-hits`.
 Use `--enable-triple-evidence --triple-refute-object-mismatch` with
 `--target-route retrieval_triple_evidence` when the sweep should measure linked
 subject-predicate-object evidence rather than lexical retrieval groundedness.
@@ -2643,6 +2650,9 @@ python benchmarks/run_citation_search_evidence_workflow.py \
 This command does not fetch network content. Adapter results remain local input,
 and promotion requires both provenance and route-quality gates to pass. The
 optional `--batch-id` values are forwarded into the citation/search handoff, so
+the downstream query sweep automatically binds source documents back to the
+queue report and consumes those source-bound fixture hits as precomputed
+retrieval evidence.
 large evidence queues can be normalized, audited, and swept batch by batch while
 preserving the same manifest and registry gates.
 

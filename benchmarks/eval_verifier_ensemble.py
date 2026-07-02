@@ -1370,6 +1370,9 @@ def _record_has_precomputed_retrieval_hits(record: ClaimEvidenceRecord) -> bool:
     retrieval = record.metadata.get("retrieval")
     if not isinstance(retrieval, Mapping):
         return False
+    if flag_value_enabled(retrieval.get("use_precomputed_hits")):
+        n_hits = _non_negative_int(retrieval.get("n_hits"))
+        return n_hits is None or n_hits > 0
     query_field = str(retrieval.get("query_field", "")).strip()
     if query_field != "triple_slot":
         return False

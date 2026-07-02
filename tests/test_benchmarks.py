@@ -9731,6 +9731,7 @@ def test_build_evidence_fixture_binds_retrieval_to_source_queue_requests():
             "workflow": "unresolved_blind_spot_evidence_queue",
             "adapter_requests": [request_a, request_b],
         },
+        use_precomputed_retrieval_hits=True,
     )
     records = fixture["records"]
 
@@ -9743,7 +9744,9 @@ def test_build_evidence_fixture_binds_retrieval_to_source_queue_requests():
     assert fixture["summary"]["source_bound_record_count"] == 2
     assert fixture["summary"]["source_bound_hit_record_count"] == 2
     assert fixture["summary"]["source_binding_fallback_count"] == 0
+    assert fixture["retriever"]["use_precomputed_hits"] is True
     assert records[0]["metadata"]["retrieval"]["source_binding"]["mode"] == "exact"
+    assert records[0]["metadata"]["retrieval"]["use_precomputed_hits"] is True
     assert records[1]["metadata"]["retrieval"]["source_binding"]["mode"] == "exact"
 
 
@@ -10475,6 +10478,87 @@ def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifie
     assert quality["label_status_matrix"]["true"]["insufficient_evidence"] == 1
     assert quality["label_status_matrix"]["false"]["refuted"] == 1
     assert run["route_summary"]["selected_counts"] == {"retrieval_groundedness": 2, "groundedness": 1}
+
+
+def test_verifier_ensemble_uses_precomputed_retrieval_hits_when_marked(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    verified_path = tmp_path / "verified.jsonl"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.9]},
+            "statements": [
+                {
+                    "question": "What is Gamma status?",
+                    "answer": "Gamma has archival status blue.",
+                    "text": "Gamma has archival status blue.",
+                },
+                {"text": "Delta is listed as green."},
+                {"text": "Epsilon is listed as red."},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "Gamma has archival status blue.",
+                    "claim_id": "gamma-status",
+                    "retrieval_documents": [
+                        {
+                            "text": "The archive lists Gamma status as blue.",
+                            "source": "archive:gamma",
+                        },
+                    ],
+                    "metadata": {
+                        "retrieval": {
+                            "n_hits": 1,
+                            "query_field": "citation_question",
+                            "use_precomputed_hits": True,
+                        },
+                    },
+                },
+                {
+                    "claim": "Delta is listed as green.",
+                    "claim_id": "delta-status",
+                },
+                {
+                    "claim": "Epsilon is listed as red.",
+                    "claim_id": "epsilon-status",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.4,
+        retriever_min_overlap=0.95,
+        retrieval_limit=1,
+        verified_records_path=verified_path,
+    )
+    run = payload["runs"][0]
+    record = json.loads(verified_path.read_text(encoding="utf-8").splitlines()[0])["record"]
+
+    assert run["cache_stats"]["retrievers"]["requests"] == 0
+    assert run["route_summary"]["selected_counts"]["retrieval_groundedness"] == 1
+    assert record["final"]["status"] == "supported"
+    assert record["route"]["used_retrieval"] is True
+    assert any(
+        timing.get("source") == "precomputed_fixture"
+        for timing in record["route"]["attempted_route_timings"]
+        if timing.get("operation") == "retrieve"
+    )
 
 
 def test_eval_verifier_ensemble_can_route_sensitive_claims_to_triple_evidence(tmp_path):
@@ -60374,6 +60458,7 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     query_sweep_report = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
     assert query_sweep_report["config"]["target_route"] == "retrieval_structured_qa"
     assert query_sweep_report["config"]["source_binding_enabled"] is True
+    assert query_sweep_report["config"]["use_precomputed_retrieval_hits"] is True
     assert query_sweep_report["source"]["source_binding_queue_path"] == str(queue_path)
     assert query_sweep_report["strategies"][0]["retrieval"]["source_bound_record_count"] == 2
     assert "record_index" not in request_jsonl

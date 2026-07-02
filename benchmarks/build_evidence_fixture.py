@@ -199,6 +199,7 @@ def build_evidence_fixture(
     max_retrieval_hits_per_source: int | None = None,
     source_family_filter: str = "off",
     source_binding_queue: Mapping[str, Any] | None = None,
+    use_precomputed_retrieval_hits: bool = False,
 ) -> dict[str, Any]:
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
@@ -323,6 +324,7 @@ def build_evidence_fixture(
                 "provenance_filter": retriever_info.get("provenance_filter"),
                 "source_binding": source_binding_metadata,
                 "source_family_filter": source_family_filter_metadata,
+                "use_precomputed_hits": bool(use_precomputed_retrieval_hits),
             },
         }
         if include_label_metadata:
@@ -354,6 +356,7 @@ def build_evidence_fixture(
             "n_corpus_documents": len(documents),
             "source_family_filter": source_family_filter,
             "source_binding": _source_binding_retriever_summary(source_binding_index),
+            "use_precomputed_hits": bool(use_precomputed_retrieval_hits),
         },
         "summary": {
             "n_records": len(records),
@@ -389,6 +392,7 @@ def build_evidence_input_provenance(
     max_retrieval_hits_per_source: int | None = None,
     source_family_filter: str = "off",
     source_binding_queue_path: str | Path | None = None,
+    use_precomputed_retrieval_hits: bool = False,
 ) -> dict[str, Any]:
     """Build input fingerprints and builder settings for fixture reproducibility."""
     score_dump_obj = _coerce_score_dump_for_metadata(score_dump)
@@ -419,6 +423,7 @@ def build_evidence_input_provenance(
             ),
             "source_family_filter": source_family_filter,
             "source_binding_queue_path": None if source_binding_queue_path is None else str(source_binding_queue_path),
+            "use_precomputed_retrieval_hits": bool(use_precomputed_retrieval_hits),
         },
     }
 
@@ -454,6 +459,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
         source_family_filter=getattr(args, "source_family_filter", "off"),
         source_binding_queue=source_binding_queue,
+        use_precomputed_retrieval_hits=bool(getattr(args, "use_precomputed_retrieval_hits", False)),
     )
     fixture["input_provenance"] = build_evidence_input_provenance(
         scores_path=scores_path,
@@ -473,6 +479,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
         source_family_filter=getattr(args, "source_family_filter", "off"),
         source_binding_queue_path=source_binding_queue_path,
+        use_precomputed_retrieval_hits=bool(getattr(args, "use_precomputed_retrieval_hits", False)),
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1569,6 +1576,8 @@ def main() -> None:
                         help="optionally filter or rerank retrieved evidence by planned source-family compatibility")
     parser.add_argument("--source-binding-queue", default=None,
                         help="optional evidence queue JSON used to bind retrieval to matching source requests")
+    parser.add_argument("--use-precomputed-retrieval-hits", action="store_true",
+                        help="mark fixture hits as already retrieved so verifier ensemble skips second-pass retrieval")
     run(parser.parse_args())
 
 
