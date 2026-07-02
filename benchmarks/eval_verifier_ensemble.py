@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import math
+import re
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -56,6 +57,7 @@ from eigentruth.eval.score_dump import (
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
+    EvidenceAlignmentVerifier,
     FactSelfConsistencyVerifier,
     GroundednessVerifier,
     JsonTraceCache,
@@ -77,11 +79,14 @@ _VERIFIER_CACHE_KEY_MODES = {
     "groundedness_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "triple_evidence_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "retrieval_qa_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "retrieval_alignment_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "fact_selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
     "state_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
     "transition_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
 }
+_NUMBER_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_])-?\d+(?:,\d{3})*(?:\.\d+)?%?")
+_CITATION_TOKEN_RE = re.compile(r"\[[A-Za-z0-9_.:/#?=&%+-]{1,80}\]|(?:doi|arxiv):\S+", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -616,6 +621,7 @@ def _verify_records(
     groundedness_runners: dict[str, CachedVerifier] = {}
     triple_evidence_runners: dict[str, CachedVerifier] = {}
     retrieval_qa_runners: dict[str, CachedVerifier] = {}
+    retrieval_alignment_runners: dict[str, CachedVerifier] = {}
     selfcheck_runners: dict[str, CachedVerifier] = {}
     fact_selfcheck_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
@@ -690,6 +696,36 @@ def _verify_records(
             return None
         runner = CachedVerifier(verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
         retrieval_qa_runners[key] = runner
+        return runner
+
+    def retrieval_alignment_runner(
+        documents: Sequence[Mapping[str, Any] | str],
+    ) -> CachedVerifier:
+        key = stable_cache_key({
+            "documents": documents,
+            "verifier": "EvidenceAlignmentVerifier",
+            "policy": {
+                "min_keyword_overlap": 0.2,
+                "min_number_recall": 1.0,
+                "min_entity_recall": 0.5,
+                "require_cited_evidence": False,
+            },
+        })
+        runner = retrieval_alignment_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                EvidenceAlignmentVerifier(
+                    evidence=documents,
+                    policy={
+                        "min_keyword_overlap": 0.2,
+                        "min_number_recall": 1.0,
+                        "min_entity_recall": 0.5,
+                        "require_cited_evidence": False,
+                    },
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
+            retrieval_alignment_runners[key] = runner
         return runner
 
     def selfcheck_runner(samples: Sequence[Mapping[str, Any] | str]) -> CachedVerifier:
@@ -786,6 +822,7 @@ def _verify_records(
         selfcheck_result = None
         fact_selfcheck_result = None
         retrieval_qa_result = None
+        retrieval_alignment_result = None
         attempted_routes = []
         route_timings: list[dict[str, Any]] = []
         if qa_runner is not None:
@@ -1083,6 +1120,26 @@ def _verify_records(
                 if final.status in {
                     VerificationStatus.INSUFFICIENT_EVIDENCE,
                     VerificationStatus.NOT_APPLICABLE,
+                } and hit_documents and _record_has_retrieval_alignment_signal(record):
+                    attempted_routes.append("retrieval_groundedness")
+                    retrieval_alignment_result = _timed_verify(
+                        route_timings,
+                        route="retrieval_groundedness",
+                        runner=retrieval_alignment_runner(hit_documents),
+                        claim=record.claim,
+                        context={"statement": record.metadata.get("statement", {})},
+                    )
+                    if retrieval_alignment_result.status in {
+                        VerificationStatus.SUPPORTED,
+                        VerificationStatus.REFUTED,
+                    }:
+                        final = retrieval_alignment_result
+                        selected_route = "retrieval_groundedness"
+                        selected_verifier = "EvidenceAlignmentVerifier"
+                        selected_retrieval_hits = hit_documents
+                if final.status in {
+                    VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    VerificationStatus.NOT_APPLICABLE,
                 } and hit_documents:
                     attempted_routes.append("retrieval_groundedness")
                     final_evidence = tuple(record.initial_evidence) + hit_documents
@@ -1116,6 +1173,9 @@ def _verify_records(
             "fact_selfcheck": None if fact_selfcheck_result is None else _verification_to_dict(fact_selfcheck_result),
             "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
             "retrieval_qa": None if retrieval_qa_result is None else _verification_to_dict(retrieval_qa_result),
+            "retrieval_alignment": (
+                None if retrieval_alignment_result is None else _verification_to_dict(retrieval_alignment_result)
+            ),
             "retrieval_hits": selected_retrieval_hits,
             "route": _route_metadata(
                 selected_route=selected_route,
@@ -1171,6 +1231,10 @@ def _verify_records(
             combine_cache_stats(*(runner.stats.to_dict() for runner in retrieval_qa_runners.values())),
             _TEXT_VERIFIER_CACHE_KEY_MODE,
         )
+        retrieval_alignment_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in retrieval_alignment_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
         selfcheck_stats = _cache_stats_with_key_mode(
             combine_cache_stats(*(runner.stats.to_dict() for runner in selfcheck_runners.values())),
             _TEXT_VERIFIER_CACHE_KEY_MODE,
@@ -1197,6 +1261,10 @@ def _verify_records(
                 **retrieval_qa_stats,
                 "instances": len(retrieval_qa_runners),
             },
+            "retrieval_alignment_verifiers": {
+                **retrieval_alignment_stats,
+                "instances": len(retrieval_alignment_runners),
+            },
             "selfcheck_verifiers": {
                 **selfcheck_stats,
                 "instances": len(selfcheck_runners),
@@ -1216,6 +1284,7 @@ def _verify_records(
                 groundedness_stats,
                 triple_evidence_stats,
                 retrieval_qa_stats,
+                retrieval_alignment_stats,
                 selfcheck_stats,
                 fact_selfcheck_stats,
                 retriever_stats,
@@ -1244,6 +1313,23 @@ def _record_has_triple_evidence(record: ClaimEvidenceRecord) -> bool:
             for key in ("has_number", "has_citation", "is_time_sensitive")
         )
     return False
+
+
+def _record_has_retrieval_alignment_signal(record: ClaimEvidenceRecord) -> bool:
+    metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
+    features = metadata.get("features", {})
+    if isinstance(features, Mapping) and any(
+        flag_value_enabled(features.get(key))
+        for key in ("has_number", "has_citation", "is_time_sensitive")
+    ):
+        return True
+    statement = record.metadata.get("statement", {})
+    answer = ""
+    if isinstance(statement, Mapping):
+        answer = str(statement.get("answer", "")).strip()
+    if not answer:
+        answer = str(metadata.get("answer", "")).strip()
+    return bool(_NUMBER_TOKEN_RE.search(answer) or _CITATION_TOKEN_RE.search(answer))
 
 
 def _retrieval_document_payloads(
@@ -2177,7 +2263,7 @@ def _verification_trace_cache_key(
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v6",
+        "builder": "eval_verifier_ensemble:verified_records:v7",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -2224,6 +2310,16 @@ def _verification_trace_cache_key(
             "type": "TripleEvidenceVerifier",
             "enabled": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+        },
+        "retrieval_alignment_verifier": {
+            "type": "EvidenceAlignmentVerifier",
+            "enabled_for_numeric_or_cited_answers": True,
+            "policy": {
+                "min_keyword_overlap": 0.2,
+                "min_number_recall": 1.0,
+                "min_entity_recall": 0.5,
+                "require_cited_evidence": False,
+            },
         },
         "transition_verifier": {
             "type": "StateTransitionVerifier",
@@ -2683,7 +2779,7 @@ def build_verifier_ensemble_report(
                             "cache_stats": dict(run_cache_stats),
                         },
                         metadata={
-                            "builder": "eval_verifier_ensemble:verified_records:v6",
+                            "builder": "eval_verifier_ensemble:verified_records:v7",
                             "name": name,
                             "signal": signal,
                             "material": trace_material,
@@ -2778,6 +2874,21 @@ def build_verifier_ensemble_report(
                         1 for record in verified_records
                         if record.get("retrieval_qa") is not None
                         and record["retrieval_qa"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                },
+                "retrieval_alignment": {
+                    "enabled": any(record.get("retrieval_alignment") is not None for record in verified_records),
+                    "records_with_signal": sum(
+                        1 for record in records
+                        if _record_has_retrieval_alignment_signal(record)
+                    ),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("retrieval_alignment") is not None
+                        and record["retrieval_alignment"]["status"] in {
                             VerificationStatus.SUPPORTED.value,
                             VerificationStatus.REFUTED.value,
                         }
@@ -2969,6 +3080,22 @@ def build_verifier_ensemble_report(
                 if isinstance(run.get("retrieval_qa"), Mapping)
             ),
             "source": "retrieval_hits",
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
+        },
+        "retrieval_alignment_verifier": {
+            "type": "EvidenceAlignmentVerifier",
+            "enabled": any(
+                bool(run.get("retrieval_alignment", {}).get("enabled"))
+                for run in runs
+                if isinstance(run.get("retrieval_alignment"), Mapping)
+            ),
+            "source": "retrieval_hits",
+            "policy": {
+                "min_keyword_overlap": 0.2,
+                "min_number_recall": 1.0,
+                "min_entity_recall": 0.5,
+                "require_cited_evidence": False,
+            },
             "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "state_verifier": {

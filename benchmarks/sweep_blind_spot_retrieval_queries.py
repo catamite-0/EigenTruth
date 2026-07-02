@@ -31,6 +31,9 @@ from benchmarks.audit_blind_spot_correction_routes import (  # noqa: E402
     load_verified_records_jsonl,
 )
 from benchmarks.build_evidence_fixture import (  # noqa: E402
+    QUERY_FIELDS as EVIDENCE_QUERY_FIELDS,
+)
+from benchmarks.build_evidence_fixture import (  # noqa: E402
     build_evidence_fixture,
     load_corpus,
     load_score_dump,
@@ -39,8 +42,16 @@ from benchmarks.eval_verifier_ensemble import build_verifier_ensemble_report  # 
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
-QUERY_FIELDS = ("answer", "question", "question_answer", "text")
+QUERY_FIELDS = (
+    "answer",
+    "question",
+    "question_answer",
+    "text",
+    "citation_question",
+    "citation_entity",
+)
 DEFAULT_MIN_OVERLAPS = (0.95, 0.80, 0.65, 0.50)
+_SUPPORTED_QUERY_FIELDS = set(EVIDENCE_QUERY_FIELDS)
 
 
 def sweep_blind_spot_retrieval_queries(
@@ -459,9 +470,12 @@ def _query_fields(values: Sequence[str]) -> tuple[str, ...]:
     fields = tuple(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
     if not fields:
         raise ValueError("query_fields must not be empty.")
-    invalid = tuple(field for field in fields if field not in QUERY_FIELDS)
+    invalid = tuple(field for field in fields if field not in _SUPPORTED_QUERY_FIELDS)
     if invalid:
-        raise ValueError(f"query_fields contains unsupported values: {', '.join(invalid)}.")
+        raise ValueError(
+            "query_fields contains unsupported values: "
+            f"{', '.join(invalid)}. Supported values: {', '.join(EVIDENCE_QUERY_FIELDS)}."
+        )
     return fields
 
 

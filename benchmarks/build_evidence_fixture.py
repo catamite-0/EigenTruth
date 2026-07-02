@@ -32,8 +32,18 @@ from eigentruth.eval.score_dump import (
     load_score_dump as _load_validated_score_dump,
 )
 from eigentruth.registry import fingerprint_path
+from eigentruth.verify.search_planning import plan_citation_search_query
 
 RETRIEVER_BACKENDS = ("memory", "sqlite_fts", "auto")
+QUERY_FIELDS = (
+    "text",
+    "answer",
+    "question",
+    "question_answer",
+    "citation_question",
+    "citation_entity",
+)
+CITATION_QUERY_FIELDS = ("citation_question", "citation_entity")
 
 
 def load_score_dump(path: Path) -> dict[str, Any]:
@@ -80,8 +90,8 @@ def build_evidence_fixture(
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
         raise ValueError("retrieval_limit must be positive.")
-    if query_field not in {"text", "answer", "question", "question_answer"}:
-        raise ValueError("query_field must be one of: text, answer, question, question_answer.")
+    if query_field not in QUERY_FIELDS:
+        raise ValueError(f"query_field must be one of: {', '.join(QUERY_FIELDS)}.")
     if retriever_backend not in RETRIEVER_BACKENDS:
         raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
     if retriever_backend == "memory" and retriever_index_path is not None:
@@ -440,11 +450,42 @@ def _query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
         text = str(statement.get("question", "")).strip()
     elif query_field == "question_answer":
         text = f"{statement.get('question', '')} {statement.get('answer', '')}".strip()
+    elif query_field in CITATION_QUERY_FIELDS:
+        text = _citation_query_text(statement, query_field=query_field)
     else:
-        raise ValueError("query_field must be one of: text, answer, question, question_answer.")
+        raise ValueError(f"query_field must be one of: {', '.join(QUERY_FIELDS)}.")
     if not text:
         raise ValueError(f"statement record is missing query field {query_field!r}.")
     return text
+
+
+def _citation_query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
+    question = str(statement.get("question", "")).strip()
+    if not question:
+        raise ValueError(f"statement record is missing query field {query_field!r}.")
+    strategy = "claim_entity" if query_field == "citation_entity" else "question_and_query"
+    metadata = statement.get("metadata")
+    question_type = ""
+    if isinstance(metadata, Mapping):
+        question_type = str(metadata.get("question_type") or "").strip()
+    question_type = str(statement.get("question_type") or question_type).strip()
+    plan = plan_citation_search_query(
+        question=question,
+        candidate_query="",
+        question_type=question_type,
+        strategy=strategy,
+    )
+    source_plan = plan.source_family_plan
+    source_hints = () if source_plan is None else tuple(source_plan.query_hints)
+    return " ".join(
+        part
+        for part in (
+            plan.query,
+            *tuple(plan.alternate_queries),
+            *source_hints,
+        )
+        if str(part).strip()
+    ).strip()
 
 
 def _documents_from_json(path: Path) -> list[RetrievalHit]:
@@ -545,7 +586,7 @@ def main() -> None:
     parser.add_argument("--retriever-backend", choices=RETRIEVER_BACKENDS, default="memory")
     parser.add_argument("--retriever-index-path", default=None,
                         help="optional persistent SQLite FTS index path for sqlite_fts/auto backends")
-    parser.add_argument("--query-field", choices=("text", "answer", "question", "question_answer"), default="text",
+    parser.add_argument("--query-field", choices=QUERY_FIELDS, default="text",
                         help="statement field used for retrieval query; claim text remains unchanged")
     parser.add_argument("--omit-label-metadata", action="store_true",
                         help="do not copy score labels into fixture record metadata")

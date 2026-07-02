@@ -9418,6 +9418,178 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
 
 
+def test_build_evidence_fixture_supports_citation_safe_query_fields():
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [1],
+        "scores": {"truth_proj": [0.9]},
+        "statements": [
+            {
+                "question": "What is the population of the country?",
+                "answer": "The population of the country is 330 million.",
+                "text": "What is the population of the country? The population of the country is 330 million.",
+                "metadata": {"question_type": "quantity"},
+            },
+        ],
+    }
+    corpus = (
+        {
+            "text": (
+                "World Bank official statistics data: Afghanistan had Population, total "
+                "of 42,647,492 in 2024."
+            ),
+            "source": "worldbank:population",
+            "metadata": {
+                "retrieval_index_text": (
+                    "What is the population of the country? population country "
+                    "official statistics data reference"
+                ),
+            },
+        },
+    )
+
+    fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.45,
+        retrieval_limit=1,
+        query_field="citation_question",
+        include_label_metadata=False,
+    )
+    entity_fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.45,
+        retrieval_limit=1,
+        query_field="citation_entity",
+        include_label_metadata=False,
+    )
+    query = fixture["records"][0]["metadata"]["retrieval"]["query"]
+
+    assert fixture["summary"]["records_with_hits"] == 1
+    assert fixture["records"][0]["retrieval_documents"][0]["source"] == "worldbank:population"
+    assert fixture["records"][0]["metadata"]["retrieval"]["query_field"] == "citation_question"
+    assert "330 million" not in query
+    assert "population country" in query
+    assert entity_fixture["summary"]["records_with_hits"] == 1
+    assert entity_fixture["records"][0]["metadata"]["retrieval"]["query_field"] == "citation_entity"
+
+
+def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 0, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.3, 0.9]},
+            "statements": [
+                {
+                    "question": "What is the population of the country?",
+                    "answer": "The population of the country is 42,647,492.",
+                    "text": "What is the population of the country? The population of the country is 42,647,492.",
+                },
+                {
+                    "question": "What is the population of the country?",
+                    "answer": "The population of the country is 42,647,492.",
+                    "text": "What is the population of the country? The population of the country is 42,647,492.",
+                },
+                {
+                    "question": "What is the population of the country?",
+                    "answer": "The population of the country is 42,647,492.",
+                    "text": "What is the population of the country? The population of the country is 42,647,492.",
+                },
+                {
+                    "question": "What is the population of the country?",
+                    "answer": "The population of the country is 330 million.",
+                    "text": "What is the population of the country? The population of the country is 330 million.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "What is the population of the country? The population of the country is 42,647,492.",
+                    "claim_id": "c1",
+                    "retrieval_documents": [
+                        {
+                            "text": (
+                                "World Bank official statistics: Afghanistan had Population, total "
+                                "of 42,647,492 in 2024."
+                            ),
+                            "source": "worldbank:population",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the population of the country? The population of the country is 42,647,492.",
+                    "claim_id": "c2",
+                    "retrieval_documents": [
+                        {
+                            "text": (
+                                "World Bank official statistics: Afghanistan had Population, total "
+                                "of 42,647,492 in 2024."
+                            ),
+                            "source": "worldbank:population",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the population of the country? The population of the country is 42,647,492.",
+                    "claim_id": "c3",
+                    "retrieval_documents": [
+                        {
+                            "text": (
+                                "World Bank official statistics: Afghanistan had Population, total "
+                                "of 42,647,492 in 2024."
+                            ),
+                            "source": "worldbank:population",
+                        },
+                    ],
+                },
+                {
+                    "claim": "What is the population of the country? The population of the country is 330 million.",
+                    "claim_id": "c4",
+                    "retrieval_documents": [
+                        {
+                            "text": (
+                                "World Bank official statistics: Afghanistan had Population, total "
+                                "of 42,647,492 in 2024."
+                            ),
+                            "source": "worldbank:population",
+                        },
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=0.0,
+        retrieval_limit=1,
+    )
+    run = payload["runs"][0]
+    route = run["route_summary"]["by_route"]["retrieval_groundedness"]
+
+    assert payload["retrieval_alignment_verifier"]["enabled"] is True
+    assert run["retrieval_alignment"]["decided_records"] == 1
+    assert route["statuses"]["refuted"] == 1
+    assert run["route_quality"]["retrieval_groundedness"]["false_refuted_rate"] == pytest.approx(1.0)
+
+
 def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifier_path(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
@@ -54996,6 +55168,17 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
     assert record.metadata["workflow"] == "blind_spot_retrieval_query_sweep"
     assert record.metadata["best_passing_strategy"] == "question_answer_overlap_0p5"
     assert record.metadata["suite"] == "unit"
+
+
+def test_sweep_blind_spot_retrieval_queries_allows_citation_safe_query_fields():
+    module = importlib.import_module("benchmarks.sweep_blind_spot_retrieval_queries")
+
+    assert "citation_question" in module.QUERY_FIELDS
+    assert "citation_entity" in module.QUERY_FIELDS
+    assert module._query_fields(("citation_question", "citation_entity")) == (
+        "citation_question",
+        "citation_entity",
+    )
 
 
 def test_compare_blind_spot_query_sweeps_blocks_controlled_only_signal(tmp_path):
