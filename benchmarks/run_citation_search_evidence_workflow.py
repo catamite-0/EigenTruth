@@ -148,6 +148,7 @@ def run(
             corpus_paths=(corpus_path,),
             blind_spots_path=blind_spots_path,
             output_path=paths["query_sweep"],
+            source_binding_queue_path=queue_report_path,
             query_fields=query_fields,
             retriever_min_overlaps=retriever_min_overlaps,
             retrieval_limit=retrieval_limit,
@@ -196,6 +197,7 @@ def run(
             "adapter_results": str(adapter_results_path),
             "scores": str(scores_path),
             "blind_spots": str(blind_spots_path),
+            "source_binding_queue": str(queue_report_path),
             "controlled_sweeps": tuple(str(path) for path in controlled_sweep_paths),
         },
         "config": {

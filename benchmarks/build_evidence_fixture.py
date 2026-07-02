@@ -9,6 +9,7 @@ fixture record per score row.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -32,6 +33,7 @@ from eigentruth.eval.score_dump import (
 from eigentruth.eval.score_dump import (
     load_score_dump as _load_validated_score_dump,
 )
+from eigentruth.json_utils import strict_json_dumps
 from eigentruth.registry import fingerprint_path
 from eigentruth.verify.protocols import Claim
 from eigentruth.verify.search_planning import SOURCE_FAMILY_NAMES, plan_citation_search_query
@@ -196,6 +198,7 @@ def build_evidence_fixture(
     required_retrieval_metadata: Mapping[str, Any] | None = None,
     max_retrieval_hits_per_source: int | None = None,
     source_family_filter: str = "off",
+    source_binding_queue: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
@@ -213,28 +216,40 @@ def build_evidence_fixture(
         raise ValueError("labels and statements must have the same length.")
 
     documents = tuple(corpus_documents)
+    source_binding_index = _source_binding_index(source_binding_queue)
+    source_binding_document_cache: dict[tuple[str, ...], tuple[RetrievalHit | Mapping[str, Any] | str, ...]] = {}
+    source_binding_retriever_cache: dict[tuple[str, ...], tuple[Any, Mapping[str, Any]]] = {}
     index_path = None if retriever_index_path is None else Path(retriever_index_path)
+    provenance_filter = _retrieval_provenance_filter_config(
+        require_source=require_retrieval_source,
+        allowed_source_prefixes=allowed_retrieval_source_prefixes,
+        denied_source_prefixes=denied_retrieval_source_prefixes,
+        min_score=min_retrieval_score,
+        required_metadata=required_retrieval_metadata,
+        max_hits_per_source=max_retrieval_hits_per_source,
+    )
     retriever, retriever_info = _build_retriever(
         documents,
         min_overlap=retriever_min_overlap,
         backend=retriever_backend,
         index_path=index_path,
-        provenance_filter=_retrieval_provenance_filter_config(
-            require_source=require_retrieval_source,
-            allowed_source_prefixes=allowed_retrieval_source_prefixes,
-            denied_source_prefixes=denied_retrieval_source_prefixes,
-            min_score=min_retrieval_score,
-            required_metadata=required_retrieval_metadata,
-            max_hits_per_source=max_retrieval_hits_per_source,
-        ),
+        provenance_filter=provenance_filter,
     )
     records = []
     total_hits = 0
     total_candidate_hits = 0
     total_source_family_filtered_hits = 0
+    source_bound_record_count = 0
+    source_bound_hit_record_count = 0
+    source_binding_fallback_count = 0
     for idx, (label, statement) in enumerate(zip(labels, statements), start=1):
         claim_text = _statement_text(statement)
         claim_id = str(statement.get("claim_id") or f"c{idx}")
+        source_binding_keys = _statement_source_binding_keys(
+            idx - 1,
+            statement,
+            source_binding_index=source_binding_index,
+        )
         retrieval_queries, query_metadata = _retrieval_query_bundle(
             statement,
             query_field=query_field,
@@ -245,11 +260,23 @@ def build_evidence_fixture(
             retrieval_limit,
             source_family_filter=source_family_filter,
         )
-        raw_candidate_hits = tuple(
-            hit
-            for query in retrieval_queries
-            for hit in retriever.retrieve(query, limit=candidate_limit)
+        raw_candidate_hits, source_binding_metadata = _retrieve_with_optional_source_binding(
+            retrieval_queries,
+            retriever=retriever,
+            documents=documents,
+            binding_keys=source_binding_keys,
+            candidate_limit=candidate_limit,
+            min_overlap=retriever_min_overlap,
+            provenance_filter=provenance_filter,
+            document_cache=source_binding_document_cache,
+            retriever_cache=source_binding_retriever_cache,
         )
+        if source_binding_metadata["requested"]:
+            source_bound_record_count += 1
+        if source_binding_metadata["mode"] == "exact":
+            source_bound_hit_record_count += 1
+        if source_binding_metadata["fallback"]:
+            source_binding_fallback_count += 1
         candidate_hits, duplicate_candidate_hits = (
             _deduplicate_retrieval_hits(raw_candidate_hits)
             if len(retrieval_queries) > 1
@@ -294,6 +321,7 @@ def build_evidence_fixture(
                 "duplicate_candidate_hit_count": duplicate_candidate_hits,
                 "query_plan": query_metadata,
                 "provenance_filter": retriever_info.get("provenance_filter"),
+                "source_binding": source_binding_metadata,
                 "source_family_filter": source_family_filter_metadata,
             },
         }
@@ -325,6 +353,7 @@ def build_evidence_fixture(
             "query_field": query_field,
             "n_corpus_documents": len(documents),
             "source_family_filter": source_family_filter,
+            "source_binding": _source_binding_retriever_summary(source_binding_index),
         },
         "summary": {
             "n_records": len(records),
@@ -332,6 +361,9 @@ def build_evidence_fixture(
             "total_hits": total_hits,
             "total_candidate_hits": total_candidate_hits,
             "source_family_filtered_hits": total_source_family_filtered_hits,
+            "source_bound_record_count": source_bound_record_count,
+            "source_bound_hit_record_count": source_bound_hit_record_count,
+            "source_binding_fallback_count": source_binding_fallback_count,
             "average_hits_per_record": float(total_hits) / len(records) if records else 0.0,
         },
         "records": records,
@@ -356,6 +388,7 @@ def build_evidence_input_provenance(
     required_retrieval_metadata: Mapping[str, Any] | None = None,
     max_retrieval_hits_per_source: int | None = None,
     source_family_filter: str = "off",
+    source_binding_queue_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build input fingerprints and builder settings for fixture reproducibility."""
     score_dump_obj = _coerce_score_dump_for_metadata(score_dump)
@@ -367,6 +400,9 @@ def build_evidence_input_provenance(
         "score_dump": score_dump_file_metadata(scores_path, score_dump_obj),
         "corpora": [fingerprint_path(path).to_dict() for path in corpus_paths],
         "retriever_index": None if index_path is None else fingerprint_path(index_path).to_dict(),
+        "source_binding_queue": (
+            None if source_binding_queue_path is None else fingerprint_path(source_binding_queue_path).to_dict()
+        ),
         "config": {
             "retriever_backend": retriever_backend,
             "retriever_min_overlap": float(retriever_min_overlap),
@@ -382,6 +418,7 @@ def build_evidence_input_provenance(
                 max_hits_per_source=max_retrieval_hits_per_source,
             ),
             "source_family_filter": source_family_filter,
+            "source_binding_queue_path": None if source_binding_queue_path is None else str(source_binding_queue_path),
         },
     }
 
@@ -397,6 +434,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     dump = validated_dump.to_mapping()
     corpus = load_corpus(corpus_paths)
+    source_binding_queue_path = getattr(args, "source_binding_queue", None)
+    source_binding_queue = None if source_binding_queue_path is None else _load_json_object(source_binding_queue_path)
     include_label_metadata = not bool(args.omit_label_metadata)
     fixture = build_evidence_fixture(
         dump,
@@ -414,6 +453,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
         max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
         source_family_filter=getattr(args, "source_family_filter", "off"),
+        source_binding_queue=source_binding_queue,
     )
     fixture["input_provenance"] = build_evidence_input_provenance(
         scores_path=scores_path,
@@ -432,6 +472,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
         max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
         source_family_filter=getattr(args, "source_family_filter", "off"),
+        source_binding_queue_path=source_binding_queue_path,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -590,6 +631,188 @@ def _provenance_filter_enabled(config: Mapping[str, Any]) -> bool:
         or bool(config.get("required_metadata"))
         or config.get("max_hits_per_source") is not None
     )
+
+
+def _source_binding_index(queue_report: Mapping[str, Any] | None) -> dict[int, tuple[str, ...]]:
+    if queue_report is None:
+        return {}
+    requests = _mapping_sequence(queue_report.get("adapter_requests", ()))
+    by_record: dict[int, set[str]] = {}
+    for request in requests:
+        record_index = _request_record_index(request)
+        if record_index is None:
+            continue
+        keys = _request_source_binding_keys(request)
+        if keys:
+            by_record.setdefault(record_index, set()).update(keys)
+    return {
+        record_index: tuple(sorted(keys))
+        for record_index, keys in sorted(by_record.items())
+        if keys
+    }
+
+
+def _statement_source_binding_keys(
+    record_index: int,
+    statement: Mapping[str, Any],
+    *,
+    source_binding_index: Mapping[int, Sequence[str]],
+) -> tuple[str, ...]:
+    explicit_keys = _source_binding_keys_from_mapping(statement)
+    metadata = statement.get("metadata")
+    if isinstance(metadata, Mapping):
+        explicit_keys.update(_source_binding_keys_from_mapping(metadata))
+    if explicit_keys:
+        return tuple(sorted(explicit_keys))
+    return tuple(source_binding_index.get(int(record_index), ()))
+
+
+def _request_source_binding_keys(request: Mapping[str, Any]) -> set[str]:
+    keys = _source_binding_keys_from_mapping(request)
+    metadata = request.get("metadata")
+    if isinstance(metadata, Mapping):
+        keys.update(_source_binding_keys_from_mapping(metadata))
+    keys.add(_sha256_json(_minimal_source_request_fingerprint(request)))
+    return {key for key in keys if key}
+
+
+def _request_record_index(request: Mapping[str, Any]) -> int | None:
+    for key in ("record_index", "source_index", "row_index"):
+        value = _optional_int(request.get(key))
+        if value is not None and value >= 0:
+            return value
+    for key in ("target_id", "record_id", "source_request_id", "queue_id", "request_id"):
+        match = re.search(r"(?:record|row|source)[-_:]?(\d+)", str(request.get(key) or ""), flags=re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def _minimal_source_request_fingerprint(request: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "queue_id": request.get("queue_id"),
+        "source_request_id": request.get("source_request_id"),
+        "adapter_family": request.get("adapter_family"),
+        "request_type": request.get("request_type"),
+        "question": request.get("question"),
+        "query": request.get("query"),
+    }
+
+
+def _sha256_json(value: Mapping[str, Any]) -> str:
+    return hashlib.sha256(strict_json_dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def _retrieve_with_optional_source_binding(
+    queries: Sequence[RetrievalQuery],
+    *,
+    retriever,
+    documents: Sequence[RetrievalHit | Mapping[str, Any] | str],
+    binding_keys: Sequence[str],
+    candidate_limit: int,
+    min_overlap: float,
+    provenance_filter: Mapping[str, Any] | None,
+    document_cache: dict[tuple[str, ...], tuple[RetrievalHit | Mapping[str, Any] | str, ...]],
+    retriever_cache: dict[tuple[str, ...], tuple[Any, Mapping[str, Any]]],
+) -> tuple[tuple[RetrievalHit, ...], dict[str, Any]]:
+    key_tuple = tuple(sorted(dict.fromkeys(str(key).strip() for key in binding_keys if str(key).strip())))
+    metadata: dict[str, Any] = {
+        "requested": bool(key_tuple),
+        "mode": "none",
+        "fallback": False,
+        "binding_key_count": len(key_tuple),
+        "bound_document_count": 0,
+        "bound_candidate_hit_count": 0,
+        "fallback_candidate_hit_count": 0,
+    }
+    if not key_tuple:
+        return _retrieve_candidates(queries, retriever=retriever, limit=candidate_limit), metadata
+
+    bound_documents = document_cache.get(key_tuple)
+    if bound_documents is None:
+        bound_documents = _source_bound_documents(documents, key_tuple)
+        document_cache[key_tuple] = bound_documents
+    metadata["bound_document_count"] = len(bound_documents)
+    if bound_documents:
+        cached = retriever_cache.get(key_tuple)
+        if cached is None:
+            cached = _build_retriever(
+                bound_documents,
+                min_overlap=float(min_overlap),
+                backend="memory",
+                index_path=None,
+                provenance_filter=provenance_filter,
+            )
+            retriever_cache[key_tuple] = cached
+        bound_retriever, bound_info = cached
+        bound_hits = _retrieve_candidates(queries, retriever=bound_retriever, limit=candidate_limit)
+        metadata["bound_candidate_hit_count"] = len(bound_hits)
+        metadata["bound_actual_backend"] = bound_info.get("actual_backend")
+        if bound_hits:
+            metadata["mode"] = "exact"
+            return bound_hits, metadata
+        metadata["mode"] = "fallback_no_bound_hits"
+    else:
+        metadata["mode"] = "fallback_no_bound_documents"
+
+    fallback_hits = _retrieve_candidates(queries, retriever=retriever, limit=candidate_limit)
+    metadata["fallback"] = True
+    metadata["fallback_candidate_hit_count"] = len(fallback_hits)
+    return fallback_hits, metadata
+
+
+def _retrieve_candidates(
+    queries: Sequence[RetrievalQuery],
+    *,
+    retriever,
+    limit: int,
+) -> tuple[RetrievalHit, ...]:
+    return tuple(hit for query in queries for hit in retriever.retrieve(query, limit=limit))
+
+
+def _source_bound_documents(
+    documents: Sequence[RetrievalHit | Mapping[str, Any] | str],
+    binding_keys: Sequence[str],
+) -> tuple[RetrievalHit | Mapping[str, Any] | str, ...]:
+    keys = set(binding_keys)
+    return tuple(
+        document
+        for document in documents
+        if keys & _document_source_binding_keys(document)
+    )
+
+
+def _document_source_binding_keys(document: RetrievalHit | Mapping[str, Any] | str) -> set[str]:
+    if isinstance(document, RetrievalHit):
+        keys = _source_binding_keys_from_mapping(document.metadata)
+        return keys
+    if isinstance(document, Mapping):
+        keys = _source_binding_keys_from_mapping(document)
+        metadata = document.get("metadata")
+        if isinstance(metadata, Mapping):
+            keys.update(_source_binding_keys_from_mapping(metadata))
+        return keys
+    return set()
+
+
+def _source_binding_keys_from_mapping(payload: Mapping[str, Any]) -> set[str]:
+    keys: set[str] = set()
+    for field_name in (
+        "source_queue_request_sha256",
+        "source_request_sha256",
+        "collection_request_sha256",
+    ):
+        keys.update(_string_tuple(payload.get(field_name)))
+    return {key for key in keys if key}
+
+
+def _source_binding_retriever_summary(index: Mapping[int, Sequence[str]]) -> dict[str, Any]:
+    key_count = sum(len(tuple(keys)) for keys in index.values())
+    return {
+        "enabled": bool(index),
+        "bound_record_count": len(index),
+        "binding_key_count": key_count,
+    }
 
 
 def _clean_string_tuple(values: Sequence[str], *, name: str) -> tuple[str, ...]:
@@ -1285,6 +1508,36 @@ def _parse_key_values(values: Sequence[str] | None) -> dict[str, str]:
     return metadata
 
 
+def _load_json_object(path: str | Path) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{path} must contain a JSON object.")
+    return dict(payload)
+
+
+def _mapping_sequence(value: Any) -> tuple[Mapping[str, Any], ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(item for item in value if isinstance(item, Mapping))
+    return ()
+
+
+def _string_tuple(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return tuple(item.strip() for item in value.split(",") if item.strip())
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item).strip() for item in value if str(item).strip())
+    return ()
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build local evidence fixture for verifier ensemble benchmarks")
     parser.add_argument("--scores", required=True, help="statement-bearing score dump")
@@ -1314,6 +1567,8 @@ def main() -> None:
                         help="maximum accepted hits per source before verifier evidence handoff")
     parser.add_argument("--source-family-filter", choices=SOURCE_FAMILY_FILTERS, default="off",
                         help="optionally filter or rerank retrieved evidence by planned source-family compatibility")
+    parser.add_argument("--source-binding-queue", default=None,
+                        help="optional evidence queue JSON used to bind retrieval to matching source requests")
     run(parser.parse_args())
 
 

@@ -9662,6 +9662,91 @@ def test_build_evidence_fixture_supports_citation_safe_query_fields():
     assert entity_fixture["records"][0]["metadata"]["retrieval"]["query_field"] == "citation_entity"
 
 
+def test_build_evidence_fixture_binds_retrieval_to_source_queue_requests():
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    request_a = {
+        "queue_id": "queue:gamma:external_citation:1",
+        "source_request_id": "cite:record-0:1",
+        "adapter_family": "external_citation_search",
+        "request_type": "external_citation",
+        "record_index": 0,
+        "question": "What is Gamma?",
+        "query": "What is Gamma? wrong shared answer",
+    }
+    request_b = {
+        "queue_id": "queue:gamma:external_citation:2",
+        "source_request_id": "cite:record-1:1",
+        "adapter_family": "external_citation_search",
+        "request_type": "external_citation",
+        "record_index": 1,
+        "question": "What is Gamma?",
+        "query": "What is Gamma? wrong shared answer",
+    }
+    sha_a = builder._sha256_json(builder._minimal_source_request_fingerprint(request_a))
+    sha_b = builder._sha256_json(builder._minimal_source_request_fingerprint(request_b))
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [1, 1],
+        "scores": {"truth_proj": [0.9, 0.8]},
+        "statements": [
+            {
+                "question": "What is Gamma?",
+                "answer": "wrong shared answer",
+                "text": "What is Gamma? wrong shared answer",
+            },
+            {
+                "question": "What is Gamma?",
+                "answer": "wrong shared answer",
+                "text": "What is Gamma? wrong shared answer",
+            },
+        ],
+    }
+    corpus = (
+        {
+            "text": "Gamma source A states the verified Alpha-specific fact.",
+            "source": "source:a",
+            "metadata": {
+                "retrieval_index_text": "What is Gamma? wrong shared answer",
+                "source_queue_request_sha256": [sha_a],
+            },
+        },
+        {
+            "text": "Gamma source B states the verified Beta-specific fact.",
+            "source": "source:b",
+            "metadata": {
+                "retrieval_index_text": "What is Gamma? wrong shared answer",
+                "source_queue_request_sha256": [sha_b],
+            },
+        },
+    )
+
+    fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.5,
+        retrieval_limit=1,
+        query_field="question_answer",
+        include_label_metadata=False,
+        source_binding_queue={
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "adapter_requests": [request_a, request_b],
+        },
+    )
+    records = fixture["records"]
+
+    assert [record["retrieval_documents"][0]["source"] for record in records] == ["source:a", "source:b"]
+    assert fixture["retriever"]["source_binding"] == {
+        "enabled": True,
+        "bound_record_count": 2,
+        "binding_key_count": 2,
+    }
+    assert fixture["summary"]["source_bound_record_count"] == 2
+    assert fixture["summary"]["source_bound_hit_record_count"] == 2
+    assert fixture["summary"]["source_binding_fallback_count"] == 0
+    assert records[0]["metadata"]["retrieval"]["source_binding"]["mode"] == "exact"
+    assert records[1]["metadata"]["retrieval"]["source_binding"]["mode"] == "exact"
+
+
 def test_build_evidence_fixture_planned_source_family_filter_drops_incompatible_hits():
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     dump = {
@@ -60288,6 +60373,9 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     assert workflow_report["config"]["target_route"] == "retrieval_structured_qa"
     query_sweep_report = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
     assert query_sweep_report["config"]["target_route"] == "retrieval_structured_qa"
+    assert query_sweep_report["config"]["source_binding_enabled"] is True
+    assert query_sweep_report["source"]["source_binding_queue_path"] == str(queue_path)
+    assert query_sweep_report["strategies"][0]["retrieval"]["source_bound_record_count"] == 2
     assert "record_index" not in request_jsonl
     assert "target_id" not in request_jsonl
     assert "model_answer" not in request_jsonl
