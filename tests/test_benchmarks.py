@@ -37023,6 +37023,201 @@ def test_frontier_research_queue_input_collection_plan_maps_semantic_artifact_in
     assert payload["collection_requests"][0]["not_verifier_evidence"] is True
 
 
+def test_frontier_research_queue_input_collection_plan_maps_control_artifact_inputs():
+    collection_module = importlib.import_module(
+        "benchmarks.plan_frontier_research_queue_input_collection"
+    )
+
+    payload = collection_module.plan_frontier_research_queue_input_collection(
+        bound_command_plan={
+            "workflow": "frontier_research_queue_bound_command_plan",
+            "status": "needs_inputs",
+            "entries": (
+                {
+                    "entry_id": "frontier-research-0001",
+                    "action_id": "review_frontier_queue_command_bindings",
+                    "title": "Review frontier queue command bindings",
+                    "command_status": "needs_inputs",
+                    "binding_review_status": "needs_review",
+                    "evidence_routes": ("frontier_queue_execution",),
+                    "unbound_inputs": (
+                        "frontier_bound_command_plan",
+                        "frontier_command_bindings",
+                        "frontier_command_review_decisions",
+                        "bound_command_template_values",
+                    ),
+                    "bound_commands": (
+                        "python benchmarks/review_frontier_research_queue_command_bindings.py "
+                        "--bound-command-plan ... --base-bindings ... "
+                        "--review-decisions ... --output-dir ... --json ... "
+                        "--approved-bindings ... --artifact-manifest ...",
+                    ),
+                },
+            ),
+        },
+    )
+    requests = payload["collection_requests"]
+    control_requests = {request["input_name"]: request for request in requests}
+
+    assert payload["status"] == "needs_collection_and_review"
+    assert payload["summary"]["artifact_input_request_count"] == 3
+    assert payload["summary"]["artifact_family_counts"] == {
+        "frontier_bound_command_plan": 1,
+        "frontier_command_bindings": 1,
+        "frontier_command_review_decisions": 1,
+    }
+    assert control_requests["frontier_bound_command_plan"]["target_flag"] == (
+        "--bound-command-plan"
+    )
+    assert control_requests["frontier_command_bindings"]["target_flag"] == "--base-bindings"
+    assert control_requests["frontier_command_review_decisions"]["target_flag"] == (
+        "--review-decisions"
+    )
+    assert control_requests["frontier_command_review_decisions"][
+        "recommended_review_skeleton"
+    ]["allowed_label_use"] == "not_allowed"
+    assert all(request["lane"] == "frontier_queue_execution" for request in requests)
+    assert all(request["not_verifier_evidence"] is True for request in requests)
+    assert payload["review_requests"][0]["input_name"] == "bound_command_template_values"
+
+
+def test_frontier_research_queue_artifact_input_bindings_stage_control_artifacts(
+    tmp_path,
+):
+    collection_module = importlib.import_module(
+        "benchmarks.plan_frontier_research_queue_input_collection"
+    )
+    artifact_bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_artifact_inputs"
+    )
+
+    bound_plan_path = tmp_path / "frontier-bound-command-plan.json"
+    base_bindings_path = tmp_path / "frontier-command-bindings.json"
+    decisions_path = tmp_path / "command-review-decisions.jsonl"
+    artifact_manifest_path = tmp_path / "artifact-manifest.json"
+    for path, data in (
+        (
+            bound_plan_path,
+            {"workflow": "frontier_research_queue_bound_command_plan", "status": "ready"},
+        ),
+        (
+            base_bindings_path,
+            {"workflow": "frontier_research_queue_command_bindings", "status": "needs_review"},
+        ),
+        (
+            decisions_path,
+            {
+                "action_id": "review_frontier_queue_command_bindings",
+                "decision": "approved",
+                "not_verifier_evidence": True,
+            },
+        ),
+        (
+            artifact_manifest_path,
+            {"workflow": "artifact_manifest", "summary": {"missing_count": 0}},
+        ),
+    ):
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    collection_plan = collection_module.plan_frontier_research_queue_input_collection(
+        bound_command_plan={
+            "workflow": "frontier_research_queue_bound_command_plan",
+            "entries": (
+                {
+                    "entry_id": "frontier-research-0001",
+                    "action_id": "review_frontier_queue_command_bindings",
+                    "title": "Review frontier queue command bindings",
+                    "command_status": "needs_inputs",
+                    "binding_review_status": "needs_review",
+                    "evidence_routes": ("frontier_queue_execution",),
+                    "unbound_inputs": (
+                        "frontier_bound_command_plan",
+                        "frontier_command_bindings",
+                        "frontier_command_review_decisions",
+                    ),
+                    "bound_commands": (
+                        "python benchmarks/review_frontier_research_queue_command_bindings.py "
+                        "--bound-command-plan ... --base-bindings ... "
+                        "--review-decisions ... --output-dir out --json review.json "
+                        "--approved-bindings approved.json --artifact-manifest manifest.json",
+                    ),
+                },
+            ),
+        },
+    )
+    artifact_bindings_path = tmp_path / "artifact-bindings.jsonl"
+    artifact_rows = []
+    path_by_input = {
+        "frontier_bound_command_plan": bound_plan_path,
+        "frontier_command_bindings": base_bindings_path,
+        "frontier_command_review_decisions": decisions_path,
+    }
+    source_workflow_by_input = {
+        "frontier_bound_command_plan": "frontier_research_queue_bound_command_plan",
+        "frontier_command_bindings": "frontier_research_queue_command_bindings",
+        "frontier_command_review_decisions": (
+            "frontier_research_queue_command_binding_review_decisions"
+        ),
+    }
+    for request in collection_plan["collection_requests"]:
+        input_name = request["input_name"]
+        artifact_rows.append({
+            "collection_request_id": request["request_id"],
+            "action_id": request["action_id"],
+            "input_name": input_name,
+            "artifact_path": str(path_by_input[input_name]),
+            "artifact_manifest": str(artifact_manifest_path),
+            "source_workflow": source_workflow_by_input[input_name],
+            "allowed_label_use": "not_allowed",
+            "review_status": "approved",
+            "reviewer": "unit-test",
+            "reviewed_at": "2026-07-02T00:00:00Z",
+            "not_verifier_evidence": True,
+        })
+    artifact_bindings_path.write_text(
+        "\n".join(json.dumps(row) for row in artifact_rows) + "\n",
+        encoding="utf-8",
+    )
+    base_bindings = {
+        "workflow": "frontier_research_queue_command_bindings",
+        "bindings": {
+            "review_frontier_queue_command_bindings": {
+                "review_status": "needs_review",
+                "bound_commands": (
+                    "python benchmarks/review_frontier_research_queue_command_bindings.py "
+                    "--bound-command-plan ... --base-bindings ... "
+                    "--review-decisions ... --output-dir out --json review.json "
+                    "--approved-bindings approved.json --artifact-manifest manifest.json",
+                ),
+            },
+        },
+    }
+
+    payload = artifact_bind_module.bind_frontier_research_queue_artifact_inputs(
+        input_collection_plan=collection_plan,
+        base_bindings=base_bindings,
+        artifact_bindings=artifact_bindings_path,
+        output_dir=tmp_path / "artifact-staging",
+    )
+    binding = payload["updated_bindings"]["bindings"][
+        "review_frontier_queue_command_bindings"
+    ]
+    command = binding["bound_commands"][0]
+
+    assert payload["status"] == "ready_for_binding_review"
+    assert payload["summary"]["artifact_request_count"] == 3
+    assert payload["summary"]["approved_artifact_input_count"] == 3
+    assert payload["summary"]["applied_placeholder_count"] == 3
+    assert str(bound_plan_path) in command
+    assert str(base_bindings_path) in command
+    assert str(decisions_path) in command
+    assert len(binding["artifact_input_reviews"]) == 3
+    assert all(
+        review["not_verifier_evidence"] is True
+        for review in binding["artifact_input_reviews"]
+    )
+
+
 def test_frontier_research_queue_artifact_input_bindings_stage_semantic_artifacts(
     tmp_path,
 ):

@@ -137,6 +137,18 @@ REQUIRED_INPUT_FLAGS = {
         "product_trace_corpus": "--trace",
         "product_promotion_contract_source": "--promotion-contract",
     },
+    "benchmarks/bind_frontier_research_queue_command_plan.py": {
+        "frontier_command_plan": "--command-plan",
+        "approved_frontier_command_bindings": "--bindings",
+    },
+    "benchmarks/review_frontier_research_queue_command_bindings.py": {
+        "frontier_bound_command_plan": "--bound-command-plan",
+        "frontier_command_bindings": "--base-bindings",
+        "frontier_command_review_decisions": "--review-decisions",
+    },
+    "benchmarks/run_frontier_research_queue_bound_command_plan.py": {
+        "reviewed_frontier_bound_command_plan": "--bound-command-plan",
+    },
     "benchmarks/run_retrieval_semantic_gap_review_workflow.py": {
         "source_bound_verified_records_jsonl": "--verified-records-jsonl",
         "detectability_blind_spot_record_indices_json": "--record-indices-json",

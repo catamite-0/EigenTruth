@@ -4300,6 +4300,11 @@ queue command-binding review, approved re-bind, execution, or repair re-run
 steps. The templates keep output paths, registry keys, and source-backed
 binding sidecars as `...` placeholders, so the follow-up scaffold/bind/run
 steps still require review before anything executes.
+Command-plan, bindings, approved-bindings, review-decision, and bound-plan
+files are treated as local control-plane artifacts by
+`plan_frontier_research_queue_input_collection.py` and can be staged with
+`bind_frontier_research_queue_artifact_inputs.py` after explicit non-evidence
+review.
 
 The same reduced 12-task queue was also replayed through Crossref with a wider
 scholarly budget:
