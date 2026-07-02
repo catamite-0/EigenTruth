@@ -181,6 +181,12 @@ REQUIRED_COMMAND_FLAGS = {
         "--output-dir",
         "--json",
     ),
+    "benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py": (
+        "--input-fill-result-rollup",
+        "--output-dir",
+        "--json",
+        "--artifact-manifest",
+    ),
     "benchmarks/promote_world_model_rule_candidates.py": (
         "--rule-results",
         "--rule-inputs",
@@ -280,6 +286,9 @@ REQUIRED_INPUT_FLAGS = {
     },
     "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py": {
         "source_backed_entity_bindings": "--entity-bindings",
+    },
+    "benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py": {
+        "world_model_rule_input_fill_result_rollup": "--input-fill-result-rollup",
     },
 }
 

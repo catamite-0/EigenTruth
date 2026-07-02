@@ -35525,6 +35525,93 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     }
 
 
+def test_frontier_research_queue_command_plan_accepts_adapter_ready_fill_rollup(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    summary_path = tmp_path / "unresolved-summary.json"
+    rollup_path = tmp_path / "frontier-input-fill-result-rollup.json"
+    rollup_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_input_fill_result_rollup",
+            "status": "ready_for_adapter",
+        }),
+        encoding="utf-8",
+    )
+    summary_path.write_text(
+        json.dumps({
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {"input_fill_result_rollup": str(rollup_path)},
+            "next_actions": [
+                {
+                    "action_id": "run_world_model_rule_adapter_promotion_workflow",
+                    "lane": "world_model_rules",
+                    "priority": 85,
+                    "reason": "adapter-ready rule inputs need promotion",
+                    "combined_rule_input_count": 2,
+                    "combined_unfilled_task_count": 0,
+                    "input_fill_rule_family_counts": {
+                        "entity_disambiguation": 1,
+                        "quantity_or_arithmetic": 1,
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(source=summary_path)
+    entry = payload["entries"][0]
+    requirements = requirements_module.frontier_command_requirement_summary(
+        entry["command_templates"][0],
+        index=1,
+        required_inputs=entry["required_inputs"],
+    )
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(command_plan=payload)
+    placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold["entries"][0]["placeholder_records"]
+    }
+
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["entry_count"] == 1
+    assert entry["action_id"] == "run_world_model_rule_adapter_promotion_workflow"
+    assert entry["required_inputs"] == ()
+    assert entry["missing_inputs"] == ("bound_command_template_values",)
+    assert len(entry["command_templates"]) == 1
+    assert "run_frontier_research_queue_rule_adapter_promotion_workflow.py" in (
+        entry["command_templates"][0]
+    )
+    assert f"--input-fill-result-rollup {rollup_path}" in entry["command_templates"][0]
+    assert "--build-handoff" in entry["command_templates"][0]
+    assert "--build-evidence-bundle" in entry["command_templates"][0]
+    assert entry["metadata"]["workflow_keys"] == {
+        "source_summary_workflow": "unresolved_frontier_evidence_summary"
+    }
+    assert requirements["script"] == (
+        "benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py"
+    )
+    assert requirements["status"] == "ready"
+    assert placeholders[(1, "--output-dir")]["suggested_binding"] == {
+        "path": (
+            "artifacts/run-world-model-rule-adapter-promotion-workflow/command-1"
+        ),
+        "source": "derived_command_output_dir",
+    }
+    assert placeholders[(1, "--json")]["suggested_binding"] == {
+        "path": entry["planned_outputs"][0]["path"],
+        "source": "planned_output",
+    }
+    assert entry["planned_outputs"][0]["name"] == (
+        "frontier_rule_adapter_promotion_workflow_report"
+    )
+
+
 def test_frontier_research_queue_command_plan_accepts_requeued_entity_rules(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
@@ -60854,6 +60941,97 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     ])
     cli_payload = json.loads(cli_report_path.read_text(encoding="utf-8"))
     assert cli_payload["metadata"] == {"model": "unit", "source": "cli"}
+
+
+def test_unresolved_frontier_evidence_summary_surfaces_input_fill_rollup_adapter_ready(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
+    registry_module = importlib.import_module("eigentruth.registry")
+    rollup = {
+        "workflow": "frontier_research_queue_input_fill_result_rollup",
+        "status": "ready_for_adapter",
+        "summary": {
+            "combined_rule_input_count": 2,
+            "combined_unfilled_task_count": 0,
+            "blocked_fill_report_count": 0,
+            "duplicate_request_id_count": 0,
+            "rule_family_counts": {
+                "entity_disambiguation": 1,
+                "quantity_or_arithmetic": 1,
+            },
+        },
+        "downstream_adapter_command": {
+            "command": "benchmarks/run_world_model_rule_authoring_adapter.py --rule-stubs stubs.jsonl",
+            "ready_for_adapter": True,
+        },
+    }
+
+    payload = module.summarize_unresolved_frontier_evidence(
+        input_fill_result_rollup=rollup,
+        metadata={"suite": "unit"},
+    )
+    rules = payload["lanes"]["world_model_rules"]
+    adapter_action = next(
+        action
+        for action in payload["next_actions"]
+        if action["action_id"] == "run_world_model_rule_adapter_promotion_workflow"
+    )
+
+    assert rules["status"] == "ready_for_adapter"
+    assert rules["input_fill_result_rollup_status"] == "ready_for_adapter"
+    assert rules["input_fill_adapter_ready"] is True
+    assert rules["combined_rule_input_count"] == 2
+    assert rules["combined_unfilled_task_count"] == 0
+    assert rules["input_fill_rule_family_counts"] == {
+        "entity_disambiguation": 1,
+        "quantity_or_arithmetic": 1,
+    }
+    assert payload["summary"]["world_model_rule_input_fill_adapter_ready"] is True
+    assert payload["summary"]["world_model_rule_combined_rule_input_count"] == 2
+    assert adapter_action["priority"] == 85
+    assert adapter_action["combined_rule_input_count"] == 2
+    assert adapter_action["input_fill_rule_family_counts"] == {
+        "entity_disambiguation": 1,
+        "quantity_or_arithmetic": 1,
+    }
+    assert "run_world_model_rule_authoring_adapter.py" in adapter_action[
+        "downstream_adapter_command"
+    ]["command"]
+
+    rollup_path = tmp_path / "frontier-input-fill-result-rollup.json"
+    report_path = tmp_path / "summary.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    rollup_path.write_text(json.dumps(rollup), encoding="utf-8")
+
+    saved = module.run(
+        input_fill_result_rollup_path=rollup_path,
+        json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="unresolved-summary-fill-rollup-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:unresolved-summary-fill-rollup-unit:0.1"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert saved["paths"]["input_fill_result_rollup"] == str(rollup_path)
+    assert manifest["artifacts"]["input_fill_result_rollup"]["exists"] is True
+    assert manifest["metadata"]["world_model_rule_input_fill_rollup_status"] == (
+        "ready_for_adapter"
+    )
+    assert manifest["metadata"]["world_model_rule_input_fill_adapter_ready"] is True
+    assert manifest["metadata"]["world_model_rule_combined_rule_input_count"] == 2
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["world_model_rule_input_fill_rollup_status"] == (
+        "ready_for_adapter"
+    )
+    assert record.metadata["world_model_rule_input_fill_adapter_ready"] is True
+    assert record.metadata["world_model_rule_combined_rule_input_count"] == 2
 
 
 def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_gate(tmp_path):

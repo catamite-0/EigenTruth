@@ -465,6 +465,14 @@ def _unresolved_summary_actions(
             )
         elif action_id == "repair_frontier_queue_command_execution":
             actions.append(_unresolved_frontier_queue_repair_action(payload, action, source_path=source_path))
+        elif action_id == "run_world_model_rule_adapter_promotion_workflow":
+            actions.append(
+                _unresolved_world_model_rule_adapter_promotion_action(
+                    payload,
+                    action,
+                    source_path=source_path,
+                )
+            )
         elif action_id == "fill_and_promote_remaining_world_model_rules":
             actions.append(_unresolved_world_model_rules_action(payload, action, source_path=source_path))
         else:
@@ -1344,6 +1352,65 @@ def _unresolved_world_model_rules_action(
             "remaining_rule_family_counts": dict(remaining_families),
             "promoted_rule_request_ids": _string_tuple(
                 action.get("promoted_rule_request_ids", ())
+            ),
+        },
+    }
+
+
+def _unresolved_world_model_rule_adapter_promotion_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    rollup_path = _resolve_path(_nested(payload, "paths", "input_fill_result_rollup"), base=source_path)
+    required_inputs = () if rollup_path is not None else ("world_model_rule_input_fill_result_rollup",)
+    command = _shell_join((
+        "python",
+        "benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py",
+        "--input-fill-result-rollup",
+        str(rollup_path) if rollup_path is not None else "...",
+        "--output-dir",
+        "...",
+        "--json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--build-handoff",
+        "--build-evidence-bundle",
+        "--metadata",
+        "closure_action=run_world_model_rule_adapter_promotion_workflow",
+    ))
+    return {
+        **dict(action),
+        "title": "Run deterministic world-model rule adapter and promotion gate",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("world_model_rules",),
+        "suggested_commands": (command,),
+        "metadata": {
+            "required_inputs": required_inputs,
+            "closure_outputs": (
+                "frontier_rule_adapter_promotion_workflow_report",
+                "world_model_rule_authoring_adapter_report",
+                "world_model_rule_candidate_promotion_report",
+                "world_model_rule_candidate_handoff_report",
+                "mechanism_handoff_evidence_bundle_report",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "input_fill_result_rollup": None if rollup_path is None else str(rollup_path),
+            "reason": str(action.get("reason") or ""),
+            "combined_rule_input_count": _int_or_zero(action.get("combined_rule_input_count")),
+            "combined_unfilled_task_count": _int_or_zero(
+                action.get("combined_unfilled_task_count")
+            ),
+            "input_fill_rule_family_counts": dict(
+                _mapping(action.get("input_fill_rule_family_counts"))
             ),
         },
     }

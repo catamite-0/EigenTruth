@@ -4276,14 +4276,18 @@ does not run adapters, promote verifier evidence, or close a release gate; it
 combines queue counts, citation/source-family gate status, source acquisition
 coverage, reviewed semantic-gap covered-fact route status,
 frontier queue command-binding review/run status, world-model
-rule-input/promotion status, mechanism handoff coverage, and the next concrete
-actions. The citation lane also carries blocked query-sweep failure counts,
+rule-input/fill-rollup/promotion status, mechanism handoff coverage, and the
+next concrete actions. The citation lane also carries blocked query-sweep failure counts,
 recommended remediation actions, and best-observed strategy diagnostics forward
 into the summary/action metadata. It can also ingest a no-model
 `frontier_queue_execution_smoke.py`
 report as a control-plane health signal; the smoke manifest is verified
 recursively and recorded in the summary manifest, but it does not replace
 real command-binding review or executed bound-command evidence.
+When an `--input-fill-result-rollup` is supplied, adapter-ready rule inputs are
+reported in the world-model lane and the summary emits a next action for
+`run_frontier_research_queue_rule_adapter_promotion_workflow.py` if no
+promotion report has consumed them yet; the rollup remains non-evidence.
 
 ```bash
 OUT=artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1
@@ -4297,6 +4301,7 @@ python benchmarks/summarize_unresolved_frontier_evidence.py \
   --frontier-bound-command-run artifacts/frontier-release-evidence/frontier-bound-command-run-v1/frontier-bound-command-run-report.json \
   --frontier-queue-execution-smoke artifacts/frontier-queue-execution-smoke/frontier-queue-execution-smoke.json \
   --rule-input-plan artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json \
+  --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json \
   --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json \
@@ -7211,6 +7216,10 @@ materialized, blocks duplicate request ids or rule inputs missing non-evidence
 and promotion-gate markers, and writes a combined adapter input plus any
 remaining unfilled rows. The downstream adapter command in the rollup is still a
 hint only; adapter execution and rule-candidate promotion remain separate gates.
+Pass the rollup back to `summarize_unresolved_frontier_evidence.py` with
+`--input-fill-result-rollup` so the frontier closure summary can show that the
+world-model lane is adapter-ready and point to the adapter/promotion workflow
+instead of only reporting generic missing rule inputs.
 
 Dry-run the combined rule-input sidecar through the adapter/promotion handoff,
 then add `--execute` only after the rollup is adapter-ready:
