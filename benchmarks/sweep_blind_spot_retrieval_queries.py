@@ -34,6 +34,9 @@ from benchmarks.build_evidence_fixture import (  # noqa: E402
     QUERY_FIELDS as EVIDENCE_QUERY_FIELDS,
 )
 from benchmarks.build_evidence_fixture import (  # noqa: E402
+    SOURCE_FAMILY_FILTERS as EVIDENCE_SOURCE_FAMILY_FILTERS,
+)
+from benchmarks.build_evidence_fixture import (  # noqa: E402
     build_evidence_fixture,
     load_corpus,
     load_score_dump,
@@ -51,7 +54,9 @@ QUERY_FIELDS = (
     "citation_entity",
 )
 DEFAULT_MIN_OVERLAPS = (0.95, 0.80, 0.65, 0.50)
+DEFAULT_SOURCE_FAMILY_FILTERS = ("off",)
 _SUPPORTED_QUERY_FIELDS = set(EVIDENCE_QUERY_FIELDS)
+_SUPPORTED_SOURCE_FAMILY_FILTERS = set(EVIDENCE_SOURCE_FAMILY_FILTERS)
 
 
 def sweep_blind_spot_retrieval_queries(
@@ -61,6 +66,7 @@ def sweep_blind_spot_retrieval_queries(
     blind_spots_path: str | Path,
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -76,6 +82,7 @@ def sweep_blind_spot_retrieval_queries(
     """Run query-strategy sweep and return a JSON-ready report."""
     fields = _query_fields(query_fields)
     overlaps = _min_overlaps(retriever_min_overlaps)
+    family_filters = _source_family_filters(source_family_filters)
     if retrieval_limit <= 0:
         raise ValueError("retrieval_limit must be positive.")
     if repeats < 1:
@@ -103,26 +110,28 @@ def sweep_blind_spot_retrieval_queries(
         temp_root = Path(temp_dir)
         for query_field in fields:
             for min_overlap in overlaps:
-                strategy = _evaluate_strategy(
-                    dump=dump,
-                    documents=documents,
-                    scores_path=score_path,
-                    blind_spots=blind_spots,
-                    query_field=query_field,
-                    retriever_min_overlap=min_overlap,
-                    retrieval_limit=retrieval_limit,
-                    signal=signal,
-                    alpha=alpha,
-                    repeats=repeats,
-                    seed=seed,
-                    verifier_min_overlap=verifier_min_overlap,
-                    target_route=target_route,
-                    max_verified_false_alarm=max_verified_false_alarm,
-                    min_blind_refuted_rate=min_blind_refuted_rate,
-                    temp_root=temp_root,
-                    max_examples_per_bucket=max_examples_per_bucket,
-                )
-                strategies.append(strategy)
+                for source_family_filter in family_filters:
+                    strategy = _evaluate_strategy(
+                        dump=dump,
+                        documents=documents,
+                        scores_path=score_path,
+                        blind_spots=blind_spots,
+                        query_field=query_field,
+                        retriever_min_overlap=min_overlap,
+                        source_family_filter=source_family_filter,
+                        retrieval_limit=retrieval_limit,
+                        signal=signal,
+                        alpha=alpha,
+                        repeats=repeats,
+                        seed=seed,
+                        verifier_min_overlap=verifier_min_overlap,
+                        target_route=target_route,
+                        max_verified_false_alarm=max_verified_false_alarm,
+                        min_blind_refuted_rate=min_blind_refuted_rate,
+                        temp_root=temp_root,
+                        max_examples_per_bucket=max_examples_per_bucket,
+                    )
+                    strategies.append(strategy)
 
     baseline = _baseline_strategy(strategies)
     best = _best_strategy(strategies)
@@ -140,6 +149,7 @@ def sweep_blind_spot_retrieval_queries(
         "config": {
             "query_fields": tuple(fields),
             "retriever_min_overlaps": tuple(overlaps),
+            "source_family_filters": tuple(family_filters),
             "retrieval_limit": int(retrieval_limit),
             "signal": signal,
             "alpha": alpha,
@@ -179,6 +189,7 @@ def run(
     output_path: str | Path,
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -205,6 +216,7 @@ def run(
         blind_spots_path=blind_spots_path,
         query_fields=query_fields,
         retriever_min_overlaps=retriever_min_overlaps,
+        source_family_filters=source_family_filters,
         retrieval_limit=retrieval_limit,
         signal=signal,
         alpha=alpha,
@@ -279,6 +291,7 @@ def _evaluate_strategy(
     blind_spots: Sequence[Mapping[str, Any]],
     query_field: str,
     retriever_min_overlap: float,
+    source_family_filter: str,
     retrieval_limit: int,
     signal: str,
     alpha: float,
@@ -291,7 +304,11 @@ def _evaluate_strategy(
     temp_root: Path,
     max_examples_per_bucket: int,
 ) -> dict[str, Any]:
-    key = _strategy_key_from_values(query_field, retriever_min_overlap)
+    key = _strategy_key_from_values(
+        query_field,
+        retriever_min_overlap,
+        source_family_filter=source_family_filter,
+    )
     fixture = build_evidence_fixture(
         dump,
         documents,
@@ -299,6 +316,7 @@ def _evaluate_strategy(
         retrieval_limit=int(retrieval_limit),
         query_field=query_field,
         include_label_metadata=False,
+        source_family_filter=source_family_filter,
     )
     claims_path = temp_root / f"{key}-claims.json"
     verified_records_path = temp_root / f"{key}-verified-records.jsonl"
@@ -342,6 +360,7 @@ def _evaluate_strategy(
         "key": key,
         "query_field": query_field,
         "retriever_min_overlap": float(retriever_min_overlap),
+        "source_family_filter": source_family_filter,
         "retrieval": dict(fixture["summary"]),
         "verification": {
             "internal": _nested(alpha_payload, "internal", default={}),
@@ -426,18 +445,34 @@ def _best_strategy(strategies: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]
 
 def _baseline_strategy(strategies: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
     for item in strategies:
-        if item.get("query_field") == "answer" and float(item.get("retriever_min_overlap", -1.0)) == 0.95:
+        if (
+            item.get("query_field") == "answer"
+            and item.get("source_family_filter", "off") == "off"
+            and float(item.get("retriever_min_overlap", -1.0)) == 0.95
+        ):
             return item
     return None
 
 
 def _strategy_key(strategy: Mapping[str, Any]) -> str:
-    return _strategy_key_from_values(str(strategy["query_field"]), float(strategy["retriever_min_overlap"]))
+    return _strategy_key_from_values(
+        str(strategy["query_field"]),
+        float(strategy["retriever_min_overlap"]),
+        source_family_filter=str(strategy.get("source_family_filter", "off")),
+    )
 
 
-def _strategy_key_from_values(query_field: str, min_overlap: float) -> str:
+def _strategy_key_from_values(
+    query_field: str,
+    min_overlap: float,
+    *,
+    source_family_filter: str = "off",
+) -> str:
     overlap = str(float(min_overlap)).replace(".", "p")
-    return f"{query_field}_overlap_{overlap}"
+    key = f"{query_field}_overlap_{overlap}"
+    if source_family_filter != "off":
+        key = f"{key}_sf_{source_family_filter}"
+    return key
 
 
 def _corpus_provenance(paths: Sequence[Path]) -> tuple[dict[str, Any], ...]:
@@ -486,6 +521,19 @@ def _min_overlaps(values: Sequence[float]) -> tuple[float, ...]:
     if any(not (0.0 <= value <= 1.0) for value in overlaps):
         raise ValueError("retriever_min_overlaps must be in [0, 1].")
     return overlaps
+
+
+def _source_family_filters(values: Sequence[str]) -> tuple[str, ...]:
+    modes = tuple(dict.fromkeys(str(value).strip().casefold() for value in values if str(value).strip()))
+    if not modes:
+        raise ValueError("source_family_filters must not be empty.")
+    invalid = tuple(mode for mode in modes if mode not in _SUPPORTED_SOURCE_FAMILY_FILTERS)
+    if invalid:
+        raise ValueError(
+            "source_family_filters contains unsupported values: "
+            f"{', '.join(invalid)}. Supported values: {', '.join(EVIDENCE_SOURCE_FAMILY_FILTERS)}."
+        )
+    return modes
 
 
 def _parse_csv(value: str | None, *, default: Sequence[str]) -> tuple[str, ...]:
@@ -563,6 +611,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--blind-spots", required=True, help="detectability blind-spot report JSON")
     parser.add_argument("--query-fields", default=",".join(QUERY_FIELDS))
     parser.add_argument("--retriever-min-overlaps", default=",".join(str(value) for value in DEFAULT_MIN_OVERLAPS))
+    parser.add_argument("--source-family-filters", default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
+                        help="comma-separated source-family evidence filters to sweep: off,planned,planned_rerank")
     parser.add_argument("--retrieval-limit", type=int, default=3)
     parser.add_argument("--signal", default="truth_proj")
     parser.add_argument("--alpha", type=float, default=0.10)
@@ -588,6 +638,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         output_path=args.json,
         query_fields=_parse_csv(args.query_fields, default=QUERY_FIELDS),
         retriever_min_overlaps=_parse_float_csv(args.retriever_min_overlaps, default=DEFAULT_MIN_OVERLAPS),
+        source_family_filters=_source_family_filters(
+            _parse_csv(args.source_family_filters, default=DEFAULT_SOURCE_FAMILY_FILTERS)
+        ),
         retrieval_limit=args.retrieval_limit,
         signal=args.signal,
         alpha=args.alpha,

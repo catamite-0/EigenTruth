@@ -1553,6 +1553,12 @@ the corpus provenance warning. Each strategy now also embeds a compact
 reports distinguish `no_retrieval_hits`, `false_negative`,
 `low_overlap_after_retrieval`, `false_positive`, and successful
 `false_refuted` / `true_supported` buckets without rerunning a separate sidecar.
+When local corpora include `source_family` metadata, add
+`--source-family-filters off,planned,planned_rerank` to compare the default
+retrieval order with hard source-family filtering and compatible-source
+reranking. `planned` drops hits whose source family does not match the citation
+query plan; `planned_rerank` puts compatible hits first while retaining
+incompatible hits as fallback evidence.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep
@@ -1563,6 +1569,7 @@ python benchmarks/sweep_blind_spot_retrieval_queries.py \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --query-fields answer,question,question_answer,text \
   --retriever-min-overlaps 0.95,0.8,0.65,0.5 \
+  --source-family-filters off \
   --retrieval-limit 3 \
   --signal truth_proj \
   --alpha 0.1 \
@@ -7992,8 +7999,12 @@ external or domain-shifted evidence: `--require-retrieval-source`,
 `--allowed-retrieval-source-prefix`, `--denied-retrieval-source-prefix`,
 `--min-retrieval-score`, `--required-retrieval-metadata key=value`, and
 `--max-retrieval-hits-per-source` drop untrusted hits before they become verifier
-evidence and record the filter in `input_provenance`. `--verification-cache-dir`
-is optional and stores verified-record traces keyed by score dump,
+evidence and record the filter in `input_provenance`. For citation-oriented
+fixtures, `--source-family-filter planned` can hard-filter retrieved evidence by
+the planned source family, while `--source-family-filter planned_rerank`
+prioritizes compatible evidence and keeps other hits as fallback. Both modes are
+metadata-driven and remain dependency-free. `--verification-cache-dir` is
+optional and stores verified-record traces keyed by score dump,
 claims/evidence content, verifier parameters, and state/QA sources so repeated
 alpha/repeat sweeps can skip claim verification.
 

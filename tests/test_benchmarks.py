@@ -9476,6 +9476,94 @@ def test_build_evidence_fixture_supports_citation_safe_query_fields():
     assert entity_fixture["records"][0]["metadata"]["retrieval"]["query_field"] == "citation_entity"
 
 
+def test_build_evidence_fixture_planned_source_family_filter_drops_incompatible_hits():
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [1],
+        "scores": {"truth_proj": [0.9]},
+        "statements": [
+            {
+                "question": "What is the population of Afghanistan?",
+                "answer": "The population of Afghanistan is 330 million.",
+                "text": "What is the population of Afghanistan? The population of Afghanistan is 330 million.",
+                "metadata": {"question_type": "quantity"},
+            },
+        ],
+    }
+    corpus = (
+        {
+            "text": "A broad scholarly article mentions Afghanistan and population change.",
+            "source": "openalex:https://openalex.org/W1",
+            "score": 1.0,
+            "metadata": {
+                "source_family": "scholarly",
+                "retrieval_index_text": (
+                    "What is the population of Afghanistan? population Afghanistan "
+                    "official statistics data reference"
+                ),
+            },
+        },
+        {
+            "text": "World Bank official statistics: Afghanistan population was 42,647,492 in 2024.",
+            "source": "worldbank:SP.POP.TOTL:AFG",
+            "score": 0.9,
+            "metadata": {
+                "source_family": "official_statistics",
+                "retrieval_index_text": (
+                    "What is the population of Afghanistan? population Afghanistan "
+                    "official statistics data reference"
+                ),
+            },
+        },
+    )
+
+    fixture = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.4,
+        retrieval_limit=1,
+        query_field="citation_question",
+        include_label_metadata=False,
+        source_family_filter="planned",
+    )
+
+    retrieval = fixture["records"][0]["metadata"]["retrieval"]
+    source_filter = retrieval["source_family_filter"]
+    hits = fixture["records"][0]["retrieval_documents"]
+
+    assert fixture["summary"]["total_candidate_hits"] == 2
+    assert fixture["summary"]["total_hits"] == 1
+    assert fixture["summary"]["source_family_filtered_hits"] == 1
+    assert fixture["retriever"]["source_family_filter"] == "planned"
+    assert hits[0]["source"] == "worldbank:SP.POP.TOTL:AFG"
+    assert hits[0]["metadata"]["source_family_filter"]["source_families"] == ("official_statistics",)
+    assert source_filter["status"] == "applied"
+    assert "official_statistics" in source_filter["accepted_families"]
+    assert source_filter["dropped_hit_examples"][0]["source"] == "openalex:https://openalex.org/W1"
+
+    reranked = builder.build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=0.4,
+        retrieval_limit=2,
+        query_field="citation_question",
+        include_label_metadata=False,
+        source_family_filter="planned_rerank",
+    )
+
+    reranked_hits = reranked["records"][0]["retrieval_documents"]
+    reranked_filter = reranked["records"][0]["metadata"]["retrieval"]["source_family_filter"]
+    assert reranked["summary"]["source_family_filtered_hits"] == 0
+    assert reranked_filter["status"] == "reranked"
+    assert reranked_filter["compatible_hit_count"] == 1
+    assert reranked_filter["incompatible_hit_count"] == 1
+    assert [hit["source"] for hit in reranked_hits] == [
+        "worldbank:SP.POP.TOTL:AFG",
+        "openalex:https://openalex.org/W1",
+    ]
+
+
 def test_verifier_ensemble_uses_retrieval_alignment_for_numeric_answer_mismatch(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -55289,6 +55377,16 @@ def test_sweep_blind_spot_retrieval_queries_allows_citation_safe_query_fields():
         "citation_question",
         "citation_entity",
     )
+    assert module._source_family_filters(("off", "planned", "planned_rerank")) == (
+        "off",
+        "planned",
+        "planned_rerank",
+    )
+    assert module._strategy_key_from_values(
+        "citation_question",
+        0.5,
+        source_family_filter="planned_rerank",
+    ) == "citation_question_overlap_0p5_sf_planned_rerank"
 
 
 def test_compare_blind_spot_query_sweeps_blocks_controlled_only_signal(tmp_path):

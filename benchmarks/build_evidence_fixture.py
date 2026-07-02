@@ -32,9 +32,10 @@ from eigentruth.eval.score_dump import (
     load_score_dump as _load_validated_score_dump,
 )
 from eigentruth.registry import fingerprint_path
-from eigentruth.verify.search_planning import plan_citation_search_query
+from eigentruth.verify.search_planning import SOURCE_FAMILY_NAMES, plan_citation_search_query
 
 RETRIEVER_BACKENDS = ("memory", "sqlite_fts", "auto")
+SOURCE_FAMILY_FILTERS = ("off", "planned", "planned_rerank")
 QUERY_FIELDS = (
     "text",
     "answer",
@@ -44,6 +45,22 @@ QUERY_FIELDS = (
     "citation_entity",
 )
 CITATION_QUERY_FIELDS = ("citation_question", "citation_entity")
+_SOURCE_FAMILY_FILTER_FETCH_MULTIPLIER = 4
+_SOURCE_FAMILY_COMPATIBILITY = {
+    "official": ("official_statistics",),
+    "official_statistics": ("official",),
+    "reference": ("encyclopedic",),
+    "encyclopedic": ("reference",),
+}
+_SOURCE_PREFIX_FAMILY_HINTS = (
+    ("worldbank:", "official_statistics"),
+    ("wikidata:", "reference"),
+    ("wikipedia:", "encyclopedic"),
+    ("openalex:", "scholarly"),
+    ("official:", "official"),
+    ("news:", "news"),
+    ("qa:", "reference"),
+)
 
 
 def load_score_dump(path: Path) -> dict[str, Any]:
@@ -86,6 +103,7 @@ def build_evidence_fixture(
     min_retrieval_score: float = 0.0,
     required_retrieval_metadata: Mapping[str, Any] | None = None,
     max_retrieval_hits_per_source: int | None = None,
+    source_family_filter: str = "off",
 ) -> dict[str, Any]:
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
@@ -96,6 +114,7 @@ def build_evidence_fixture(
         raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
     if retriever_backend == "memory" and retriever_index_path is not None:
         raise ValueError("retriever_index_path is only supported with sqlite_fts or auto backends.")
+    source_family_filter = _source_family_filter(source_family_filter)
     labels = tuple(int(label) for label in dump.get("labels", ()))
     statements = tuple(dict(statement) for statement in dump.get("statements", ()))
     if len(labels) != len(statements):
@@ -119,20 +138,36 @@ def build_evidence_fixture(
     )
     records = []
     total_hits = 0
+    total_candidate_hits = 0
+    total_source_family_filtered_hits = 0
     for idx, (label, statement) in enumerate(zip(labels, statements), start=1):
         claim_text = _statement_text(statement)
         query_text = _query_text(statement, query_field=query_field)
         claim_id = str(statement.get("claim_id") or f"c{idx}")
-        hits = tuple(retriever.retrieve(
+        candidate_limit = _retrieval_candidate_limit(
+            retrieval_limit,
+            source_family_filter=source_family_filter,
+        )
+        candidate_hits = tuple(retriever.retrieve(
             RetrievalQuery(query=query_text, claim_id=claim_id),
-            limit=retrieval_limit,
+            limit=candidate_limit,
         ))
+        hits, source_family_filter_metadata = _apply_source_family_filter(
+            candidate_hits,
+            statement=statement,
+            query_field=query_field,
+            source_family_filter=source_family_filter,
+            limit=retrieval_limit,
+        )
+        total_candidate_hits += len(candidate_hits)
         total_hits += len(hits)
+        total_source_family_filtered_hits += int(source_family_filter_metadata.get("dropped_hit_count", 0))
         record_metadata: dict[str, Any] = {
             "index": idx - 1,
             "statement": statement,
             "retrieval": {
                 "n_hits": len(hits),
+                "n_candidate_hits": len(candidate_hits),
                 "retriever": retriever_info["type"],
                 "requested_backend": retriever_info["requested_backend"],
                 "actual_backend": retriever_info["actual_backend"],
@@ -145,6 +180,7 @@ def build_evidence_fixture(
                 "query_field": query_field,
                 "query": query_text,
                 "provenance_filter": retriever_info.get("provenance_filter"),
+                "source_family_filter": source_family_filter_metadata,
             },
         }
         if include_label_metadata:
@@ -174,11 +210,14 @@ def build_evidence_fixture(
             "limit": retrieval_limit,
             "query_field": query_field,
             "n_corpus_documents": len(documents),
+            "source_family_filter": source_family_filter,
         },
         "summary": {
             "n_records": len(records),
             "records_with_hits": sum(1 for record in records if record["retrieval_documents"]),
             "total_hits": total_hits,
+            "total_candidate_hits": total_candidate_hits,
+            "source_family_filtered_hits": total_source_family_filtered_hits,
             "average_hits_per_record": float(total_hits) / len(records) if records else 0.0,
         },
         "records": records,
@@ -202,10 +241,12 @@ def build_evidence_input_provenance(
     min_retrieval_score: float = 0.0,
     required_retrieval_metadata: Mapping[str, Any] | None = None,
     max_retrieval_hits_per_source: int | None = None,
+    source_family_filter: str = "off",
 ) -> dict[str, Any]:
     """Build input fingerprints and builder settings for fixture reproducibility."""
     score_dump_obj = _coerce_score_dump_for_metadata(score_dump)
     index_path = None if retriever_index_path is None else Path(retriever_index_path)
+    source_family_filter = _source_family_filter(source_family_filter)
     return {
         "schema_version": 1,
         "builder": "build_evidence_fixture",
@@ -226,6 +267,7 @@ def build_evidence_input_provenance(
                 required_metadata=required_retrieval_metadata,
                 max_hits_per_source=max_retrieval_hits_per_source,
             ),
+            "source_family_filter": source_family_filter,
         },
     }
 
@@ -257,6 +299,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_retrieval_score=float(getattr(args, "min_retrieval_score", 0.0)),
         required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
         max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
+        source_family_filter=getattr(args, "source_family_filter", "off"),
     )
     fixture["input_provenance"] = build_evidence_input_provenance(
         scores_path=scores_path,
@@ -274,6 +317,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_retrieval_score=float(getattr(args, "min_retrieval_score", 0.0)),
         required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
         max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
+        source_family_filter=getattr(args, "source_family_filter", "off"),
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -460,21 +504,7 @@ def _query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
 
 
 def _citation_query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
-    question = str(statement.get("question", "")).strip()
-    if not question:
-        raise ValueError(f"statement record is missing query field {query_field!r}.")
-    strategy = "claim_entity" if query_field == "citation_entity" else "question_and_query"
-    metadata = statement.get("metadata")
-    question_type = ""
-    if isinstance(metadata, Mapping):
-        question_type = str(metadata.get("question_type") or "").strip()
-    question_type = str(statement.get("question_type") or question_type).strip()
-    plan = plan_citation_search_query(
-        question=question,
-        candidate_query="",
-        question_type=question_type,
-        strategy=strategy,
-    )
+    plan = _citation_query_plan(statement, query_field=query_field)
     source_plan = plan.source_family_plan
     source_hints = () if source_plan is None else tuple(source_plan.query_hints)
     return " ".join(
@@ -486,6 +516,191 @@ def _citation_query_text(statement: Mapping[str, Any], *, query_field: str) -> s
         )
         if str(part).strip()
     ).strip()
+
+
+def _citation_query_plan(statement: Mapping[str, Any], *, query_field: str):
+    question = str(statement.get("question", "")).strip()
+    if not question:
+        raise ValueError(f"statement record is missing query field {query_field!r}.")
+    strategy = "claim_entity" if query_field == "citation_entity" else "question_and_query"
+    return plan_citation_search_query(
+        question=question,
+        candidate_query="",
+        question_type=_question_type(statement),
+        strategy=strategy,
+    )
+
+
+def _question_type(statement: Mapping[str, Any]) -> str:
+    metadata = statement.get("metadata")
+    metadata_question_type = ""
+    if isinstance(metadata, Mapping):
+        metadata_question_type = str(metadata.get("question_type") or "").strip()
+    return str(statement.get("question_type") or metadata_question_type).strip()
+
+
+def _source_family_filter(value: str) -> str:
+    mode = str(value).strip().casefold() or "off"
+    if mode not in SOURCE_FAMILY_FILTERS:
+        raise ValueError(f"source_family_filter must be one of: {', '.join(SOURCE_FAMILY_FILTERS)}.")
+    return mode
+
+
+def _retrieval_candidate_limit(limit: int, *, source_family_filter: str) -> int:
+    if source_family_filter == "off":
+        return int(limit)
+    return int(limit) * _SOURCE_FAMILY_FILTER_FETCH_MULTIPLIER
+
+
+def _apply_source_family_filter(
+    hits: Sequence[RetrievalHit],
+    *,
+    statement: Mapping[str, Any],
+    query_field: str,
+    source_family_filter: str,
+    limit: int,
+) -> tuple[tuple[RetrievalHit, ...], dict[str, Any]]:
+    if source_family_filter == "off":
+        kept = tuple(hits[:limit])
+        return kept, {
+            "mode": "off",
+            "candidate_hit_count": len(hits),
+            "kept_hit_count": len(kept),
+            "dropped_hit_count": 0,
+        }
+
+    plan = _source_family_plan(statement, query_field=query_field)
+    if plan is None:
+        kept = tuple(hits[:limit])
+        return kept, {
+            "mode": source_family_filter,
+            "status": "skipped",
+            "reason": "missing_question",
+            "candidate_hit_count": len(hits),
+            "kept_hit_count": len(kept),
+            "dropped_hit_count": 0,
+        }
+
+    accepted_families = _compatible_source_families(plan)
+    compatible: list[RetrievalHit] = []
+    incompatible: list[RetrievalHit] = []
+    incompatible_examples: list[dict[str, Any]] = []
+    for hit in hits:
+        hit_families = _hit_source_families(hit)
+        if hit_families and any(family in accepted_families for family in hit_families):
+            compatible.append(_annotate_source_family_hit(
+                hit,
+                mode=source_family_filter,
+                source_families=hit_families,
+                accepted_families=accepted_families,
+            ))
+            continue
+        incompatible.append(_annotate_source_family_hit(
+            hit,
+            mode=source_family_filter,
+            source_families=hit_families,
+            accepted_families=accepted_families,
+        ))
+        if len(incompatible_examples) < 5:
+            incompatible_examples.append({
+                "source": hit.source,
+                "source_families": hit_families,
+                "score": hit.score,
+            })
+
+    if source_family_filter == "planned_rerank":
+        kept = tuple((compatible + incompatible)[:limit])
+        dropped_count = 0
+        status = "reranked"
+    else:
+        kept = tuple(compatible[:limit])
+        dropped_count = len(incompatible)
+        status = "applied"
+
+    return tuple(kept), {
+        "mode": source_family_filter,
+        "status": status,
+        "candidate_hit_count": len(hits),
+        "kept_hit_count": len(kept),
+        "dropped_hit_count": dropped_count,
+        "compatible_hit_count": len(compatible),
+        "incompatible_hit_count": len(incompatible),
+        "planned_families": tuple(plan.families),
+        "accepted_families": accepted_families,
+        "official_source_preferred": bool(plan.official_source_preferred),
+        "rationale": tuple(plan.rationale),
+        "incompatible_hit_examples": tuple(incompatible_examples),
+        "dropped_hit_examples": tuple(incompatible_examples),
+    }
+
+
+def _source_family_plan(statement: Mapping[str, Any], *, query_field: str):
+    question = str(statement.get("question", "")).strip()
+    if not question:
+        return None
+    strategy = "claim_entity" if query_field == "citation_entity" else "question"
+    return plan_citation_search_query(
+        question=question,
+        candidate_query="",
+        question_type=_question_type(statement),
+        strategy=strategy,
+    ).source_family_plan
+
+
+def _compatible_source_families(plan) -> tuple[str, ...]:
+    families = {_normalize_source_family(family) for family in plan.families}
+    for family in tuple(families):
+        families.update(_SOURCE_FAMILY_COMPATIBILITY.get(family, ()))
+    return tuple(sorted(family for family in families if family))
+
+
+def _hit_source_families(hit: RetrievalHit) -> tuple[str, ...]:
+    metadata = dict(hit.metadata)
+    raw_family = metadata.get("source_family", metadata.get("source_type", metadata.get("family")))
+    families = tuple(
+        family
+        for family in _normalize_source_family_values(raw_family)
+        if family in SOURCE_FAMILY_NAMES
+    )
+    if families:
+        return families
+    source = "" if hit.source is None else str(hit.source).casefold()
+    for prefix, family in _SOURCE_PREFIX_FAMILY_HINTS:
+        if source.startswith(prefix):
+            return (family,)
+    return ()
+
+
+def _normalize_source_family_values(value: Any) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (_normalize_source_family(value),)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(_normalize_source_family(item) for item in value)
+    return (_normalize_source_family(value),)
+
+
+def _normalize_source_family(value: Any) -> str:
+    return str(value).strip().casefold().replace("-", "_").replace(" ", "_")
+
+
+def _annotate_source_family_hit(
+    hit: RetrievalHit,
+    *,
+    mode: str,
+    source_families: Sequence[str],
+    accepted_families: Sequence[str],
+) -> RetrievalHit:
+    metadata = {
+        **dict(hit.metadata),
+        "source_family_filter": {
+            "mode": mode,
+            "source_families": tuple(source_families),
+            "accepted_families": tuple(accepted_families),
+        },
+    }
+    return RetrievalHit(hit.text, hit.source, hit.score, metadata)
 
 
 def _documents_from_json(path: Path) -> list[RetrievalHit]:
@@ -602,6 +817,8 @@ def main() -> None:
                         help="required hit metadata key=value; repeatable")
     parser.add_argument("--max-retrieval-hits-per-source", type=int, default=None,
                         help="maximum accepted hits per source before verifier evidence handoff")
+    parser.add_argument("--source-family-filter", choices=SOURCE_FAMILY_FILTERS, default="off",
+                        help="optionally filter or rerank retrieved evidence by planned source-family compatibility")
     run(parser.parse_args())
 
 
