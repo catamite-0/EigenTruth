@@ -2653,8 +2653,11 @@ optional `--batch-id` values are forwarded into the citation/search handoff, so
 the downstream query sweep automatically binds source documents back to the
 queue report and consumes those source-bound fixture hits as precomputed
 retrieval evidence.
-large evidence queues can be normalized, audited, and swept batch by batch while
+Large evidence queues can be normalized, audited, and swept batch by batch while
 preserving the same manifest and registry gates.
+Use `--source-family-filters off,planned_rerank` for diagnostic sweeps that
+compare raw retrieval against source-family-aware reranking; the default remains
+`off` so existing gates do not silently change behavior.
 Blocked query sweeps also write `query_sweep_failure_reason_counts`,
 `query_sweep_best_observed_*`, and `query_sweep_recommended_next_actions` into
 the workflow summary. These fields split failures into no retrieval hits,
@@ -2757,6 +2760,7 @@ python benchmarks/run_source_family_citation_search_workflow.py \
   --name source-family-citation-search-workflow-smoke \
   --version 0.1 \
   --query-fields question_answer \
+  --source-family-filters off \
   --adapter-diversify-source-families \
   --retriever-min-overlaps 0.5 \
   --retrieval-limit 2 \
@@ -2783,6 +2787,11 @@ For large unresolved queues, pass one or more `--batch-id` values from
 `execution-batches.jsonl`. The workflow forwards those ids into both request
 handoff and evidence gating, while the local source-family adapter simply ranks
 the resulting smaller request JSONL.
+Use `--source-family-filters planned_rerank` in diagnostic reruns when you want
+the evidence sweep to prefer source families requested by the unresolved queue
+without dropping incompatible hits. Use `planned` only for stricter experiments
+that should discard incompatible source families and fail closed if that loses
+coverage.
 
 The first real cached-source run uses the target-specific Wikidata catalog:
 
@@ -4521,8 +4530,11 @@ blind-spot query, and controlled-vs-external gates before any route decision is
 promoted. Passing `--batch-id` keeps the preflight request JSONL and downstream
 evidence gate aligned to the same unresolved evidence batch, which is the
 preferred path for long-running external search jobs. The wrapper forwards
-`--min-adapter-request-coverage` into the evidence workflow and records missing
-request counts in the workflow manifest/registry metadata.
+`--min-adapter-request-coverage` and `--source-family-filters` into the evidence
+workflow and records missing request counts in the workflow manifest/registry
+metadata. Keep `--source-family-filters off` for stable release gates; use
+`planned_rerank` in diagnostic adapter reruns when you need source-family-aware
+ordering without changing the external search command contract.
 
 ## `eval_verifier_ensemble.py`
 

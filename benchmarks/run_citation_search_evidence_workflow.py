@@ -40,6 +40,7 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
 from benchmarks.compare_blind_spot_query_sweeps import run as run_query_sweep_comparison  # noqa: E402
 from benchmarks.sweep_blind_spot_retrieval_queries import (  # noqa: E402
     DEFAULT_MIN_OVERLAPS,
+    DEFAULT_SOURCE_FAMILY_FILTERS,
     DEFAULT_TARGET_ROUTE,
     QUERY_FIELDS,
 )
@@ -75,6 +76,7 @@ def run(
     source_kind: str = DEFAULT_SOURCE_KIND,
     query_fields: Sequence[str] = ("question", "question_answer"),
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -152,6 +154,7 @@ def run(
             source_binding_queue_path=queue_report_path,
             query_fields=query_fields,
             retriever_min_overlaps=retriever_min_overlaps,
+            source_family_filters=source_family_filters,
             retrieval_limit=retrieval_limit,
             signal=signal,
             alpha=alpha,
@@ -211,6 +214,7 @@ def run(
             "source_kind": source_kind,
             "query_fields": tuple(query_fields),
             "retriever_min_overlaps": tuple(float(value) for value in retriever_min_overlaps),
+            "source_family_filters": tuple(str(value) for value in source_family_filters),
             "retrieval_limit": int(retrieval_limit),
             "signal": signal,
             "alpha": float(alpha),
@@ -876,6 +880,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--query-fields", default="question,question_answer")
     parser.add_argument("--retriever-min-overlaps", default=",".join(str(value) for value in DEFAULT_MIN_OVERLAPS))
+    parser.add_argument(
+        "--source-family-filters",
+        default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
+        help="comma-separated source-family evidence filters to sweep: off,planned,planned_rerank",
+    )
     parser.add_argument("--retrieval-limit", type=int, default=3)
     parser.add_argument("--signal", default="truth_proj")
     parser.add_argument("--alpha", type=float, default=0.10)
@@ -917,6 +926,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_kind=args.source_kind,
         query_fields=_parse_csv_strings(args.query_fields, choices=QUERY_FIELDS, name="query_fields"),
         retriever_min_overlaps=_parse_csv_floats(args.retriever_min_overlaps, name="retriever_min_overlaps"),
+        source_family_filters=_parse_csv_strings(
+            args.source_family_filters,
+            choices=("off", "planned", "planned_rerank"),
+            name="source_family_filters",
+        ),
         retrieval_limit=args.retrieval_limit,
         signal=args.signal,
         alpha=args.alpha,

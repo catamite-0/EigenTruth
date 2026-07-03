@@ -36,8 +36,14 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
 from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     run as run_citation_search_handoff,
 )
+from benchmarks.run_citation_search_evidence_workflow import (  # noqa: E402
+    _parse_csv_strings,
+)
 from benchmarks.run_citation_search_evidence_workflow import run as run_citation_search_evidence  # noqa: E402
-from benchmarks.sweep_blind_spot_retrieval_queries import DEFAULT_TARGET_ROUTE  # noqa: E402
+from benchmarks.sweep_blind_spot_retrieval_queries import (  # noqa: E402
+    DEFAULT_SOURCE_FAMILY_FILTERS,
+    DEFAULT_TARGET_ROUTE,
+)
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -69,6 +75,7 @@ def run_external_citation_search_adapter_workflow(
     source_kind: str = DEFAULT_SOURCE_KIND,
     command_timeout_seconds: float | None = None,
     target_route: str = DEFAULT_TARGET_ROUTE,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
     min_adapter_request_coverage: float = 1.0,
     evidence_metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -132,6 +139,7 @@ def run_external_citation_search_adapter_workflow(
         corpus_name=corpus_name,
         source_kind=source_kind,
         target_route=target_route,
+        source_family_filters=source_family_filters,
         min_adapter_request_coverage=min_adapter_request_coverage,
         metadata={**dict(evidence_metadata or {}), "source_workflow": WORKFLOW},
         compact_json=compact_json,
@@ -162,6 +170,7 @@ def run_external_citation_search_adapter_workflow(
             "source_kind": source_kind,
             "command_timeout_seconds": command_timeout_seconds,
             "target_route": target_route,
+            "source_family_filters": tuple(str(item) for item in source_family_filters),
             "min_adapter_request_coverage": float(min_adapter_request_coverage),
         },
         "paths": {
@@ -205,6 +214,7 @@ def run_external_citation_search_adapter_workflow(
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
             "target_route": target_route,
+            "source_family_filters": tuple(str(item) for item in source_family_filters),
             "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
             "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
@@ -232,6 +242,7 @@ def run_external_citation_search_adapter_workflow(
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
                 "target_route": target_route,
+                "source_family_filters": tuple(str(item) for item in source_family_filters),
                 "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
                 "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
@@ -376,6 +387,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--command-timeout-seconds", type=float, default=None)
     parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
+    parser.add_argument(
+        "--source-family-filters",
+        default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
+        help="Comma-separated source-family filters for query sweep evidence: off, planned, planned_rerank.",
+    )
     parser.add_argument("--min-adapter-request-coverage", type=float, default=1.0)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
@@ -404,6 +420,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_kind=args.source_kind,
         command_timeout_seconds=args.command_timeout_seconds,
         target_route=args.target_route,
+        source_family_filters=_parse_csv_strings(
+            args.source_family_filters,
+            choices=("off", "planned", "planned_rerank"),
+            name="source_family_filters",
+        ),
         min_adapter_request_coverage=args.min_adapter_request_coverage,
         evidence_metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),

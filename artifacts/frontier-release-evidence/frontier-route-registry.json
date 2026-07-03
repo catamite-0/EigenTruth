@@ -1651,6 +1651,24 @@
       "name": "smollm2-l80-frontier-v4-unresolved-frontier-evidence-summary",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-source-family-filter-sweep/artifact-manifest.json",
+        "best_blind_refuted_count": 2,
+        "best_passing_blind_refuted_count": null,
+        "best_passing_strategy": null,
+        "best_strategy": "citation_entity_overlap_0p65_sf_planned_rerank",
+        "blind_spot_count": 89,
+        "closure_action": "improve_unresolved_citation_alignment",
+        "diagnostic": "planned_rerank_citation_query_probe",
+        "status": "complete",
+        "workflow": "blind_spot_retrieval_query_sweep"
+      },
+      "name": "improve-unresolved-citation-alignment-source-family-filter-diagnostic",
+      "path": "artifacts/improve-unresolved-citation-alignment/diagnostic-source-family-filter-sweep/query-sweep.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

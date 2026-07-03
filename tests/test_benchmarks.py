@@ -63328,6 +63328,7 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
         output_dir=output_dir,
         query_fields=("question_answer",),
         retriever_min_overlaps=(0.5,),
+        source_family_filters=("planned_rerank",),
         retrieval_limit=2,
         alpha=0.2,
         max_verified_false_alarm=0.0,
@@ -63358,7 +63359,9 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     assert payload["summary"]["source_document_count"] == 2
     assert payload["summary"]["corpus_document_count"] == 2
     assert payload["summary"]["provenance_passed"] is True
-    assert payload["summary"]["query_sweep_best_strategy"] == "question_answer_overlap_0p5"
+    assert payload["summary"]["query_sweep_best_strategy"] == (
+        "question_answer_overlap_0p5_sf_planned_rerank"
+    )
     assert payload["summary"]["query_sweep_best_passing_strategy"] is None
     assert payload["summary"]["query_sweep_failure_reason_counts"][
         "blind_refuted_rate_below_min"
@@ -63368,15 +63371,17 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
         in payload["summary"]["query_sweep_recommended_next_actions"]
     )
     assert payload["summary"]["query_sweep_best_observed_strategy"] == (
-        "question_answer_overlap_0p5"
+        "question_answer_overlap_0p5_sf_planned_rerank"
     )
     assert payload["summary"]["query_sweep_best_observed_failure_reasons"]
     assert payload["summary"]["comparison_passed"] is False
     assert payload["config"]["target_route"] == "retrieval_structured_qa"
     assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-corpus.json")
     assert workflow_report["config"]["target_route"] == "retrieval_structured_qa"
+    assert workflow_report["config"]["source_family_filters"] == ["planned_rerank"]
     query_sweep_report = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
     assert query_sweep_report["config"]["target_route"] == "retrieval_structured_qa"
+    assert query_sweep_report["config"]["source_family_filters"] == ["planned_rerank"]
     assert query_sweep_report["config"]["source_binding_enabled"] is True
     assert query_sweep_report["config"]["use_precomputed_retrieval_hits"] is True
     assert query_sweep_report["source"]["source_binding_queue_path"] == str(queue_path)
@@ -63508,6 +63513,7 @@ def test_citation_search_evidence_workflow_blocks_partial_adapter_result_coverag
         output_dir=output_dir,
         query_fields=("question_answer",),
         retriever_min_overlaps=(0.5,),
+        source_family_filters=("planned_rerank",),
         retrieval_limit=2,
         alpha=0.2,
         max_verified_false_alarm=0.0,
@@ -63789,6 +63795,7 @@ print(f"mock_search_adapter_written={written}")
         controlled_sweep_paths=(controlled_sweep_path,),
         output_dir=output_dir,
         batch_ids=("unresolved-evidence-batch-0001",),
+        source_family_filters=("planned_rerank",),
         registry_path=registry_path,
         name="external-citation-search-unit",
         version="0.1",
@@ -63817,8 +63824,10 @@ print(f"mock_search_adapter_written={written}")
     assert payload["evidence_summary"]["provenance_passed"] is True
     assert payload["evidence_summary"]["query_sweep_best_passing_strategy"] is None
     assert payload["config"]["target_route"] == "retrieval_structured_qa"
+    assert payload["config"]["source_family_filters"] == ("planned_rerank",)
     assert evidence_report["config"]["batch_ids"] == ["unresolved-evidence-batch-0001"]
     assert evidence_report["config"]["target_route"] == "retrieval_structured_qa"
+    assert evidence_report["config"]["source_family_filters"] == ["planned_rerank"]
     assert "record_index" not in request_jsonl
     assert "target_id" not in request_jsonl
     assert "model_answer" not in request_jsonl
