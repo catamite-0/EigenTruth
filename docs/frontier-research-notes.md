@@ -959,6 +959,16 @@ Added the first monitor-first tool-selection audit layer:
   `evidence_alignment_insufficient_evidence`, `48` need numeric/statistical
   evidence, `16` need causal/procedural evidence, and `8` need temporal
   evidence.
+- Claim-specific evidence span extraction is now part of the binding audit, but
+  it is conservative by default: accepted bound documents keep their original
+  text while recording `citation_binding_evidence_span` metadata. The command-3
+  default replay binds `128/740` source docs across `88` requests, records spans
+  for `84` accepted docs, and preserves the prior best observed query-sweep
+  profile (`346` records with hits, `1038` hits, blind refute `1/89`, verified
+  false alarm `0.088`). Replacing bound-corpus text with spans is available as
+  `--clip-binding-evidence-spans`, but the replay showed it drops the blind
+  refute count to `0/89`, so clipping remains an explicit experiment rather
+  than a promoted default.
 - `run_external_citation_search_adapter_workflow.py` adds the local command
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the

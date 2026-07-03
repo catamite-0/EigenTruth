@@ -109,6 +109,7 @@ def run(
     max_label_metadata_rate: float = 0.0,
     audit_source_bindings: bool = False,
     require_binding_source_family_match: bool = False,
+    clip_binding_evidence_spans: bool = False,
     binding_min_keyword_overlap: float = 0.2,
     binding_min_support_keyword_overlap: float = 0.65,
     binding_min_entity_recall: float = 0.5,
@@ -167,6 +168,7 @@ def run(
             min_support_keyword_overlap=float(binding_min_support_keyword_overlap),
             min_entity_recall=float(binding_min_entity_recall),
             require_source_family_match=bool(require_binding_source_family_match),
+            clip_accepted_evidence_spans=bool(clip_binding_evidence_spans),
             metadata={**dict(metadata or {}), "source_workflow": WORKFLOW},
             compact_json=compact_json,
         )
@@ -288,6 +290,7 @@ def run(
             "max_label_metadata_rate": float(max_label_metadata_rate),
             "audit_source_bindings": bool(audit_source_bindings),
             "require_binding_source_family_match": bool(require_binding_source_family_match),
+            "clip_binding_evidence_spans": bool(clip_binding_evidence_spans),
             "binding_min_keyword_overlap": float(binding_min_keyword_overlap),
             "binding_min_support_keyword_overlap": float(binding_min_support_keyword_overlap),
             "binding_min_entity_recall": float(binding_min_entity_recall),
@@ -1104,6 +1107,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="Run claim-specific citation/source binding before provenance and query-sweep gates.",
     )
     parser.add_argument("--require-binding-source-family-match", action="store_true")
+    parser.add_argument(
+        "--clip-binding-evidence-spans",
+        action="store_true",
+        help="Use accepted claim-specific evidence spans as bound-corpus text; default only records span metadata.",
+    )
     parser.add_argument("--binding-min-keyword-overlap", type=float, default=0.2)
     parser.add_argument("--binding-min-support-keyword-overlap", type=float, default=0.65)
     parser.add_argument("--binding-min-entity-recall", type=float, default=0.5)
@@ -1156,6 +1164,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         max_label_metadata_rate=args.max_label_metadata_rate,
         audit_source_bindings=bool(args.audit_source_bindings),
         require_binding_source_family_match=bool(args.require_binding_source_family_match),
+        clip_binding_evidence_spans=bool(args.clip_binding_evidence_spans),
         binding_min_keyword_overlap=float(args.binding_min_keyword_overlap),
         binding_min_support_keyword_overlap=float(args.binding_min_support_keyword_overlap),
         binding_min_entity_recall=float(args.binding_min_entity_recall),

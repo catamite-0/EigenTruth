@@ -63001,6 +63001,81 @@ def test_citation_search_result_binding_audit_filters_unbound_hits(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_citation_search_result_binding_audit_clips_claim_specific_evidence_span():
+    module = importlib.import_module("benchmarks.audit_citation_search_result_bindings")
+
+    source_hash = "sha-beta-founder"
+    full_text = (
+        "Beta Lab opened a campus in Paris. "
+        "Beta Lab was founded by Ada Example in 2010. "
+        "Gamma Lab was founded by Wrong Person."
+    )
+
+    default_payload = module.audit_citation_search_result_bindings(
+        requests=(
+            {
+                "request_id": "cite-search-beta-founder",
+                "query": "Who founded Beta Lab?",
+                "question_type": "person",
+                "requires_timestamp": False,
+                "metadata": {"source_queue_request_sha256": source_hash},
+            },
+        ),
+        source_documents=(
+            {
+                "text": full_text,
+                "source": "https://example.org/beta-lab",
+                "metadata": {
+                    "source_queue_request_sha256": source_hash,
+                    "source_family": "reference",
+                    "title": "Beta Lab reference",
+                },
+            },
+        ),
+    )
+    default_bound_doc = default_payload["bound_source_documents"][0]
+    assert default_bound_doc["text"] == full_text
+    assert default_bound_doc["metadata"]["citation_binding_evidence_span"] == (
+        "Beta Lab was founded by Ada Example in 2010."
+    )
+
+    payload = module.audit_citation_search_result_bindings(
+        requests=(
+            {
+                "request_id": "cite-search-beta-founder",
+                "query": "Who founded Beta Lab?",
+                "question_type": "person",
+                "requires_timestamp": False,
+                "metadata": {"source_queue_request_sha256": source_hash},
+            },
+        ),
+        source_documents=(
+            {
+                "text": full_text,
+                "source": "https://example.org/beta-lab",
+                "metadata": {
+                    "source_queue_request_sha256": source_hash,
+                    "source_family": "reference",
+                    "title": "Beta Lab reference",
+                },
+            },
+        ),
+        clip_accepted_evidence_spans=True,
+    )
+
+    bound_doc = payload["bound_source_documents"][0]
+    record = payload["records"][0]
+
+    assert payload["summary"]["accepted_source_document_count"] == 1
+    assert bound_doc["text"] == "Beta Lab was founded by Ada Example in 2010."
+    assert "Wrong Person" not in bound_doc["text"]
+    assert bound_doc["metadata"]["citation_binding_evidence_span"] == bound_doc["text"]
+    assert bound_doc["metadata"]["citation_binding_evidence_span_source"] == "text"
+    assert bound_doc["metadata"]["citation_binding_original_text_chars"] == len(full_text)
+    assert record["evidence_span"]["text"] == bound_doc["text"]
+    assert record["intent"]["reason"] == "person_relation_intent_matched"
+
+
 def test_citation_search_adapter_handoff_selects_execution_batch(tmp_path):
     module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
 
@@ -65277,6 +65352,7 @@ def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
     query_sweep = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
 
     assert payload["config"]["audit_source_bindings"] is True
+    assert payload["config"]["clip_binding_evidence_spans"] is False
     assert payload["summary"]["source_document_count"] == 2
     assert payload["summary"]["bound_source_document_count"] == 1
     assert payload["summary"]["bound_request_count"] == 1

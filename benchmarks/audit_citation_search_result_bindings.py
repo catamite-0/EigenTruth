@@ -16,6 +16,7 @@ import json
 import re
 import sys
 from collections import Counter
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -65,6 +66,56 @@ PERSON_RELATION_TERMS = {
 }
 LOCATION_TERMS = {"capital", "country", "located", "location", "place", "where"}
 TEMPORAL_TERMS = {"date", "time", "when", "year"}
+SPAN_STOPWORDS = {
+    "about",
+    "after",
+    "also",
+    "and",
+    "are",
+    "because",
+    "been",
+    "before",
+    "being",
+    "between",
+    "both",
+    "but",
+    "can",
+    "did",
+    "does",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "how",
+    "into",
+    "many",
+    "more",
+    "much",
+    "not",
+    "off",
+    "onto",
+    "out",
+    "than",
+    "that",
+    "the",
+    "their",
+    "then",
+    "there",
+    "these",
+    "this",
+    "those",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "who",
+    "why",
+    "with",
+}
 OFFICIAL_FAMILIES = {"official", "official_statistics", "domain_specific"}
 SOURCE_FAMILY_COMPATIBILITY = {
     "official": {"official_statistics", "domain_specific"},
@@ -96,6 +147,7 @@ def audit_citation_search_result_bindings(
     min_entity_recall: float = 0.5,
     require_source_family_match: bool = False,
     require_freshness: bool = True,
+    clip_accepted_evidence_spans: bool = False,
     max_examples: int = 20,
     metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -137,6 +189,7 @@ def audit_citation_search_result_bindings(
                 status="rejected",
                 issue_codes=binding_failures,
                 alignment_record={},
+                evidence_span={},
                 intent={},
                 source_family={},
             )
@@ -155,7 +208,13 @@ def audit_citation_search_result_bindings(
             request_counts[record["request_id"]] += 1
         records.append(record)
         if record["status"] == "accepted":
-            accepted_documents.append(_accepted_document(document, record=record))
+            accepted_documents.append(
+                _accepted_document(
+                    document,
+                    record=record,
+                    clip_evidence_span=bool(clip_accepted_evidence_spans),
+                )
+            )
 
     accepted_request_ids = {record["request_id"] for record in records if record["status"] == "accepted"}
     rejected_count = len(records) - len(accepted_documents)
@@ -191,6 +250,7 @@ def audit_citation_search_result_bindings(
             "min_entity_recall": float(min_entity_recall),
             "require_source_family_match": bool(require_source_family_match),
             "require_freshness": bool(require_freshness),
+            "clip_accepted_evidence_spans": bool(clip_accepted_evidence_spans),
             "max_examples": int(max_examples),
         },
         "summary": summary,
@@ -219,6 +279,7 @@ def run(
     min_entity_recall: float = 0.5,
     require_source_family_match: bool = False,
     require_freshness: bool = True,
+    clip_accepted_evidence_spans: bool = False,
     max_examples: int = 20,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -236,6 +297,7 @@ def run(
         min_entity_recall=min_entity_recall,
         require_source_family_match=require_source_family_match,
         require_freshness=require_freshness,
+        clip_accepted_evidence_spans=clip_accepted_evidence_spans,
         max_examples=max_examples,
         metadata=metadata,
     )
@@ -325,10 +387,16 @@ def _audit_document_binding(
         claim_id=str(request.get("request_id") or f"request-{source_document_index}"),
         metadata={"source": "citation_search_request"},
     )
-    alignment = audit_evidence_alignment(claim, evidence=(document,), policy=policy)
+    evidence_document = _claim_specific_evidence_document(request=request, document=document)
+    alignment = audit_evidence_alignment(claim, evidence=(evidence_document,), policy=policy)
     alignment_record = alignment.records[0].to_dict() if alignment.records else {}
-    intent = _request_intent_match(request, document)
+    if evidence_document is not document and alignment_record.get("status") != "aligned":
+        evidence_document = document
+        alignment = audit_evidence_alignment(claim, evidence=(document,), policy=policy)
+    alignment_record = alignment.records[0].to_dict() if alignment.records else {}
+    intent = _request_intent_match(request, evidence_document)
     source_family = _source_family_match(request, document)
+    evidence_span = _mapping(evidence_document.get("metadata")).get("claim_evidence_span")
     issue_codes = list(base_failures)
     alignment_status = str(alignment_record.get("status") or "")
     if alignment_status != "aligned":
@@ -347,6 +415,7 @@ def _audit_document_binding(
         status=status,
         issue_codes=tuple(dict.fromkeys(issue_codes)),
         alignment_record=alignment_record,
+        evidence_span=evidence_span if isinstance(evidence_span, Mapping) else {},
         intent=intent,
         source_family=source_family,
     )
@@ -360,6 +429,7 @@ def _binding_record(
     status: str,
     issue_codes: Sequence[str],
     alignment_record: Mapping[str, Any],
+    evidence_span: Mapping[str, Any],
     intent: Mapping[str, Any],
     source_family: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -383,13 +453,22 @@ def _binding_record(
             "entity_recall": alignment_record.get("entity_recall"),
             "issue_codes": tuple(_sequence(alignment_record.get("issue_codes", ()))),
         },
+        "evidence_span": dict(evidence_span),
         "intent": dict(intent),
         "source_family": dict(source_family),
     }
 
 
-def _accepted_document(document: Mapping[str, Any], *, record: Mapping[str, Any]) -> dict[str, Any]:
+def _accepted_document(
+    document: Mapping[str, Any],
+    *,
+    record: Mapping[str, Any],
+    clip_evidence_span: bool,
+) -> dict[str, Any]:
     metadata = dict(_mapping(document.get("metadata")))
+    evidence_span = _mapping(record.get("evidence_span"))
+    span_text = str(evidence_span.get("text") or "").strip()
+    original_text = str(document.get("text") or "").strip()
     metadata.update({
         "citation_binding_audit": WORKFLOW,
         "citation_binding_status": "accepted",
@@ -398,9 +477,18 @@ def _accepted_document(document: Mapping[str, Any], *, record: Mapping[str, Any]
         "citation_binding_alignment_status": _mapping(record.get("alignment")).get("status"),
         "citation_binding_source_family_status": _mapping(record.get("source_family")).get("reason"),
     })
+    if span_text:
+        metadata.update({
+            "citation_binding_evidence_span": span_text,
+            "citation_binding_evidence_span_score": evidence_span.get("score"),
+            "citation_binding_evidence_span_source": evidence_span.get("source"),
+            "citation_binding_original_text_chars": len(original_text),
+            "citation_binding_original_text_sha256": sha256(original_text.encode("utf-8")).hexdigest(),
+        })
     _reject_reserved_metadata(metadata, source=str(document.get("source") or "accepted_document"))
     return {
         **{key: value for key, value in document.items() if key != "metadata"},
+        **({"text": span_text} if span_text and clip_evidence_span else {}),
         "metadata": metadata,
     }
 
@@ -469,6 +557,158 @@ def _binding_claim_text(request: Mapping[str, Any]) -> str:
         *tuple(_string_sequence(request.get("alternate_queries", ()))),
     ]
     return " ".join(part for part in parts if part).strip()
+
+
+def _claim_specific_evidence_document(
+    *,
+    request: Mapping[str, Any],
+    document: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    span = _best_claim_evidence_span(request=request, document=document)
+    if not span:
+        return document
+    metadata = dict(_mapping(document.get("metadata")))
+    metadata["claim_evidence_span"] = span
+    return {
+        **dict(document),
+        "text": span["text"],
+        "metadata": metadata,
+    }
+
+
+def _best_claim_evidence_span(
+    *,
+    request: Mapping[str, Any],
+    document: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    claim_text = _binding_claim_text(request)
+    candidates = _claim_evidence_span_candidates(document)
+    if not claim_text or not candidates:
+        return None
+    ranked = []
+    for index, (source, text) in enumerate(candidates):
+        rank = _claim_span_rank(claim_text=claim_text, request=request, span_text=text)
+        ranked.append((rank, index, source, text))
+    best_rank, best_index, best_source, best_text = max(ranked, key=lambda item: item[0])
+    if best_rank <= (0.0, 0.0, 0.0, 0.0, 0.0, -10_000.0):
+        return None
+    return {
+        "text": best_text,
+        "score": round(sum(best_rank[:5]) / 5.0, 6),
+        "source": best_source,
+        "candidate_index": best_index,
+        "rank": best_rank,
+        "text_sha256": sha256(best_text.encode("utf-8")).hexdigest(),
+    }
+
+
+def _claim_evidence_span_candidates(document: Mapping[str, Any]) -> tuple[tuple[str, str], ...]:
+    metadata = _mapping(document.get("metadata"))
+    sources = (
+        ("text", document.get("text")),
+        ("content", document.get("content")),
+        ("snippet", metadata.get("snippet")),
+        ("title", metadata.get("title")),
+        ("description", metadata.get("description")),
+    )
+    candidates: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for source, value in sources:
+        text = _clean_text(value)
+        if not text:
+            continue
+        for span in _sentence_windows(text):
+            normalized = " ".join(span.casefold().split())
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            candidates.append((source, span))
+    return tuple(candidates)
+
+
+def _sentence_windows(text: str) -> tuple[str, ...]:
+    normalized = _clean_text(text)
+    if not normalized:
+        return ()
+    sentences = tuple(
+        part.strip()
+        for part in re.split(r"(?<=[.!?。！？])\s+", normalized)
+        if part.strip()
+    )
+    if not sentences:
+        return (normalized,)
+    windows: list[str] = []
+    for index, sentence in enumerate(sentences):
+        windows.append(sentence)
+        if index + 1 < len(sentences):
+            combined = f"{sentence} {sentences[index + 1]}".strip()
+            if len(combined) <= 800:
+                windows.append(combined)
+    if len(normalized) <= 800:
+        windows.append(normalized)
+    return tuple(dict.fromkeys(windows))
+
+
+def _claim_span_rank(
+    *,
+    claim_text: str,
+    request: Mapping[str, Any],
+    span_text: str,
+) -> tuple[float, float, float, float, float, float]:
+    claim_tokens = set(_content_tokens(claim_text))
+    span_tokens = set(_content_tokens(span_text))
+    token_recall = _safe_div(len(claim_tokens & span_tokens), len(claim_tokens)) or 0.0
+    claim_numbers = set(_number_terms(claim_text))
+    span_numbers = set(_number_terms(span_text))
+    number_recall = _safe_div(len(claim_numbers & span_numbers), len(claim_numbers)) or 0.0
+    numeric_intent_bonus = 0.0
+    if _numeric_intent(claim_text=claim_text, request=request) and span_numbers:
+        numeric_intent_bonus = 1.0
+    relation_bonus = _relation_bonus(claim_text=claim_text, span_tokens=span_tokens)
+    temporal_bonus = 1.0 if _temporal_intent(claim_text=claim_text, request=request) and span_numbers else 0.0
+    return (
+        number_recall,
+        numeric_intent_bonus,
+        relation_bonus,
+        temporal_bonus,
+        token_recall,
+        -min(len(span_text), 10_000) / 10_000.0,
+    )
+
+
+def _content_tokens(value: str) -> tuple[str, ...]:
+    tokens = []
+    for token in _tokens(value):
+        if len(token) < 3 or token in SPAN_STOPWORDS or NUMBER_RE.fullmatch(token):
+            continue
+        tokens.append(token)
+    return tuple(dict.fromkeys(tokens))
+
+
+def _number_terms(value: str) -> tuple[str, ...]:
+    terms = []
+    for match in NUMBER_RE.finditer(value):
+        term = match.group(0).replace(",", "").strip().casefold()
+        if term:
+            terms.append(term)
+    return tuple(dict.fromkeys(terms))
+
+
+def _numeric_intent(*, claim_text: str, request: Mapping[str, Any]) -> bool:
+    question_type = str(request.get("question_type") or "").strip().casefold()
+    return question_type == "quantity" or _contains_any(claim_text, NUMERIC_TERMS) or bool(NUMBER_RE.search(claim_text))
+
+
+def _temporal_intent(*, claim_text: str, request: Mapping[str, Any]) -> bool:
+    question_type = str(request.get("question_type") or "").strip().casefold()
+    return question_type == "temporal" or _contains_any(claim_text, TEMPORAL_TERMS)
+
+
+def _relation_bonus(*, claim_text: str, span_tokens: set[str]) -> float:
+    relation_terms = set(_content_tokens(claim_text)) & PERSON_RELATION_TERMS
+    if not relation_terms:
+        return 0.0
+    return 1.0 if relation_terms & span_tokens else 0.0
 
 
 def _request_intent_match(request: Mapping[str, Any], document: Mapping[str, Any]) -> dict[str, Any]:
@@ -607,6 +847,12 @@ def _tokens(value: str) -> tuple[str, ...]:
     return tuple(match.group(0).casefold() for match in TOKEN_RE.finditer(value))
 
 
+def _clean_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return " ".join(str(value).split())
+
+
 def _normalize_family(value: Any) -> str:
     return str(value or "").strip().casefold().replace("-", "_").replace(" ", "_")
 
@@ -710,6 +956,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-entity-recall", type=float, default=0.5)
     parser.add_argument("--require-source-family-match", action="store_true")
     parser.add_argument("--allow-missing-freshness", action="store_true")
+    parser.add_argument("--clip-accepted-evidence-spans", action="store_true")
     parser.add_argument("--max-examples", type=int, default=20)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
@@ -731,6 +978,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         min_entity_recall=args.min_entity_recall,
         require_source_family_match=bool(args.require_source_family_match),
         require_freshness=not bool(args.allow_missing_freshness),
+        clip_accepted_evidence_spans=bool(args.clip_accepted_evidence_spans),
         max_examples=args.max_examples,
         metadata=_parse_metadata(args.metadata),
         compact_json=bool(args.compact_json),
