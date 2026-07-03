@@ -40313,6 +40313,173 @@ def test_frontier_research_queue_input_binding_scaffold_expands_source_family_ur
     assert record.metadata["binding_skeleton_count"] == 2
 
 
+def test_frontier_research_queue_seed_input_binding_stages_audited_sidecar(
+    tmp_path,
+):
+    seed_bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_seed_inputs"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    seed_path = tmp_path / "source-family-url-seeds.jsonl"
+    seed_path.write_text(
+        json.dumps({
+            "task_id": "catalog-news-alpha",
+            "collection_task_id": "catalog-news-alpha",
+            "action_id": "run_source_family_catalog_adapters",
+            "input_name": "source_family_url_seeds",
+            "source_family": "news",
+            "provider": "seeded_news",
+            "seed_key": "news:catalog-news-alpha",
+            "url": "https://example.com/news-alpha",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        })
+        + "\n",
+        encoding="utf-8",
+    )
+    audit = {
+        "workflow": "frontier_research_queue_input_binding_audit",
+        "status": "ready",
+        "summary": {
+            "sidecar_counts": {"source_family_url_seeds": 1},
+            "sidecar_status_counts": {"source_family_url_seeds": {"ready": 1, "blocked": 0}},
+            "ready_by_sidecar": {"source_family_url_seeds": 1},
+            "blocked_by_sidecar": {},
+        },
+        "paths": {"source_family_url_seeds": str(seed_path)},
+    }
+    base_bindings = {
+        "workflow": "frontier_research_queue_command_bindings",
+        "status": "needs_review",
+        "inputs": {},
+        "bindings": {
+            "run_source_family_catalog_adapters": {
+                "bound_commands": (
+                    "python benchmarks/run_seeded_url_source_family_catalog_adapter.py "
+                    "--tasks tasks.jsonl --source-family news --seeds ... "
+                    "--output seeded.jsonl --report-json seeded.json "
+                    "--artifact-manifest manifest.json",
+                ),
+                "review_status": "needs_review",
+                "required_inputs": ("source_family_url_seeds",),
+            },
+        },
+    }
+    output_dir = tmp_path / "seed-binding-stage"
+    registry_path = tmp_path / "registry.json"
+
+    payload = seed_bind_module.bind_frontier_research_queue_seed_inputs(
+        input_binding_audit=audit,
+        base_bindings=base_bindings,
+        output_dir=output_dir,
+        artifact_manifest_path=output_dir / "artifact-manifest.json",
+        registry_path=registry_path,
+        name="frontier-seed-binding-stage",
+        version="0.1",
+    )
+    updated = payload["updated_bindings"]
+    binding = updated["bindings"]["run_source_family_catalog_adapters"]
+    command = binding["bound_commands"][0]
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-seed-binding-stage:0.1"
+    )
+
+    assert payload["status"] == "ready_for_binding_review"
+    assert payload["summary"]["applied_input_count"] == 1
+    assert payload["summary"]["applied_placeholder_count"] == 1
+    assert payload["summary"]["ready_seed_input_count"] == 1
+    assert updated["workflow"] == "frontier_research_queue_command_bindings"
+    assert updated["status"] == "needs_review"
+    assert updated["generated_by"] == (
+        "frontier_research_queue_source_family_seed_binding_staging"
+    )
+    assert str(seed_path) in command
+    assert "--seeds ..." not in command
+    assert binding["review_status"] == "needs_review"
+    assert binding["inputs"]["source_family_url_seeds"]["path"] == str(seed_path)
+    assert binding["source_backed_input_reviews"][0]["target_flag"] == "--seeds"
+    assert updated["inputs"]["source_family_url_seeds"]["not_verifier_evidence"] is True
+    assert registry_module.load_and_verify_artifact_manifest(
+        output_dir / "artifact-manifest.json"
+    ).passed is True
+    assert record.metadata["workflow"] == (
+        "frontier_research_queue_source_family_seed_binding_staging"
+    )
+    assert record.metadata["applied_placeholder_count"] == 1
+
+
+def test_frontier_research_queue_seed_input_binding_blocks_stale_or_blocked_seed_sidecar(
+    tmp_path,
+):
+    seed_bind_module = importlib.import_module(
+        "benchmarks.bind_frontier_research_queue_seed_inputs"
+    )
+    seed_path = tmp_path / "source-family-url-seeds.jsonl"
+    seed_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "task_id": "catalog-news-alpha",
+                    "action_id": "run_source_family_catalog_adapters",
+                    "input_name": "source_family_url_seeds",
+                    "url": "https://example.com/news-alpha",
+                    "review_status": "approved",
+                    "not_verifier_evidence": True,
+                },
+                {
+                    "task_id": "catalog-news-beta",
+                    "action_id": "run_source_family_catalog_adapters",
+                    "input_name": "source_family_url_seeds",
+                    "url": "",
+                    "review_status": "needs_review",
+                    "not_verifier_evidence": True,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    audit = {
+        "workflow": "frontier_research_queue_input_binding_audit",
+        "status": "blocked",
+        "summary": {
+            "sidecar_counts": {"source_family_url_seeds": 1},
+            "sidecar_status_counts": {"source_family_url_seeds": {"ready": 1, "blocked": 1}},
+            "ready_by_sidecar": {"source_family_url_seeds": 1},
+            "blocked_by_sidecar": {"source_family_url_seeds": 1},
+        },
+        "paths": {"source_family_url_seeds": str(seed_path)},
+    }
+    base_bindings = {
+        "workflow": "frontier_research_queue_command_bindings",
+        "bindings": {
+            "run_source_family_catalog_adapters": {
+                "bound_commands": (
+                    "python benchmarks/run_seeded_url_source_family_catalog_adapter.py "
+                    "--tasks tasks.jsonl --seeds ... --output seeded.jsonl",
+                ),
+                "review_status": "needs_review",
+            },
+        },
+    }
+
+    payload = seed_bind_module.bind_frontier_research_queue_seed_inputs(
+        input_binding_audit=audit,
+        base_bindings=base_bindings,
+        output_dir=tmp_path / "blocked-seed-binding-stage",
+    )
+    binding = payload["updated_bindings"]["bindings"]["run_source_family_catalog_adapters"]
+
+    assert payload["status"] == "needs_review"
+    assert payload["summary"]["applied_placeholder_count"] == 0
+    assert payload["summary"]["skip_reason_counts"] == {
+        "source_family_url_seed_sidecar_blocked": 1,
+        "source_family_url_seed_sidecar_changed_since_audit": 1,
+    }
+    assert "--seeds ..." in binding["bound_commands"][0]
+
+
 def test_frontier_research_queue_input_binding_scaffold_can_skip_task_expansion(
     tmp_path,
 ):

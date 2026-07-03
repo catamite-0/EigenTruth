@@ -7304,6 +7304,28 @@ before adapter execution. The audit still executes no commands and still does
 not promote the bindings as verifier evidence; it is a pre-fill or pre-adapter
 quality gate.
 
+If the audit contains a ready `source_family_url_seeds` sidecar, stage that
+reviewed seed file back into command bindings before rerunning normal
+command-binding review:
+
+```bash
+python benchmarks/bind_frontier_research_queue_seed_inputs.py \
+  --input-binding-audit artifacts/frontier-research-queue-input-binding-audit/frontier-input-binding-audit.json \
+  --base-bindings artifacts/frontier-research-queue-staged-bindings.json \
+  --output-dir artifacts/frontier-research-queue-seed-input-binding-stage \
+  --json artifacts/frontier-research-queue-seed-input-binding-stage/source-family-seed-binding-staging.json \
+  --bindings-json artifacts/frontier-research-queue-seed-input-binding-stage/frontier-research-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-seed-input-binding-stage/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-seed-input-binding-stage \
+  --version 0.1
+```
+
+This bridge only replaces matching `--seeds ...` placeholders with the audited
+`source-family-url-seeds.jsonl` path and records the source-backed input review.
+It leaves the command bindings at `needs_review`, executes no adapters, and does
+not turn URL seeds into verifier evidence.
+
 To dry-run or explicitly execute the audited fill commands:
 
 ```bash
