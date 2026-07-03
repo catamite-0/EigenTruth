@@ -937,6 +937,15 @@ Added the first monitor-first tool-selection audit layer:
   model answers, or retrieval-only `retrieval_index_text`. The evidence
   workflow can now run this as `--audit-source-bindings` and sweep over the
   filtered `citation-search-bound-corpus.json`.
+- The binding gate now treats the sanitized adapter request fingerprint as a
+  valid fallback binding for older source-family artifacts whose
+  `source_queue_request_sha256` was overwritten by upstream catalog hashes. A
+  replay of the command-3 citation alignment run increased accepted source docs
+  from `20/740` to `124/740` and removed `672` unknown-source rejections, but it
+  still blocks route promotion because blind-spot refutation remains `1/89`
+  while verified false alarm remains `0.088` against the `0.05` gate. The next
+  citation/search work is evidence-quality and route-quality improvement, not
+  another provenance-binding repair.
 - `run_external_citation_search_adapter_workflow.py` adds the local command
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the

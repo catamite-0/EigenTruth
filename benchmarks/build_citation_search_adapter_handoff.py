@@ -587,9 +587,14 @@ def _source_binding_metadata(
         "source_request_sha256",
         "collection_request_sha256",
     ):
-        value = result_metadata.get(key, request_metadata.get(key))
-        if value is not None:
-            metadata[key] = value
+        request_value = request_metadata.get(key)
+        result_value = result_metadata.get(key)
+        if request_value is not None:
+            metadata[key] = request_value
+        elif result_value is not None:
+            metadata[key] = result_value
+        if result_value is not None and result_value != request_value:
+            metadata[f"source_result_{key}"] = result_value
     return metadata
 
 

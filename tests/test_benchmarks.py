@@ -62599,6 +62599,7 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
                         "entity": "Alpha Syndrome",
                         "property": "definition",
                         "value": "fictional condition",
+                        "source_queue_request_sha256": ["catalog-source-alpha"],
                     },
                 },
                 {
@@ -62652,6 +62653,7 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert source_docs[0]["metadata"]["source_queue_request_sha256"] == requests[0]["metadata"][
         "source_queue_request_sha256"
     ]
+    assert source_docs[0]["metadata"]["source_result_source_queue_request_sha256"] == ["catalog-source-alpha"]
     assert "What is Alpha Syndrome?" in source_docs[0]["metadata"]["retrieval_index_text"]
     assert "A moon" not in source_docs[0]["metadata"]["retrieval_index_text"]
     assert "record_index" not in source_docs[0]["metadata"]
@@ -62846,10 +62848,20 @@ def test_citation_search_result_binding_audit_filters_unbound_hits(tmp_path):
         adapter_results_path=results_path,
         output_dir=handoff_dir,
     )
+    source_docs_path = handoff_dir / "citation-search-source-docs.jsonl"
+    source_docs = [json.loads(line) for line in source_docs_path.read_text(encoding="utf-8").splitlines()]
+    source_docs[0]["metadata"]["source_queue_request_sha256"] = [
+        "catalog-source-alpha",
+        "catalog-source-shared",
+    ]
+    source_docs_path.write_text(
+        "\n".join(json.dumps(row) for row in source_docs) + "\n",
+        encoding="utf-8",
+    )
 
     payload = module.run(
         requests_path=handoff_dir / "citation-search-adapter-requests.jsonl",
-        source_documents_path=handoff_dir / "citation-search-source-docs.jsonl",
+        source_documents_path=source_docs_path,
         report_json_path=report_path,
         bound_source_documents_path=bound_docs_path,
         bound_corpus_json_path=bound_corpus_path,
@@ -62869,6 +62881,7 @@ def test_citation_search_result_binding_audit_filters_unbound_hits(tmp_path):
     assert payload["summary"]["source_document_count"] == 4
     assert payload["summary"]["accepted_source_document_count"] == 2
     assert payload["summary"]["accepted_request_count"] == 2
+    assert "unknown_source_binding" not in payload["summary"]["issue_counts"]
     assert payload["summary"]["issue_counts"]["person_intent_requires_relation_evidence"] == 1
     assert payload["summary"]["issue_counts"]["numeric_intent_requires_numeric_evidence"] == 1
     assert [doc["metadata"]["citation_binding_intent_reason"] for doc in bound_docs] == [

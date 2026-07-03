@@ -11,6 +11,7 @@ candidates.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -108,7 +109,7 @@ def audit_citation_search_result_bindings(
     if max_examples < 0:
         raise ValueError("max_examples cannot be negative.")
 
-    request_index, duplicate_request_hashes = _request_index(requests)
+    source_request_index, adapter_request_index, duplicate_request_hashes = _request_index(requests)
     policy = EvidenceAlignmentPolicy(
         min_keyword_overlap=float(min_keyword_overlap),
         min_support_keyword_overlap=float(min_support_keyword_overlap),
@@ -123,7 +124,11 @@ def audit_citation_search_result_bindings(
 
     for index, document in enumerate(source_documents, start=1):
         _reject_reserved_metadata(_mapping(document.get("metadata")), source=f"source_document:{index}")
-        request, binding_failures = _request_for_document(document, request_index=request_index)
+        request, binding_failures = _request_for_document(
+            document,
+            source_request_index=source_request_index,
+            adapter_request_index=adapter_request_index,
+        )
         if request is None:
             record = _binding_record(
                 document=document,
@@ -403,31 +408,59 @@ def _accepted_document(document: Mapping[str, Any], *, record: Mapping[str, Any]
 def _request_for_document(
     document: Mapping[str, Any],
     *,
-    request_index: Mapping[str, Mapping[str, Any]],
+    source_request_index: Mapping[str, Mapping[str, Any]],
+    adapter_request_index: Mapping[str, Mapping[str, Any]],
 ) -> tuple[Mapping[str, Any] | None, tuple[str, ...]]:
     metadata = _mapping(document.get("metadata"))
-    source_hash = str(metadata.get("source_queue_request_sha256") or "").strip()
-    if not source_hash:
+    source_hashes = _binding_hashes(metadata.get("source_queue_request_sha256"))
+    adapter_hash = str(metadata.get("adapter_request_sha256") or "").strip()
+    if not source_hashes and not adapter_hash:
         return None, ("missing_source_binding",)
-    request = request_index.get(source_hash)
-    if request is None:
-        return None, ("unknown_source_binding",)
-    return request, ()
+    for source_hash in source_hashes:
+        request = source_request_index.get(source_hash)
+        if request is not None:
+            return request, ()
+    if adapter_hash:
+        request = adapter_request_index.get(adapter_hash)
+        if request is not None:
+            return request, ()
+    return None, ("unknown_source_binding",)
 
 
-def _request_index(requests: Sequence[Mapping[str, Any]]) -> tuple[dict[str, Mapping[str, Any]], tuple[str, ...]]:
-    index: dict[str, Mapping[str, Any]] = {}
+def _request_index(
+    requests: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Mapping[str, Any]], dict[str, Mapping[str, Any]], tuple[str, ...]]:
+    source_index: dict[str, Mapping[str, Any]] = {}
+    adapter_index: dict[str, Mapping[str, Any]] = {}
     duplicates: list[str] = []
     for request in requests:
         _reject_reserved_metadata(_mapping(request.get("metadata")), source=str(request.get("request_id") or "request"))
-        source_hash = str(_mapping(request.get("metadata")).get("source_queue_request_sha256") or "").strip()
-        if not source_hash:
+        for source_hash in _binding_hashes(_mapping(request.get("metadata")).get("source_queue_request_sha256")):
+            if source_hash in source_index:
+                duplicates.append(source_hash)
+                continue
+            source_index[source_hash] = request
+        adapter_hash = _sha256_json(request)
+        if adapter_hash in adapter_index:
+            duplicates.append(adapter_hash)
             continue
-        if source_hash in index:
-            duplicates.append(source_hash)
-            continue
-        index[source_hash] = request
-    return index, tuple(duplicates)
+        adapter_index[adapter_hash] = request
+    return source_index, adapter_index, tuple(duplicates)
+
+
+def _binding_hashes(value: Any) -> tuple[str, ...]:
+    if isinstance(value, str):
+        return (value.strip(),) if value.strip() else ()
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item).strip() for item in value if str(item).strip())
+    if value is None:
+        return ()
+    text = str(value).strip()
+    return (text,) if text else ()
+
+
+def _sha256_json(value: Any) -> str:
+    return hashlib.sha256(strict_json_dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def _binding_claim_text(request: Mapping[str, Any]) -> str:
