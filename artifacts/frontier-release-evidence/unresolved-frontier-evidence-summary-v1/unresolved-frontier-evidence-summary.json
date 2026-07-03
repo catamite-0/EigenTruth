@@ -323,9 +323,53 @@
     },
     "semantic_gap_review": {
       "approved_source_document_count": 7,
+      "best_answer_entity_collision_count": 5,
+      "best_answer_value_supported_count": 4,
+      "best_candidate_fact_coverage_count": 16,
       "best_covered_fact_route_decision_accuracy": 1.0,
       "best_covered_fact_route_false_refuted_rate": 1.0,
+      "best_mapping_target_count": 89,
+      "best_no_joined_fact_count": 41,
+      "best_records_with_joined_facts": 48,
       "blocked_workflow_count": 0,
+      "covered_fact_mapping_audit_count": 1,
+      "covered_fact_mapping_audits": [
+        {
+          "answer_entity_collision_count": 5,
+          "answer_value_supported_count": 4,
+          "candidate_fact_coverage_count": 16,
+          "index": 1,
+          "joined_property_counts": {
+            "P106": 20,
+            "P112": 3,
+            "P131": 6,
+            "P17": 54,
+            "P170": 4,
+            "P27": 8,
+            "P279": 22,
+            "P31": 103,
+            "P527": 13,
+            "P793": 7,
+            "P856": 31,
+            "description": 51
+          },
+          "mapping_status_counts": {
+            "answer_entity_collision": 2,
+            "answer_value_supported": 4,
+            "candidate_fact_coverage": 16,
+            "joined_low_relevance": 26,
+            "no_joined_facts": 41
+          },
+          "no_joined_fact_count": 41,
+          "records_with_joined_facts": 48,
+          "status": "observed",
+          "target_count": 89,
+          "workflow": "blind_spot_covered_fact_mapping_audit"
+        }
+      ],
+      "covered_fact_mapping_status_counts": {
+        "observed": 1
+      },
       "covered_fact_route_n_records": 22,
       "covered_fact_route_skipped_count": 0,
       "covered_fact_route_status_counts": {
@@ -724,8 +768,8 @@
     }
   },
   "metadata": {
-    "closure_update": "metadata_slot_covered_fact_route",
-    "sample_scope": "metadata_slot_small_covered_facts",
+    "closure_update": "covered_fact_mapping_audit",
+    "sample_scope": "target_level_covered_fact_mapping",
     "source_workflow": "reviewed_citation_alignment_rerun"
   },
   "next_actions": [
@@ -755,6 +799,8 @@
       "query_sweep_target_route_not_selected_strategy_count": 0,
       "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use",
+      "semantic_gap_best_candidate_fact_coverage_count": 16,
+      "semantic_gap_best_records_with_joined_facts": 48,
       "semantic_gap_covered_fact_route_n_records": 22,
       "semantic_gap_review_status": "promote",
       "unresolved_target_count": 88
@@ -768,6 +814,9 @@
       "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
       "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
       "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json"
+    ],
+    "covered_fact_mapping_audits": [
+      "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json"
     ],
     "covered_fact_route_summaries": [
       "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json"
@@ -856,6 +905,12 @@
     "mechanism_handoff_trace_count": 9,
     "missing_lane_count": 0,
     "semantic_gap_review_approved_source_document_count": 7,
+    "semantic_gap_review_best_answer_entity_collision_count": 5,
+    "semantic_gap_review_best_answer_value_supported_count": 4,
+    "semantic_gap_review_best_candidate_fact_coverage_count": 16,
+    "semantic_gap_review_best_no_joined_fact_count": 41,
+    "semantic_gap_review_best_records_with_joined_facts": 48,
+    "semantic_gap_review_covered_fact_mapping_audit_count": 1,
     "semantic_gap_review_covered_fact_route_n_records": 22,
     "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,

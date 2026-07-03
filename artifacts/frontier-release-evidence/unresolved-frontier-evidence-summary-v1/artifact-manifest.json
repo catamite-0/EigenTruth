@@ -40,6 +40,14 @@
       "sha256": "03d734b9b347e3306f5065bfe29716224b873e26fd5875a822bfc587f3b5a209",
       "size_bytes": 30991
     },
+    "covered_fact_mapping_audit_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json",
+      "sha256": "68b5ae764f70b4ab3b2a6959c8f3cd58e321922efc742c0c65db6492400cb368",
+      "size_bytes": 203668
+    },
     "covered_fact_route_summary_1": {
       "exists": true,
       "file_count": 1,
@@ -189,8 +197,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "75356bf99404d5856dd8a16f0cc9475eb0c81d7807b281dfd85498ca1fab8640",
-      "size_bytes": 35592
+      "sha256": "ec8e8477b65a198140e2000e351acbeaed861bdab65776cad82318c6d9f8b4cd",
+      "size_bytes": 37655
     },
     "unresolved_queue": {
       "exists": true,
@@ -216,7 +224,7 @@
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
     "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_status": "blocked",
-    "closure_update": "metadata_slot_covered_fact_route",
+    "closure_update": "covered_fact_mapping_audit",
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_review_count": 1,
@@ -225,8 +233,14 @@
     "frontier_queue_execution_smoke_status": "pass",
     "frontier_queue_execution_status": "promote",
     "next_action_count": 1,
-    "sample_scope": "metadata_slot_small_covered_facts",
+    "sample_scope": "target_level_covered_fact_mapping",
     "semantic_gap_review_approved_source_document_count": 7,
+    "semantic_gap_review_best_answer_entity_collision_count": 5,
+    "semantic_gap_review_best_answer_value_supported_count": 4,
+    "semantic_gap_review_best_candidate_fact_coverage_count": 16,
+    "semantic_gap_review_best_no_joined_fact_count": 41,
+    "semantic_gap_review_best_records_with_joined_facts": 48,
+    "semantic_gap_review_covered_fact_mapping_audit_count": 1,
     "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,
     "semantic_gap_review_standalone_covered_fact_route_count": 1,
@@ -251,9 +265,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 25,
+    "artifact_count": 26,
     "directory_count": 0,
-    "file_count": 25,
+    "file_count": 26,
     "missing_count": 0
   }
 }

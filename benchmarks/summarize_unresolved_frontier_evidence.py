@@ -69,6 +69,7 @@ def summarize_unresolved_frontier_evidence(
     source_family_coverage_audits: Sequence[Mapping[str, Any]] = (),
     semantic_gap_review_workflows: Sequence[Mapping[str, Any]] = (),
     covered_fact_route_summaries: Sequence[Mapping[str, Any]] = (),
+    covered_fact_mapping_audits: Sequence[Mapping[str, Any]] = (),
     frontier_command_binding_reviews: Sequence[Mapping[str, Any]] = (),
     frontier_bound_command_runs: Sequence[Mapping[str, Any]] = (),
     frontier_queue_execution_smokes: Sequence[Mapping[str, Any]] = (),
@@ -88,6 +89,7 @@ def summarize_unresolved_frontier_evidence(
     semantic_lane = _semantic_gap_review_lane(
         semantic_gap_review_workflows,
         covered_fact_route_summaries=covered_fact_route_summaries,
+        covered_fact_mapping_audits=covered_fact_mapping_audits,
     )
     frontier_queue_lane = _frontier_queue_execution_lane(
         frontier_command_binding_reviews,
@@ -137,6 +139,7 @@ def run(
     source_family_coverage_audit_paths: Sequence[str | Path] = (),
     semantic_gap_review_workflow_paths: Sequence[str | Path] = (),
     covered_fact_route_summary_paths: Sequence[str | Path] = (),
+    covered_fact_mapping_audit_paths: Sequence[str | Path] = (),
     frontier_command_binding_review_paths: Sequence[str | Path] = (),
     frontier_bound_command_run_paths: Sequence[str | Path] = (),
     frontier_queue_execution_smoke_paths: Sequence[str | Path] = (),
@@ -168,6 +171,7 @@ def run(
     coverage_audits = tuple(_load_mapping(path) for path in source_family_coverage_audit_paths)
     semantic_gap_reviews = tuple(_load_mapping(path) for path in semantic_gap_review_workflow_paths)
     covered_fact_routes = tuple(_load_mapping(path) for path in covered_fact_route_summary_paths)
+    covered_fact_mappings = tuple(_load_mapping(path) for path in covered_fact_mapping_audit_paths)
     frontier_command_reviews = tuple(
         _load_mapping(path) for path in frontier_command_binding_review_paths
     )
@@ -204,6 +208,7 @@ def run(
         source_family_coverage_audits=coverage_audits,
         semantic_gap_review_workflows=semantic_gap_reviews,
         covered_fact_route_summaries=covered_fact_routes,
+        covered_fact_mapping_audits=covered_fact_mappings,
         frontier_command_binding_reviews=frontier_command_reviews,
         frontier_bound_command_runs=frontier_command_runs,
         frontier_queue_execution_smokes=frontier_queue_smokes,
@@ -232,6 +237,9 @@ def run(
         ),
         "covered_fact_route_summaries": tuple(
             str(path) for path in covered_fact_route_summary_paths
+        ),
+        "covered_fact_mapping_audits": tuple(
+            str(path) for path in covered_fact_mapping_audit_paths
         ),
         "frontier_command_binding_reviews": tuple(
             str(path) for path in frontier_command_binding_review_paths
@@ -278,6 +286,7 @@ def run(
             source_family_coverage_audit_paths=source_family_coverage_audit_paths,
             semantic_gap_review_workflow_paths=semantic_gap_review_workflow_paths,
             covered_fact_route_summary_paths=covered_fact_route_summary_paths,
+            covered_fact_mapping_audit_paths=covered_fact_mapping_audit_paths,
             frontier_command_binding_review_paths=frontier_command_binding_review_paths,
             frontier_bound_command_run_paths=frontier_bound_command_run_paths,
             frontier_queue_execution_smoke_paths=frontier_queue_execution_smoke_paths,
@@ -354,6 +363,24 @@ def run(
                         "standalone_covered_fact_route_source_document_count"
                     ]
                 ),
+                "semantic_gap_review_covered_fact_mapping_audit_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["covered_fact_mapping_audit_count"],
+                "semantic_gap_review_best_candidate_fact_coverage_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["best_candidate_fact_coverage_count"],
+                "semantic_gap_review_best_records_with_joined_facts": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["best_records_with_joined_facts"],
+                "semantic_gap_review_best_answer_value_supported_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["best_answer_value_supported_count"],
+                "semantic_gap_review_best_answer_entity_collision_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["best_answer_entity_collision_count"],
+                "semantic_gap_review_best_no_joined_fact_count": payload["lanes"][
+                    "semantic_gap_review"
+                ]["best_no_joined_fact_count"],
                 "frontier_queue_execution_status": payload["lanes"][
                     "frontier_queue_execution"
                 ]["status"],
@@ -737,11 +764,14 @@ def _semantic_gap_review_lane(
     workflows: Sequence[Mapping[str, Any]],
     *,
     covered_fact_route_summaries: Sequence[Mapping[str, Any]] = (),
+    covered_fact_mapping_audits: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     rows = []
     route_rows = []
+    mapping_rows = []
     status_counts: Counter[str] = Counter()
     route_status_counts: Counter[str] = Counter()
+    mapping_status_counts: Counter[str] = Counter()
     candidate_count = 0
     fact_candidate_count = 0
     fact_review_document_count = 0
@@ -755,6 +785,12 @@ def _semantic_gap_review_lane(
     skipped_route_count = 0
     best_decision_accuracy: float | None = None
     best_false_refuted_rate: float | None = None
+    best_candidate_fact_coverage_count = 0
+    best_records_with_joined_facts = 0
+    best_answer_value_supported_count = 0
+    best_answer_entity_collision_count = 0
+    best_no_joined_fact_count = 0
+    best_mapping_target_count = 0
     for index, workflow in enumerate(workflows, start=1):
         status = str(workflow.get("status") or "unknown")
         summary = _mapping(workflow.get("summary"))
@@ -841,10 +877,42 @@ def _semantic_gap_review_lane(
         elif route_status in {"insufficient_qa_documents", "skipped"}:
             skipped_route_count += 1
 
-    if not rows and not route_rows:
+    for index, mapping_audit in enumerate(covered_fact_mapping_audits, start=1):
+        mapping_row = _covered_fact_mapping_audit_row(mapping_audit, index=index)
+        mapping_rows.append(mapping_row)
+        mapping_status = str(mapping_row["status"] or "unknown")
+        mapping_status_counts[mapping_status] += 1
+        best_candidate_fact_coverage_count = max(
+            best_candidate_fact_coverage_count,
+            _int(mapping_row.get("candidate_fact_coverage_count")),
+        )
+        best_records_with_joined_facts = max(
+            best_records_with_joined_facts,
+            _int(mapping_row.get("records_with_joined_facts")),
+        )
+        best_answer_value_supported_count = max(
+            best_answer_value_supported_count,
+            _int(mapping_row.get("answer_value_supported_count")),
+        )
+        best_answer_entity_collision_count = max(
+            best_answer_entity_collision_count,
+            _int(mapping_row.get("answer_entity_collision_count")),
+        )
+        best_no_joined_fact_count = max(
+            best_no_joined_fact_count,
+            _int(mapping_row.get("no_joined_fact_count")),
+        )
+        best_mapping_target_count = max(
+            best_mapping_target_count,
+            _int(mapping_row.get("target_count")),
+        )
+
+    if not rows and not route_rows and not mapping_rows:
         status = "not_configured"
     elif promoted_count or standalone_promoted_count:
         status = "promote"
+    elif mapping_rows and best_candidate_fact_coverage_count:
+        status = "observed"
     elif approved_source_document_count and not covered_route_records:
         status = "ready_for_covered_fact_route"
     elif fact_candidate_count or fact_review_document_count or blocked_count or skipped_route_count:
@@ -862,6 +930,7 @@ def _semantic_gap_review_lane(
         "covered_fact_route_skipped_count": skipped_route_count,
         "status_counts": dict(sorted(status_counts.items())),
         "covered_fact_route_status_counts": dict(sorted(route_status_counts.items())),
+        "covered_fact_mapping_status_counts": dict(sorted(mapping_status_counts.items())),
         "semantic_gap_candidate_count": candidate_count,
         "semantic_gap_fact_candidate_count": fact_candidate_count,
         "fact_review_document_count": fact_review_document_count,
@@ -873,8 +942,16 @@ def _semantic_gap_review_lane(
         "covered_fact_route_n_records": covered_route_records,
         "best_covered_fact_route_decision_accuracy": best_decision_accuracy,
         "best_covered_fact_route_false_refuted_rate": best_false_refuted_rate,
+        "covered_fact_mapping_audit_count": len(mapping_rows),
+        "best_candidate_fact_coverage_count": best_candidate_fact_coverage_count,
+        "best_records_with_joined_facts": best_records_with_joined_facts,
+        "best_answer_value_supported_count": best_answer_value_supported_count,
+        "best_answer_entity_collision_count": best_answer_entity_collision_count,
+        "best_no_joined_fact_count": best_no_joined_fact_count,
+        "best_mapping_target_count": best_mapping_target_count,
         "workflows": tuple(rows),
         "covered_fact_routes": tuple(route_rows),
+        "covered_fact_mapping_audits": tuple(mapping_rows),
     }
 
 
@@ -929,6 +1006,31 @@ def _covered_fact_route_summary_row(
         "covered_fact_score_dump_path": route_summary.get("covered_fact_score_dump_path"),
         "verifier_report_path": route_summary.get("verifier_report_path"),
         "verified_records_jsonl_path": route_summary.get("verified_records_jsonl_path"),
+    }
+
+
+def _covered_fact_mapping_audit_row(
+    mapping_audit: Mapping[str, Any],
+    *,
+    index: int,
+) -> dict[str, Any]:
+    summary = _mapping(mapping_audit.get("summary"))
+    return {
+        "index": index,
+        "workflow": mapping_audit.get("workflow"),
+        "status": str(mapping_audit.get("status") or "unknown"),
+        "target_count": _int(summary.get("target_count")),
+        "records_with_joined_facts": _int(summary.get("records_with_joined_facts")),
+        "candidate_fact_coverage_count": _int(
+            summary.get("candidate_fact_coverage_count")
+        ),
+        "answer_value_supported_count": _int(summary.get("answer_value_supported_count")),
+        "answer_entity_collision_count": _int(
+            summary.get("answer_entity_collision_count")
+        ),
+        "no_joined_fact_count": _int(summary.get("no_joined_fact_count")),
+        "mapping_status_counts": dict(_mapping(summary.get("mapping_status_counts"))),
+        "joined_property_counts": dict(_mapping(summary.get("joined_property_counts"))),
     }
 
 
@@ -1481,6 +1583,12 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "semantic_gap_covered_fact_route_n_records": semantic.get(
                 "covered_fact_route_n_records", 0
             ),
+            "semantic_gap_best_candidate_fact_coverage_count": semantic.get(
+                "best_candidate_fact_coverage_count", 0
+            ),
+            "semantic_gap_best_records_with_joined_facts": semantic.get(
+                "best_records_with_joined_facts", 0
+            ),
             "unresolved_target_count": queue.get("target_count", 0),
         })
     if semantic.get("status") in {"ready_for_covered_fact_route", "needs_evidence", "missing"}:
@@ -1750,6 +1858,24 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "semantic_gap_review_covered_fact_route_n_records": _int(
             lanes["semantic_gap_review"].get("covered_fact_route_n_records")
         ),
+        "semantic_gap_review_covered_fact_mapping_audit_count": _int(
+            lanes["semantic_gap_review"].get("covered_fact_mapping_audit_count")
+        ),
+        "semantic_gap_review_best_candidate_fact_coverage_count": _int(
+            lanes["semantic_gap_review"].get("best_candidate_fact_coverage_count")
+        ),
+        "semantic_gap_review_best_records_with_joined_facts": _int(
+            lanes["semantic_gap_review"].get("best_records_with_joined_facts")
+        ),
+        "semantic_gap_review_best_answer_value_supported_count": _int(
+            lanes["semantic_gap_review"].get("best_answer_value_supported_count")
+        ),
+        "semantic_gap_review_best_answer_entity_collision_count": _int(
+            lanes["semantic_gap_review"].get("best_answer_entity_collision_count")
+        ),
+        "semantic_gap_review_best_no_joined_fact_count": _int(
+            lanes["semantic_gap_review"].get("best_no_joined_fact_count")
+        ),
         "frontier_queue_execution_status": str(
             lanes["frontier_queue_execution"].get("status") or "unknown"
         ),
@@ -1821,6 +1947,7 @@ def _write_manifest(
     source_family_coverage_audit_paths: Sequence[str | Path],
     semantic_gap_review_workflow_paths: Sequence[str | Path],
     covered_fact_route_summary_paths: Sequence[str | Path],
+    covered_fact_mapping_audit_paths: Sequence[str | Path],
     frontier_command_binding_review_paths: Sequence[str | Path],
     frontier_bound_command_run_paths: Sequence[str | Path],
     frontier_queue_execution_smoke_paths: Sequence[str | Path],
@@ -1860,6 +1987,10 @@ def _write_manifest(
     artifacts.update({
         f"covered_fact_route_summary_{idx}": path
         for idx, path in enumerate(covered_fact_route_summary_paths, start=1)
+    })
+    artifacts.update({
+        f"covered_fact_mapping_audit_{idx}": path
+        for idx, path in enumerate(covered_fact_mapping_audit_paths, start=1)
     })
     artifacts.update({
         f"frontier_command_binding_review_{idx}": path
@@ -1967,6 +2098,42 @@ def _write_manifest(
                 "lanes",
                 "semantic_gap_review",
                 "standalone_covered_fact_route_source_document_count",
+            ),
+            "semantic_gap_review_covered_fact_mapping_audit_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "covered_fact_mapping_audit_count",
+            ),
+            "semantic_gap_review_best_candidate_fact_coverage_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_candidate_fact_coverage_count",
+            ),
+            "semantic_gap_review_best_records_with_joined_facts": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_records_with_joined_facts",
+            ),
+            "semantic_gap_review_best_answer_value_supported_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_answer_value_supported_count",
+            ),
+            "semantic_gap_review_best_answer_entity_collision_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_answer_entity_collision_count",
+            ),
+            "semantic_gap_review_best_no_joined_fact_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_no_joined_fact_count",
             ),
             "frontier_queue_execution_status": _nested(
                 payload, "lanes", "frontier_queue_execution", "status"
@@ -2314,6 +2481,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-family-coverage-audit", action="append", default=[])
     parser.add_argument("--semantic-gap-review-workflow", action="append", default=[])
     parser.add_argument("--covered-fact-route-summary", action="append", default=[])
+    parser.add_argument("--covered-fact-mapping-audit", action="append", default=[])
     parser.add_argument("--frontier-command-binding-review", action="append", default=[])
     parser.add_argument("--frontier-bound-command-run", action="append", default=[])
     parser.add_argument("--frontier-queue-execution-smoke", action="append", default=[])
@@ -2342,6 +2510,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_family_coverage_audit_paths=tuple(args.source_family_coverage_audit or ()),
         semantic_gap_review_workflow_paths=tuple(args.semantic_gap_review_workflow or ()),
         covered_fact_route_summary_paths=tuple(args.covered_fact_route_summary or ()),
+        covered_fact_mapping_audit_paths=tuple(args.covered_fact_mapping_audit or ()),
         frontier_command_binding_review_paths=tuple(
             args.frontier_command_binding_review or ()
         ),

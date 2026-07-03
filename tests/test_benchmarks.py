@@ -61193,6 +61193,24 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "verifier_report_path": "verifier.json",
         "verified_records_jsonl_path": "records.jsonl",
     }
+    covered_fact_mapping = {
+        "workflow": "blind_spot_covered_fact_mapping_audit",
+        "status": "observed",
+        "summary": {
+            "target_count": 3,
+            "records_with_joined_facts": 2,
+            "candidate_fact_coverage_count": 1,
+            "answer_value_supported_count": 1,
+            "answer_entity_collision_count": 0,
+            "no_joined_fact_count": 1,
+            "mapping_status_counts": {
+                "answer_value_supported": 1,
+                "candidate_fact_coverage": 1,
+                "no_joined_facts": 1,
+            },
+            "joined_property_counts": {"description": 1, "P31": 1},
+        },
+    }
 
     payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
@@ -61408,6 +61426,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         source_family_coverage_audits=(covered_coverage,),
         semantic_gap_review_workflows=(semantic_promoted_partial,),
         covered_fact_route_summaries=(standalone_route,),
+        covered_fact_mapping_audits=(covered_fact_mapping,),
         mechanism_handoff_bundle=bundle,
         metadata={"suite": "unit"},
     )
@@ -61423,9 +61442,23 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert semantic_with_route_lane["covered_fact_routes"][0]["workflow"] == (
         "wikidata_structured_qa_route_workflow"
     )
+    assert semantic_with_route_lane["covered_fact_mapping_audit_count"] == 1
+    assert semantic_with_route_lane["best_candidate_fact_coverage_count"] == 1
+    assert semantic_with_route_lane["best_records_with_joined_facts"] == 2
+    assert semantic_with_route_lane["best_answer_value_supported_count"] == 1
+    assert semantic_with_route_lane["best_no_joined_fact_count"] == 1
+    assert semantic_with_route_lane["covered_fact_mapping_audits"][0]["workflow"] == (
+        "blind_spot_covered_fact_mapping_audit"
+    )
     assert (
         semantic_with_route_payload["summary"][
             "semantic_gap_review_standalone_covered_fact_route_count"
+        ]
+        == 1
+    )
+    assert (
+        semantic_with_route_payload["summary"][
+            "semantic_gap_review_best_candidate_fact_coverage_count"
         ]
         == 1
     )
@@ -61604,6 +61637,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     bundle_path = tmp_path / "bundle.json"
     semantic_path = tmp_path / "semantic-gap-review.json"
     standalone_route_path = tmp_path / "standalone-route.json"
+    covered_fact_mapping_path = tmp_path / "covered-fact-mapping.json"
     report_path = tmp_path / "summary.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
@@ -61621,6 +61655,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         (bundle_path, bundle),
         (semantic_path, semantic_promoted),
         (standalone_route_path, standalone_route),
+        (covered_fact_mapping_path, covered_fact_mapping),
     ):
         path.write_text(json.dumps(data), encoding="utf-8")
 
@@ -61630,6 +61665,7 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         source_family_coverage_audit_paths=(missing_coverage_path, covered_coverage_path),
         semantic_gap_review_workflow_paths=(semantic_path,),
         covered_fact_route_summary_paths=(standalone_route_path,),
+        covered_fact_mapping_audit_paths=(covered_fact_mapping_path,),
         rule_input_plan_path=rule_plan_path,
         rule_input_audit_report_path=rule_audit_path,
         rule_stub_requeue_report_path=requeue_report_path,
@@ -61651,6 +61687,8 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert saved["status"] == "needs_evidence"
     assert saved["summary"]["semantic_gap_review_covered_fact_route_n_records"] == 6
     assert saved["summary"]["semantic_gap_review_standalone_covered_fact_route_count"] == 1
+    assert saved["summary"]["semantic_gap_review_covered_fact_mapping_audit_count"] == 1
+    assert saved["summary"]["semantic_gap_review_best_records_with_joined_facts"] == 2
     assert json.loads(report_path.read_text(encoding="utf-8"))["workflow"] == (
         "unresolved_frontier_evidence_summary"
     )
@@ -61670,8 +61708,12 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         == 1
     )
     assert manifest["metadata"]["semantic_gap_review_promoted_covered_fact_route_count"] == 2
+    assert manifest["metadata"]["semantic_gap_review_covered_fact_mapping_audit_count"] == 1
+    assert manifest["metadata"]["semantic_gap_review_best_candidate_fact_coverage_count"] == 1
+    assert manifest["metadata"]["semantic_gap_review_best_records_with_joined_facts"] == 2
     assert manifest["artifacts"]["semantic_gap_review_workflow_1"]["exists"] is True
     assert manifest["artifacts"]["covered_fact_route_summary_1"]["exists"] is True
+    assert manifest["artifacts"]["covered_fact_mapping_audit_1"]["exists"] is True
     assert manifest["metadata"]["world_model_rule_status"] == "partial"
     assert manifest["metadata"]["world_model_rule_remaining_task_count"] == 3
     assert manifest["metadata"]["world_model_rule_audit_adjusted_remaining_task_count"] == 3
@@ -61692,6 +61734,9 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         == 1
     )
     assert record.metadata["semantic_gap_review_promoted_covered_fact_route_count"] == 2
+    assert record.metadata["semantic_gap_review_covered_fact_mapping_audit_count"] == 1
+    assert record.metadata["semantic_gap_review_best_candidate_fact_coverage_count"] == 1
+    assert record.metadata["semantic_gap_review_best_records_with_joined_facts"] == 2
     assert record.metadata["semantic_gap_review_approved_source_document_count"] == 2
     assert record.metadata["world_model_rule_status"] == "partial"
     assert record.metadata["world_model_rule_remaining_task_count"] == 3
