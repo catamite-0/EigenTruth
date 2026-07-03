@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -32,6 +33,71 @@ WORKFLOW = "covered_fact_retrieval_qa_corpus_builder"
 CORPUS_TYPE = "target_specific_covered_fact_retrieval_qa_diagnostic"
 DEFAULT_ROUTE_NAME = "covered_fact_retrieval_structured_qa"
 DEFAULT_INCLUDE_STATUSES = ("candidate_fact_coverage",)
+TOKEN_RE = re.compile(r"[A-Za-z0-9]+|[\u4e00-\u9fff]+")
+NUMBER_RE = re.compile(r"[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:million|billion|thousand|%|percent))?", re.I)
+NUMERIC_QUESTION_TERMS = {
+    "amount",
+    "count",
+    "fewer",
+    "greater",
+    "how many",
+    "less",
+    "more",
+    "number",
+    "percent",
+    "percentage",
+    "population",
+    "rate",
+    "share",
+    "total",
+}
+NUMERIC_PROPERTY_TERMS = {
+    "amount",
+    "count",
+    "headcount",
+    "number",
+    "percent",
+    "percentage",
+    "population",
+    "rate",
+    "share",
+    "total",
+    "value",
+}
+PERSON_RELATION_TERMS = {
+    "author",
+    "cofounder",
+    "created",
+    "creator",
+    "founded",
+    "founder",
+    "invented",
+    "inventor",
+    "started",
+}
+PERSON_PROPERTY_TERMS = {
+    "author",
+    "creator",
+    "developer",
+    "founded by",
+    "founder",
+    "inventor",
+}
+LOCATION_TERMS = {"country", "location", "nation", "place", "where"}
+LOCATION_PROPERTY_TERMS = {"capital", "country", "country of origin", "located in", "location"}
+TEMPORAL_TERMS = {"date", "time", "when", "year"}
+TEMPORAL_PROPERTY_TERMS = {"date", "inception", "point in time", "publication date", "time", "year"}
+QUESTION_CONTENT_STOPWORDS = {
+    "a",
+    "an",
+    "are",
+    "is",
+    "of",
+    "the",
+    "was",
+    "were",
+    "what",
+}
 
 
 def build_covered_fact_retrieval_qa_corpus(
@@ -40,6 +106,7 @@ def build_covered_fact_retrieval_qa_corpus(
     include_statuses: Sequence[str] = DEFAULT_INCLUDE_STATUSES,
     max_facts_per_record: int = 3,
     route_name: str = DEFAULT_ROUTE_NAME,
+    require_question_intent: bool = False,
 ) -> dict[str, Any]:
     """Return a target-specific QA corpus from covered-fact mapping rows."""
     statuses = _include_statuses(include_statuses)
@@ -60,6 +127,7 @@ def build_covered_fact_retrieval_qa_corpus(
         "missing_question": 0,
         "status_not_included": 0,
         "without_facts": 0,
+        "question_intent_mismatch": 0,
     })
     included_statuses: Counter[str] = Counter()
     seen: set[tuple[int, str]] = set()
@@ -93,6 +161,10 @@ def build_covered_fact_retrieval_qa_corpus(
             if not answer:
                 skipped["missing_fact_answer"] += 1
                 continue
+            intent = _question_intent_match(record, fact)
+            if require_question_intent and not bool(intent["match"]):
+                skipped["question_intent_mismatch"] += 1
+                continue
             key = (record_index, normalize_claim_text(answer))
             if key in seen:
                 skipped["duplicate_fact"] += 1
@@ -107,6 +179,7 @@ def build_covered_fact_retrieval_qa_corpus(
                 record_index=record_index,
                 mapping_status=mapping_status,
                 route_name=route,
+                question_intent=intent,
             ))
 
     by_property = Counter(
@@ -136,6 +209,7 @@ def build_covered_fact_retrieval_qa_corpus(
             "route_name": route,
             "include_statuses": statuses,
             "max_facts_per_record": max_facts,
+            "require_question_intent": bool(require_question_intent),
         },
         "summary": {
             "mapping_record_count": len(records),
@@ -161,6 +235,7 @@ def run(
     include_statuses: Sequence[str] = DEFAULT_INCLUDE_STATUSES,
     max_facts_per_record: int = 3,
     route_name: str = DEFAULT_ROUTE_NAME,
+    require_question_intent: bool = False,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
 ) -> dict[str, Any]:
@@ -180,6 +255,7 @@ def run(
         include_statuses=include_statuses,
         max_facts_per_record=max_facts_per_record,
         route_name=route_name,
+        require_question_intent=require_question_intent,
     )
     status = "ready" if corpus["summary"]["n_documents"] else "blocked"
     report = {
@@ -200,6 +276,7 @@ def run(
             "include_statuses": tuple(str(item) for item in include_statuses),
             "max_facts_per_record": int(max_facts_per_record),
             "route_name": route_name,
+            "require_question_intent": bool(require_question_intent),
         },
         "summary": dict(corpus["summary"]),
         "paths": {
@@ -224,6 +301,7 @@ def run(
             "corpus_type": CORPUS_TYPE,
             "document_count": corpus["summary"]["n_documents"],
             "question_count": corpus["summary"]["n_questions"],
+            "require_question_intent": bool(require_question_intent),
             **dict(metadata or {}),
         },
     )
@@ -240,6 +318,7 @@ def run(
                 "corpus_type": CORPUS_TYPE,
                 "document_count": corpus["summary"]["n_documents"],
                 "question_count": corpus["summary"]["n_questions"],
+                "require_question_intent": bool(require_question_intent),
                 "artifact_manifest": str(manifest_path),
                 **dict(metadata or {}),
             },
@@ -255,6 +334,7 @@ def _document_for_fact(
     record_index: int,
     mapping_status: str,
     route_name: str,
+    question_intent: Mapping[str, Any],
 ) -> dict[str, Any]:
     answer = str(fact.get("answer") or "").strip()
     subject = _optional_str(fact.get("subject"))
@@ -278,6 +358,9 @@ def _document_for_fact(
         "question_overlap": fact.get("question_overlap"),
         "answer_value_overlap": fact.get("answer_value_overlap"),
         "answer_subject_overlap": fact.get("answer_subject_overlap"),
+        "question_intent_match": bool(question_intent.get("match")),
+        "question_intent_reason": question_intent.get("reason"),
+        "question_intent_terms": tuple(str(item) for item in _sequence(question_intent.get("terms"))),
         "retrieval_index_text": tuple(
             part
             for part in (
@@ -297,6 +380,68 @@ def _document_for_fact(
         "source": source,
         "metadata": metadata,
     }
+
+
+def _question_intent_match(record: Mapping[str, Any], fact: Mapping[str, Any]) -> dict[str, Any]:
+    question = str(record.get("question") or "")
+    question_type = str(record.get("question_type") or "").strip().casefold()
+    answer = str(fact.get("answer") or "")
+    subject = str(fact.get("subject") or "")
+    property_id = str(fact.get("statement_property") or "").strip()
+    property_label = str(fact.get("statement_property_label") or "").strip()
+    question_key = normalize_claim_text(question)
+    property_key = normalize_claim_text(f"{property_id} {property_label}")
+    question_tokens = set(_tokens(question))
+    property_tokens = set(_tokens(property_label))
+    subject_tokens = set(_tokens(subject))
+
+    if _has_numeric_intent(question_key):
+        if _answer_or_property_is_numeric(answer=answer, property_key=property_key):
+            return _intent_result(True, "numeric_question_numeric_fact", ("numeric",))
+        return _intent_result(False, "numeric_question_requires_numeric_fact", ("numeric",))
+
+    if "why" in question_tokens or question_type == "causal":
+        if _contains_any(property_key, {"cause", "reason", "because", "etiology"}):
+            return _intent_result(True, "causal_property_match", ("cause",))
+        return _intent_result(False, "causal_question_requires_causal_property", ("cause",))
+
+    if "who" in question_tokens or question_type == "person":
+        if _contains_any(question_key, PERSON_RELATION_TERMS) and _contains_any(property_key, PERSON_PROPERTY_TERMS):
+            return _intent_result(True, "person_relation_property_match", ("person_relation",))
+        if _contains_any(property_key, PERSON_PROPERTY_TERMS) and property_tokens & question_tokens:
+            return _intent_result(True, "person_property_token_match", sorted(property_tokens & question_tokens))
+        return _intent_result(False, "person_question_requires_person_relation_property", ("person_relation",))
+
+    if _contains_any(question_key, LOCATION_TERMS) or question_type == "location":
+        if _contains_any(property_key, LOCATION_PROPERTY_TERMS):
+            return _intent_result(True, "location_property_match", ("location",))
+        return _intent_result(False, "location_question_requires_location_property", ("location",))
+
+    if _contains_any(question_key, TEMPORAL_TERMS) or question_type == "temporal":
+        if _contains_any(property_key, TEMPORAL_PROPERTY_TERMS):
+            return _intent_result(True, "temporal_property_match", ("temporal",))
+        return _intent_result(False, "temporal_question_requires_temporal_property", ("temporal",))
+
+    if question_type == "definition" and question_key.startswith(("what is ", "what are ", "what was ", "what were ")):
+        if property_id in {"description", "P31", "P279"} or _contains_any(
+            property_key,
+            {"description", "instance of", "subclass of"},
+        ):
+            question_content = question_tokens - QUESTION_CONTENT_STOPWORDS
+            off_subject_terms = question_content - subject_tokens
+            if subject_tokens and len(off_subject_terms) <= 1:
+                return _intent_result(True, "definition_property_match", ("definition",))
+            return _intent_result(False, "definition_question_subject_mismatch", tuple(sorted(off_subject_terms)))
+        return _intent_result(False, "definition_question_requires_definition_property", ("definition",))
+
+    overlap = tuple(sorted(property_tokens & question_tokens))
+    if overlap:
+        return _intent_result(True, "property_token_overlap", overlap)
+    return _intent_result(False, "no_question_property_intent_match", ())
+
+
+def _intent_result(match: bool, reason: str, terms: Sequence[str]) -> dict[str, Any]:
+    return {"match": bool(match), "reason": reason, "terms": tuple(terms)}
 
 
 def _ranked_facts(value: Any) -> tuple[dict[str, Any], ...]:
@@ -319,6 +464,35 @@ def _include_statuses(values: Sequence[str]) -> tuple[str, ...]:
     if not statuses:
         raise ValueError("include_statuses must not be empty.")
     return statuses
+
+
+def _tokens(value: str) -> tuple[str, ...]:
+    return tuple(match.group(0).casefold() for match in TOKEN_RE.finditer(value))
+
+
+def _contains_any(text: str, terms: set[str]) -> bool:
+    padded = f" {text} "
+    words = set(text.split())
+    for term in terms:
+        normalized = term.casefold()
+        if " " in normalized:
+            if f" {normalized} " in padded:
+                return True
+        elif normalized in words:
+            return True
+    return False
+
+
+def _has_numeric_intent(question_key: str) -> bool:
+    if NUMBER_RE.search(question_key) or "%" in question_key:
+        return True
+    return _contains_any(question_key, NUMERIC_QUESTION_TERMS)
+
+
+def _answer_or_property_is_numeric(*, answer: str, property_key: str) -> bool:
+    if NUMBER_RE.search(answer):
+        return True
+    return _contains_any(property_key, NUMERIC_PROPERTY_TERMS)
 
 
 def _records(payload: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -414,6 +588,11 @@ def main() -> None:
     parser.add_argument("--include-statuses", default=",".join(DEFAULT_INCLUDE_STATUSES))
     parser.add_argument("--max-facts-per-record", type=int, default=3)
     parser.add_argument("--route-name", default=DEFAULT_ROUTE_NAME)
+    parser.add_argument(
+        "--require-question-intent",
+        action="store_true",
+        help="Keep only target-specific facts whose property/value type matches the source question intent.",
+    )
     parser.add_argument("--metadata", action="append")
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args()
@@ -429,6 +608,7 @@ def main() -> None:
         include_statuses=_parse_csv(args.include_statuses),
         max_facts_per_record=args.max_facts_per_record,
         route_name=args.route_name,
+        require_question_intent=bool(args.require_question_intent),
         metadata=_parse_metadata(args.metadata),
         compact_json=args.compact_json,
     )

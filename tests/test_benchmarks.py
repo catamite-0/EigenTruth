@@ -60627,6 +60627,95 @@ def test_build_covered_fact_retrieval_qa_corpus_from_mapping_candidates(tmp_path
     assert record.metadata["suite"] == "unit"
 
 
+def test_covered_fact_retrieval_qa_corpus_can_require_question_intent():
+    module = importlib.import_module("benchmarks.build_covered_fact_retrieval_qa_corpus")
+    mapping_audit = {
+        "workflow": "blind_spot_covered_fact_mapping_audit",
+        "status": "observed",
+        "records": [
+            {
+                "record_index": 1,
+                "question": "Who founded Acme Motors?",
+                "answer": "Alice",
+                "question_type": "person",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [
+                    {
+                        "question": "What does Wikidata list as the founder for Acme Motors?",
+                        "answer": "Bob",
+                        "source": "wikidata:Q1:P112:Q10",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                        "subject": "Acme Motors",
+                    },
+                    {
+                        "question": "What does Wikidata list as the chief executive for Acme Motors?",
+                        "answer": "Carol",
+                        "source": "wikidata:Q1:P169:Q11",
+                        "statement_property": "P169",
+                        "statement_property_label": "chief executive officer",
+                        "subject": "Acme Motors",
+                    },
+                ],
+            },
+            {
+                "record_index": 2,
+                "question": "Do more than 20% of Americans have passports?",
+                "answer": "No",
+                "question_type": "other",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [
+                    {
+                        "question": "What does Wikidata list as the instance of for Americans?",
+                        "answer": "nationality",
+                        "source": "wikidata:Q2:P31:Q20",
+                        "statement_property": "P31",
+                        "statement_property_label": "instance of",
+                        "subject": "Americans",
+                    }
+                ],
+            },
+            {
+                "record_index": 3,
+                "question": "What is the population of Exampleland?",
+                "answer": "1,000",
+                "question_type": "quantity",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [
+                    {
+                        "question": "What does the World Bank list as Population, total for Exampleland?",
+                        "answer": "42,000",
+                        "source": "worldbank:SP.POP.TOTL:EXL:2024",
+                        "statement_property": "SP.POP.TOTL",
+                        "statement_property_label": "Population, total",
+                        "subject": "Exampleland",
+                    }
+                ],
+            },
+        ],
+    }
+
+    corpus = module.build_covered_fact_retrieval_qa_corpus(
+        mapping_audit,
+        require_question_intent=True,
+        max_facts_per_record=3,
+    )
+    documents = list(corpus["documents"])
+
+    assert [document["answer"] for document in documents] == ["Bob", "42,000"]
+    assert corpus["summary"]["skipped"]["question_intent_mismatch"] == 2
+    assert documents[0]["metadata"]["question_intent_reason"] == "person_relation_property_match"
+    assert documents[1]["metadata"]["question_intent_reason"] == "numeric_question_numeric_fact"
+    assert documents[0]["metadata"]["question_intent_match"] is True
+    assert corpus["source"]["require_question_intent"] is True
+
+
 def test_map_blind_spot_question_properties_promotes_explicit_properties(tmp_path):
     module = importlib.import_module("benchmarks.map_blind_spot_question_properties")
     registry_module = importlib.import_module("eigentruth.registry")

@@ -3226,6 +3226,34 @@ controlled groundedness sweep refutes `1/89`, and external verified false alarm
 is `0.136` against the `0.05` gate. Treat it as diagnostic evidence, not a
 route-promotion artifact.
 
+## `build_covered_fact_retrieval_qa_corpus.py`
+
+Builds a target-specific structured QA diagnostic corpus from covered-fact
+mapping audit rows. Unlike general source-family QA corpora, this command
+reuses the original blind-spot question and substitutes candidate covered-fact
+answers, so it measures correction potential only. It must not be treated as
+broad citation evidence.
+
+Use `--require-question-intent` for frontier/citation-lane diagnostics. The
+gate keeps only facts whose property/value type matches the source question
+intent, for example a `founder` fact for a "who founded" question or numeric
+statistics for a quantity question. It rejects subject-only facts such as
+`Americans instance of nationality` for a passport-rate question, which reduces
+false refutation pressure before any route-promotion gate.
+
+```bash
+OUT=artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa-intent-gated
+
+python benchmarks/build_covered_fact_retrieval_qa_corpus.py \
+  --mapping-audit artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json \
+  --json "$OUT/covered-fact-retrieval-qa-corpus.json" \
+  --report-json "$OUT/covered-fact-retrieval-qa-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --route-name covered_fact_retrieval_structured_qa_intent_gated \
+  --require-question-intent \
+  --metadata diagnostic=question_intent_gate
+```
+
 ## `build_source_family_qa_corpus.py`
 
 Builds a conservative structured QA corpus from source-family catalog or adapter

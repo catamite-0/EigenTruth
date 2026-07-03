@@ -1099,6 +1099,16 @@ Added the first monitor-first tool-selection audit layer:
   writes `18` label-free structured QA records (`16` Wikidata, `2` World Bank).
   This creates a covered-fact candidate corpus for structured QA route audits;
   it does not promote `retrieval_groundedness`.
+- `build_covered_fact_retrieval_qa_corpus.py --require-question-intent` adds a
+  stricter target-specific diagnostic gate before covered facts are reused as
+  original-question QA rows. The gate keeps property/value types that answer
+  the question intent, such as `founder` for "who founded" or numeric
+  statistics for quantity questions, and drops subject-only matches like
+  nationality/description facts for unrelated rate, activity, or causal
+  questions. Replaying the current Wikidata covered-fact mapping contracts the
+  loose diagnostic corpus from `41` facts over `16` questions to `2` reviewed
+  Tesla founder facts over `1` question; this is cleaner evidence, not broader
+  citation-lane promotion.
 - `run_source_family_structured_qa_route_workflow.py` runs that audit without
   reusing Wikidata-specific assumptions. The first SmolLM2 l80 artifact turns
   those `18` facts into `36` balanced known-answer/mismatched-answer rows,
