@@ -80,6 +80,68 @@ SOURCE_PREFIX_MARKERS = (
     "wikidata",
     "world bank",
 )
+STRUCTURED_EVIDENCE_SLOT_KEYS = (
+    "subject",
+    "subject_label",
+    "entity",
+    "entity_name",
+    "country",
+    "country_name",
+    "organization_name",
+    "location_name",
+    "predicate",
+    "property",
+    "property_label",
+    "statement_property",
+    "statement_property_label",
+    "indicator",
+    "indicator_name",
+    "object",
+    "object_text",
+    "value",
+    "fact_value",
+    "reference_year",
+    "year",
+    "time_period",
+)
+STRUCTURED_EVIDENCE_CONTAINER_KEYS = (
+    "fact",
+    "facts",
+    "structured_fact",
+    "structured_facts",
+    "structured_slots",
+    "slots",
+)
+SUBJECT_SLOT_KEYS = (
+    "subject",
+    "subject_label",
+    "entity",
+    "entity_name",
+    "country",
+    "country_name",
+    "organization_name",
+    "location_name",
+)
+PROPERTY_SLOT_KEYS = (
+    "predicate",
+    "property",
+    "property_label",
+    "statement_property",
+    "statement_property_label",
+    "indicator",
+    "indicator_name",
+)
+VALUE_SLOT_KEYS = (
+    "object",
+    "object_text",
+    "value",
+    "fact_value",
+)
+TIME_SLOT_KEYS = (
+    "reference_year",
+    "year",
+    "time_period",
+)
 QUESTION_STOPWORDS = {
     "a",
     "an",
@@ -328,10 +390,12 @@ def _score_document(
 ) -> dict[str, Any] | None:
     doc_text = str(document.get("text", ""))
     metadata = _mapping(document.get("metadata"))
+    structured_slots = _structured_evidence_slots(metadata)
     doc_blob = " ".join((
         doc_text,
         str(metadata.get("title", "")),
         str(document.get("source", "")),
+        _slot_blob(structured_slots),
     ))
     doc_tokens = _tokens(doc_blob)
     if not doc_tokens:
@@ -359,6 +423,7 @@ def _score_document(
         "matched_property_hint": property_hint,
         "model_answer_value_matched": answer_value,
         "evidence_span": span,
+        "structured_evidence_slots": structured_slots,
     }
 
 
@@ -377,7 +442,12 @@ def _fact_candidates(
     for hit in hits:
         property_hint = str(hit.get("matched_property_hint") or "")
         evidence_span = str(hit.get("evidence_span", ""))
-        subject = _candidate_subject(
+        structured_slots = _mapping(hit.get("structured_evidence_slots"))
+        subject = _structured_candidate_subject(
+            structured_slots,
+            requested_subject=requested_subject,
+            matched_entity=str(hit.get("matched_entity") or ""),
+        ) or _candidate_subject(
             evidence_span,
             property_hint=property_hint,
             requested_subject=requested_subject,
@@ -385,7 +455,11 @@ def _fact_candidates(
         )
         if not subject or not property_hint:
             continue
-        value = _candidate_value(evidence_span, request=request, property_hint=property_hint)
+        value = _structured_candidate_value(
+            structured_slots,
+            request=request,
+            property_hint=property_hint,
+        ) or _candidate_value(evidence_span, request=request, property_hint=property_hint)
         if not value:
             continue
         fact_key = (
@@ -413,6 +487,7 @@ def _fact_candidates(
             "evidence_source": str(hit.get("source", "")),
             "source_family": hit.get("source_family"),
             "provider": hit.get("provider"),
+            "structured_evidence_slots": structured_slots,
             "confidence": _candidate_confidence(hit),
             "usage": "structured_fact_review_only",
         })
@@ -427,11 +502,7 @@ def _gap_reason(best_hit: Mapping[str, Any] | None, *, request: Mapping[str, Any
     entity = bool(best_hit.get("matched_entity"))
     prop = bool(best_hit.get("matched_property_hint"))
     value = bool(
-        _candidate_value(
-            str(best_hit.get("evidence_span", "")),
-            request=request,
-            property_hint=str(best_hit.get("matched_property_hint") or ""),
-        )
+        _hit_candidate_value(best_hit, request=request)
     )
     if entity and prop and value:
         return "subject_property_value_aligned"
@@ -442,6 +513,26 @@ def _gap_reason(best_hit: Mapping[str, Any] | None, *, request: Mapping[str, Any
     if prop:
         return "property_only_alignment"
     return "broad_source_no_subject_property_alignment"
+
+
+def _hit_candidate_value(
+    hit: Mapping[str, Any],
+    *,
+    request: Mapping[str, Any],
+) -> str | None:
+    property_hint = str(hit.get("matched_property_hint") or "")
+    structured_value = _structured_candidate_value(
+        _mapping(hit.get("structured_evidence_slots")),
+        request=request,
+        property_hint=property_hint,
+    )
+    if structured_value:
+        return structured_value
+    return _candidate_value(
+        str(hit.get("evidence_span", "")),
+        request=request,
+        property_hint=property_hint,
+    )
 
 
 def _alignment_status(gap_reason: str) -> str:
@@ -538,6 +629,63 @@ def _normalize_document(document: Mapping[str, Any], *, ordinal: int) -> dict[st
         "text": str(document.get("text", "")),
         "metadata": dict(_mapping(document.get("metadata"))),
     }
+
+
+def _structured_evidence_slots(metadata: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
+    values: dict[str, list[str]] = {}
+    _extend_structured_slots(values, metadata)
+    for key in STRUCTURED_EVIDENCE_CONTAINER_KEYS:
+        nested = metadata.get(key)
+        if isinstance(nested, Mapping):
+            _extend_structured_slots(values, nested)
+        elif isinstance(nested, Sequence) and not isinstance(nested, (str, bytes, bytearray)):
+            for item in nested:
+                if isinstance(item, Mapping):
+                    _extend_structured_slots(values, item)
+    return {
+        key: tuple(dict.fromkeys(items))
+        for key, items in sorted(values.items())
+        if items
+    }
+
+
+def _extend_structured_slots(values: dict[str, list[str]], metadata: Mapping[str, Any]) -> None:
+    for key in STRUCTURED_EVIDENCE_SLOT_KEYS:
+        if key in metadata:
+            values.setdefault(key, []).extend(_slot_value_strings(metadata[key]))
+
+
+def _slot_value_strings(value: Any) -> tuple[str, ...]:
+    if value is None or isinstance(value, bool):
+        return ()
+    if isinstance(value, Mapping):
+        values: list[str] = []
+        for key in ("label", "name", "text", "value", "object"):
+            if key in value:
+                values.extend(_slot_value_strings(value[key]))
+        return tuple(values)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        values: list[str] = []
+        for item in value:
+            values.extend(_slot_value_strings(item))
+        return tuple(values)
+    text = str(value).strip()
+    return (text,) if text else ()
+
+
+def _slot_blob(slots: Mapping[str, Any]) -> str:
+    return " ".join(
+        value
+        for key in STRUCTURED_EVIDENCE_SLOT_KEYS
+        for value in _slot_values(slots, (key,))
+    )
+
+
+def _slot_values(slots: Mapping[str, Any], keys: Sequence[str]) -> tuple[str, ...]:
+    values: list[str] = []
+    for key in keys:
+        values.extend(str(item).strip() for item in _sequence(slots.get(key)) if str(item).strip())
+    return tuple(dict.fromkeys(values))
 
 
 def _request_tokens(request: Mapping[str, Any]) -> tuple[str, ...]:
@@ -642,6 +790,59 @@ def _candidate_value(
             continue
         return candidate
     return None
+
+
+def _structured_candidate_subject(
+    slots: Mapping[str, Any],
+    *,
+    requested_subject: str,
+    matched_entity: str,
+) -> str | None:
+    del requested_subject, matched_entity
+    for raw in _slot_values(slots, SUBJECT_SLOT_KEYS):
+        subject = _clean_candidate_subject(str(raw))
+        if subject:
+            return subject
+    return None
+
+
+def _structured_candidate_value(
+    slots: Mapping[str, Any],
+    *,
+    request: Mapping[str, Any],
+    property_hint: str | None = None,
+) -> str | None:
+    if not _structured_property_matches(slots, property_hint or ""):
+        return None
+    property_label, property_id = _property_parts(property_hint or "")
+    qtype = str(request.get("question_type", "")).casefold()
+    value_keys: tuple[str, ...] = VALUE_SLOT_KEYS
+    if property_id == "P577" or property_label == "publication date" or qtype == "temporal":
+        value_keys = (*TIME_SLOT_KEYS, *VALUE_SLOT_KEYS)
+    for raw in _slot_values(slots, value_keys):
+        value = _clean_candidate_value(str(raw))
+        if value:
+            return value
+    return None
+
+
+def _structured_property_matches(slots: Mapping[str, Any], property_hint: str) -> bool:
+    slot_values = _slot_values(slots, PROPERTY_SLOT_KEYS)
+    if not slot_values:
+        return False
+    property_label, property_id = _property_parts(property_hint)
+    hint_tokens = set(_tokens(property_label))
+    if property_id:
+        property_id_folded = property_id.casefold()
+        if any(property_id_folded == value.casefold() for value in slot_values):
+            return True
+    if not hint_tokens:
+        return False
+    for value in slot_values:
+        slot_tokens = set(_tokens(value))
+        if hint_tokens.issubset(slot_tokens):
+            return True
+    return False
 
 
 def _clean_candidate_value(value: str) -> str:

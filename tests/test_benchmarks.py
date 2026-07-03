@@ -59596,6 +59596,92 @@ def test_audit_blind_spot_alignment_requests_outputs_fact_candidates(tmp_path):
     assert record.metadata["suite"] == "unit"
 
 
+def test_audit_blind_spot_alignment_requests_uses_structured_metadata_slots():
+    module = importlib.import_module("benchmarks.audit_blind_spot_alignment_requests")
+
+    collection = {
+        "schema_version": 1,
+        "workflow": "blind_spot_evidence_collection_corpus",
+        "status": "ready_for_collection",
+        "summary": {"target_count": 1},
+        "requests": {
+            "alignment_audit": [
+                {
+                    "request_id": "align:alpha:1",
+                    "target_id": "record-alpha",
+                    "request_type": "claim_evidence_alignment",
+                    "priority": "high",
+                    "question_type": "quantity",
+                    "question": "What is the population of Alpha?",
+                    "model_answer": "100.",
+                    "entity_candidates": ["Alpha"],
+                    "wikidata_property_hints": ["population:P1082"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+                {
+                    "request_id": "align:alpha-website:1",
+                    "target_id": "record-alpha-website",
+                    "request_type": "claim_evidence_alignment",
+                    "priority": "high",
+                    "question_type": "entity",
+                    "question": "What is Alpha's official website?",
+                    "model_answer": "alpha.example",
+                    "entity_candidates": ["Alpha"],
+                    "wikidata_property_hints": ["official_website:P856"],
+                    "alignment_actions": ["claim_evidence_alignment"],
+                    "usage": "alignment_audit_only",
+                },
+            ],
+        },
+    }
+    evidence_documents = [
+        {
+            "source": "worldbank:alpha:2024",
+            "text": "Official statistics table row from a trusted source.",
+            "metadata": {
+                "provider": "worldbank",
+                "source_family": "official_statistics",
+                "title": "External statistics record",
+                "country_name": "Alpha",
+                "indicator_name": "Population, total",
+                "reference_year": 2024,
+                "value": 123,
+            },
+        }
+    ]
+
+    payload = module.audit_blind_spot_alignment_requests(
+        collection_corpus=collection,
+        evidence_documents=evidence_documents,
+    )
+    by_record = {record["request_id"]: record for record in payload["audit_records"]}
+    record = by_record["align:alpha:1"]
+    candidate = payload["fact_candidates"][0]
+    hit = record["top_evidence_hits"][0]
+
+    assert payload["status"] == "ready_for_fact_review"
+    assert payload["summary"]["fact_candidate_count"] == 1
+    assert record["alignment_status"] == "candidate_fact_ready"
+    assert hit["matched_entity"] == "Alpha"
+    assert hit["matched_property_hint"] == "population:P1082"
+    assert hit["structured_evidence_slots"]["country_name"] == ("Alpha",)
+    assert hit["structured_evidence_slots"]["indicator_name"] == ("Population, total",)
+    assert hit["structured_evidence_slots"]["value"] == ("123",)
+    assert candidate["subject"] == "Alpha"
+    assert candidate["property_hint"] == "population:P1082"
+    assert candidate["value"] == "123"
+    assert candidate["structured_evidence_slots"]["reference_year"] == ("2024",)
+    assert (
+        by_record["align:alpha-website:1"]["alignment_status"]
+        == "needs_value_extraction"
+    )
+    assert {
+        candidate["request_id"]
+        for candidate in payload["fact_candidates"]
+    } == {"align:alpha:1"}
+
+
 def test_audit_blind_spot_alignment_requests_extracts_property_values_and_dedupes(tmp_path):
     module = importlib.import_module("benchmarks.audit_blind_spot_alignment_requests")
 

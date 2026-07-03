@@ -2461,6 +2461,22 @@
       "name": "unresolved-frontier-evidence-summary",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "alignment_request_count": 89,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-alignment-audit/artifact-manifest.json",
+        "fact_candidate_count": 22,
+        "source_workflow": "metadata_slot_fact_extraction",
+        "status": "ready_for_fact_review",
+        "top_alignment_status": "needs_property_or_subject_alignment",
+        "top_gap_reason": "property_only_alignment",
+        "workflow": "blind_spot_alignment_audit"
+      },
+      "name": "improve-unresolved-citation-alignment-metadata-slot-audit",
+      "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-alignment-audit/alignment-audit.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
