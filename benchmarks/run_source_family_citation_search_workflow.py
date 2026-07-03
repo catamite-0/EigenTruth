@@ -80,6 +80,7 @@ def run_source_family_citation_search_workflow(
     query_fields: Sequence[str] = ("question", "question_answer"),
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    query_sweep_verified_records_dir: str | Path | None = None,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -171,6 +172,7 @@ def run_source_family_citation_search_workflow(
         query_fields=query_fields,
         retriever_min_overlaps=retriever_min_overlaps,
         source_family_filters=source_family_filters,
+        query_sweep_verified_records_dir=query_sweep_verified_records_dir,
         retrieval_limit=retrieval_limit,
         signal=signal,
         alpha=alpha,
@@ -227,6 +229,9 @@ def run_source_family_citation_search_workflow(
             "query_fields": tuple(query_fields),
             "retriever_min_overlaps": tuple(float(value) for value in retriever_min_overlaps),
             "source_family_filters": tuple(str(value) for value in source_family_filters),
+            "query_sweep_verified_records_dir": (
+                None if query_sweep_verified_records_dir is None else str(query_sweep_verified_records_dir)
+            ),
             "retrieval_limit": int(retrieval_limit),
             "signal": signal,
             "alpha": float(alpha),
@@ -513,6 +518,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
         help="comma-separated source-family evidence filters to sweep: off,planned,planned_rerank",
     )
+    parser.add_argument(
+        "--query-sweep-verified-records-dir",
+        default=None,
+        help="optional directory to save per-strategy query sweep verified-records JSONL sidecars",
+    )
     parser.add_argument("--retrieval-limit", type=int, default=3)
     parser.add_argument("--signal", default="truth_proj")
     parser.add_argument("--alpha", type=float, default=0.10)
@@ -568,6 +578,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             choices=("off", "planned", "planned_rerank"),
             name="source_family_filters",
         ),
+        query_sweep_verified_records_dir=args.query_sweep_verified_records_dir,
         retrieval_limit=args.retrieval_limit,
         signal=args.signal,
         alpha=args.alpha,

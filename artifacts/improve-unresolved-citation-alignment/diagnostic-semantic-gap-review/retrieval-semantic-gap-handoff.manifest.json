@@ -1,0 +1,37 @@
+{
+  "artifacts": {
+    "retrieval_semantic_gap_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-semantic-gap-handoff.json",
+      "sha256": "e4fd770efcb163f434664faa6606bb3c57ed17512872c64efd91d5e3f998de44",
+      "size_bytes": 1030679
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../diagnostic-verified-records-sweep/verified-records/citation_entity_overlap_0p65_sf_planned_rerank-verified-records.jsonl",
+      "sha256": "4318b9a9b3e379dbe6b746f1edd4f973d63f3d3db7c39383d5b50f3ce6f09c5d",
+      "size_bytes": 5917336
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 63,
+    "fact_candidate_count": 10,
+    "mode": "false_negative_with_hits",
+    "record_indices_json": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "status": "ready_for_handoff",
+    "total_request_count": 152,
+    "workflow": "retrieval_semantic_gap_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

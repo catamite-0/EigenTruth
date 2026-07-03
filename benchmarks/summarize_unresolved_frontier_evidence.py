@@ -1310,7 +1310,7 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
     if (
         source.get("status") == "covered"
         and citation.get("status") != "promote"
-        and semantic.get("status") != "promote"
+        and not _semantic_gap_review_covers_queue(semantic, queue)
     ):
         actions.append({
             "action_id": "improve_unresolved_citation_alignment",
@@ -1342,6 +1342,11 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "query_sweep_best_observed_strategy_counts": citation.get(
                 "query_sweep_best_observed_strategy_counts", {}
             ),
+            "semantic_gap_review_status": semantic.get("status"),
+            "semantic_gap_covered_fact_route_n_records": semantic.get(
+                "covered_fact_route_n_records", 0
+            ),
+            "unresolved_target_count": queue.get("target_count", 0),
         })
     if semantic.get("status") in {"ready_for_covered_fact_route", "needs_evidence", "missing"}:
         actions.append({
@@ -1497,6 +1502,18 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "reason": "unresolved targets remain in the source queue even though lane gates passed",
         })
     return actions
+
+
+def _semantic_gap_review_covers_queue(
+    semantic: Mapping[str, Any],
+    queue: Mapping[str, Any],
+) -> bool:
+    if semantic.get("status") != "promote":
+        return False
+    target_count = _int(queue.get("target_count"))
+    if target_count <= 0:
+        return False
+    return _int(semantic.get("covered_fact_route_n_records")) >= target_count
 
 
 def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:

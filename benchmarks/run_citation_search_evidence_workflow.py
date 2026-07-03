@@ -77,6 +77,7 @@ def run(
     query_fields: Sequence[str] = ("question", "question_answer"),
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    query_sweep_verified_records_dir: str | Path | None = None,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -155,6 +156,7 @@ def run(
             query_fields=query_fields,
             retriever_min_overlaps=retriever_min_overlaps,
             source_family_filters=source_family_filters,
+            verified_records_dir=query_sweep_verified_records_dir,
             retrieval_limit=retrieval_limit,
             signal=signal,
             alpha=alpha,
@@ -215,6 +217,9 @@ def run(
             "query_fields": tuple(query_fields),
             "retriever_min_overlaps": tuple(float(value) for value in retriever_min_overlaps),
             "source_family_filters": tuple(str(value) for value in source_family_filters),
+            "query_sweep_verified_records_dir": (
+                None if query_sweep_verified_records_dir is None else str(query_sweep_verified_records_dir)
+            ),
             "retrieval_limit": int(retrieval_limit),
             "signal": signal,
             "alpha": float(alpha),
@@ -243,6 +248,7 @@ def run(
             paths=paths,
             report_path=report_path,
             manifest_path=manifest_path,
+            query_sweep_verified_records_dir=query_sweep_verified_records_dir,
             has_corpus=corpus_path is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
@@ -261,6 +267,7 @@ def run(
             scores_path=scores_path,
             blind_spots_path=blind_spots_path,
             controlled_sweep_paths=controlled_sweep_paths,
+            query_sweep_verified_records_dir=query_sweep_verified_records_dir,
             has_corpus=corpus_path is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
@@ -393,6 +400,7 @@ def _paths(output: Path) -> dict[str, Path]:
         "query_sweep_comparison": output / "citation-search-query-sweep-comparison.json",
         "query_sweep_comparison_manifest": output / "citation-search-query-sweep-comparison-manifest.json",
         "query_sweep_manifest": output / "citation-search-query-sweep-manifest.json",
+        "query_sweep_verified_records": output / "citation-search-query-sweep-verified-records",
         "source_documents": output / "citation-search-source-docs.jsonl",
         "workflow_report": output / "citation-search-evidence-workflow.json",
     }
@@ -715,11 +723,15 @@ def _report_paths(
     paths: Mapping[str, Path],
     report_path: Path,
     manifest_path: Path,
+    query_sweep_verified_records_dir: str | Path | None,
     has_corpus: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
 ) -> dict[str, str | None]:
+    verified_records_dir = (
+        None if query_sweep_verified_records_dir is None else Path(query_sweep_verified_records_dir)
+    )
     return {
         "workflow_report": str(report_path),
         "artifact_manifest": str(manifest_path),
@@ -731,6 +743,11 @@ def _report_paths(
         "provenance_audit": str(paths["provenance_audit"]) if has_provenance else None,
         "query_sweep": str(paths["query_sweep"]) if has_query_sweep else None,
         "query_sweep_manifest": str(paths["query_sweep_manifest"]) if has_query_sweep else None,
+        "query_sweep_verified_records": (
+            str(verified_records_dir)
+            if has_query_sweep and verified_records_dir is not None and verified_records_dir.exists()
+            else None
+        ),
         "query_sweep_comparison": str(paths["query_sweep_comparison"]) if has_comparison else None,
         "query_sweep_comparison_manifest": (
             str(paths["query_sweep_comparison_manifest"]) if has_comparison else None
@@ -747,11 +764,15 @@ def _manifest_artifacts(
     scores_path: str | Path,
     blind_spots_path: str | Path,
     controlled_sweep_paths: Sequence[str | Path],
+    query_sweep_verified_records_dir: str | Path | None,
     has_corpus: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
 ) -> dict[str, str | Path | None]:
+    verified_records_dir = (
+        None if query_sweep_verified_records_dir is None else Path(query_sweep_verified_records_dir)
+    )
     artifacts: dict[str, str | Path | None] = {
         "workflow_report": report_path,
         "queue_report": Path(queue_report_path),
@@ -766,6 +787,11 @@ def _manifest_artifacts(
         "provenance_audit": paths["provenance_audit"] if has_provenance else None,
         "query_sweep": paths["query_sweep"] if has_query_sweep else None,
         "query_sweep_manifest": paths["query_sweep_manifest"] if has_query_sweep else None,
+        "query_sweep_verified_records": (
+            verified_records_dir
+            if has_query_sweep and verified_records_dir is not None and verified_records_dir.exists()
+            else None
+        ),
         "query_sweep_comparison": paths["query_sweep_comparison"] if has_comparison else None,
         "query_sweep_comparison_manifest": paths["query_sweep_comparison_manifest"] if has_comparison else None,
     }
@@ -885,6 +911,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
         help="comma-separated source-family evidence filters to sweep: off,planned,planned_rerank",
     )
+    parser.add_argument(
+        "--query-sweep-verified-records-dir",
+        default=None,
+        help="optional directory to save per-strategy query sweep verified-records JSONL sidecars",
+    )
     parser.add_argument("--retrieval-limit", type=int, default=3)
     parser.add_argument("--signal", default="truth_proj")
     parser.add_argument("--alpha", type=float, default=0.10)
@@ -931,6 +962,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             choices=("off", "planned", "planned_rerank"),
             name="source_family_filters",
         ),
+        query_sweep_verified_records_dir=args.query_sweep_verified_records_dir,
         retrieval_limit=args.retrieval_limit,
         signal=args.signal,
         alpha=args.alpha,

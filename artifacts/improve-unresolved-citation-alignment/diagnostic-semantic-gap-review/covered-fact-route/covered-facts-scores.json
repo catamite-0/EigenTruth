@@ -1,0 +1,261 @@
+{
+  "config": {
+    "label_semantics": {
+      "0": "known source-family structured QA answer",
+      "1": "answer mismatches known structured QA answer(s) for the same question"
+    },
+    "layer": -1,
+    "model": "source-family-covered-facts",
+    "signal": "truth_proj",
+    "source": {
+      "accepted_providers": [
+        "wikidata",
+        "worldbank"
+      ],
+      "builder": "source_family_structured_qa_corpus_builder",
+      "corpus_type": "source_family_structured_qa_external_evidence"
+    },
+    "statement_style": "qa",
+    "workflow": "source_family_structured_qa_route_workflow"
+  },
+  "labels": [
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+  ],
+  "scores": {
+    "truth_proj": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "statements": [
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_source_document_id": "alignment-approved:1",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "known_answers": [
+          "2020 single by Sam Smith"
+        ],
+        "label_generation": "source_family_known_answer",
+        "provider": "wikidata",
+        "review_id": "review:1ba4cfb5d67b238c",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "source_index": 0,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "subject": "Diamonds",
+        "title": "Reviewed alignment fact: Diamonds description"
+      },
+      "question": "What does Wikidata list as the description for Diamonds?",
+      "text": "What does Wikidata list as the description for Diamonds? 2020 single by Sam Smith"
+    },
+    {
+      "answer": "American businessman, investor, and philanthropist (born 1955)",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_source_document_id": "alignment-approved:1",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "false_answer_fact_group": "wikidata:reference:description",
+        "false_answer_provider": "wikidata",
+        "false_answer_source": "wikidata:Q5284:description",
+        "false_answer_source_family": "reference",
+        "known_answers": [
+          "2020 single by Sam Smith"
+        ],
+        "label_generation": "source_family_known_answer_mismatch",
+        "provider": "wikidata",
+        "review_id": "review:1ba4cfb5d67b238c",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q5284:description",
+        "source_family": "reference",
+        "source_index": 0,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "subject": "Diamonds",
+        "title": "Reviewed alignment fact: Diamonds description"
+      },
+      "question": "What does Wikidata list as the description for Diamonds?",
+      "text": "What does Wikidata list as the description for Diamonds? American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "answer": "American businessman, investor, and philanthropist (born 1955)",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_source_document_id": "alignment-approved:2",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "known_answers": [
+          "American businessman, investor, and philanthropist (born 1955)"
+        ],
+        "label_generation": "source_family_known_answer",
+        "provider": "wikidata",
+        "review_id": "review:e2978fac6c984da2",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q5284:description",
+        "source_family": "reference",
+        "source_index": 1,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "subject": "Bill Gates",
+        "title": "Reviewed alignment fact: Bill Gates description"
+      },
+      "question": "What does Wikidata list as the description for Bill Gates?",
+      "text": "What does Wikidata list as the description for Bill Gates? American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_source_document_id": "alignment-approved:2",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "false_answer_fact_group": "wikidata:reference:description",
+        "false_answer_provider": "wikidata",
+        "false_answer_source": "wikidata:Q99644917:description",
+        "false_answer_source_family": "reference",
+        "known_answers": [
+          "American businessman, investor, and philanthropist (born 1955)"
+        ],
+        "label_generation": "source_family_known_answer_mismatch",
+        "provider": "wikidata",
+        "review_id": "review:e2978fac6c984da2",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "source_index": 1,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "subject": "Bill Gates",
+        "title": "Reviewed alignment fact: Bill Gates description"
+      },
+      "question": "What does Wikidata list as the description for Bill Gates?",
+      "text": "What does Wikidata list as the description for Bill Gates? 2020 single by Sam Smith"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_source_document_id": "alignment-approved:3",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "known_answers": [
+          "West Germanic language"
+        ],
+        "label_generation": "source_family_known_answer",
+        "provider": "wikidata",
+        "review_id": "review:d69f124712266987",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "source_index": 2,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "subject": "English",
+        "title": "Reviewed alignment fact: English description"
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "text": "What does Wikidata list as the description for English? West Germanic language"
+    },
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_source_document_id": "alignment-approved:3",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "false_answer_fact_group": "wikidata:reference:description",
+        "false_answer_provider": "wikidata",
+        "false_answer_source": "wikidata:Q99644917:description",
+        "false_answer_source_family": "reference",
+        "known_answers": [
+          "West Germanic language"
+        ],
+        "label_generation": "source_family_known_answer_mismatch",
+        "provider": "wikidata",
+        "review_id": "review:d69f124712266987",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "source_index": 2,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "subject": "English",
+        "title": "Reviewed alignment fact: English description"
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "text": "What does Wikidata list as the description for English? 2020 single by Sam Smith"
+    }
+  ],
+  "summary": {
+    "by_fact_group": {
+      "wikidata:reference:description": {
+        "fact_group": "wikidata:reference:description",
+        "fact_type": "description",
+        "n_false": 3,
+        "n_records": 6,
+        "n_source_documents": 3,
+        "n_true": 3,
+        "provider": "wikidata",
+        "source_family": "reference"
+      }
+    },
+    "by_provider": {
+      "wikidata": 3
+    },
+    "by_source_family": {
+      "reference": 3
+    },
+    "fact_group_count": 1,
+    "n_false": 3,
+    "n_records": 6,
+    "n_skipped_false_answer": 0,
+    "n_source_documents": 3,
+    "n_true": 3,
+    "provider_count": 1,
+    "source_family_count": 1
+  }
+}

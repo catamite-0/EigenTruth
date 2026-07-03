@@ -1,0 +1,121 @@
+{
+  "corpus_type": "alignment_review_approved_source_documents",
+  "description": "Approved alignment fact-review source documents. These are inputs for source-family structured QA corpus construction, not a broad route promotion by themselves.",
+  "documents": [
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_source_document_id": "alignment-approved:1",
+        "confidence": 0.8888888888888888,
+        "evidence_span": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
+        "provider": "wikidata",
+        "review_id": "review:1ba4cfb5d67b238c",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Diamonds",
+        "value": "2020 single by Sam Smith"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q99644917:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
+      "title": "Reviewed alignment fact: Diamonds description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_source_document_id": "alignment-approved:2",
+        "confidence": 0.9230769230769231,
+        "evidence_span": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
+        "provider": "wikidata",
+        "review_id": "review:e2978fac6c984da2",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q5284:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Bill Gates",
+        "value": "American businessman, investor, and philanthropist (born 1955)"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q5284:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
+      "title": "Reviewed alignment fact: Bill Gates description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_source_document_id": "alignment-approved:3",
+        "confidence": 0.9523809523809523,
+        "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "provider": "wikidata",
+        "review_id": "review:d69f124712266987",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "English",
+        "value": "West Germanic language"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q1860:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
+      "title": "Reviewed alignment fact: English description"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "request_ids_copied_to_document_metadata": false,
+    "target_ids_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "builder": "alignment_fact_review_promotion_gate",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready",
+  "summary": {
+    "approved_source_document_count": 3,
+    "by_property": {
+      "description": 3
+    },
+    "by_provider": {
+      "wikidata": 3
+    },
+    "by_source_family": {
+      "reference": 3
+    },
+    "needs_more_evidence_count": 0,
+    "pending_review_count": 0,
+    "rejected_count": 0,
+    "review_decision_count": 3,
+    "review_document_count": 3,
+    "skip_counts": {
+      "approved": 3,
+      "duplicate_review_decision": 0,
+      "invalid_review_decision": 0,
+      "missing_candidate_id": 0,
+      "missing_reviewer": 0,
+      "needs_more_evidence": 0,
+      "pending_review": 0,
+      "rejected": 0,
+      "reserved_review_metadata": 0,
+      "unknown_candidate_id": 0,
+      "unsupported_evidence_source": 0
+    }
+  }
+}

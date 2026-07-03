@@ -1,0 +1,41 @@
+{
+  "config": {
+    "skip_qid_values": true
+  },
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/source-family-qa/artifact-manifest.json",
+    "qa_corpus": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/source-family-qa/source-family-qa-corpus.json",
+    "report": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/source-family-qa/source-family-qa-report.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "source_paths": [
+      "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-reviewed-promotion-gate/approved-source-documents.json"
+    ]
+  },
+  "status": "ready",
+  "summary": {
+    "by_provider": {
+      "wikidata": 3
+    },
+    "by_source_family": {
+      "reference": 3
+    },
+    "n_candidate_documents": 3,
+    "n_documents": 3,
+    "n_source_documents": 3,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  },
+  "workflow": "source_family_structured_qa_corpus_builder"
+}

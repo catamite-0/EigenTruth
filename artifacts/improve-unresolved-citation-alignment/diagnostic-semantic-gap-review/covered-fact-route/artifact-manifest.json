@@ -1,0 +1,73 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "457c53ff95e59771330bb83a5278b0a91434583924b83de24ee397f87e6ca203",
+      "size_bytes": 10001
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../source-family-qa/source-family-qa-corpus.json",
+      "sha256": "b4216a2629829b9590856620d3dc44f53f2a7286a7e52bc8f77e3b6d997356d6",
+      "size_bytes": 4298
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-route-summary.json",
+      "sha256": "58fe35ac76bc0a439f0fe8ab86d3d5b476174af4291b9207ea1a31312c968c03",
+      "size_bytes": 8261
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "c6f6ef2c2f91a69ca019cba82e0ca7a24281b484639dba3ceb5fc444b90e9c49",
+      "size_bytes": 25845
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-verifier-report.json",
+      "sha256": "0836500a9f2375c57aea02460b9b72f95bede6b0fb2725adde4396c22b38a7ad",
+      "size_bytes": 17862
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "fact_group_count": 1,
+    "n_false": 3,
+    "n_records": 6,
+    "n_true": 3,
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "promotes_covered_facts_route": true,
+    "provider_count": 1,
+    "route": "structured_qa",
+    "score_name": "semantic-gap-reviewed-covered-facts",
+    "signal": "truth_proj",
+    "source_family_count": 1,
+    "status": "promote",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "workflow": "source_family_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

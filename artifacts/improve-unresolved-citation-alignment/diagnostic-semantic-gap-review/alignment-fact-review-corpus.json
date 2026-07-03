@@ -1,0 +1,127 @@
+{
+  "corpus_type": "alignment_structured_fact_review_corpus",
+  "description": "Review-gated structured QA rows derived from alignment-audit fact candidates. These rows are candidate fact-review inputs only; they are not verifier evidence or broad route promotion.",
+  "documents": [
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_review_document_id": "alignment-review:1",
+        "confidence": 0.8888888888888888,
+        "evidence_source": "wikidata:Q99644917:description",
+        "evidence_span": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Diamonds",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Diamonds?",
+      "source": "wikidata:Q99644917:description",
+      "text": "What does the aligned evidence say is the description for Diamonds? 2020 single by Sam Smith"
+    },
+    {
+      "answer": "American businessman, investor, and philanthropist (born 1955)",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_review_document_id": "alignment-review:2",
+        "confidence": 0.9230769230769231,
+        "evidence_source": "wikidata:Q5284:description",
+        "evidence_span": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Bill Gates",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Bill Gates?",
+      "source": "wikidata:Q5284:description",
+      "text": "What does the aligned evidence say is the description for Bill Gates? American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_review_document_id": "alignment-review:3",
+        "confidence": 0.9523809523809523,
+        "evidence_source": "wikidata:Q1860:description",
+        "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "English",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for English?",
+      "source": "wikidata:Q1860:description",
+      "text": "What does the aligned evidence say is the description for English? West Germanic language"
+    }
+  ],
+  "label_usage": {
+    "candidate_facts_are_verifier_evidence": false,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "request_ids_copied_to_document_metadata": false,
+    "target_ids_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "accepted_usage": "structured_fact_review_only",
+    "builder": "alignment_fact_review_corpus_builder",
+    "min_confidence": 0.0
+  },
+  "status": "ready_for_review",
+  "summary": {
+    "accepted_document_count": 3,
+    "by_property_hint": {
+      "description": 3
+    },
+    "by_provider": {
+      "source_family_catalog": 3
+    },
+    "by_source_family": {
+      "reference": 3
+    },
+    "input_candidate_count": 10,
+    "skipped": {
+      "answer_value_matches_model_answer": 0,
+      "duplicate_candidate": 2,
+      "generic_value": 0,
+      "invalid_row": 0,
+      "low_confidence": 0,
+      "missing_required_fields": 0,
+      "non_review_usage": 0,
+      "property_value_invalid": 0,
+      "subject_not_in_evidence_span": 5,
+      "value_equals_subject": 0,
+      "value_not_in_evidence_span": 0
+    },
+    "skipped_count": 7,
+    "unique_candidate_count": 10
+  }
+}

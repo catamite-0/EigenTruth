@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-corpus.json",
+      "sha256": "8490aee063130f268d7d70a14b9f7841403233ad543bf1618f8a47b07143e506",
+      "size_bytes": 5073
+    },
+    "alignment_fact_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-records.jsonl",
+      "sha256": "4a3ea090eb176026fa77d63cd074c54876ec5d6a6e330a48f50cf351a9b87e84",
+      "size_bytes": 6374
+    },
+    "alignment_fact_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-report.json",
+      "sha256": "98ea9bf76535469e2e980400110d807646769b0a9b2e949663167f660436d77c",
+      "size_bytes": 1957
+    },
+    "structured_fact_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-semantic-gap-handoff.json",
+      "sha256": "e4fd770efcb163f434664faa6606bb3c57ed17512872c64efd91d5e3f998de44",
+      "size_bytes": 1030679
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_type": "alignment_structured_fact_review_corpus",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "document_count": 3,
+    "input_candidate_count": 10,
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "status": "ready_for_review",
+    "unique_candidate_count": 10,
+    "workflow": "alignment_fact_review_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

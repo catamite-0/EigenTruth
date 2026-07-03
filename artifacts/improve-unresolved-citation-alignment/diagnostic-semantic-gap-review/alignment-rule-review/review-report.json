@@ -1,0 +1,152 @@
+{
+  "config": {
+    "decision_output_schema": "promotion_gate_review_decisions",
+    "reviewed_at": "2026-07-02T00:00:00Z",
+    "reviewer": "rule_based_alignment_fact_reviewer_v1"
+  },
+  "decisions": [
+    {
+      "alignment_candidate_id": "fact:record-10:2",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:1ba4cfb5d67b238c",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:record-27:1",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:e2978fac6c984da2",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:record-61:1",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:d69f124712266987",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_decisions": false,
+    "labels_used_for_review": false,
+    "model_answers_copied_to_decisions": false,
+    "request_ids_copied_to_decisions": false,
+    "target_ids_copied_to_decisions": false
+  },
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-rule-review/artifact-manifest.json",
+    "review_corpus": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-fact-review-corpus.json",
+    "review_decisions": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-rule-review/review-decisions.jsonl",
+    "review_records": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-rule-review/review-records.jsonl",
+    "review_report": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-rule-review/review-report.json"
+  },
+  "records": [
+    {
+      "alignment_candidate_id": "fact:record-10:2",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q99644917:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 1,
+      "review_id": "review:1ba4cfb5d67b238c",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Diamonds",
+      "value": "2020 single by Sam Smith"
+    },
+    {
+      "alignment_candidate_id": "fact:record-27:1",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q5284:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 2,
+      "review_id": "review:e2978fac6c984da2",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Bill Gates",
+      "value": "American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "alignment_candidate_id": "fact:record-61:1",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q1860:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 3,
+      "review_id": "review:d69f124712266987",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "English",
+      "value": "West Germanic language"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Rule-based review of alignment fact-review rows. Approval means the row has a closed Wikidata subject/property/value evidence span, not broad open-domain route coverage.",
+  "source": {
+    "review_corpus_status": "ready_for_review",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready_for_promotion_gate",
+  "summary": {
+    "approved_count": 3,
+    "approved_property_counts": {
+      "description": 3
+    },
+    "decision_counts": {
+      "approved": 3
+    },
+    "needs_more_evidence_count": 0,
+    "reason_counts": {},
+    "review_document_count": 3
+  },
+  "workflow": "alignment_fact_rule_review"
+}

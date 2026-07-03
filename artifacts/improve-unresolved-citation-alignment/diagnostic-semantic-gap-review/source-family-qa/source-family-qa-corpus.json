@@ -1,0 +1,109 @@
+{
+  "corpus_type": "source_family_structured_qa_external_evidence",
+  "description": "Structured QA corpus derived only from source-family rows with explicit structured metadata. Use as a covered-fact input for QuestionAnswerVerifier; do not treat it as broad open-domain TruthfulQA coverage.",
+  "documents": [
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_source_document_id": "alignment-approved:1",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:1ba4cfb5d67b238c",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "source_index": 0,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Diamonds",
+        "title": "Reviewed alignment fact: Diamonds description"
+      },
+      "question": "What does Wikidata list as the description for Diamonds?",
+      "source": "wikidata:Q99644917:description",
+      "text": "What does Wikidata list as the description for Diamonds? 2020 single by Sam Smith"
+    },
+    {
+      "answer": "American businessman, investor, and philanthropist (born 1955)",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_source_document_id": "alignment-approved:2",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:e2978fac6c984da2",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q5284:description",
+        "source_family": "reference",
+        "source_index": 1,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Bill Gates",
+        "title": "Reviewed alignment fact: Bill Gates description"
+      },
+      "question": "What does Wikidata list as the description for Bill Gates?",
+      "source": "wikidata:Q5284:description",
+      "text": "What does Wikidata list as the description for Bill Gates? American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_source_document_id": "alignment-approved:3",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:d69f124712266987",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "source_index": 2,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "English",
+        "title": "Reviewed alignment fact: English description"
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "source": "wikidata:Q1860:description",
+      "text": "What does Wikidata list as the description for English? West Germanic language"
+    }
+  ],
+  "label_usage": {
+    "claim_ids_copied_to_document_metadata": false,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "score_dump_rows_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "accepted_providers": [
+      "wikidata",
+      "worldbank"
+    ],
+    "builder": "source_family_structured_qa_corpus_builder",
+    "skip_qid_values": true
+  },
+  "summary": {
+    "by_provider": {
+      "wikidata": 3
+    },
+    "by_source_family": {
+      "reference": 3
+    },
+    "n_candidate_documents": 3,
+    "n_documents": 3,
+    "n_source_documents": 3,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  }
+}

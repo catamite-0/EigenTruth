@@ -58471,6 +58471,7 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
     corpus_path = tmp_path / "corpus.json"
     blind_spots_path = tmp_path / "blind-spots.json"
     output_path = tmp_path / "query-sweep.json"
+    verified_records_dir = tmp_path / "verified-records"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
     scores_path.write_text(
@@ -58533,6 +58534,7 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
         output_path=output_path,
         query_fields=("answer", "question_answer"),
         retriever_min_overlaps=(1.0, 0.5),
+        verified_records_dir=verified_records_dir,
         retrieval_limit=2,
         alpha=0.2,
         max_verified_false_alarm=0.0,
@@ -58547,6 +58549,7 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     record = registry_module.ArtifactRegistry.load_json(registry_path).get("report:query-sweep-unit:0.1")
     by_key = {item["key"]: item for item in payload["strategies"]}
+    sidecar_path = verified_records_dir / "question_answer_overlap_0p5-verified-records.jsonl"
 
     assert payload["summary"]["strategy_count"] == 4
     assert payload["summary"]["best_strategy"] == "question_answer_overlap_0p5"
@@ -58556,12 +58559,18 @@ def test_sweep_blind_spot_retrieval_queries_ranks_query_strategies(tmp_path):
     assert by_key["question_answer_overlap_0p5"]["gate"]["pass"] is True
     assert by_key["answer_overlap_1p0"]["gap_analysis"]["gap_buckets"]["no_retrieval_hits"]["count"] == 2
     assert by_key["question_answer_overlap_0p5"]["gap_analysis"]["gap_buckets"]["false_refuted"]["count"] == 2
+    assert by_key["question_answer_overlap_0p5"]["paths"]["verified_records_jsonl"] == str(sidecar_path)
+    assert sidecar_path.exists()
+    assert sidecar_path.read_text(encoding="utf-8").count("\n") == 4
     assert saved["summary"]["best_passing_blind_refuted_count"] == 2
+    assert saved["strategies"][0]["paths"]["verified_records_jsonl"]
     assert manifest["summary"]["missing_count"] == 0
     assert manifest["artifacts"]["blind_spot_query_sweep"]["exists"] is True
+    assert manifest["artifacts"]["verified_records_dir"]["exists"] is True
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "blind_spot_retrieval_query_sweep"
     assert record.metadata["best_passing_strategy"] == "question_answer_overlap_0p5"
+    assert record.metadata["verified_records_dir"] == str(verified_records_dir)
     assert record.metadata["suite"] == "unit"
 
 
@@ -60521,6 +60530,13 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "covered_fact_route_false_refuted_rate": 1.0,
         },
     }
+    semantic_promoted_partial = {
+        **semantic_promoted,
+        "summary": {
+            **semantic_promoted["summary"],
+            "covered_fact_route_n_records": 2,
+        },
+    }
 
     payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
@@ -60698,6 +60714,28 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert semantic_ready_payload["lanes"]["semantic_gap_review"]["approved_source_document_count"] == 2
     assert semantic_ready_payload["summary"]["semantic_gap_review_workflow_count"] == 1
     assert "complete_retrieval_semantic_gap_review" in semantic_ready_actions
+
+    semantic_partial_payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation,),
+        source_family_coverage_audits=(covered_coverage,),
+        semantic_gap_review_workflows=(semantic_promoted_partial,),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+    semantic_partial_actions = {
+        action["action_id"] for action in semantic_partial_payload["next_actions"]
+    }
+    semantic_partial_citation_action = next(
+        action
+        for action in semantic_partial_payload["next_actions"]
+        if action["action_id"] == "improve_unresolved_citation_alignment"
+    )
+    assert semantic_partial_payload["lanes"]["semantic_gap_review"]["status"] == "promote"
+    assert "improve_unresolved_citation_alignment" in semantic_partial_actions
+    assert semantic_partial_citation_action["semantic_gap_review_status"] == "promote"
+    assert semantic_partial_citation_action["semantic_gap_covered_fact_route_n_records"] == 2
+    assert semantic_partial_citation_action["unresolved_target_count"] == 3
 
     semantic_promoted_payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
@@ -63329,6 +63367,7 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
         query_fields=("question_answer",),
         retriever_min_overlaps=(0.5,),
         source_family_filters=("planned_rerank",),
+        query_sweep_verified_records_dir=output_dir / "query-sweep-verified-records",
         retrieval_limit=2,
         alpha=0.2,
         max_verified_false_alarm=0.0,
@@ -63377,13 +63416,20 @@ def test_citation_search_evidence_workflow_runs_gates_and_blocks_unsupported_res
     assert payload["summary"]["comparison_passed"] is False
     assert payload["config"]["target_route"] == "retrieval_structured_qa"
     assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-corpus.json")
+    assert workflow_report["paths"]["query_sweep_verified_records"].endswith("query-sweep-verified-records")
     assert workflow_report["config"]["target_route"] == "retrieval_structured_qa"
     assert workflow_report["config"]["source_family_filters"] == ["planned_rerank"]
+    assert workflow_report["config"]["query_sweep_verified_records_dir"].endswith("query-sweep-verified-records")
     query_sweep_report = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
     assert query_sweep_report["config"]["target_route"] == "retrieval_structured_qa"
     assert query_sweep_report["config"]["source_family_filters"] == ["planned_rerank"]
     assert query_sweep_report["config"]["source_binding_enabled"] is True
     assert query_sweep_report["config"]["use_precomputed_retrieval_hits"] is True
+    assert query_sweep_report["config"]["verified_records_dir"].endswith("query-sweep-verified-records")
+    assert query_sweep_report["strategies"][0]["paths"]["verified_records_jsonl"].endswith(
+        "question_answer_overlap_0p5_sf_planned_rerank-verified-records.jsonl"
+    )
+    assert (output_dir / "query-sweep-verified-records").is_dir()
     assert query_sweep_report["source"]["source_binding_queue_path"] == str(queue_path)
     assert query_sweep_report["strategies"][0]["retrieval"]["source_bound_record_count"] == 2
     assert "record_index" not in request_jsonl

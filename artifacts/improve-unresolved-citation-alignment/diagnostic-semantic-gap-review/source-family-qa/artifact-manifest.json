@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "source_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../alignment-reviewed-promotion-gate/approved-source-documents.json",
+      "sha256": "125f27a3656b515ea17d46fc8efa55e9dc8918cd5a566329c3f66023ee390cb4",
+      "size_bytes": 4845
+    },
+    "source_family_structured_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-corpus.json",
+      "sha256": "b4216a2629829b9590856620d3dc44f53f2a7286a7e52bc8f77e3b6d997356d6",
+      "size_bytes": 4298
+    },
+    "source_family_structured_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-report.json",
+      "sha256": "bcf39b83802e6d98f34e000473e16f455204b26d7ff653e96d867a51ca723cd3",
+      "size_bytes": 1381
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_document_count": 3,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_type": "source_family_structured_qa_external_evidence",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "document_count": 3,
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "status": "ready",
+    "workflow": "source_family_structured_qa_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

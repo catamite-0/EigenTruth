@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -70,6 +71,7 @@ def sweep_blind_spot_retrieval_queries(
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    verified_records_dir: str | Path | None = None,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -117,6 +119,9 @@ def sweep_blind_spot_retrieval_queries(
         else bool(use_precomputed_retrieval_hits)
     )
     corpus_provenance = _corpus_provenance(corpus_input_paths)
+    verified_records_output_dir = None if verified_records_dir is None else Path(verified_records_dir)
+    if verified_records_output_dir is not None:
+        verified_records_output_dir.mkdir(parents=True, exist_ok=True)
     strategies = []
 
     with tempfile.TemporaryDirectory(prefix="eigentruth-blind-query-sweep-") as temp_dir:
@@ -134,6 +139,7 @@ def sweep_blind_spot_retrieval_queries(
                         query_field=query_field,
                         retriever_min_overlap=min_overlap,
                         source_family_filter=source_family_filter,
+                        verified_records_dir=verified_records_output_dir,
                         retrieval_limit=retrieval_limit,
                         signal=signal,
                         alpha=alpha,
@@ -184,6 +190,7 @@ def sweep_blind_spot_retrieval_queries(
             "max_examples_per_bucket": int(max_examples_per_bucket),
             "source_binding_enabled": source_binding_path is not None,
             "use_precomputed_retrieval_hits": resolved_use_precomputed_hits,
+            "verified_records_dir": None if verified_records_output_dir is None else str(verified_records_output_dir),
         },
         "summary": {
             "strategy_count": len(strategies),
@@ -216,6 +223,7 @@ def run(
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    verified_records_dir: str | Path | None = None,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
@@ -248,6 +256,7 @@ def run(
         query_fields=query_fields,
         retriever_min_overlaps=retriever_min_overlaps,
         source_family_filters=source_family_filters,
+        verified_records_dir=verified_records_dir,
         retrieval_limit=retrieval_limit,
         signal=signal,
         alpha=alpha,
@@ -275,6 +284,7 @@ def run(
                 "scores": Path(scores_path),
                 "blind_spots": Path(blind_spots_path),
                 "source_binding_queue": None if source_binding_queue_path is None else Path(source_binding_queue_path),
+                "verified_records_dir": None if verified_records_dir is None else Path(verified_records_dir),
                 **{f"corpus_{index}": Path(path) for index, path in enumerate(corpus_paths)},
             },
             root=manifest_path.parent,
@@ -290,6 +300,7 @@ def run(
                     "summary",
                     "best_passing_blind_refuted_count",
                 ),
+                "verified_records_dir": None if verified_records_dir is None else str(verified_records_dir),
             },
         )
         _write_json(manifest_path, manifest, compact=compact_json)
@@ -311,6 +322,7 @@ def run(
                     "summary",
                     "best_passing_blind_refuted_count",
                 ),
+                "verified_records_dir": None if verified_records_dir is None else str(verified_records_dir),
                 "artifact_manifest": None if artifact_manifest_path is None else str(artifact_manifest_path),
                 **dict(metadata or {}),
             },
@@ -329,6 +341,7 @@ def _evaluate_strategy(
     query_field: str,
     retriever_min_overlap: float,
     source_family_filter: str,
+    verified_records_dir: Path | None,
     retrieval_limit: int,
     signal: str,
     alpha: float,
@@ -381,6 +394,11 @@ def _evaluate_strategy(
     run = verifier_report["runs"][0]
     alpha_payload = run["alphas"][str(float(alpha))]
     verified_rows = load_verified_records_jsonl(verified_records_path)
+    durable_verified_records_path = _copy_verified_records_sidecar(
+        verified_records_path,
+        strategy_key=key,
+        verified_records_dir=verified_records_dir,
+    )
     blind_audit = audit_blind_spot_correction_routes(
         blind_spots,
         verified_rows,
@@ -406,6 +424,13 @@ def _evaluate_strategy(
         "query_field": query_field,
         "retriever_min_overlap": float(retriever_min_overlap),
         "source_family_filter": source_family_filter,
+        "paths": {
+            "verified_records_jsonl": (
+                None
+                if durable_verified_records_path is None
+                else str(durable_verified_records_path)
+            ),
+        },
         "retrieval": dict(fixture["summary"]),
         "verification": {
             "internal": _nested(alpha_payload, "internal", default={}),
@@ -424,6 +449,20 @@ def _evaluate_strategy(
             "blind_refuted_rate": blind_refuted_rate,
         },
     }
+
+
+def _copy_verified_records_sidecar(
+    source_path: Path,
+    *,
+    strategy_key: str,
+    verified_records_dir: Path | None,
+) -> Path | None:
+    if verified_records_dir is None:
+        return None
+    output = verified_records_dir / f"{_safe_filename(strategy_key)}-verified-records.jsonl"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source_path, output)
+    return output
 
 
 def _selected_route_summary(run: Mapping[str, Any], target_route: str) -> dict[str, Any]:
@@ -518,6 +557,10 @@ def _strategy_key_from_values(
     if source_family_filter != "off":
         key = f"{key}_sf_{source_family_filter}"
     return key
+
+
+def _safe_filename(value: str) -> str:
+    return "".join(char if char.isalnum() or char in {"-", "_", "."} else "_" for char in value)
 
 
 def _corpus_provenance(paths: Sequence[Path]) -> tuple[dict[str, Any], ...]:
@@ -667,6 +710,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--retriever-min-overlaps", default=",".join(str(value) for value in DEFAULT_MIN_OVERLAPS))
     parser.add_argument("--source-family-filters", default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
                         help="comma-separated source-family evidence filters to sweep: off,planned,planned_rerank")
+    parser.add_argument("--verified-records-dir", default=None,
+                        help="optional directory to save per-strategy verified-records JSONL sidecars")
     parser.add_argument("--retrieval-limit", type=int, default=3)
     parser.add_argument("--signal", default="truth_proj")
     parser.add_argument("--alpha", type=float, default=0.10)
@@ -700,6 +745,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         source_family_filters=_source_family_filters(
             _parse_csv(args.source_family_filters, default=DEFAULT_SOURCE_FAMILY_FILTERS)
         ),
+        verified_records_dir=args.verified_records_dir,
         retrieval_limit=args.retrieval_limit,
         signal=args.signal,
         alpha=args.alpha,

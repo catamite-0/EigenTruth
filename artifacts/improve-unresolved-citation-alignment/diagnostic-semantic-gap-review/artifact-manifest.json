@@ -1,0 +1,201 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-corpus.json",
+      "sha256": "8490aee063130f268d7d70a14b9f7841403233ad543bf1618f8a47b07143e506",
+      "size_bytes": 5073
+    },
+    "alignment_fact_review_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review.manifest.json",
+      "sha256": "5b6faaceea898244968c54f0691248596dd3420d75e78c828abf3fbe15020528",
+      "size_bytes": 1746
+    },
+    "alignment_fact_review_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-reviewed-promotion-gate/promotion-gate-report.json",
+      "sha256": "58b8875f1fe09e6e858adb691edc12d42d69cae169d96bb9d3e7d7a659880387",
+      "size_bytes": 12188
+    },
+    "alignment_fact_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-records.jsonl",
+      "sha256": "4a3ea090eb176026fa77d63cd074c54876ec5d6a6e330a48f50cf351a9b87e84",
+      "size_bytes": 6374
+    },
+    "alignment_fact_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-report.json",
+      "sha256": "98ea9bf76535469e2e980400110d807646769b0a9b2e949663167f660436d77c",
+      "size_bytes": 1957
+    },
+    "alignment_fact_rule_review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-rule-review/review-decisions.jsonl",
+      "sha256": "335a87813cbf24a8037abb87c1b7d41ef513063c4639c31e640d14b700a1db68",
+      "size_bytes": 762
+    },
+    "alignment_fact_rule_review_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-rule-review/artifact-manifest.json",
+      "sha256": "169705e264b94489dd39217187d22d6b9015ba67d225bfcb1ad6748ed67d24cf",
+      "size_bytes": 1676
+    },
+    "alignment_fact_rule_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-rule-review/review-records.jsonl",
+      "sha256": "d2cbc3284ed7ccf9e2cb6a645f715ca977a1d0188b68bd6ee0b1cec1268292ca",
+      "size_bytes": 2165
+    },
+    "alignment_fact_rule_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-rule-review/review-report.json",
+      "sha256": "523b21df7befae76ab672b26812749b8b8651a863013e18c05d7c34c4bc67ac2",
+      "size_bytes": 5706
+    },
+    "approved_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-reviewed-promotion-gate/approved-source-documents.json",
+      "sha256": "125f27a3656b515ea17d46fc8efa55e9dc8918cd5a566329c3f66023ee390cb4",
+      "size_bytes": 4845
+    },
+    "covered_fact_route_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-fact-route/artifact-manifest.json",
+      "sha256": "1d94fecfdd3e466e15ec83dc6d4915295b231cce637ff4f9ce907481a78766bc",
+      "size_bytes": 2244
+    },
+    "covered_fact_route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-fact-route/structured-qa-route-summary.json",
+      "sha256": "58fe35ac76bc0a439f0fe8ab86d3d5b476174af4291b9207ea1a31312c968c03",
+      "size_bytes": 8261
+    },
+    "promotion_gate_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-reviewed-promotion-gate/artifact-manifest.json",
+      "sha256": "2396da866954d6807134721a7597b8229614bb656e86f9806262c70079cff92e",
+      "size_bytes": 2271
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-reviewed-promotion-gate/promotion-gate-records.jsonl",
+      "sha256": "b034f5987c8a944a6f67e68cee3a12d385ebe267843d2f8416ad380fd9a50198",
+      "size_bytes": 1376
+    },
+    "record_indices_json": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "retrieval_semantic_gap_review_workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-semantic-gap-review-workflow.json",
+      "sha256": "b575346e4d7ce8285414abd1b25842da78b55101867598dc5dc46f25d1c8c431",
+      "size_bytes": 7717
+    },
+    "semantic_gap_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-semantic-gap-handoff.json",
+      "sha256": "e4fd770efcb163f434664faa6606bb3c57ed17512872c64efd91d5e3f998de44",
+      "size_bytes": 1030679
+    },
+    "semantic_gap_handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-semantic-gap-handoff.manifest.json",
+      "sha256": "8123d669dd101402b07fa6625089d318b24807b5bfdebca7696112596444ee5e",
+      "size_bytes": 1211
+    },
+    "source_family_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa/source-family-qa-corpus.json",
+      "sha256": "b4216a2629829b9590856620d3dc44f53f2a7286a7e52bc8f77e3b6d997356d6",
+      "size_bytes": 4298
+    },
+    "source_family_qa_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa/artifact-manifest.json",
+      "sha256": "e640a021285a60357ced6029b1d2055ca26a84f57da5ff74867f9e544e0e2266",
+      "size_bytes": 1453
+    },
+    "source_family_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa/source-family-qa-report.json",
+      "sha256": "bcf39b83802e6d98f34e000473e16f455204b26d7ff653e96d867a51ca723cd3",
+      "size_bytes": 1381
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../diagnostic-verified-records-sweep/verified-records/citation_entity_overlap_0p65_sf_planned_rerank-verified-records.jsonl",
+      "sha256": "4318b9a9b3e379dbe6b746f1edd4f973d63f3d3db7c39383d5b50f3ce6f09c5d",
+      "size_bytes": 5917336
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_source_document_count": 3,
+    "candidate_count": 63,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "covered_fact_route_status": "promote",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "fact_candidate_count": 10,
+    "review_document_count": 3,
+    "rule_review_approved_count": 3,
+    "source_family_qa_document_count": 3,
+    "status": "covered_fact_route_promote",
+    "workflow": "retrieval_semantic_gap_review_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 22,
+    "directory_count": 0,
+    "file_count": 22,
+    "missing_count": 0
+  }
+}

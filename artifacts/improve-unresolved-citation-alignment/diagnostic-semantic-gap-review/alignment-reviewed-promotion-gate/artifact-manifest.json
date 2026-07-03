@@ -1,0 +1,71 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../alignment-fact-review-corpus.json",
+      "sha256": "8490aee063130f268d7d70a14b9f7841403233ad543bf1618f8a47b07143e506",
+      "size_bytes": 5073
+    },
+    "alignment_fact_review_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-report.json",
+      "sha256": "58b8875f1fe09e6e858adb691edc12d42d69cae169d96bb9d3e7d7a659880387",
+      "size_bytes": 12188
+    },
+    "approved_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "approved-source-documents.json",
+      "sha256": "125f27a3656b515ea17d46fc8efa55e9dc8918cd5a566329c3f66023ee390cb4",
+      "size_bytes": 4845
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-records.jsonl",
+      "sha256": "b034f5987c8a944a6f67e68cee3a12d385ebe267843d2f8416ad380fd9a50198",
+      "size_bytes": 1376
+    },
+    "review_decision_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decision-template.jsonl",
+      "sha256": "fb6d342bf940340fe029ad59b0adddefa1c8656983c79811179d60ff7bf7a90f",
+      "size_bytes": 2082
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../alignment-rule-review/review-decisions.jsonl",
+      "sha256": "335a87813cbf24a8037abb87c1b7d41ef513063c4639c31e640d14b700a1db68",
+      "size_bytes": 762
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_source_document_count": 3,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "pending_review_count": 0,
+    "promotes_verifier_evidence": false,
+    "review_document_count": 3,
+    "status": "ready_for_structured_qa",
+    "workflow": "alignment_fact_review_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

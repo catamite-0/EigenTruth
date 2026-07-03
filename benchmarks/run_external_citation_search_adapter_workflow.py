@@ -76,6 +76,7 @@ def run_external_citation_search_adapter_workflow(
     command_timeout_seconds: float | None = None,
     target_route: str = DEFAULT_TARGET_ROUTE,
     source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    query_sweep_verified_records_dir: str | Path | None = None,
     min_adapter_request_coverage: float = 1.0,
     evidence_metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -140,6 +141,7 @@ def run_external_citation_search_adapter_workflow(
         source_kind=source_kind,
         target_route=target_route,
         source_family_filters=source_family_filters,
+        query_sweep_verified_records_dir=query_sweep_verified_records_dir,
         min_adapter_request_coverage=min_adapter_request_coverage,
         metadata={**dict(evidence_metadata or {}), "source_workflow": WORKFLOW},
         compact_json=compact_json,
@@ -171,6 +173,9 @@ def run_external_citation_search_adapter_workflow(
             "command_timeout_seconds": command_timeout_seconds,
             "target_route": target_route,
             "source_family_filters": tuple(str(item) for item in source_family_filters),
+            "query_sweep_verified_records_dir": (
+                None if query_sweep_verified_records_dir is None else str(query_sweep_verified_records_dir)
+            ),
             "min_adapter_request_coverage": float(min_adapter_request_coverage),
         },
         "paths": {
@@ -392,6 +397,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
         help="Comma-separated source-family filters for query sweep evidence: off, planned, planned_rerank.",
     )
+    parser.add_argument(
+        "--query-sweep-verified-records-dir",
+        default=None,
+        help="Optional directory to save per-strategy query sweep verified-records JSONL sidecars.",
+    )
     parser.add_argument("--min-adapter-request-coverage", type=float, default=1.0)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
@@ -425,6 +435,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             choices=("off", "planned", "planned_rerank"),
             name="source_family_filters",
         ),
+        query_sweep_verified_records_dir=args.query_sweep_verified_records_dir,
         min_adapter_request_coverage=args.min_adapter_request_coverage,
         evidence_metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),

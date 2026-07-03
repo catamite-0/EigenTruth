@@ -1590,12 +1590,20 @@ python benchmarks/sweep_blind_spot_retrieval_queries.py \
   --signal truth_proj \
   --alpha 0.1 \
   --verifier-min-overlap 0.65 \
+  --verified-records-dir "$OUT/verified-records" \
   --json "$OUT/blind-spot-query-sweep.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
   --name truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep \
   --version 0.1
 ```
+
+When a sweep is intended to feed the semantic-gap lane, add
+`--verified-records-dir`. The sweep saves one
+`<strategy>-verified-records.jsonl` sidecar per strategy and records each path
+under `strategies[].paths.verified_records_jsonl`; those sidecars are the direct
+inputs for `build_retrieval_semantic_gap_handoff.py` and
+`run_retrieval_semantic_gap_review_workflow.py`.
 
 The registered SmolLM2 sweep
 (`report:truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep:0.1`) evaluates
@@ -2658,6 +2666,9 @@ preserving the same manifest and registry gates.
 Use `--source-family-filters off,planned_rerank` for diagnostic sweeps that
 compare raw retrieval against source-family-aware reranking; the default remains
 `off` so existing gates do not silently change behavior.
+Use `--query-sweep-verified-records-dir "$OUT/query-sweep-verified-records"`
+when a blocked evidence workflow should feed semantic-gap review without
+rerunning the verifier ensemble.
 Blocked query sweeps also write `query_sweep_failure_reason_counts`,
 `query_sweep_best_observed_*`, and `query_sweep_recommended_next_actions` into
 the workflow summary. These fields split failures into no retrieval hits,
@@ -8137,7 +8148,7 @@ slots are available, the payload also includes `fact_candidates` in the
 
 ```bash
 python benchmarks/build_retrieval_semantic_gap_handoff.py \
-  --verified-records-jsonl artifacts/source-bound-sweep/verified-records.jsonl \
+  --verified-records-jsonl artifacts/source-bound-sweep/verified-records/question_answer_overlap_0p5-verified-records.jsonl \
   --record-indices-json artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --output artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.json \
   --artifact-manifest artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.manifest.json \
@@ -8175,7 +8186,7 @@ verifier evidence.
 OUT=artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1
 
 python benchmarks/run_retrieval_semantic_gap_review_workflow.py \
-  --verified-records-jsonl artifacts/source-bound-sweep/verified-records.jsonl \
+  --verified-records-jsonl artifacts/source-bound-sweep/verified-records/question_answer_overlap_0p5-verified-records.jsonl \
   --record-indices-json artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --output-dir "$OUT" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
