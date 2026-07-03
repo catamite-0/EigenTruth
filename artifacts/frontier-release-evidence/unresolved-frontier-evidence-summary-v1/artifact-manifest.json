@@ -213,8 +213,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "387fd567f0fff2b9e663403eb5e0c2a1929315ced64a5f95f87a900361ab8081",
-      "size_bytes": 40911
+      "sha256": "9c4ce97e5c06fae4f7c2073e3272988af575b6830cd99628d612cbe380939065",
+      "size_bytes": 41258
     },
     "unresolved_queue": {
       "exists": true,
@@ -268,6 +268,8 @@
     "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
     "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
     "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
+    "semantic_gap_review_covered_fact_route_fallback_n_records": 0,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 22,
     "semantic_gap_review_covered_fact_route_n_records": 22,
     "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,

@@ -31,6 +31,7 @@ from eigentruth.registry import (  # noqa: E402
 )
 
 WORKFLOW = "unresolved_frontier_evidence_summary"
+_SOURCE_PATH_KEY = "__eigentruth_source_path"
 RULE_FAMILY_INPUT_FIELDS = {
     "causal_or_procedural": frozenset({
         "mechanism",
@@ -181,8 +182,14 @@ def run(
     unresolved_queue = _load_optional_mapping(unresolved_queue_path)
     citation_workflows = tuple(_load_mapping(path) for path in citation_workflow_paths)
     coverage_audits = tuple(_load_mapping(path) for path in source_family_coverage_audit_paths)
-    semantic_gap_reviews = tuple(_load_mapping(path) for path in semantic_gap_review_workflow_paths)
-    covered_fact_routes = tuple(_load_mapping(path) for path in covered_fact_route_summary_paths)
+    semantic_gap_reviews = tuple(
+        _load_mapping_with_source_path(path)
+        for path in semantic_gap_review_workflow_paths
+    )
+    covered_fact_routes = tuple(
+        _load_mapping_with_source_path(path)
+        for path in covered_fact_route_summary_paths
+    )
     covered_fact_mappings = tuple(_load_mapping(path) for path in covered_fact_mapping_audit_paths)
     covered_fact_retrieval_qa_reports = tuple(
         _load_mapping(path) for path in covered_fact_retrieval_qa_report_paths
@@ -861,6 +868,8 @@ def _semantic_gap_review_lane(
     source_family_qa_document_count = 0
     standalone_route_source_document_count = 0
     covered_route_records = 0
+    covered_route_record_keys: set[str] = set()
+    covered_route_records_without_keys = 0
     promoted_count = 0
     standalone_promoted_count = 0
     blocked_count = 0
@@ -894,7 +903,12 @@ def _semantic_gap_review_lane(
         fact_review_document_count += _int(summary.get("fact_review_document_count"))
         approved_source_document_count += _int(summary.get("approved_source_document_count"))
         source_family_qa_document_count += _int(summary.get("source_family_qa_document_count"))
-        covered_route_records += _int(summary.get("covered_fact_route_n_records"))
+        route_n_records = _int(summary.get("covered_fact_route_n_records"))
+        route_record_keys = _workflow_covered_fact_route_record_keys(workflow)
+        if route_record_keys:
+            covered_route_record_keys.update(route_record_keys)
+        else:
+            covered_route_records_without_keys += route_n_records
         decision_accuracy = _optional_float(summary.get("covered_fact_route_decision_accuracy"))
         false_refuted_rate = _optional_float(summary.get("covered_fact_route_false_refuted_rate"))
         if decision_accuracy is not None:
@@ -931,7 +945,8 @@ def _semantic_gap_review_lane(
             "fact_review_document_count": _int(summary.get("fact_review_document_count")),
             "approved_source_document_count": _int(summary.get("approved_source_document_count")),
             "source_family_qa_document_count": _int(summary.get("source_family_qa_document_count")),
-            "covered_fact_route_n_records": _int(summary.get("covered_fact_route_n_records")),
+            "covered_fact_route_n_records": route_n_records,
+            "covered_fact_route_identity_n_records": len(route_record_keys),
             "covered_fact_route_decision_accuracy": decision_accuracy,
             "covered_fact_route_false_refuted_rate": false_refuted_rate,
         })
@@ -941,7 +956,14 @@ def _semantic_gap_review_lane(
         route_rows.append(route_row)
         route_status = str(route_row["status"] or "unknown")
         route_status_counts[route_status] += 1
-        covered_route_records += _int(route_row.get("covered_fact_route_n_records"))
+        route_record_keys = _covered_fact_route_record_keys(route_summary)
+        route_row["covered_fact_route_identity_n_records"] = len(route_record_keys)
+        if route_record_keys:
+            covered_route_record_keys.update(route_record_keys)
+        else:
+            covered_route_records_without_keys += _int(
+                route_row.get("covered_fact_route_n_records")
+            )
         source_family_qa_document_count += _int(route_row.get("source_family_qa_document_count"))
         standalone_route_source_document_count += _int(route_row.get("source_document_count"))
         decision_accuracy = _optional_float(route_row.get("covered_fact_route_decision_accuracy"))
@@ -964,6 +986,8 @@ def _semantic_gap_review_lane(
             blocked_count += 1
         elif route_status in {"insufficient_qa_documents", "skipped"}:
             skipped_route_count += 1
+
+    covered_route_records = len(covered_route_record_keys) + covered_route_records_without_keys
 
     for index, mapping_audit in enumerate(covered_fact_mapping_audits, start=1):
         mapping_row = _covered_fact_mapping_audit_row(mapping_audit, index=index)
@@ -1060,6 +1084,8 @@ def _semantic_gap_review_lane(
             standalone_route_source_document_count
         ),
         "covered_fact_route_n_records": covered_route_records,
+        "covered_fact_route_identity_n_records": len(covered_route_record_keys),
+        "covered_fact_route_fallback_n_records": covered_route_records_without_keys,
         "best_covered_fact_route_decision_accuracy": best_decision_accuracy,
         "best_covered_fact_route_false_refuted_rate": best_false_refuted_rate,
         "covered_fact_mapping_audit_count": len(mapping_rows),
@@ -1145,6 +1171,210 @@ def _covered_fact_route_summary_row(
         "verifier_report_path": route_summary.get("verifier_report_path"),
         "verified_records_jsonl_path": route_summary.get("verified_records_jsonl_path"),
     }
+
+
+def _workflow_covered_fact_route_record_keys(workflow: Mapping[str, Any]) -> tuple[str, ...]:
+    source_path = _source_path(workflow)
+    if source_path is None:
+        return ()
+    route_summary_path = _resolve_report_path(
+        _nested(workflow, "paths", "covered_fact_route_summary"),
+        base_path=source_path,
+    )
+    if route_summary_path is None or not route_summary_path.exists():
+        return ()
+    try:
+        route_summary = _load_mapping_with_source_path(route_summary_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return ()
+    return _covered_fact_route_record_keys(route_summary)
+
+
+def _covered_fact_route_record_keys(route_summary: Mapping[str, Any]) -> tuple[str, ...]:
+    records_path = _covered_fact_route_verified_records_path(route_summary)
+    if records_path is None or not records_path.exists():
+        return ()
+    keys: list[str] = []
+    try:
+        lines = records_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ()
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            return ()
+        if not isinstance(row, Mapping):
+            continue
+        key = _covered_fact_verified_record_key(row)
+        if key is not None:
+            keys.append(key)
+    return tuple(dict.fromkeys(keys))
+
+
+def _covered_fact_route_verified_records_path(
+    route_summary: Mapping[str, Any],
+) -> Path | None:
+    source_path = _source_path(route_summary)
+    path_value = (
+        route_summary.get("verified_records_jsonl_path")
+        or _nested(route_summary, "paths", "verified_records_jsonl")
+        or _nested(route_summary, "paths", "verified_records_jsonl_path")
+        or _nested(route_summary, "paths", "verified_records")
+    )
+    if path_value:
+        if source_path is not None:
+            return _resolve_report_path(path_value, base_path=source_path)
+        return Path(str(path_value))
+    if source_path is None:
+        return None
+    inferred = source_path.parent / "verified-records.jsonl"
+    return inferred if inferred.exists() else None
+
+
+def _covered_fact_verified_record_key(
+    row: Mapping[str, Any],
+) -> str | None:
+    record = _mapping(row.get("record"))
+    claim = _mapping(record.get("claim"))
+    record_metadata = _mapping(record.get("metadata"))
+    statement = _mapping(record_metadata.get("statement"))
+    metadata_layers = (
+        _mapping(claim.get("metadata")),
+        _mapping(statement.get("metadata")),
+        record_metadata,
+        _mapping(row.get("metadata")),
+    )
+    alignment_candidate_id = _metadata_value(
+        metadata_layers,
+        "alignment_candidate_id",
+        "candidate_id",
+        "fact_id",
+    )
+    source = _metadata_value(
+        metadata_layers,
+        "source",
+        "false_answer_source",
+        "alignment_source_document_id",
+    )
+    subject = _metadata_value(metadata_layers, "subject")
+    if subject is None:
+        subject = _slot_value(metadata_layers, "subject")
+    statement_property = _metadata_value(
+        metadata_layers,
+        "statement_property",
+        "fact_type",
+        "property",
+    )
+    if statement_property is None:
+        statement_property = _slot_value(metadata_layers, "statement_property")
+    known_answers = _metadata_value(metadata_layers, "known_answers", "value")
+    if known_answers is None:
+        known_answers = _slot_value(metadata_layers, "value")
+    label = _identity_component(
+        _first_present(
+            row.get("label"),
+            record.get("label"),
+            claim.get("label"),
+            statement.get("label"),
+        )
+    )
+    claim_text = _identity_component(
+        _first_present(
+            claim.get("text"),
+            statement.get("text"),
+            row.get("claim_text"),
+            row.get("text"),
+        )
+    )
+    answer = _identity_component(
+        _first_present(
+            statement.get("answer"),
+            claim.get("answer"),
+            row.get("answer"),
+        )
+    )
+    stable_parts = {
+        "alignment_candidate_id": _identity_component(alignment_candidate_id),
+        "source": _identity_component(source),
+        "subject": _identity_component(subject),
+        "statement_property": _identity_component(statement_property),
+        "known_answers": _identity_component(known_answers),
+        "label": label,
+        "claim_text": claim_text,
+        "answer": answer,
+    }
+    if not any(
+        stable_parts.get(key)
+        for key in (
+            "alignment_candidate_id",
+            "source",
+            "subject",
+            "statement_property",
+            "claim_text",
+        )
+    ):
+        return None
+    return json.dumps(
+        stable_parts,
+        sort_keys=True,
+        ensure_ascii=True,
+        separators=(",", ":"),
+    )
+
+
+def _source_path(payload: Mapping[str, Any]) -> Path | None:
+    value = payload.get(_SOURCE_PATH_KEY)
+    return Path(str(value)) if value else None
+
+
+def _metadata_value(
+    metadata_layers: Sequence[Mapping[str, Any]],
+    *keys: str,
+) -> Any:
+    for metadata in metadata_layers:
+        for key in keys:
+            if key in metadata and metadata[key] not in (None, ""):
+                return metadata[key]
+    return None
+
+
+def _slot_value(metadata_layers: Sequence[Mapping[str, Any]], key: str) -> Any:
+    for metadata in metadata_layers:
+        slots = _mapping(metadata.get("structured_evidence_slots"))
+        if key in slots and slots[key] not in (None, ""):
+            return slots[key]
+    return None
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _identity_component(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, Mapping):
+        items = {}
+        for key, item in sorted(value.items(), key=lambda item: str(item[0])):
+            normalized = _identity_component(item)
+            if normalized not in (None, ""):
+                items[str(key)] = normalized
+        return items or None
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        items = tuple(
+            item
+            for item in (_identity_component(item) for item in value)
+            if item not in (None, "")
+        )
+        return items or None
+    text = str(value).strip()
+    return text or None
 
 
 def _covered_fact_mapping_audit_row(
@@ -2241,6 +2471,12 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "semantic_gap_review_covered_fact_route_n_records": _int(
             lanes["semantic_gap_review"].get("covered_fact_route_n_records")
         ),
+        "semantic_gap_review_covered_fact_route_identity_n_records": _int(
+            lanes["semantic_gap_review"].get("covered_fact_route_identity_n_records")
+        ),
+        "semantic_gap_review_covered_fact_route_fallback_n_records": _int(
+            lanes["semantic_gap_review"].get("covered_fact_route_fallback_n_records")
+        ),
         "semantic_gap_review_coverage_gap_count": _semantic_gap_coverage_gap_count(
             lanes["semantic_gap_review"],
             lanes["unresolved_queue"],
@@ -2528,6 +2764,16 @@ def _write_manifest(
                 "summary",
                 "semantic_gap_review_covered_fact_route_n_records",
             ),
+            "semantic_gap_review_covered_fact_route_identity_n_records": _nested(
+                payload,
+                "summary",
+                "semantic_gap_review_covered_fact_route_identity_n_records",
+            ),
+            "semantic_gap_review_covered_fact_route_fallback_n_records": _nested(
+                payload,
+                "summary",
+                "semantic_gap_review_covered_fact_route_fallback_n_records",
+            ),
             "semantic_gap_review_coverage_gap_count": _nested(
                 payload,
                 "summary",
@@ -2740,6 +2986,12 @@ def _load_mapping(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, Mapping):
         raise ValueError(f"{path} must contain a JSON object.")
     return dict(payload)
+
+
+def _load_mapping_with_source_path(path: str | Path) -> dict[str, Any]:
+    payload = _load_mapping(path)
+    payload[_SOURCE_PATH_KEY] = str(path)
+    return payload
 
 
 def _load_frontier_queue_execution_smoke(path: str | Path) -> dict[str, Any]:

@@ -63088,6 +63088,117 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert cli_payload["metadata"] == {"model": "unit", "source": "cli"}
 
 
+def test_unresolved_frontier_evidence_summary_dedupes_covered_fact_route_records(
+    tmp_path,
+):
+    module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
+
+    records_path = tmp_path / "verified-records.jsonl"
+    metadata = {
+        "alignment_candidate_id": "fact:record-7:1",
+        "source": "wikidata:Q90:P36",
+        "source_family": "reference",
+        "statement_property": "P36",
+        "subject": "France",
+        "known_answers": ["Paris"],
+    }
+    false_metadata = {
+        **metadata,
+        "false_answer_source": "wikidata:Q64:P36",
+        "source": "wikidata:Q64:P36",
+    }
+    records = [
+        {
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_route_workflow",
+            "record_index": 0,
+            "label": 0,
+            "record": {
+                "claim": {
+                    "text": "What is the capital of France? Paris",
+                    "metadata": metadata,
+                },
+                "metadata": {
+                    "statement": {
+                        "answer": "Paris",
+                        "text": "What is the capital of France? Paris",
+                        "metadata": metadata,
+                    }
+                },
+            },
+        },
+        {
+            "schema_version": 1,
+            "workflow": "source_family_structured_qa_route_workflow",
+            "record_index": 1,
+            "label": 1,
+            "record": {
+                "claim": {
+                    "text": "What is the capital of France? Berlin",
+                    "metadata": false_metadata,
+                },
+                "metadata": {
+                    "statement": {
+                        "answer": "Berlin",
+                        "text": "What is the capital of France? Berlin",
+                        "metadata": false_metadata,
+                    }
+                },
+            },
+        },
+    ]
+    records_path.write_text(
+        "\n".join(json.dumps(record, sort_keys=True) for record in records) + "\n",
+        encoding="utf-8",
+    )
+    route_summary = {
+        "workflow": "source_family_structured_qa_route_workflow",
+        "status": "promote",
+        "route": "structured_qa",
+        "signal": "truth_proj",
+        "score_dump_summary": {"n_records": 2, "n_source_documents": 1},
+        "route_metrics": {
+            "decision_accuracy": 1.0,
+            "false_refuted_rate": 1.0,
+        },
+        "qa_corpus_summary": {"n_documents": 1},
+        "verified_records_jsonl_path": str(records_path),
+    }
+    route_a_path = tmp_path / "route-a.json"
+    route_b_path = tmp_path / "route-b.json"
+    route_a_path.write_text(json.dumps(route_summary), encoding="utf-8")
+    route_b_path.write_text(json.dumps(route_summary), encoding="utf-8")
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps({
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 4},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        unresolved_queue_path=queue_path,
+        covered_fact_route_summary_paths=(route_a_path, route_b_path),
+    )
+
+    semantic_lane = payload["lanes"]["semantic_gap_review"]
+    assert semantic_lane["standalone_covered_fact_route_count"] == 2
+    assert semantic_lane["covered_fact_route_n_records"] == 2
+    assert semantic_lane["covered_fact_route_identity_n_records"] == 2
+    assert semantic_lane["covered_fact_route_fallback_n_records"] == 0
+    assert payload["summary"]["semantic_gap_review_covered_fact_route_n_records"] == 2
+    assert (
+        payload["summary"]["semantic_gap_review_covered_fact_route_identity_n_records"]
+        == 2
+    )
+    assert (
+        payload["summary"]["semantic_gap_review_covered_fact_route_fallback_n_records"]
+        == 0
+    )
+
+
 def test_unresolved_frontier_evidence_summary_surfaces_input_fill_rollup_adapter_ready(
     tmp_path,
 ):

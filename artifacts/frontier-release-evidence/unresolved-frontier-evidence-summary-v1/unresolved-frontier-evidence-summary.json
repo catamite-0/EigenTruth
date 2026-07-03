@@ -441,6 +441,8 @@
           "workflow": "blind_spot_retrieval_query_sweep"
         }
       ],
+      "covered_fact_route_fallback_n_records": 0,
+      "covered_fact_route_identity_n_records": 22,
       "covered_fact_route_n_records": 22,
       "covered_fact_route_skipped_count": 0,
       "covered_fact_route_status_counts": {
@@ -451,6 +453,7 @@
           "covered_fact_route_decision_accuracy": 1.0,
           "covered_fact_route_false_refuted_rate": 1.0,
           "covered_fact_route_false_supported_rate": 0.0,
+          "covered_fact_route_identity_n_records": 8,
           "covered_fact_route_n_records": 8,
           "covered_fact_route_true_supported_rate": 1.0,
           "covered_fact_score_dump_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/covered-facts-scores.json",
@@ -488,6 +491,7 @@
           "approved_source_document_count": 7,
           "covered_fact_route_decision_accuracy": 1.0,
           "covered_fact_route_false_refuted_rate": 1.0,
+          "covered_fact_route_identity_n_records": 14,
           "covered_fact_route_n_records": 14,
           "covered_fact_route_status": "promote",
           "fact_review_document_count": 10,
@@ -983,6 +987,8 @@
     "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
     "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
     "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
+    "semantic_gap_review_covered_fact_route_fallback_n_records": 0,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 22,
     "semantic_gap_review_covered_fact_route_n_records": 22,
     "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,
