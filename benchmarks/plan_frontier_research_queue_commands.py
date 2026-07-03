@@ -653,6 +653,14 @@ def _unresolved_summary_actions(
             )
         elif action_id == "repair_frontier_queue_command_execution":
             actions.append(_unresolved_frontier_queue_repair_action(payload, action, source_path=source_path))
+        elif action_id == "stage_frontier_queue_seed_inputs":
+            actions.append(
+                _unresolved_frontier_queue_seed_input_action(
+                    payload,
+                    action,
+                    source_path=source_path,
+                )
+            )
         elif action_id == "run_world_model_rule_adapter_promotion_workflow":
             actions.append(
                 _unresolved_world_model_rule_adapter_promotion_action(
@@ -1341,6 +1349,90 @@ def _unresolved_frontier_queue_repair_action(
             "missing_output_count": _int_or_zero(action.get("missing_output_count")),
         },
     }
+
+
+def _unresolved_frontier_queue_seed_input_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    audit_paths = _summary_path_tuple(
+        payload,
+        "input_binding_audits",
+        "input_binding_audit",
+        source_path=source_path,
+    )
+    binding_paths = _summary_path_tuple(
+        payload,
+        "frontier_command_bindings",
+        "frontier_command_binding",
+        source_path=source_path,
+    )
+    commands: list[str] = []
+    required_inputs: list[str] = []
+    if not audit_paths:
+        required_inputs.append("frontier_input_binding_audit")
+    if not binding_paths:
+        required_inputs.append("frontier_command_bindings")
+    for audit_path, binding_path in _paired_paths(audit_paths, binding_paths):
+        commands.append(
+            _frontier_seed_input_binding_command(
+                input_binding_audit=audit_path,
+                base_bindings=binding_path,
+            )
+        )
+    return {
+        **dict(action),
+        "title": "Stage audited source-family seed inputs",
+        "action_type": "workflow_plan",
+        "evidence_routes": ("frontier_queue_execution", "source_family_acquisition"),
+        "suggested_commands": tuple(commands),
+        "metadata": {
+            "required_inputs": tuple(required_inputs),
+            "closure_outputs": (
+                "frontier_seed_input_binding_report",
+                "frontier_seed_input_bindings",
+                "frontier_seed_input_binding_artifact_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "source_input_binding_audit_count": len(audit_paths),
+            "source_frontier_command_binding_count": len(binding_paths),
+            "reason": str(action.get("reason") or ""),
+            "blocked_seed_count": _int_or_zero(action.get("blocked_seed_count")),
+            "pending_review_count": _int_or_zero(action.get("pending_review_count")),
+        },
+    }
+
+
+def _frontier_seed_input_binding_command(
+    *,
+    input_binding_audit: Path | None,
+    base_bindings: Path | None,
+) -> str:
+    parts: list[Any] = [
+        "python",
+        "benchmarks/bind_frontier_research_queue_seed_inputs.py",
+        "--input-binding-audit",
+        "..." if input_binding_audit is None else str(input_binding_audit),
+        "--base-bindings",
+        "..." if base_bindings is None else str(base_bindings),
+        "--output-dir",
+        "...",
+        "--json",
+        "...",
+        "--bindings-json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+    ]
+    return _shell_join(parts)
 
 
 def _frontier_command_binding_review_command_from_report(
@@ -2193,6 +2285,45 @@ def _load_optional_json(path: Path | None) -> Mapping[str, Any]:
         return {}
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload if isinstance(payload, Mapping) else {}
+
+
+def _summary_path_tuple(
+    payload: Mapping[str, Any],
+    plural_key: str,
+    singular_key: str,
+    *,
+    source_path: Path | None,
+) -> tuple[Path, ...]:
+    values = _string_tuple(_nested(payload, "paths", plural_key))
+    if not values:
+        values = _string_tuple(_nested(payload, "paths", singular_key))
+    return tuple(
+        path
+        for path in (
+            _resolve_path(value, base=source_path)
+            for value in values
+        )
+        if path is not None
+    )
+
+
+def _paired_paths(
+    left: Sequence[Path],
+    right: Sequence[Path],
+) -> tuple[tuple[Path | None, Path | None], ...]:
+    if not left and not right:
+        return ((None, None),)
+    if not left:
+        return tuple((None, value) for value in right)
+    if not right:
+        return tuple((value, None) for value in left)
+    if len(left) == len(right):
+        return tuple(zip(left, right, strict=True))
+    if len(right) == 1:
+        return tuple((value, right[0]) for value in left)
+    if len(left) == 1:
+        return tuple((left[0], value) for value in right)
+    return tuple((left_value, right_value) for left_value, right_value in zip(left, right, strict=False))
 
 
 def _artifact_path(

@@ -32,6 +32,14 @@ REQUIRED_COMMAND_FLAGS = {
         "--json",
         "--artifact-manifest",
     ),
+    "benchmarks/bind_frontier_research_queue_seed_inputs.py": (
+        "--input-binding-audit",
+        "--base-bindings",
+        "--output-dir",
+        "--json",
+        "--bindings-json",
+        "--artifact-manifest",
+    ),
     "benchmarks/plan_frontier_abstention_evidence_reruns.py": ("--source",),
     "benchmarks/run_product_runtime_baseline.py": ("--trace", "--json"),
     "benchmarks/review_frontier_research_queue_command_bindings.py": (
@@ -226,6 +234,10 @@ REQUIRED_INPUT_FLAGS = {
     "benchmarks/bind_frontier_research_queue_command_plan.py": {
         "frontier_command_plan": "--command-plan",
         "approved_frontier_command_bindings": "--bindings",
+    },
+    "benchmarks/bind_frontier_research_queue_seed_inputs.py": {
+        "frontier_input_binding_audit": "--input-binding-audit",
+        "frontier_command_bindings": "--base-bindings",
     },
     "benchmarks/review_frontier_research_queue_command_bindings.py": {
         "frontier_bound_command_plan": "--bound-command-plan",

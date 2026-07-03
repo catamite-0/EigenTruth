@@ -36649,6 +36649,12 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "--json report.json --bindings-json bindings.json "
             "--artifact-manifest manifest.json"
         ),
+        "seed_bind": (
+            "python benchmarks/bind_frontier_research_queue_seed_inputs.py "
+            "--input-binding-audit audit.json --base-bindings staged.json "
+            "--output-dir out --json report.json --bindings-json bindings.json "
+            "--artifact-manifest manifest.json"
+        ),
         "review": (
             "python benchmarks/review_frontier_research_queue_command_bindings.py "
             "--bound-command-plan bound.json --base-bindings bindings.json "
@@ -36780,6 +36786,7 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     assert {name: summary["status"] for name, summary in summaries.items()} == {
         "bind": "ready",
         "artifact_bind": "ready",
+        "seed_bind": "ready",
         "review": "ready",
         "run": "ready",
         "source_family_audit": "ready",
@@ -36793,6 +36800,9 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     }
     assert summaries["review"]["script"] == (
         "benchmarks/review_frontier_research_queue_command_bindings.py"
+    )
+    assert summaries["seed_bind"]["script"] == (
+        "benchmarks/bind_frontier_research_queue_seed_inputs.py"
     )
     assert missing_review["status"] == "needs_review"
     assert missing_review["missing_required_flags"] == ("--approved-bindings",)
@@ -36853,12 +36863,22 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         {"input": "source_family_collection_tasks", "flag": "--tasks"},
         {"input": "source_family_url_seeds", "flag": "--seeds"},
     )
+    seed_bind_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["seed_bind"],
+        index=14,
+        required_inputs=("frontier_input_binding_audit", "frontier_command_bindings"),
+    )
+    assert seed_bind_inputs["required_input_flags"] == (
+        {"input": "frontier_input_binding_audit", "flag": "--input-binding-audit"},
+        {"input": "frontier_command_bindings", "flag": "--base-bindings"},
+    )
 
 
 def test_frontier_research_queue_command_plan_templates_queue_execution_actions(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
     command_plan_path = tmp_path / "frontier-command-plan.json"
+    input_binding_audit_path = tmp_path / "frontier-input-binding-audit.json"
     base_bindings_path = tmp_path / "frontier-command-bindings.json"
     approved_bindings_path = tmp_path / "approved-frontier-command-bindings.json"
     bound_plan_path = tmp_path / "frontier-bound-command-plan.json"
@@ -36873,6 +36893,13 @@ def test_frontier_research_queue_command_plan_templates_queue_execution_actions(
     )
     base_bindings_path.write_text(
         json.dumps({"workflow": "frontier_research_queue_command_bindings"}),
+        encoding="utf-8",
+    )
+    input_binding_audit_path.write_text(
+        json.dumps({
+            "workflow": "frontier_research_queue_input_binding_audit",
+            "status": "ready",
+        }),
         encoding="utf-8",
     )
     approved_bindings_path.write_text(
@@ -37018,6 +37045,52 @@ def test_frontier_research_queue_command_plan_templates_queue_execution_actions(
     assert f"--bound-command-plan {bound_plan_path}" in repair_command
     assert "--execute" in repair_command
     assert repair_requirements["status"] == "ready"
+
+    seed_payload = plan_module.build_frontier_research_queue_command_plan(
+        source={
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "paths": {
+                "input_binding_audits": [str(input_binding_audit_path)],
+                "frontier_command_bindings": [str(base_bindings_path)],
+            },
+            "next_actions": [
+                {
+                    "action_id": "stage_frontier_queue_seed_inputs",
+                    "lane": "frontier_queue_execution",
+                    "priority": 81,
+                    "reason": "reviewed source-family URL seeds need command binding",
+                },
+            ],
+        }
+    )
+    seed_entry = seed_payload["entries"][0]
+    seed_command = seed_entry["command_templates"][0]
+    seed_requirements = requirements_module.frontier_command_requirement_summary(
+        seed_command,
+        index=1,
+        required_inputs=seed_entry["required_inputs"],
+    )
+
+    assert seed_payload["status"] == "needs_inputs"
+    assert seed_entry["required_inputs"] == ()
+    assert seed_entry["missing_inputs"] == ("bound_command_template_values",)
+    assert "bind_frontier_research_queue_seed_inputs.py" in seed_command
+    assert f"--input-binding-audit {input_binding_audit_path}" in seed_command
+    assert f"--base-bindings {base_bindings_path}" in seed_command
+    assert "--output-dir ..." in seed_command
+    assert "--bindings-json ..." in seed_command
+    assert "--artifact-manifest ..." in seed_command
+    assert "--registry ..." in seed_command
+    assert "--name ..." in seed_command
+    assert "--version ..." in seed_command
+    assert tuple(item["name"] for item in seed_entry["planned_outputs"]) == (
+        "frontier_seed_input_binding_report",
+        "frontier_seed_input_bindings",
+        "frontier_seed_input_binding_artifact_manifest",
+    )
+    assert all(item["status"] == "planned" for item in seed_entry["planned_outputs"])
+    assert seed_requirements["status"] == "ready"
 
 
 def test_frontier_research_queue_command_plan_skips_closed_requeued_entity_rules(tmp_path):
@@ -63161,6 +63234,20 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
             "missing_output_count": 1,
         },
     }
+    ready_seed_audit = {
+        "workflow": "frontier_research_queue_input_binding_audit",
+        "status": "ready",
+        "summary": {
+            "sidecar_status_counts": {
+                "source_family_url_seeds": {"ready": 2, "blocked": 0}
+            },
+        },
+    }
+    base_bindings = {
+        "workflow": "frontier_research_queue_command_bindings",
+        "status": "needs_review",
+        "summary": {"entry_count": 1, "binding_count": 1},
+    }
 
     ready_payload = module.summarize_unresolved_frontier_evidence(
         frontier_command_binding_reviews=(ready_review,),
@@ -63213,6 +63300,23 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
     assert failed_payload["lanes"]["frontier_queue_execution"]["status"] == "blocked"
     assert "repair_frontier_queue_command_execution" in failed_actions
 
+    seed_payload = module.summarize_unresolved_frontier_evidence(
+        input_binding_audits=(ready_seed_audit,),
+        frontier_command_bindings=(base_bindings,),
+    )
+    seed_lane = seed_payload["lanes"]["frontier_queue_execution"]
+    seed_action = next(
+        action
+        for action in seed_payload["next_actions"]
+        if action["action_id"] == "stage_frontier_queue_seed_inputs"
+    )
+    assert seed_lane["status"] == "not_configured"
+    assert seed_lane["seed_input_staging_ready"] is True
+    assert seed_lane["ready_seed_input_audit_count"] == 1
+    assert seed_lane["ready_seed_input_count"] == 2
+    assert seed_lane["frontier_command_binding_count"] == 1
+    assert seed_action["ready_seed_input_count"] == 2
+
     smoke_payload = smoke_module.build_frontier_queue_execution_smoke(tmp_path / "smoke")
     smoke_only_payload = module.summarize_unresolved_frontier_evidence(
         frontier_queue_execution_smokes=(smoke_payload,),
@@ -63242,13 +63346,19 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
 
     review_path = tmp_path / "command-review.json"
     run_path = tmp_path / "bound-run.json"
+    seed_audit_path = tmp_path / "input-binding-audit.json"
+    bindings_path = tmp_path / "frontier-command-bindings.json"
     report_path = tmp_path / "summary.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
     smoke_report_path = tmp_path / "smoke" / "frontier-queue-execution-smoke.json"
     review_path.write_text(json.dumps(ready_review), encoding="utf-8")
     run_path.write_text(json.dumps(succeeded_run), encoding="utf-8")
+    seed_audit_path.write_text(json.dumps(ready_seed_audit), encoding="utf-8")
+    bindings_path.write_text(json.dumps(base_bindings), encoding="utf-8")
     saved = module.run(
+        input_binding_audit_paths=(seed_audit_path,),
+        frontier_command_binding_paths=(bindings_path,),
         frontier_command_binding_review_paths=(review_path,),
         frontier_bound_command_run_paths=(run_path,),
         frontier_queue_execution_smoke_paths=(smoke_report_path,),
@@ -63265,7 +63375,12 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
     )
 
     assert saved["lanes"]["frontier_queue_execution"]["status"] == "promote"
+    assert saved["paths"]["input_binding_audits"] == (str(seed_audit_path),)
+    assert saved["paths"]["frontier_command_bindings"] == (str(bindings_path),)
     assert manifest["metadata"]["frontier_queue_execution_status"] == "promote"
+    assert manifest["metadata"]["frontier_input_binding_audit_count"] == 1
+    assert manifest["metadata"]["frontier_ready_seed_input_count"] == 2
+    assert manifest["metadata"]["frontier_command_binding_count"] == 1
     assert manifest["metadata"]["frontier_command_binding_review_count"] == 1
     assert manifest["metadata"]["frontier_bound_command_run_count"] == 1
     assert manifest["metadata"]["frontier_queue_execution_smoke_status"] == "pass"
@@ -63274,6 +63389,8 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
         "frontier_queue_execution_smoke_manifest_verified_count"
     ] == 1
     assert manifest["artifacts"]["frontier_command_binding_review_1"]["exists"] is True
+    assert manifest["artifacts"]["input_binding_audit_1"]["exists"] is True
+    assert manifest["artifacts"]["frontier_command_bindings_1"]["exists"] is True
     assert manifest["artifacts"]["frontier_bound_command_run_1"]["exists"] is True
     assert manifest["artifacts"]["frontier_queue_execution_smoke_1"]["exists"] is True
     assert (
@@ -63281,6 +63398,9 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
         is True
     )
     assert record.metadata["frontier_queue_execution_status"] == "promote"
+    assert record.metadata["frontier_input_binding_audit_count"] == 1
+    assert record.metadata["frontier_ready_seed_input_count"] == 2
+    assert record.metadata["frontier_command_binding_count"] == 1
     assert record.metadata["frontier_command_binding_review_count"] == 1
     assert record.metadata["frontier_bound_command_run_count"] == 1
     assert record.metadata["frontier_bound_command_succeeded_count"] == 1
@@ -63292,6 +63412,10 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
 
     cli_report_path = tmp_path / "cli-summary.json"
     module.main([
+        "--input-binding-audit",
+        str(seed_audit_path),
+        "--frontier-command-bindings",
+        str(bindings_path),
         "--frontier-command-binding-review",
         str(review_path),
         "--frontier-bound-command-run",
@@ -63303,6 +63427,8 @@ def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_ga
     ])
     cli_payload = json.loads(cli_report_path.read_text(encoding="utf-8"))
     assert cli_payload["lanes"]["frontier_queue_execution"]["status"] == "promote"
+    assert cli_payload["paths"]["input_binding_audits"] == [str(seed_audit_path)]
+    assert cli_payload["paths"]["frontier_command_bindings"] == [str(bindings_path)]
     assert (
         cli_payload["lanes"]["frontier_queue_execution"]["control_plane_smoke_status"]
         == "pass"

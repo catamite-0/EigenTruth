@@ -1651,6 +1651,11 @@ Added the first monitor-first tool-selection audit layer:
   replaces matching `--seeds ...` placeholders. The staged bindings remain
   `needs_review`, execute no adapters, and keep URL seeds as non-evidence input
   provenance until the normal command-binding review/run gates approve them.
+- `summarize_unresolved_frontier_evidence.py` and
+  `plan_frontier_research_queue_commands.py` now preserve that handoff in the
+  control plane: a ready seed audit plus staged command bindings produces a
+  `stage_frontier_queue_seed_inputs` next action and a reviewable
+  `bind_frontier_research_queue_seed_inputs.py` command template.
 - `run_frontier_research_queue_input_fill_commands.py` then consumes that audit
   report and creates a dry-run or explicit execution report for only the
   audit-ready fill commands. Real execution is gated on the whole audit being

@@ -72,6 +72,8 @@ def summarize_unresolved_frontier_evidence(
     covered_fact_mapping_audits: Sequence[Mapping[str, Any]] = (),
     covered_fact_retrieval_qa_reports: Sequence[Mapping[str, Any]] = (),
     covered_fact_retrieval_query_sweeps: Sequence[Mapping[str, Any]] = (),
+    input_binding_audits: Sequence[Mapping[str, Any]] = (),
+    frontier_command_bindings: Sequence[Mapping[str, Any]] = (),
     frontier_command_binding_reviews: Sequence[Mapping[str, Any]] = (),
     frontier_bound_command_runs: Sequence[Mapping[str, Any]] = (),
     frontier_queue_execution_smokes: Sequence[Mapping[str, Any]] = (),
@@ -96,6 +98,8 @@ def summarize_unresolved_frontier_evidence(
         covered_fact_retrieval_query_sweeps=covered_fact_retrieval_query_sweeps,
     )
     frontier_queue_lane = _frontier_queue_execution_lane(
+        input_binding_audits,
+        frontier_command_bindings,
         frontier_command_binding_reviews,
         frontier_bound_command_runs,
         frontier_queue_execution_smokes,
@@ -146,6 +150,8 @@ def run(
     covered_fact_mapping_audit_paths: Sequence[str | Path] = (),
     covered_fact_retrieval_qa_report_paths: Sequence[str | Path] = (),
     covered_fact_retrieval_query_sweep_paths: Sequence[str | Path] = (),
+    input_binding_audit_paths: Sequence[str | Path] = (),
+    frontier_command_binding_paths: Sequence[str | Path] = (),
     frontier_command_binding_review_paths: Sequence[str | Path] = (),
     frontier_bound_command_run_paths: Sequence[str | Path] = (),
     frontier_queue_execution_smoke_paths: Sequence[str | Path] = (),
@@ -183,6 +189,10 @@ def run(
     )
     covered_fact_retrieval_query_sweeps = tuple(
         _load_mapping(path) for path in covered_fact_retrieval_query_sweep_paths
+    )
+    input_binding_audits = tuple(_load_mapping(path) for path in input_binding_audit_paths)
+    frontier_command_bindings = tuple(
+        _load_mapping(path) for path in frontier_command_binding_paths
     )
     frontier_command_reviews = tuple(
         _load_mapping(path) for path in frontier_command_binding_review_paths
@@ -223,6 +233,8 @@ def run(
         covered_fact_mapping_audits=covered_fact_mappings,
         covered_fact_retrieval_qa_reports=covered_fact_retrieval_qa_reports,
         covered_fact_retrieval_query_sweeps=covered_fact_retrieval_query_sweeps,
+        input_binding_audits=input_binding_audits,
+        frontier_command_bindings=frontier_command_bindings,
         frontier_command_binding_reviews=frontier_command_reviews,
         frontier_bound_command_runs=frontier_command_runs,
         frontier_queue_execution_smokes=frontier_queue_smokes,
@@ -261,6 +273,8 @@ def run(
         "covered_fact_retrieval_query_sweeps": tuple(
             str(path) for path in covered_fact_retrieval_query_sweep_paths
         ),
+        "input_binding_audits": tuple(str(path) for path in input_binding_audit_paths),
+        "frontier_command_bindings": tuple(str(path) for path in frontier_command_binding_paths),
         "frontier_command_binding_reviews": tuple(
             str(path) for path in frontier_command_binding_review_paths
         ),
@@ -309,6 +323,8 @@ def run(
             covered_fact_mapping_audit_paths=covered_fact_mapping_audit_paths,
             covered_fact_retrieval_qa_report_paths=covered_fact_retrieval_qa_report_paths,
             covered_fact_retrieval_query_sweep_paths=covered_fact_retrieval_query_sweep_paths,
+            input_binding_audit_paths=input_binding_audit_paths,
+            frontier_command_binding_paths=frontier_command_binding_paths,
             frontier_command_binding_review_paths=frontier_command_binding_review_paths,
             frontier_bound_command_run_paths=frontier_bound_command_run_paths,
             frontier_queue_execution_smoke_paths=frontier_queue_execution_smoke_paths,
@@ -425,6 +441,18 @@ def run(
                 "frontier_queue_execution_status": payload["lanes"][
                     "frontier_queue_execution"
                 ]["status"],
+                "frontier_input_binding_audit_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["input_binding_audit_count"],
+                "frontier_ready_seed_input_audit_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["ready_seed_input_audit_count"],
+                "frontier_ready_seed_input_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["ready_seed_input_count"],
+                "frontier_command_binding_count": payload["lanes"][
+                    "frontier_queue_execution"
+                ]["frontier_command_binding_count"],
                 "frontier_command_binding_review_count": payload["lanes"][
                     "frontier_queue_execution"
                 ]["command_binding_review_count"],
@@ -1223,10 +1251,48 @@ def _query_sweep_strategy_row(
 
 
 def _frontier_queue_execution_lane(
+    input_binding_audits: Sequence[Mapping[str, Any]],
+    frontier_command_bindings: Sequence[Mapping[str, Any]],
     command_binding_reviews: Sequence[Mapping[str, Any]],
     bound_command_runs: Sequence[Mapping[str, Any]],
     queue_execution_smokes: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
+    input_audit_rows = []
+    ready_seed_input_audit_count = 0
+    ready_seed_input_count = 0
+    blocked_seed_input_count = 0
+    for index, report in enumerate(input_binding_audits, start=1):
+        status = str(report.get("status") or "unknown")
+        summary = _mapping(report.get("summary"))
+        sidecar_counts = _mapping(
+            _mapping(summary.get("sidecar_status_counts")).get("source_family_url_seeds")
+        )
+        ready_count = _int(sidecar_counts.get("ready"))
+        blocked_count = _int(sidecar_counts.get("blocked"))
+        if status == "ready" and ready_count > 0 and blocked_count == 0:
+            ready_seed_input_audit_count += 1
+        ready_seed_input_count += ready_count
+        blocked_seed_input_count += blocked_count
+        input_audit_rows.append({
+            "index": index,
+            "workflow": report.get("workflow"),
+            "status": status,
+            "ready_seed_input_count": ready_count,
+            "blocked_seed_input_count": blocked_count,
+        })
+
+    binding_rows = []
+    for index, report in enumerate(frontier_command_bindings, start=1):
+        summary = _mapping(report.get("summary"))
+        binding_rows.append({
+            "index": index,
+            "workflow": report.get("workflow"),
+            "status": str(report.get("status") or "unknown"),
+            "entry_count": _int(summary.get("entry_count")),
+            "binding_count": _int(summary.get("binding_count")),
+            "approved_binding_count": _int(summary.get("approved_binding_count")),
+        })
+
     smoke_rows = []
     smoke_status_counts: Counter[str] = Counter()
     smoke_passed_count = 0
@@ -1403,6 +1469,20 @@ def _frontier_queue_execution_lane(
         "frontier_queue_execution_smoke_status_counts": dict(
             sorted(smoke_status_counts.items())
         ),
+        "input_binding_audit_count": len(input_audit_rows),
+        "ready_seed_input_audit_count": ready_seed_input_audit_count,
+        "ready_seed_input_count": ready_seed_input_count,
+        "blocked_seed_input_count": blocked_seed_input_count,
+        "frontier_command_binding_count": len(binding_rows),
+        "seed_input_staging_ready": (
+            ready_seed_input_audit_count > 0
+            and blocked_seed_input_count == 0
+            and len(binding_rows) > 0
+            and not review_rows
+            and not run_rows
+        ),
+        "input_binding_audits": tuple(input_audit_rows),
+        "frontier_command_bindings": tuple(binding_rows),
         "command_binding_review_count": len(review_rows),
         "ready_review_count": review_status_counts.get("ready_for_execution", 0),
         "review_status_counts": dict(sorted(review_status_counts.items())),
@@ -1858,6 +1938,25 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 "audit_adjusted_required_input_counts", {}
             ),
         })
+    if frontier_queue.get("seed_input_staging_ready") is True:
+        actions.append({
+            "action_id": "stage_frontier_queue_seed_inputs",
+            "priority": 83,
+            "lane": "frontier_queue_execution",
+            "reason": (
+                "audited source-family URL seed sidecars are ready to stage "
+                "into frontier command bindings before command-binding review"
+            ),
+            "input_binding_audit_count": frontier_queue.get("input_binding_audit_count", 0),
+            "ready_seed_input_audit_count": frontier_queue.get(
+                "ready_seed_input_audit_count", 0
+            ),
+            "ready_seed_input_count": frontier_queue.get("ready_seed_input_count", 0),
+            "blocked_seed_input_count": frontier_queue.get("blocked_seed_input_count", 0),
+            "frontier_command_binding_count": frontier_queue.get(
+                "frontier_command_binding_count", 0
+            ),
+        })
     if frontier_queue.get("status") == "needs_review":
         actions.append({
             "action_id": "review_frontier_queue_command_bindings",
@@ -2169,6 +2268,8 @@ def _write_manifest(
     covered_fact_mapping_audit_paths: Sequence[str | Path],
     covered_fact_retrieval_qa_report_paths: Sequence[str | Path],
     covered_fact_retrieval_query_sweep_paths: Sequence[str | Path],
+    input_binding_audit_paths: Sequence[str | Path],
+    frontier_command_binding_paths: Sequence[str | Path],
     frontier_command_binding_review_paths: Sequence[str | Path],
     frontier_bound_command_run_paths: Sequence[str | Path],
     frontier_queue_execution_smoke_paths: Sequence[str | Path],
@@ -2220,6 +2321,14 @@ def _write_manifest(
     artifacts.update({
         f"covered_fact_retrieval_query_sweep_{idx}": path
         for idx, path in enumerate(covered_fact_retrieval_query_sweep_paths, start=1)
+    })
+    artifacts.update({
+        f"input_binding_audit_{idx}": path
+        for idx, path in enumerate(input_binding_audit_paths, start=1)
+    })
+    artifacts.update({
+        f"frontier_command_bindings_{idx}": path
+        for idx, path in enumerate(frontier_command_binding_paths, start=1)
     })
     artifacts.update({
         f"frontier_command_binding_review_{idx}": path
@@ -2396,6 +2505,30 @@ def _write_manifest(
             ),
             "frontier_queue_execution_status": _nested(
                 payload, "lanes", "frontier_queue_execution", "status"
+            ),
+            "frontier_input_binding_audit_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "input_binding_audit_count",
+            ),
+            "frontier_ready_seed_input_audit_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "ready_seed_input_audit_count",
+            ),
+            "frontier_ready_seed_input_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "ready_seed_input_count",
+            ),
+            "frontier_command_binding_count": _nested(
+                payload,
+                "lanes",
+                "frontier_queue_execution",
+                "frontier_command_binding_count",
             ),
             "frontier_command_binding_review_count": _nested(
                 payload,
@@ -2743,6 +2876,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--covered-fact-mapping-audit", action="append", default=[])
     parser.add_argument("--covered-fact-retrieval-qa-report", action="append", default=[])
     parser.add_argument("--covered-fact-retrieval-query-sweep", action="append", default=[])
+    parser.add_argument("--input-binding-audit", action="append", default=[])
+    parser.add_argument("--frontier-command-bindings", action="append", default=[])
     parser.add_argument("--frontier-command-binding-review", action="append", default=[])
     parser.add_argument("--frontier-bound-command-run", action="append", default=[])
     parser.add_argument("--frontier-queue-execution-smoke", action="append", default=[])
@@ -2778,6 +2913,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         covered_fact_retrieval_query_sweep_paths=tuple(
             args.covered_fact_retrieval_query_sweep or ()
         ),
+        input_binding_audit_paths=tuple(args.input_binding_audit or ()),
+        frontier_command_binding_paths=tuple(args.frontier_command_bindings or ()),
         frontier_command_binding_review_paths=tuple(
             args.frontier_command_binding_review or ()
         ),

@@ -7325,6 +7325,10 @@ This bridge only replaces matching `--seeds ...` placeholders with the audited
 `source-family-url-seeds.jsonl` path and records the source-backed input review.
 It leaves the command bindings at `needs_review`, executes no adapters, and does
 not turn URL seeds into verifier evidence.
+When updating the unresolved closure summary, pass the same audit and staged
+bindings with `--input-binding-audit` and `--frontier-command-bindings`; the
+summary can then surface `stage_frontier_queue_seed_inputs` and the command
+planner can lower it back into the seed-binding staging command.
 
 To dry-run or explicitly execute the audited fill commands:
 
