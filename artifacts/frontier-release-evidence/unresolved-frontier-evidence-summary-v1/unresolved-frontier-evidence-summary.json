@@ -326,6 +326,9 @@
       "best_answer_entity_collision_count": 5,
       "best_answer_value_supported_count": 4,
       "best_candidate_fact_coverage_count": 16,
+      "best_covered_fact_retrieval_blind_refuted_count": 28,
+      "best_covered_fact_retrieval_blind_refuted_rate": 0.3146067415730337,
+      "best_covered_fact_retrieval_verified_false_alarm": 0.272,
       "best_covered_fact_route_decision_accuracy": 1.0,
       "best_covered_fact_route_false_refuted_rate": 1.0,
       "best_mapping_target_count": 89,
@@ -370,6 +373,66 @@
       "covered_fact_mapping_status_counts": {
         "observed": 1
       },
+      "covered_fact_retrieval_qa_document_count": 41,
+      "covered_fact_retrieval_qa_question_count": 16,
+      "covered_fact_retrieval_qa_report_count": 1,
+      "covered_fact_retrieval_qa_reports": [
+        {
+          "by_property": {
+            "P106": 1,
+            "P112": 3,
+            "P170": 2,
+            "P279": 7,
+            "P31": 17,
+            "P793": 2,
+            "description": 9
+          },
+          "corpus_type": null,
+          "include_statuses": [
+            "candidate_fact_coverage"
+          ],
+          "included_status_counts": {
+            "candidate_fact_coverage": 41
+          },
+          "index": 1,
+          "mapping_record_count": 89,
+          "max_facts_per_record": 3,
+          "n_documents": 41,
+          "n_questions": 16,
+          "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-corpus.json",
+          "route_name": "covered_fact_retrieval_structured_qa",
+          "scope": "Diagnostic target-specific covered-fact QA bridge. Use for measuring route potential; do not promote as independent citation evidence.",
+          "status": "ready",
+          "workflow": "covered_fact_retrieval_qa_corpus_builder"
+        }
+      ],
+      "covered_fact_retrieval_query_sweep_count": 1,
+      "covered_fact_retrieval_query_sweep_passing_count": 0,
+      "covered_fact_retrieval_query_sweeps": [
+        {
+          "best_blind_refuted_count": 28,
+          "best_blind_refuted_rate": 0.3146067415730337,
+          "best_gate_pass": false,
+          "best_passing_blind_refuted_count": null,
+          "best_passing_strategy": null,
+          "best_strategy": "question_overlap_0p8",
+          "best_verified_false_alarm": 0.272,
+          "blind_spot_count": 89,
+          "index": 1,
+          "max_verified_false_alarm": 0.2,
+          "min_blind_refuted_rate": 0.0,
+          "query_fields": [
+            "question"
+          ],
+          "records_with_retrieval_hits": 28,
+          "retrieval_limit": 3,
+          "status": "complete",
+          "strategy_count": 3,
+          "target_route": "retrieval_structured_qa",
+          "target_route_selected_count": 28,
+          "workflow": "blind_spot_retrieval_query_sweep"
+        }
+      ],
       "covered_fact_route_n_records": 22,
       "covered_fact_route_skipped_count": 0,
       "covered_fact_route_status_counts": {
@@ -768,9 +831,8 @@
     }
   },
   "metadata": {
-    "closure_update": "covered_fact_mapping_audit",
-    "sample_scope": "target_level_covered_fact_mapping",
-    "source_workflow": "reviewed_citation_alignment_rerun"
+    "refresh_reason": "covered_fact_retrieval_qa_diagnostic",
+    "source_workflow": "covered_fact_retrieval_qa_corpus_builder"
   },
   "next_actions": [
     {
@@ -800,7 +862,11 @@
       "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use",
       "semantic_gap_best_candidate_fact_coverage_count": 16,
+      "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": 28,
+      "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": 0.272,
       "semantic_gap_best_records_with_joined_facts": 48,
+      "semantic_gap_covered_fact_retrieval_qa_document_count": 41,
+      "semantic_gap_covered_fact_retrieval_query_sweep_count": 1,
       "semantic_gap_covered_fact_route_n_records": 22,
       "semantic_gap_review_status": "promote",
       "unresolved_target_count": 88
@@ -817,6 +883,12 @@
     ],
     "covered_fact_mapping_audits": [
       "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json"
+    ],
+    "covered_fact_retrieval_qa_reports": [
+      "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-report.json"
+    ],
+    "covered_fact_retrieval_query_sweeps": [
+      "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-structured-qa-query-sweep.json"
     ],
     "covered_fact_route_summaries": [
       "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json"
@@ -908,9 +980,14 @@
     "semantic_gap_review_best_answer_entity_collision_count": 5,
     "semantic_gap_review_best_answer_value_supported_count": 4,
     "semantic_gap_review_best_candidate_fact_coverage_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": 28,
+    "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.272,
     "semantic_gap_review_best_no_joined_fact_count": 41,
     "semantic_gap_review_best_records_with_joined_facts": 48,
     "semantic_gap_review_covered_fact_mapping_audit_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
+    "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
     "semantic_gap_review_covered_fact_route_n_records": 22,
     "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,

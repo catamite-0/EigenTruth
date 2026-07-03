@@ -60360,6 +60360,183 @@ def test_audit_blind_spot_covered_fact_mapping_classifies_joined_facts(tmp_path)
     assert record.metadata["suite"] == "unit"
 
 
+def test_build_covered_fact_retrieval_qa_corpus_from_mapping_candidates(tmp_path):
+    module = importlib.import_module("benchmarks.build_covered_fact_retrieval_qa_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+    mapping_path = tmp_path / "covered-fact-mapping.json"
+    output_path = tmp_path / "covered-fact-retrieval-qa-corpus.json"
+    report_path = tmp_path / "covered-fact-retrieval-qa-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    mapping_audit = {
+        "workflow": "blind_spot_covered_fact_mapping_audit",
+        "status": "observed",
+        "summary": {"target_count": 6},
+        "records": [
+            {
+                "record_index": 1,
+                "question": "Who founded Acme Motors?",
+                "answer": "Alice",
+                "model_answer": "Alice",
+                "label": 1,
+                "question_type": "person",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [
+                    {
+                        "question": "What does Wikidata list as the founder for Acme Motors?",
+                        "answer": "Bob",
+                        "source": "wikidata:Q1:P112:Q10",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                        "subject": "Acme Motors",
+                        "subject_qid": "Q1",
+                        "value_qid": "Q10",
+                        "question_overlap": 0.9,
+                        "answer_value_overlap": 0.0,
+                        "answer_subject_overlap": 0.0,
+                    },
+                    {
+                        "question": "What does Wikidata list as the founder for Acme Motors?",
+                        "answer": "Bob",
+                        "source": "wikidata:Q1:P112:Q10",
+                        "statement_property": "P112",
+                        "statement_property_label": "founder",
+                        "subject": "Acme Motors",
+                        "subject_qid": "Q1",
+                        "value_qid": "Q10",
+                        "question_overlap": 0.85,
+                        "answer_value_overlap": 0.0,
+                        "answer_subject_overlap": 0.0,
+                    },
+                    {
+                        "question": "What does Wikidata list as the chief executive for Acme Motors?",
+                        "answer": "Carol",
+                        "source": "wikidata:Q1:P169:Q11",
+                        "statement_property": "P169",
+                        "statement_property_label": "chief executive officer",
+                        "subject": "Acme Motors",
+                        "subject_qid": "Q1",
+                        "value_qid": "Q11",
+                        "question_overlap": 0.8,
+                        "answer_value_overlap": 0.0,
+                        "answer_subject_overlap": 0.0,
+                    },
+                ],
+            },
+            {
+                "record_index": 2,
+                "question": "Who founded Example Labs?",
+                "answer": "Dana",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": True,
+                "answer_entity_collision": False,
+                "facts": [{"answer": "Dana"}],
+            },
+            {
+                "record_index": 3,
+                "question": "What is Nothing Technology?",
+                "answer": "Nothing",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": True,
+                "facts": [{"answer": "enterprise"}],
+            },
+            {
+                "record_index": 4,
+                "question": "What is the capital of Exampleland?",
+                "answer": "Example City",
+                "mapping_status": "no_joined_facts",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [],
+            },
+            {
+                "record_index": 5,
+                "question": "Who started Empty Co?",
+                "answer": "Eve",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [],
+            },
+            {
+                "record_index": 6,
+                "question": "",
+                "answer": "Frank",
+                "mapping_status": "candidate_fact_coverage",
+                "answer_value_supported": False,
+                "answer_entity_collision": False,
+                "facts": [{"answer": "Grace"}],
+            },
+        ],
+    }
+    mapping_path.write_text(json.dumps(mapping_audit), encoding="utf-8")
+
+    corpus = module.build_covered_fact_retrieval_qa_corpus(
+        mapping_audit,
+        max_facts_per_record=2,
+        route_name="unit_covered_fact_route",
+    )
+    documents = list(corpus["documents"])
+    metadata_keys = set().union(*(document["metadata"].keys() for document in documents))
+
+    assert corpus["corpus_type"] == "target_specific_covered_fact_retrieval_qa_diagnostic"
+    assert corpus["label_usage"]["not_general_retrieval_corpus"] is True
+    assert corpus["summary"]["mapping_record_count"] == 6
+    assert corpus["summary"]["n_documents"] == 2
+    assert corpus["summary"]["n_questions"] == 1
+    assert corpus["summary"]["included_status_counts"] == {"candidate_fact_coverage": 2}
+    assert corpus["summary"]["by_property"] == {"P112": 1, "P169": 1}
+    assert corpus["summary"]["skipped"]["answer_value_supported"] == 1
+    assert corpus["summary"]["skipped"]["answer_entity_collision"] == 1
+    assert corpus["summary"]["skipped"]["duplicate_fact"] == 1
+    assert corpus["summary"]["skipped"]["missing_question"] == 1
+    assert corpus["summary"]["skipped"]["status_not_included"] == 1
+    assert corpus["summary"]["skipped"]["without_facts"] == 1
+    assert [document["question"] for document in documents] == [
+        "Who founded Acme Motors?",
+        "Who founded Acme Motors?",
+    ]
+    assert [document["answer"] for document in documents] == ["Bob", "Carol"]
+    assert documents[0]["metadata"]["route_name"] == "unit_covered_fact_route"
+    assert documents[0]["metadata"]["source_record_index"] == 1
+    assert documents[0]["metadata"]["statement_property"] == "P112"
+    assert "Acme Motors" in documents[0]["metadata"]["retrieval_index_text"]
+    assert "founder" in documents[0]["metadata"]["retrieval_index_text"]
+    assert "label" not in metadata_keys
+    assert "model_answer" not in metadata_keys
+
+    payload = module.run(
+        mapping_audit_path=mapping_path,
+        output_path=output_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="covered-fact-retrieval-qa-unit",
+        version="0.1",
+        max_facts_per_record=2,
+        route_name="unit_covered_fact_route",
+        metadata={"suite": "unit"},
+        compact_json=True,
+    )
+    saved_corpus = json.loads(output_path.read_text(encoding="utf-8"))
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:covered-fact-retrieval-qa-unit:0.1"
+    )
+
+    assert payload["report"]["status"] == "ready"
+    assert saved_corpus["summary"]["n_documents"] == 2
+    assert saved_report["scope"].startswith("Diagnostic target-specific")
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "covered_fact_retrieval_qa_corpus_builder"
+    assert record.metadata["document_count"] == 2
+    assert record.metadata["question_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
 def test_map_blind_spot_question_properties_promotes_explicit_properties(tmp_path):
     module = importlib.import_module("benchmarks.map_blind_spot_question_properties")
     registry_module = importlib.import_module("eigentruth.registry")
@@ -61211,6 +61388,58 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
             "joined_property_counts": {"description": 1, "P31": 1},
         },
     }
+    diagnostic_qa_report = {
+        "workflow": "covered_fact_retrieval_qa_corpus_builder",
+        "status": "ready",
+        "scope": "Diagnostic target-specific covered-fact QA bridge.",
+        "summary": {
+            "mapping_record_count": 3,
+            "n_documents": 2,
+            "n_questions": 1,
+            "included_status_counts": {"candidate_fact_coverage": 2},
+            "by_property": {"P112": 1, "P169": 1},
+        },
+        "config": {
+            "include_statuses": ["candidate_fact_coverage"],
+            "max_facts_per_record": 2,
+            "route_name": "covered_fact_retrieval_structured_qa",
+        },
+        "paths": {"qa_corpus": "covered-fact-retrieval-qa-corpus.json"},
+    }
+    diagnostic_query_sweep = {
+        "workflow": "blind_spot_retrieval_query_sweep",
+        "status": "complete",
+        "summary": {
+            "blind_spot_count": 3,
+            "strategy_count": 1,
+            "best_strategy": "question_overlap_0p8",
+            "best_passing_strategy": None,
+            "best_blind_refuted_count": 2,
+            "best_passing_blind_refuted_count": None,
+        },
+        "config": {
+            "target_route": "retrieval_structured_qa",
+            "query_fields": ["question"],
+            "retrieval_limit": 3,
+        },
+        "strategies": [
+            {
+                "key": "question_overlap_0p8",
+                "gate": {
+                    "pass": False,
+                    "blind_refuted_rate": 2 / 3,
+                    "verified_false_alarm": 0.27,
+                    "max_verified_false_alarm": 0.2,
+                    "min_blind_refuted_rate": 0.0,
+                },
+                "blind_spot": {
+                    "target_route_refuted_count": 2,
+                    "target_route_selected_count": 2,
+                    "records_with_retrieval_hits": 2,
+                },
+            },
+        ],
+    }
 
     payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,
@@ -61379,6 +61608,46 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert payload["lanes"]["unresolved_queue"]["label_usage"] == {
         "requests_are_verifier_evidence": False
     }
+
+    diagnostic_payload = module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=queue,
+        citation_workflows=(citation,),
+        source_family_coverage_audits=(covered_coverage,),
+        covered_fact_mapping_audits=(covered_fact_mapping,),
+        covered_fact_retrieval_qa_reports=(diagnostic_qa_report,),
+        covered_fact_retrieval_query_sweeps=(diagnostic_query_sweep,),
+        mechanism_handoff_bundle=bundle,
+        metadata={"suite": "unit"},
+    )
+    diagnostic_lane = diagnostic_payload["lanes"]["semantic_gap_review"]
+    diagnostic_action = next(
+        action
+        for action in diagnostic_payload["next_actions"]
+        if action["action_id"] == "improve_unresolved_citation_alignment"
+    )
+    assert diagnostic_lane["status"] == "observed"
+    assert diagnostic_lane["covered_fact_retrieval_qa_report_count"] == 1
+    assert diagnostic_lane["covered_fact_retrieval_qa_document_count"] == 2
+    assert diagnostic_lane["covered_fact_retrieval_query_sweep_count"] == 1
+    assert diagnostic_lane["best_covered_fact_retrieval_blind_refuted_count"] == 2
+    assert diagnostic_lane["best_covered_fact_retrieval_verified_false_alarm"] == pytest.approx(
+        0.27
+    )
+    assert diagnostic_lane["covered_fact_retrieval_query_sweeps"][0]["target_route"] == (
+        "retrieval_structured_qa"
+    )
+    assert diagnostic_payload["summary"][
+        "semantic_gap_review_covered_fact_retrieval_qa_document_count"
+    ] == 2
+    assert diagnostic_payload["summary"][
+        "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count"
+    ] == 2
+    assert diagnostic_action[
+        "semantic_gap_best_covered_fact_retrieval_blind_refuted_count"
+    ] == 2
+    assert diagnostic_action[
+        "semantic_gap_best_covered_fact_retrieval_verified_false_alarm"
+    ] == pytest.approx(0.27)
 
     semantic_ready_payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,

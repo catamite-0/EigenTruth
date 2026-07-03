@@ -48,6 +48,22 @@
       "sha256": "68b5ae764f70b4ab3b2a6959c8f3cd58e321922efc742c0c65db6492400cb368",
       "size_bytes": 203668
     },
+    "covered_fact_retrieval_qa_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-report.json",
+      "sha256": "bc5a9d633ee03b094347edb3de4623b3a8223fea8bfd6a5a080984ccb84e5543",
+      "size_bytes": 1545
+    },
+    "covered_fact_retrieval_query_sweep_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-structured-qa-query-sweep.json",
+      "sha256": "bd8e3c92a0415163976012bb9a7068ff64bea78bfa8054df639f2e4450f50106",
+      "size_bytes": 46951
+    },
     "covered_fact_route_summary_1": {
       "exists": true,
       "file_count": 1,
@@ -197,8 +213,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "ec8e8477b65a198140e2000e351acbeaed861bdab65776cad82318c6d9f8b4cd",
-      "size_bytes": 37655
+      "sha256": "e1befe60f25b4d6730b79aa37126397f746724be8cab9d01a14a15f9ac95fa12",
+      "size_bytes": 41140
     },
     "unresolved_queue": {
       "exists": true,
@@ -224,7 +240,6 @@
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
     "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_status": "blocked",
-    "closure_update": "covered_fact_mapping_audit",
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_review_count": 1,
@@ -233,14 +248,19 @@
     "frontier_queue_execution_smoke_status": "pass",
     "frontier_queue_execution_status": "promote",
     "next_action_count": 1,
-    "sample_scope": "target_level_covered_fact_mapping",
+    "refresh_reason": "covered_fact_retrieval_qa_diagnostic",
     "semantic_gap_review_approved_source_document_count": 7,
     "semantic_gap_review_best_answer_entity_collision_count": 5,
     "semantic_gap_review_best_answer_value_supported_count": 4,
     "semantic_gap_review_best_candidate_fact_coverage_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": 28,
+    "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.272,
     "semantic_gap_review_best_no_joined_fact_count": 41,
     "semantic_gap_review_best_records_with_joined_facts": 48,
     "semantic_gap_review_covered_fact_mapping_audit_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
+    "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
     "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,
     "semantic_gap_review_standalone_covered_fact_route_count": 1,
@@ -249,7 +269,7 @@
     "semantic_gap_review_status": "promote",
     "semantic_gap_review_workflow_count": 1,
     "source_family_acquisition_status": "covered",
-    "source_workflow": "reviewed_citation_alignment_rerun",
+    "source_workflow": "covered_fact_retrieval_qa_corpus_builder",
     "status": "needs_evidence",
     "unresolved_target_count": 88,
     "workflow": "unresolved_frontier_evidence_summary",
@@ -265,9 +285,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 26,
+    "artifact_count": 28,
     "directory_count": 0,
-    "file_count": 26,
+    "file_count": 28,
     "missing_count": 0
   }
 }

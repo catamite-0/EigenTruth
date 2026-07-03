@@ -70,6 +70,8 @@ def summarize_unresolved_frontier_evidence(
     semantic_gap_review_workflows: Sequence[Mapping[str, Any]] = (),
     covered_fact_route_summaries: Sequence[Mapping[str, Any]] = (),
     covered_fact_mapping_audits: Sequence[Mapping[str, Any]] = (),
+    covered_fact_retrieval_qa_reports: Sequence[Mapping[str, Any]] = (),
+    covered_fact_retrieval_query_sweeps: Sequence[Mapping[str, Any]] = (),
     frontier_command_binding_reviews: Sequence[Mapping[str, Any]] = (),
     frontier_bound_command_runs: Sequence[Mapping[str, Any]] = (),
     frontier_queue_execution_smokes: Sequence[Mapping[str, Any]] = (),
@@ -90,6 +92,8 @@ def summarize_unresolved_frontier_evidence(
         semantic_gap_review_workflows,
         covered_fact_route_summaries=covered_fact_route_summaries,
         covered_fact_mapping_audits=covered_fact_mapping_audits,
+        covered_fact_retrieval_qa_reports=covered_fact_retrieval_qa_reports,
+        covered_fact_retrieval_query_sweeps=covered_fact_retrieval_query_sweeps,
     )
     frontier_queue_lane = _frontier_queue_execution_lane(
         frontier_command_binding_reviews,
@@ -140,6 +144,8 @@ def run(
     semantic_gap_review_workflow_paths: Sequence[str | Path] = (),
     covered_fact_route_summary_paths: Sequence[str | Path] = (),
     covered_fact_mapping_audit_paths: Sequence[str | Path] = (),
+    covered_fact_retrieval_qa_report_paths: Sequence[str | Path] = (),
+    covered_fact_retrieval_query_sweep_paths: Sequence[str | Path] = (),
     frontier_command_binding_review_paths: Sequence[str | Path] = (),
     frontier_bound_command_run_paths: Sequence[str | Path] = (),
     frontier_queue_execution_smoke_paths: Sequence[str | Path] = (),
@@ -172,6 +178,12 @@ def run(
     semantic_gap_reviews = tuple(_load_mapping(path) for path in semantic_gap_review_workflow_paths)
     covered_fact_routes = tuple(_load_mapping(path) for path in covered_fact_route_summary_paths)
     covered_fact_mappings = tuple(_load_mapping(path) for path in covered_fact_mapping_audit_paths)
+    covered_fact_retrieval_qa_reports = tuple(
+        _load_mapping(path) for path in covered_fact_retrieval_qa_report_paths
+    )
+    covered_fact_retrieval_query_sweeps = tuple(
+        _load_mapping(path) for path in covered_fact_retrieval_query_sweep_paths
+    )
     frontier_command_reviews = tuple(
         _load_mapping(path) for path in frontier_command_binding_review_paths
     )
@@ -209,6 +221,8 @@ def run(
         semantic_gap_review_workflows=semantic_gap_reviews,
         covered_fact_route_summaries=covered_fact_routes,
         covered_fact_mapping_audits=covered_fact_mappings,
+        covered_fact_retrieval_qa_reports=covered_fact_retrieval_qa_reports,
+        covered_fact_retrieval_query_sweeps=covered_fact_retrieval_query_sweeps,
         frontier_command_binding_reviews=frontier_command_reviews,
         frontier_bound_command_runs=frontier_command_runs,
         frontier_queue_execution_smokes=frontier_queue_smokes,
@@ -240,6 +254,12 @@ def run(
         ),
         "covered_fact_mapping_audits": tuple(
             str(path) for path in covered_fact_mapping_audit_paths
+        ),
+        "covered_fact_retrieval_qa_reports": tuple(
+            str(path) for path in covered_fact_retrieval_qa_report_paths
+        ),
+        "covered_fact_retrieval_query_sweeps": tuple(
+            str(path) for path in covered_fact_retrieval_query_sweep_paths
         ),
         "frontier_command_binding_reviews": tuple(
             str(path) for path in frontier_command_binding_review_paths
@@ -287,6 +307,8 @@ def run(
             semantic_gap_review_workflow_paths=semantic_gap_review_workflow_paths,
             covered_fact_route_summary_paths=covered_fact_route_summary_paths,
             covered_fact_mapping_audit_paths=covered_fact_mapping_audit_paths,
+            covered_fact_retrieval_qa_report_paths=covered_fact_retrieval_qa_report_paths,
+            covered_fact_retrieval_query_sweep_paths=covered_fact_retrieval_query_sweep_paths,
             frontier_command_binding_review_paths=frontier_command_binding_review_paths,
             frontier_bound_command_run_paths=frontier_bound_command_run_paths,
             frontier_queue_execution_smoke_paths=frontier_queue_execution_smoke_paths,
@@ -381,6 +403,25 @@ def run(
                 "semantic_gap_review_best_no_joined_fact_count": payload["lanes"][
                     "semantic_gap_review"
                 ]["best_no_joined_fact_count"],
+                "semantic_gap_review_covered_fact_retrieval_qa_report_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["covered_fact_retrieval_qa_report_count"],
+                "semantic_gap_review_covered_fact_retrieval_qa_document_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["covered_fact_retrieval_qa_document_count"],
+                "semantic_gap_review_covered_fact_retrieval_query_sweep_count": payload[
+                    "lanes"
+                ]["semantic_gap_review"]["covered_fact_retrieval_query_sweep_count"],
+                "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": (
+                    payload["lanes"]["semantic_gap_review"][
+                        "best_covered_fact_retrieval_blind_refuted_count"
+                    ]
+                ),
+                "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": (
+                    payload["lanes"]["semantic_gap_review"][
+                        "best_covered_fact_retrieval_verified_false_alarm"
+                    ]
+                ),
                 "frontier_queue_execution_status": payload["lanes"][
                     "frontier_queue_execution"
                 ]["status"],
@@ -765,10 +806,14 @@ def _semantic_gap_review_lane(
     *,
     covered_fact_route_summaries: Sequence[Mapping[str, Any]] = (),
     covered_fact_mapping_audits: Sequence[Mapping[str, Any]] = (),
+    covered_fact_retrieval_qa_reports: Sequence[Mapping[str, Any]] = (),
+    covered_fact_retrieval_query_sweeps: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     rows = []
     route_rows = []
     mapping_rows = []
+    retrieval_qa_rows = []
+    retrieval_query_rows = []
     status_counts: Counter[str] = Counter()
     route_status_counts: Counter[str] = Counter()
     mapping_status_counts: Counter[str] = Counter()
@@ -791,6 +836,12 @@ def _semantic_gap_review_lane(
     best_answer_entity_collision_count = 0
     best_no_joined_fact_count = 0
     best_mapping_target_count = 0
+    retrieval_qa_document_count = 0
+    retrieval_qa_question_count = 0
+    retrieval_query_sweep_passing_count = 0
+    best_retrieval_blind_refuted_count = 0
+    best_retrieval_blind_refuted_rate: float | None = None
+    best_retrieval_verified_false_alarm: float | None = None
     for index, workflow in enumerate(workflows, start=1):
         status = str(workflow.get("status") or "unknown")
         summary = _mapping(workflow.get("summary"))
@@ -907,11 +958,43 @@ def _semantic_gap_review_lane(
             _int(mapping_row.get("target_count")),
         )
 
-    if not rows and not route_rows and not mapping_rows:
+    for index, report in enumerate(covered_fact_retrieval_qa_reports, start=1):
+        qa_row = _covered_fact_retrieval_qa_report_row(report, index=index)
+        retrieval_qa_rows.append(qa_row)
+        retrieval_qa_document_count += _int(qa_row.get("n_documents"))
+        retrieval_qa_question_count += _int(qa_row.get("n_questions"))
+
+    for index, query_sweep in enumerate(covered_fact_retrieval_query_sweeps, start=1):
+        query_row = _covered_fact_retrieval_query_sweep_row(query_sweep, index=index)
+        retrieval_query_rows.append(query_row)
+        if query_row.get("best_passing_strategy"):
+            retrieval_query_sweep_passing_count += 1
+        best_retrieval_blind_refuted_count = max(
+            best_retrieval_blind_refuted_count,
+            _int(query_row.get("best_blind_refuted_count")),
+        )
+        blind_refuted_rate = _optional_float(query_row.get("best_blind_refuted_rate"))
+        if blind_refuted_rate is not None:
+            best_retrieval_blind_refuted_rate = (
+                blind_refuted_rate
+                if best_retrieval_blind_refuted_rate is None
+                else max(best_retrieval_blind_refuted_rate, blind_refuted_rate)
+            )
+        verified_false_alarm = _optional_float(query_row.get("best_verified_false_alarm"))
+        if verified_false_alarm is not None:
+            best_retrieval_verified_false_alarm = (
+                verified_false_alarm
+                if best_retrieval_verified_false_alarm is None
+                else min(best_retrieval_verified_false_alarm, verified_false_alarm)
+            )
+
+    if not rows and not route_rows and not mapping_rows and not retrieval_qa_rows and not retrieval_query_rows:
         status = "not_configured"
     elif promoted_count or standalone_promoted_count:
         status = "promote"
     elif mapping_rows and best_candidate_fact_coverage_count:
+        status = "observed"
+    elif retrieval_qa_rows or retrieval_query_rows:
         status = "observed"
     elif approved_source_document_count and not covered_route_records:
         status = "ready_for_covered_fact_route"
@@ -949,9 +1032,27 @@ def _semantic_gap_review_lane(
         "best_answer_entity_collision_count": best_answer_entity_collision_count,
         "best_no_joined_fact_count": best_no_joined_fact_count,
         "best_mapping_target_count": best_mapping_target_count,
+        "covered_fact_retrieval_qa_report_count": len(retrieval_qa_rows),
+        "covered_fact_retrieval_qa_document_count": retrieval_qa_document_count,
+        "covered_fact_retrieval_qa_question_count": retrieval_qa_question_count,
+        "covered_fact_retrieval_query_sweep_count": len(retrieval_query_rows),
+        "covered_fact_retrieval_query_sweep_passing_count": (
+            retrieval_query_sweep_passing_count
+        ),
+        "best_covered_fact_retrieval_blind_refuted_count": (
+            best_retrieval_blind_refuted_count
+        ),
+        "best_covered_fact_retrieval_blind_refuted_rate": (
+            best_retrieval_blind_refuted_rate
+        ),
+        "best_covered_fact_retrieval_verified_false_alarm": (
+            best_retrieval_verified_false_alarm
+        ),
         "workflows": tuple(rows),
         "covered_fact_routes": tuple(route_rows),
         "covered_fact_mapping_audits": tuple(mapping_rows),
+        "covered_fact_retrieval_qa_reports": tuple(retrieval_qa_rows),
+        "covered_fact_retrieval_query_sweeps": tuple(retrieval_query_rows),
     }
 
 
@@ -1032,6 +1133,93 @@ def _covered_fact_mapping_audit_row(
         "mapping_status_counts": dict(_mapping(summary.get("mapping_status_counts"))),
         "joined_property_counts": dict(_mapping(summary.get("joined_property_counts"))),
     }
+
+
+def _covered_fact_retrieval_qa_report_row(
+    report: Mapping[str, Any],
+    *,
+    index: int,
+) -> dict[str, Any]:
+    summary = _mapping(report.get("summary"))
+    config = _mapping(report.get("config"))
+    return {
+        "index": index,
+        "workflow": report.get("workflow"),
+        "status": str(report.get("status") or "unknown"),
+        "scope": report.get("scope"),
+        "corpus_type": _nested(report, "metadata", "corpus_type"),
+        "n_documents": _int(summary.get("n_documents")),
+        "n_questions": _int(summary.get("n_questions")),
+        "mapping_record_count": _int(summary.get("mapping_record_count")),
+        "included_status_counts": dict(_mapping(summary.get("included_status_counts"))),
+        "by_property": dict(_mapping(summary.get("by_property"))),
+        "include_statuses": _sequence(config.get("include_statuses")),
+        "max_facts_per_record": _int(config.get("max_facts_per_record")),
+        "route_name": config.get("route_name"),
+        "qa_corpus_path": _nested(report, "paths", "qa_corpus"),
+    }
+
+
+def _covered_fact_retrieval_query_sweep_row(
+    query_sweep: Mapping[str, Any],
+    *,
+    index: int,
+) -> dict[str, Any]:
+    summary = _mapping(query_sweep.get("summary"))
+    config = _mapping(query_sweep.get("config"))
+    best_strategy = str(summary.get("best_strategy") or "").strip()
+    best_row = _query_sweep_strategy_row(query_sweep, key=best_strategy)
+    gate = _mapping(best_row.get("gate"))
+    blind = _mapping(best_row.get("blind_spot"))
+    best_blind_refuted_count = _int(summary.get("best_blind_refuted_count"))
+    if not best_blind_refuted_count:
+        best_blind_refuted_count = _int(blind.get("target_route_refuted_count"))
+    best_blind_refuted_rate = _optional_float(gate.get("blind_refuted_rate"))
+    if best_blind_refuted_rate is None:
+        best_blind_refuted_rate = _optional_float(blind.get("target_route_refuted_rate"))
+    return {
+        "index": index,
+        "workflow": query_sweep.get("workflow"),
+        "status": str(query_sweep.get("status") or "unknown"),
+        "target_route": config.get("target_route"),
+        "strategy_count": _int(summary.get("strategy_count")),
+        "blind_spot_count": _int(summary.get("blind_spot_count")),
+        "best_strategy": best_strategy or None,
+        "best_passing_strategy": summary.get("best_passing_strategy"),
+        "best_blind_refuted_count": best_blind_refuted_count,
+        "best_blind_refuted_rate": best_blind_refuted_rate,
+        "best_passing_blind_refuted_count": _optional_int(
+            summary.get("best_passing_blind_refuted_count")
+        ),
+        "best_verified_false_alarm": _optional_float(gate.get("verified_false_alarm")),
+        "best_gate_pass": gate.get("pass"),
+        "max_verified_false_alarm": _optional_float(gate.get("max_verified_false_alarm")),
+        "min_blind_refuted_rate": _optional_float(gate.get("min_blind_refuted_rate")),
+        "target_route_selected_count": _int(blind.get("target_route_selected_count")),
+        "records_with_retrieval_hits": _int(blind.get("records_with_retrieval_hits")),
+        "retrieval_limit": _int(config.get("retrieval_limit")),
+        "query_fields": _sequence(config.get("query_fields")),
+    }
+
+
+def _query_sweep_strategy_row(
+    query_sweep: Mapping[str, Any],
+    *,
+    key: str,
+) -> Mapping[str, Any]:
+    strategies = _mapping_sequence(query_sweep.get("strategies"))
+    if key:
+        for strategy in strategies:
+            if str(strategy.get("key") or "") == key:
+                return strategy
+    if not strategies:
+        return {}
+    return max(
+        strategies,
+        key=lambda strategy: _int(
+            _mapping(strategy.get("blind_spot")).get("target_route_refuted_count")
+        ),
+    )
 
 
 def _frontier_queue_execution_lane(
@@ -1589,6 +1777,18 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "semantic_gap_best_records_with_joined_facts": semantic.get(
                 "best_records_with_joined_facts", 0
             ),
+            "semantic_gap_covered_fact_retrieval_qa_document_count": semantic.get(
+                "covered_fact_retrieval_qa_document_count", 0
+            ),
+            "semantic_gap_covered_fact_retrieval_query_sweep_count": semantic.get(
+                "covered_fact_retrieval_query_sweep_count", 0
+            ),
+            "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": semantic.get(
+                "best_covered_fact_retrieval_blind_refuted_count", 0
+            ),
+            "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": semantic.get(
+                "best_covered_fact_retrieval_verified_false_alarm"
+            ),
             "unresolved_target_count": queue.get("target_count", 0),
         })
     if semantic.get("status") in {"ready_for_covered_fact_route", "needs_evidence", "missing"}:
@@ -1876,6 +2076,25 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "semantic_gap_review_best_no_joined_fact_count": _int(
             lanes["semantic_gap_review"].get("best_no_joined_fact_count")
         ),
+        "semantic_gap_review_covered_fact_retrieval_qa_report_count": _int(
+            lanes["semantic_gap_review"].get("covered_fact_retrieval_qa_report_count")
+        ),
+        "semantic_gap_review_covered_fact_retrieval_qa_document_count": _int(
+            lanes["semantic_gap_review"].get("covered_fact_retrieval_qa_document_count")
+        ),
+        "semantic_gap_review_covered_fact_retrieval_query_sweep_count": _int(
+            lanes["semantic_gap_review"].get("covered_fact_retrieval_query_sweep_count")
+        ),
+        "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": _int(
+            lanes["semantic_gap_review"].get(
+                "best_covered_fact_retrieval_blind_refuted_count"
+            )
+        ),
+        "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": (
+            lanes["semantic_gap_review"].get(
+                "best_covered_fact_retrieval_verified_false_alarm"
+            )
+        ),
         "frontier_queue_execution_status": str(
             lanes["frontier_queue_execution"].get("status") or "unknown"
         ),
@@ -1948,6 +2167,8 @@ def _write_manifest(
     semantic_gap_review_workflow_paths: Sequence[str | Path],
     covered_fact_route_summary_paths: Sequence[str | Path],
     covered_fact_mapping_audit_paths: Sequence[str | Path],
+    covered_fact_retrieval_qa_report_paths: Sequence[str | Path],
+    covered_fact_retrieval_query_sweep_paths: Sequence[str | Path],
     frontier_command_binding_review_paths: Sequence[str | Path],
     frontier_bound_command_run_paths: Sequence[str | Path],
     frontier_queue_execution_smoke_paths: Sequence[str | Path],
@@ -1991,6 +2212,14 @@ def _write_manifest(
     artifacts.update({
         f"covered_fact_mapping_audit_{idx}": path
         for idx, path in enumerate(covered_fact_mapping_audit_paths, start=1)
+    })
+    artifacts.update({
+        f"covered_fact_retrieval_qa_report_{idx}": path
+        for idx, path in enumerate(covered_fact_retrieval_qa_report_paths, start=1)
+    })
+    artifacts.update({
+        f"covered_fact_retrieval_query_sweep_{idx}": path
+        for idx, path in enumerate(covered_fact_retrieval_query_sweep_paths, start=1)
     })
     artifacts.update({
         f"frontier_command_binding_review_{idx}": path
@@ -2134,6 +2363,36 @@ def _write_manifest(
                 "lanes",
                 "semantic_gap_review",
                 "best_no_joined_fact_count",
+            ),
+            "semantic_gap_review_covered_fact_retrieval_qa_report_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "covered_fact_retrieval_qa_report_count",
+            ),
+            "semantic_gap_review_covered_fact_retrieval_qa_document_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "covered_fact_retrieval_qa_document_count",
+            ),
+            "semantic_gap_review_covered_fact_retrieval_query_sweep_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "covered_fact_retrieval_query_sweep_count",
+            ),
+            "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_covered_fact_retrieval_blind_refuted_count",
+            ),
+            "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": _nested(
+                payload,
+                "lanes",
+                "semantic_gap_review",
+                "best_covered_fact_retrieval_verified_false_alarm",
             ),
             "frontier_queue_execution_status": _nested(
                 payload, "lanes", "frontier_queue_execution", "status"
@@ -2482,6 +2741,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--semantic-gap-review-workflow", action="append", default=[])
     parser.add_argument("--covered-fact-route-summary", action="append", default=[])
     parser.add_argument("--covered-fact-mapping-audit", action="append", default=[])
+    parser.add_argument("--covered-fact-retrieval-qa-report", action="append", default=[])
+    parser.add_argument("--covered-fact-retrieval-query-sweep", action="append", default=[])
     parser.add_argument("--frontier-command-binding-review", action="append", default=[])
     parser.add_argument("--frontier-bound-command-run", action="append", default=[])
     parser.add_argument("--frontier-queue-execution-smoke", action="append", default=[])
@@ -2511,6 +2772,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         semantic_gap_review_workflow_paths=tuple(args.semantic_gap_review_workflow or ()),
         covered_fact_route_summary_paths=tuple(args.covered_fact_route_summary or ()),
         covered_fact_mapping_audit_paths=tuple(args.covered_fact_mapping_audit or ()),
+        covered_fact_retrieval_qa_report_paths=tuple(
+            args.covered_fact_retrieval_qa_report or ()
+        ),
+        covered_fact_retrieval_query_sweep_paths=tuple(
+            args.covered_fact_retrieval_query_sweep or ()
+        ),
         frontier_command_binding_review_paths=tuple(
             args.frontier_command_binding_review or ()
         ),
