@@ -77,6 +77,10 @@ SIDECAR_SPECS = {
         "path_key": "entity_bindings",
         "label": "source_backed_entity_bindings",
     },
+    "source_family_url_seeds": {
+        "path_key": "source_family_url_seeds",
+        "label": "source_family_url_seeds",
+    },
 }
 
 
@@ -138,16 +142,26 @@ def audit_frontier_research_queue_input_bindings(
         "temporal_bindings",
         "mechanism_bindings",
         "entity_bindings",
+        "source_family_url_seeds",
     ):
         if key not in loaded_sidecars:
             continue
         rows = loaded_sidecars.get(key, ())
-        id_counts = _request_id_counts(rows)
+        id_counts = (
+            _source_family_url_seed_key_counts(rows)
+            if key == "source_family_url_seeds"
+            else _request_id_counts(rows)
+        )
         if key == "subject_bindings":
             audit_rows.extend(subject_audits)
             continue
         for index, row in enumerate(rows, start=1):
-            duplicate = _request_id(row) in id_counts and id_counts[_request_id(row)] > 1
+            row_key = (
+                _source_family_url_seed_key(row)
+                if key == "source_family_url_seeds"
+                else _request_id(row)
+            )
+            duplicate = row_key in id_counts and id_counts[row_key] > 1
             if key == "numeric_bindings":
                 audit_rows.append(
                     _audit_numeric_binding(
@@ -163,6 +177,8 @@ def audit_frontier_research_queue_input_bindings(
                 audit_rows.append(_audit_mechanism_binding(row, line_no=index, duplicate=duplicate))
             elif key == "entity_bindings":
                 audit_rows.append(_audit_entity_binding(row, line_no=index, duplicate=duplicate))
+            elif key == "source_family_url_seeds":
+                audit_rows.append(_audit_source_family_url_seed(row, line_no=index, duplicate=duplicate))
 
     for key in missing_sidecar_keys:
         audit_rows.append(_missing_sidecar_row(key, sidecar_paths.get(key)))
@@ -333,6 +349,45 @@ def _audit_entity_binding(row: Mapping[str, Any], *, line_no: int, duplicate: bo
         if not _clean(row.get(key)):
             failures.append(f"missing_{key}")
     return _audit_row(row, sidecar_key="entity_bindings", line_no=line_no, failures=failures)
+
+
+def _audit_source_family_url_seed(
+    row: Mapping[str, Any],
+    *,
+    line_no: int,
+    duplicate: bool,
+) -> dict[str, Any]:
+    failures: list[str] = []
+    if duplicate:
+        failures.append("duplicate_source_family_url_seed")
+    task_id = _clean(row.get("task_id") or row.get("collection_task_id"))
+    url = _clean(row.get("url") or row.get("href"))
+    if not task_id:
+        failures.append("missing_task_id")
+    if not url:
+        failures.append("missing_url")
+    elif not url.startswith(("http://", "https://")):
+        failures.append("invalid_url")
+    if row.get("not_verifier_evidence") is not True:
+        failures.append("seed_not_marked_non_evidence")
+    review_status = _clean(row.get("review_status")).lower()
+    if review_status not in READY_REVIEW_STATUSES:
+        failures.append("binding_requires_review")
+    reserved = tuple(sorted(key for key in row if str(key) in RESERVED_FIELDS))
+    if reserved:
+        failures.append("reserved_fields_present")
+    return _audit_row(
+        row,
+        sidecar_key="source_family_url_seeds",
+        line_no=line_no,
+        failures=failures,
+        extra={
+            "request_id": task_id,
+            "target_id": task_id,
+            "url": url,
+            "reserved_fields": reserved,
+        },
+    )
 
 
 def _base_failures(row: Mapping[str, Any], *, duplicate: bool, duplicate_reason: str) -> tuple[str, ...]:
@@ -537,6 +592,18 @@ def _request_id(row: Mapping[str, Any]) -> str:
 
 def _request_id_counts(rows: Sequence[Mapping[str, Any]]) -> Counter[str]:
     return Counter(_request_id(row) for row in rows if _request_id(row))
+
+
+def _source_family_url_seed_key(row: Mapping[str, Any]) -> str:
+    task_id = _clean(row.get("task_id") or row.get("collection_task_id"))
+    url = _clean(row.get("url") or row.get("href"))
+    if not task_id or not url:
+        return ""
+    return f"{task_id}\n{url}"
+
+
+def _source_family_url_seed_key_counts(rows: Sequence[Mapping[str, Any]]) -> Counter[str]:
+    return Counter(_source_family_url_seed_key(row) for row in rows if _source_family_url_seed_key(row))
 
 
 def _normalize_mechanism_status(value: Any) -> str | None:

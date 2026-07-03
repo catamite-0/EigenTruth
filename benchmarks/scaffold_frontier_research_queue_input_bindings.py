@@ -2,8 +2,8 @@
 
 This workflow consumes ``frontier_research_queue_input_collection_plan`` output
 and writes editable JSONL sidecars for numeric, temporal, subject, mechanism,
-and entity-role bindings. It never fills evidence values, approves review, or
-executes downstream rule-input fill commands.
+entity-role, and source-family URL seed bindings. It never fills evidence
+values, approves review, or executes downstream commands.
 """
 
 from __future__ import annotations
@@ -66,6 +66,12 @@ SIDECARES = {
         "downstream_tool": "benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py",
         "flag": "--entity-bindings",
     },
+    "source_family_url_seeds": {
+        "key": "source_family_url_seeds",
+        "filename": "source-family-url-seeds.jsonl",
+        "task_usage": "source_catalog_collection_only",
+        "flag": "--seeds",
+    },
 }
 
 
@@ -108,6 +114,43 @@ def scaffold_frontier_research_queue_input_bindings(
         if config is None:
             skipped_requests.append(_skipped_request(request, reason="unsupported_input_name"))
             continue
+        if input_name == "source_family_url_seeds":
+            tasks_path = _source_family_tasks_path_hint(request)
+            task_rows = _load_matching_source_family_tasks(
+                tasks_path,
+                expand_input_tasks=expand_input_tasks,
+                source_root=None if source_path is None else source_path.parent,
+                source_families=_source_family_filters(request),
+            )
+            input_task_sources[str(request.get("request_id") or "")] = {
+                "input_tasks_path": None if tasks_path is None else str(tasks_path),
+                "expanded_task_count": len(task_rows),
+                "expand_input_tasks": bool(expand_input_tasks),
+                "task_usage": str(config["task_usage"]),
+                "source_families": _source_family_filters(request),
+            }
+            rows = (
+                tuple(
+                    _url_seed_skeleton(
+                        request,
+                        task,
+                        input_name=input_name,
+                        sidecar_key=str(config["key"]),
+                    )
+                    for task in task_rows
+                )
+                if task_rows
+                else (
+                    _url_seed_request_skeleton(
+                        request,
+                        input_name=input_name,
+                        sidecar_key=str(config["key"]),
+                    ),
+                )
+            )
+            sidecar_rows[str(config["key"])].extend(rows)
+            rows_by_request[str(request.get("request_id") or "")] = (str(config["key"]), len(rows))
+            continue
         request_filter = _request_task_filter(request)
         if request_filter["max_tasks"] == 0:
             skipped_requests.append(_skipped_request(request, reason="no_remaining_rule_family_count"))
@@ -146,15 +189,16 @@ def scaffold_frontier_research_queue_input_bindings(
         )
         sidecar_rows[str(config["key"])].extend(rows)
         rows_by_request[str(request.get("request_id") or "")] = (str(config["key"]), len(rows))
-        downstream_commands.append(
-            _downstream_command(
-                request,
-                config=config,
-                output_dir=output,
-                sidecar_path=output / str(config["filename"]),
-                input_tasks_path=input_tasks_path,
+        if config.get("downstream_tool"):
+            downstream_commands.append(
+                _downstream_command(
+                    request,
+                    config=config,
+                    output_dir=output,
+                    sidecar_path=output / str(config["filename"]),
+                    input_tasks_path=input_tasks_path,
+                )
             )
-        )
 
     paths = {
         "input_binding_scaffold": str(report_path),
@@ -313,6 +357,94 @@ def _base_skeleton(
     return skeleton
 
 
+def _url_seed_skeleton(
+    request: Mapping[str, Any],
+    task: Mapping[str, Any],
+    *,
+    input_name: str,
+    sidecar_key: str,
+) -> dict[str, Any]:
+    skeleton = dict(_mapping(request.get("recommended_binding_skeleton")))
+    for key in _string_tuple(request.get("required_binding_fields", ())):
+        skeleton.setdefault(key, "")
+    task_id = str(task.get("task_id") or "")
+    source_family = str(task.get("source_family") or "")
+    skeleton.update({
+        "binding_id": f"{_slug(str(request.get('request_id') or input_name))}:{_slug(task_id)}",
+        "task_id": task_id,
+        "collection_task_id": task_id,
+        "source_family": source_family,
+        "query": str(task.get("query") or ""),
+        "query_key": str(task.get("query_key") or ""),
+        "search_queries": _string_tuple(task.get("search_queries", ())),
+        "provider": _provider_for_task(request, source_family=source_family),
+        "seed_key": f"{_slug(source_family)}:{_slug(task_id)}",
+        "url": "",
+        "href": "",
+        "title": "",
+        "published_at": "",
+        "retrieved_at": "",
+        "review_status": "needs_review",
+        "not_verifier_evidence": True,
+        "collection_request_id": str(request.get("request_id") or ""),
+        "action_id": str(request.get("action_id") or ""),
+        "input_name": input_name,
+        "sidecar_key": sidecar_key,
+        "required_binding_fields": _string_tuple(request.get("required_binding_fields", ())),
+        "source_gap_ids": _string_tuple(request.get("source_gap_ids", ())),
+        "scaffold_status": "needs_source_family_url_seed",
+        "source_note": "",
+        "metadata": {
+            "collection_boundary": "url_seed_not_evidence",
+            "source_family_collection_task": task_id,
+        },
+    })
+    return skeleton
+
+
+def _url_seed_request_skeleton(
+    request: Mapping[str, Any],
+    *,
+    input_name: str,
+    sidecar_key: str,
+) -> dict[str, Any]:
+    skeleton = dict(_mapping(request.get("recommended_binding_skeleton")))
+    for key in _string_tuple(request.get("required_binding_fields", ())):
+        skeleton.setdefault(key, "")
+    skeleton.update({
+        "binding_id": f"{_slug(str(request.get('request_id') or input_name))}:request-level",
+        "task_id": "",
+        "collection_task_id": "",
+        "source_family": "",
+        "query": "",
+        "search_queries": (),
+        "url": "",
+        "href": "",
+        "review_status": "needs_review",
+        "not_verifier_evidence": True,
+        "collection_request_id": str(request.get("request_id") or ""),
+        "action_id": str(request.get("action_id") or ""),
+        "input_name": input_name,
+        "sidecar_key": sidecar_key,
+        "required_binding_fields": _string_tuple(request.get("required_binding_fields", ())),
+        "scaffold_status": "needs_collection_task_expansion_or_manual_task_id",
+        "source_note": "",
+    })
+    return skeleton
+
+
+def _provider_for_task(request: Mapping[str, Any], *, source_family: str) -> str:
+    metadata = _mapping(request.get("metadata"))
+    providers = _string_tuple(metadata.get("providers", ()))
+    if source_family == "official":
+        return "official_site" if "official_site" in providers or not providers else providers[0]
+    if source_family == "news":
+        return "seeded_news" if "seeded_news" in providers or not providers else providers[0]
+    if source_family == "domain_specific":
+        return "seeded_domain_specific" if "seeded_domain_specific" in providers or not providers else providers[0]
+    return providers[0] if providers else "seeded_url"
+
+
 def _downstream_command(
     request: Mapping[str, Any],
     *,
@@ -349,6 +481,53 @@ def _input_tasks_path_hint(request: Mapping[str, Any]) -> str | None:
         if len(before) >= 2 and before[-1] == flag and before[-2] and not before[-2].startswith("--"):
             return before[-2]
     return None
+
+
+def _source_family_tasks_path_hint(request: Mapping[str, Any]) -> str | None:
+    metadata = _mapping(request.get("metadata"))
+    path = str(metadata.get("collection_tasks_path") or "")
+    if path:
+        return path
+    paths = _string_tuple(metadata.get("collection_tasks_paths", ()))
+    if paths:
+        return paths[0]
+    return _input_tasks_path_hint(request)
+
+
+def _source_family_filters(request: Mapping[str, Any]) -> tuple[str, ...]:
+    metadata = _mapping(request.get("metadata"))
+    return tuple(
+        item.casefold().replace("-", "_").replace(" ", "_")
+        for item in _string_tuple(metadata.get("source_families", ()))
+        if str(item)
+    )
+
+
+def _load_matching_source_family_tasks(
+    path: str | Path | None,
+    *,
+    expand_input_tasks: bool,
+    source_root: Path | None,
+    source_families: Sequence[str] = (),
+) -> tuple[Mapping[str, Any], ...]:
+    if not expand_input_tasks or path is None:
+        return ()
+    task_path = _resolve_path(path, source_root=source_root)
+    if not task_path.exists():
+        return ()
+    wanted = set(source_families)
+    rows = _load_jsonl_mappings(task_path)
+    matched = []
+    for row in rows:
+        if str(row.get("usage") or "") != "source_catalog_collection_only":
+            continue
+        if row.get("not_verifier_evidence") is not True:
+            continue
+        source_family = str(row.get("source_family") or "").casefold().replace("-", "_").replace(" ", "_")
+        if wanted and source_family not in wanted:
+            continue
+        matched.append(row)
+    return tuple(matched)
 
 
 def _load_matching_tasks(
@@ -431,7 +610,8 @@ def _summary(
         1
         for rows in sidecar_rows.values()
         for row in rows
-        if str(row.get("scaffold_status") or "") == "needs_source_backed_values"
+        if str(row.get("scaffold_status") or "")
+        in {"needs_source_backed_values", "needs_source_family_url_seed"}
     )
     request_level_count = sum(
         1

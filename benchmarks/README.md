@@ -7215,9 +7215,12 @@ python benchmarks/plan_frontier_research_queue_input_collection.py \
 ```
 
 The preflight reads `unbound_inputs` plus still-unfilled command placeholders
-from the bound plan. Source-backed numeric, temporal, subject, and mechanism
-inputs become non-evidence collection requests with required sidecar fields and
-recommended downstream tools. Semantic-gap local artifacts such as
+from the bound plan. Source-backed numeric, temporal, subject, mechanism, and
+source-family URL seed inputs become non-evidence collection requests with
+required sidecar fields and recommended downstream tools. Source-family adapter
+`--seeds ...` placeholders preserve their collection-task path, source-family
+filters, and provider hints so URL selection can be reviewed before official,
+news, or domain-specific adapters run. Semantic-gap local artifacts such as
 `source_bound_verified_records_jsonl` and
 `detectability_blind_spot_record_indices_json` become separate non-evidence
 artifact review requests, because they may carry label-use provenance for gap
@@ -7266,12 +7269,16 @@ python benchmarks/scaffold_frontier_research_queue_input_bindings.py \
 When the preflight exposes a reachable `--input-tasks` path, the scaffold
 expands source-backed requests into one empty JSONL skeleton per rule-input
 task, for example `source-backed-numeric-bindings.jsonl` and
-`source-backed-temporal-bindings.jsonl`. Rows are deliberately written with
-`review_status=needs_review`, blank source/citation/value fields, and
-`not_verifier_evidence=true`; after an external collector or reviewer fills and
-approves them, the generated downstream command hints show which existing
-`fill_world_model_rule_inputs_from_*_bindings.py` bridge can consume the
-sidecar.
+`source-backed-temporal-bindings.jsonl`. Source-family URL seed requests use the
+same boundary for catalog collection tasks: they expand matching official/news/
+domain-specific collection rows into `source-family-url-seeds.jsonl`, keeping
+query/task provenance while leaving `url` and `href` blank for review. Rows are
+deliberately written with `review_status=needs_review`, blank source/citation/
+value or URL fields, and `not_verifier_evidence=true`; after an external
+collector or reviewer fills and approves them, the generated downstream command
+hints show which existing `fill_world_model_rule_inputs_from_*_bindings.py`
+bridge can consume rule-input sidecars. URL seed sidecars instead feed the
+source-family adapter `--seeds` flag after audit.
 
 Before passing edited sidecars into those fill bridges, audit the sidecar set:
 
@@ -7288,12 +7295,14 @@ python benchmarks/audit_frontier_research_queue_input_bindings.py \
 ```
 
 The audit reports `ready` only when every edited binding row has an approved or
-ready review status, required source-backed values and citations, a
-`not_verifier_evidence=true` marker, no reserved label/model-answer fields, and
-no duplicate request ids. Numeric rows marked `ambiguous_subject` can become
-ready only when a matching approved subject-binding sidecar resolves the
-subject. The audit still executes no commands and still does not promote the
-bindings as verifier evidence; it is a pre-fill quality gate.
+ready review status, required source-backed values and citations or approved
+URL seeds, a `not_verifier_evidence=true` marker, no reserved label/model-answer
+fields, and no duplicate request ids. Numeric rows marked `ambiguous_subject`
+can become ready only when a matching approved subject-binding sidecar resolves
+the subject. Source-family seed rows must carry a task id plus an `http(s)` URL
+before adapter execution. The audit still executes no commands and still does
+not promote the bindings as verifier evidence; it is a pre-fill or pre-adapter
+quality gate.
 
 To dry-run or explicitly execute the audited fill commands:
 

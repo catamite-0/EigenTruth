@@ -188,6 +188,31 @@ SOURCE_BACKED_CONTRACTS: dict[str, dict[str, Any]] = {
             "not_verifier_evidence": True,
         },
     },
+    "source_family_url_seeds": {
+        "lane": "source_family_acquisition",
+        "collection_family": "source_family_url_seed_collection",
+        "recommended_next_tools": (
+            "benchmarks/run_official_site_source_family_catalog_adapter.py",
+            "benchmarks/run_seeded_url_source_family_catalog_adapter.py",
+        ),
+        "target_flag": "--seeds",
+        "required_binding_fields": (
+            "task_id",
+            "url",
+            "provider",
+            "seed_key",
+            "review_status",
+            "not_verifier_evidence",
+        ),
+        "binding_skeleton": {
+            "task_id": "",
+            "url": "",
+            "provider": "",
+            "seed_key": "",
+            "review_status": "approved",
+            "not_verifier_evidence": True,
+        },
+    },
 }
 
 ARTIFACT_INPUT_CONTRACTS: dict[str, dict[str, Any]] = {
@@ -689,7 +714,11 @@ def _collection_request(
 ) -> dict[str, Any]:
     contract = SOURCE_BACKED_CONTRACTS.get(input_name, _generic_source_backed_contract(input_name))
     request_id = f"{_slug(action_id)}:{_slug(input_name)}"
-    request_metadata = _collection_request_metadata(entry, contract)
+    request_metadata = _collection_request_metadata(
+        entry,
+        contract,
+        blocking_placeholders=blocking_placeholders,
+    )
     return {
         "schema_version": 1,
         "workflow": WORKFLOW,
@@ -720,6 +749,8 @@ def _collection_request(
 def _collection_request_metadata(
     entry: Mapping[str, Any],
     contract: Mapping[str, Any],
+    *,
+    blocking_placeholders: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     entry_metadata = _mapping(entry.get("metadata"))
     remaining_counts = _int_mapping(entry_metadata.get("remaining_rule_family_counts"))
@@ -733,7 +764,75 @@ def _collection_request_metadata(
     }
     if target_rule_family and target_rule_family in remaining_counts:
         metadata["target_remaining_rule_count"] = int(remaining_counts[target_rule_family])
+    if str(contract.get("collection_family") or "") == "source_family_url_seed_collection":
+        metadata.update(_source_family_url_seed_metadata(entry, blocking_placeholders))
     return metadata
+
+
+def _source_family_url_seed_metadata(
+    entry: Mapping[str, Any],
+    blocking_placeholders: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    seed_inputs = []
+    for placeholder in blocking_placeholders:
+        command_index = _int_or_zero(placeholder.get("command_index"))
+        command = _command_at_index(entry, command_index)
+        tokens = _command_tokens(command)
+        script = frontier_command_script(tokens)
+        if not tokens:
+            continue
+        source_family = _flag_value(tokens, "--source-family")
+        provider = _flag_value(tokens, "--provider") or _provider_from_script(script, source_family)
+        seed_inputs.append({
+            "command_index": command_index,
+            "script": script,
+            "collection_tasks_path": _flag_value(tokens, "--tasks"),
+            "source_family": source_family,
+            "provider": provider,
+        })
+    task_paths = tuple(dict.fromkeys(
+        str(item.get("collection_tasks_path") or "")
+        for item in seed_inputs
+        if item.get("collection_tasks_path")
+    ))
+    source_families = tuple(
+        dict.fromkeys(str(item.get("source_family") or "") for item in seed_inputs if item.get("source_family"))
+    )
+    providers = tuple(
+        dict.fromkeys(str(item.get("provider") or "") for item in seed_inputs if item.get("provider"))
+    )
+    return {
+        "source_family_seed_inputs": tuple(seed_inputs),
+        "collection_tasks_path": task_paths[0] if len(task_paths) == 1 else "",
+        "collection_tasks_paths": task_paths,
+        "source_families": source_families,
+        "providers": providers,
+    }
+
+
+def _command_at_index(entry: Mapping[str, Any], command_index: int) -> str:
+    commands = _string_tuple(entry.get("bound_commands", ()))
+    if command_index <= 0 or command_index > len(commands):
+        return ""
+    return commands[command_index - 1]
+
+
+def _flag_value(tokens: Sequence[str], flag: str) -> str:
+    for index, token in enumerate(tokens[:-1]):
+        if token == flag:
+            value = str(tokens[index + 1])
+            return "" if value == "..." else value
+    return ""
+
+
+def _provider_from_script(script: str | None, source_family: str) -> str:
+    if script == "benchmarks/run_official_site_source_family_catalog_adapter.py":
+        return "official_site"
+    if script == "benchmarks/run_seeded_url_source_family_catalog_adapter.py":
+        if source_family:
+            return f"seeded_{source_family}"
+        return "seeded_url"
+    return ""
 
 
 def _review_request(

@@ -38442,6 +38442,68 @@ def test_frontier_research_queue_input_collection_plan_maps_control_artifact_inp
     assert payload["review_requests"][0]["input_name"] == "bound_command_template_values"
 
 
+def test_frontier_research_queue_input_collection_plan_maps_source_family_url_seeds(
+    tmp_path,
+):
+    collection_module = importlib.import_module(
+        "benchmarks.plan_frontier_research_queue_input_collection"
+    )
+    tasks_path = tmp_path / "source-family-collection-tasks.jsonl"
+
+    payload = collection_module.plan_frontier_research_queue_input_collection(
+        bound_command_plan={
+            "workflow": "frontier_research_queue_bound_command_plan",
+            "status": "needs_inputs",
+            "entries": (
+                {
+                    "entry_id": "frontier-research-0001",
+                    "action_id": "run_source_family_catalog_adapters",
+                    "title": "Run source-family catalog adapters",
+                    "command_status": "needs_inputs",
+                    "binding_review_status": "needs_review",
+                    "evidence_routes": ("source_family_acquisition",),
+                    "unbound_inputs": ("source_family_url_seeds",),
+                    "bound_commands": (
+                        "python benchmarks/run_official_site_source_family_catalog_adapter.py "
+                        f"--tasks {tasks_path} --output official.jsonl "
+                        "--report-json official.json --artifact-manifest manifest.json "
+                        "--source-family official --seeds ...",
+                        "python benchmarks/run_seeded_url_source_family_catalog_adapter.py "
+                        f"--tasks {tasks_path} --output news.jsonl "
+                        "--report-json news.json --artifact-manifest news-manifest.json "
+                        "--source-family news --seeds ... --provider seeded_news --no-fetch",
+                    ),
+                },
+            ),
+        },
+    )
+    request = payload["collection_requests"][0]
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["collection_request_count"] == 1
+    assert payload["summary"]["collection_family_counts"] == {
+        "source_family_url_seed_collection": 1
+    }
+    assert request["input_name"] == "source_family_url_seeds"
+    assert request["input_category"] == "source_backed"
+    assert request["lane"] == "source_family_acquisition"
+    assert request["target_flag"] == "--seeds"
+    assert request["required_binding_fields"] == (
+        "task_id",
+        "url",
+        "provider",
+        "seed_key",
+        "review_status",
+        "not_verifier_evidence",
+    )
+    assert request["metadata"]["collection_tasks_path"] == str(tasks_path)
+    assert request["metadata"]["collection_tasks_paths"] == (str(tasks_path),)
+    assert request["metadata"]["source_families"] == ("official", "news")
+    assert request["metadata"]["providers"] == ("official_site", "seeded_news")
+    assert request["blocking_placeholders"][0]["flag"] == "--seeds"
+    assert request["not_verifier_evidence"] is True
+
+
 def test_frontier_research_queue_artifact_input_bindings_stage_control_artifacts(
     tmp_path,
 ):
@@ -40086,6 +40148,169 @@ def test_frontier_research_queue_input_binding_scaffold_expands_task_sidecars(
         output_dir / "artifact-manifest.json"
     ).passed is True
     assert record.metadata["binding_skeleton_count"] == 3
+
+
+def test_frontier_research_queue_input_binding_scaffold_expands_source_family_url_seeds(
+    tmp_path,
+):
+    input_scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_input_bindings"
+    )
+    audit_module = importlib.import_module(
+        "benchmarks.audit_frontier_research_queue_input_bindings"
+    )
+    registry_module = importlib.import_module("eigentruth.registry")
+    tasks_path = tmp_path / "source-family-collection-tasks.jsonl"
+    tasks_path.write_text(
+        "\n".join(
+            json.dumps(row)
+            for row in (
+                {
+                    "schema_version": 1,
+                    "workflow": "source_family_catalog_collection_plan",
+                    "usage": "source_catalog_collection_only",
+                    "not_verifier_evidence": True,
+                    "task_id": "catalog-official-alpha",
+                    "source_family": "official",
+                    "query": "Ireland population",
+                    "query_key": "ireland population",
+                    "search_queries": ["Ireland population official"],
+                    "request_ids": ["must-not-copy"],
+                    "label": "reserved-should-not-copy",
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "source_family_catalog_collection_plan",
+                    "usage": "source_catalog_collection_only",
+                    "not_verifier_evidence": True,
+                    "task_id": "catalog-news-alpha",
+                    "source_family": "news",
+                    "query": "Ireland census release",
+                    "query_key": "ireland census release",
+                    "search_queries": ["Ireland census release news"],
+                    "model_answer": "reserved-should-not-copy",
+                },
+                {
+                    "schema_version": 1,
+                    "workflow": "source_family_catalog_collection_plan",
+                    "usage": "source_catalog_collection_only",
+                    "not_verifier_evidence": True,
+                    "task_id": "catalog-scholarly-alpha",
+                    "source_family": "scholarly",
+                    "query": "Ireland population study",
+                    "query_key": "ireland population study",
+                    "search_queries": ["Ireland population study"],
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "input-binding-scaffold"
+    registry_path = tmp_path / "registry.json"
+
+    payload = input_scaffold_module.scaffold_frontier_research_queue_input_bindings(
+        input_collection_plan={
+            "workflow": "frontier_research_queue_input_collection_plan",
+            "status": "ready_for_collection",
+            "collection_requests": (
+                {
+                    "request_id": "run-adapters:source-family-url-seeds",
+                    "action_id": "run_source_family_catalog_adapters",
+                    "input_name": "source_family_url_seeds",
+                    "collection_family": "source_family_url_seed_collection",
+                    "required_binding_fields": (
+                        "task_id",
+                        "url",
+                        "provider",
+                        "seed_key",
+                        "review_status",
+                        "not_verifier_evidence",
+                    ),
+                    "recommended_binding_skeleton": {
+                        "task_id": "",
+                        "url": "",
+                        "provider": "",
+                        "seed_key": "",
+                        "review_status": "approved",
+                        "not_verifier_evidence": True,
+                    },
+                    "metadata": {
+                        "collection_tasks_path": str(tasks_path),
+                        "source_families": ("official", "news"),
+                        "providers": ("official_site", "seeded_news"),
+                    },
+                    "blocking_placeholders": (),
+                },
+            ),
+            "review_requests": (),
+        },
+        output_dir=output_dir,
+        artifact_manifest_path=output_dir / "artifact-manifest.json",
+        registry_path=registry_path,
+        name="frontier-input-seed-scaffold",
+        version="0.1",
+    )
+    seed_path = output_dir / "source-family-url-seeds.jsonl"
+    seed_rows = [
+        json.loads(line)
+        for line in seed_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert registry_module.load_and_verify_artifact_manifest(
+        output_dir / "artifact-manifest.json"
+    ).passed is True
+    blocked_audit = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold=payload,
+        output_dir=tmp_path / "blocked-audit",
+    )
+    seed_rows[0]["url"] = "https://example.gov/ireland-population"
+    seed_rows[0]["href"] = ""
+    seed_rows[0]["review_status"] = "approved"
+    seed_path.write_text(
+        "\n".join(json.dumps(row) for row in seed_rows[:1]) + "\n",
+        encoding="utf-8",
+    )
+    ready_audit = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold=payload,
+        output_dir=tmp_path / "ready-audit",
+    )
+    seed_path.write_text(
+        "\n".join(json.dumps(row) for row in (seed_rows[0], seed_rows[0])) + "\n",
+        encoding="utf-8",
+    )
+    duplicate_audit = audit_module.audit_frontier_research_queue_input_bindings(
+        input_binding_scaffold=payload,
+        output_dir=tmp_path / "duplicate-audit",
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-input-seed-scaffold:0.1"
+    )
+
+    assert payload["status"] == "needs_binding_values"
+    assert payload["summary"]["binding_skeleton_count"] == 2
+    assert payload["summary"]["expanded_task_count"] == 2
+    assert payload["summary"]["sidecar_counts"]["source_family_url_seeds"] == 2
+    assert payload["summary"]["downstream_command_count"] == 0
+    assert seed_rows[0]["task_id"] == "catalog-official-alpha"
+    assert seed_rows[0]["collection_task_id"] == "catalog-official-alpha"
+    assert seed_rows[0]["source_family"] == "official"
+    assert seed_rows[0]["provider"] == "official_site"
+    assert seed_rows[0]["url"] == "https://example.gov/ireland-population"
+    assert seed_rows[0]["not_verifier_evidence"] is True
+    assert "request_ids" not in seed_rows[0]
+    assert "label" not in seed_rows[0]
+    assert seed_rows[1]["task_id"] == "catalog-news-alpha"
+    assert seed_rows[1]["provider"] == "seeded_news"
+    assert "model_answer" not in seed_rows[1]
+    assert blocked_audit["status"] == "blocked"
+    assert blocked_audit["summary"]["failure_counts"]["missing_url"] == 2
+    assert blocked_audit["summary"]["failure_counts"]["binding_requires_review"] == 2
+    assert ready_audit["status"] == "ready"
+    assert ready_audit["summary"]["ready_by_sidecar"] == {"source_family_url_seeds": 1}
+    assert duplicate_audit["status"] == "blocked"
+    assert duplicate_audit["summary"]["failure_counts"]["duplicate_source_family_url_seed"] == 2
+    assert record.metadata["binding_skeleton_count"] == 2
 
 
 def test_frontier_research_queue_input_binding_scaffold_can_skip_task_expansion(

@@ -1615,29 +1615,36 @@ Added the first monitor-first tool-selection audit layer:
 - `plan_frontier_research_queue_input_collection.py` adds an execution
   preflight for bound frontier queues: it reads remaining `unbound_inputs` plus
   still-unfilled `...` placeholders, turns source-backed numeric/temporal/
-  subject/mechanism gaps into explicit non-evidence collection requests, and
-  keeps unmapped placeholders as review requests. In the current unresolved
-  summary smoke this makes the next frontier worklist concrete: two
-  source-backed rule-input collection requests, one missing-template review
-  request, and one remaining command-template placeholder review request, with
-  no evidence ingestion or binding approval.
+  subject/mechanism gaps and source-family URL seed gaps into explicit
+  non-evidence collection requests, and keeps unmapped placeholders as review
+  requests. The seed preflight maps adapter `--seeds` placeholders back to their
+  collection-task path, source-family filters, and provider hints, so official/
+  news/domain source selection is reviewed before adapter execution. In the
+  current unresolved summary smoke this makes the next frontier worklist
+  concrete: two source-backed rule-input collection requests, one
+  missing-template review request, and one remaining command-template
+  placeholder review request, with no evidence ingestion or binding approval.
 - `scaffold_frontier_research_queue_input_bindings.py` turns that preflight
   into editable sidecar skeletons. When the request exposes a reachable
   `--input-tasks` path, it expands each matching rule-input task into a blank
   source-backed binding row, strips reserved label/model-answer fields, keeps
-  `review_status=needs_review`, and emits downstream fill-command hints. The
-  current unresolved smoke expands the two source-backed requests into 17
+  `review_status=needs_review`, and emits downstream fill-command hints. It now
+  also expands source-family collection tasks into
+  `source-family-url-seeds.jsonl`, preserving task/query/source-family
+  provenance while leaving URL fields blank and non-evidence-marked for review.
+  The current unresolved smoke expands the two source-backed requests into 17
   editable rows: 12 numeric and 5 temporal, plus the two review requests above.
   Replaying those empty sidecars through the existing numeric and temporal fill
   bridges remains blocked with `filled=0`, because required values, citations,
   and review approval are intentionally absent.
 - `audit_frontier_research_queue_input_bindings.py` adds the pre-fill quality
   gate for those edited sidecars. It checks review approval, source-backed
-  value/citation presence, duplicate request ids, `not_verifier_evidence`,
-  reserved label/model-answer leakage, and numeric subject-binding resolution
-  before any fill bridge can be treated as ready. Empty scaffold rows therefore
-  remain blocked, while an `ambiguous_subject` numeric row can become ready only
-  when a matching approved subject-binding sidecar resolves the subject.
+  value/citation or source-family URL seed presence, duplicate request ids,
+  `not_verifier_evidence`, reserved label/model-answer leakage, and numeric
+  subject-binding resolution before any fill bridge or seed adapter input can
+  be treated as ready. Empty scaffold rows therefore remain blocked, while an
+  `ambiguous_subject` numeric row can become ready only when a matching approved
+  subject-binding sidecar resolves the subject.
 - `run_frontier_research_queue_input_fill_commands.py` then consumes that audit
   report and creates a dry-run or explicit execution report for only the
   audit-ready fill commands. Real execution is gated on the whole audit being
