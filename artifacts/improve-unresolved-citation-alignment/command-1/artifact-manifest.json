@@ -21,7 +21,7 @@
       "file_count": 1,
       "kind": "file",
       "path": "evidence-gate/artifact-manifest.json",
-      "sha256": "9abce68722c0d4bc3a35d4a6ebc34b046eba2173da4192f00e3c3e6dfcbe1051",
+      "sha256": "1fd032cb944f0cc04261d22b5f94139b55e0cbc1a2553940838c112d09aa67ef",
       "size_bytes": 5761
     },
     "evidence_workflow": {
@@ -29,8 +29,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "evidence-gate/citation-search-evidence-workflow.json",
-      "sha256": "74a622051b265e2017c1f8ed67399bf4eedd0df51cf644f0698dc32f1b3a1d46",
-      "size_bytes": 6423
+      "sha256": "e46bb3cc9e56790f10e4da71c0e1d494b11381f5bb6fdd0c59bb10d46237bb07",
+      "size_bytes": 6561
     },
     "queue_report": {
       "exists": true,
@@ -149,8 +149,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "workflow-report.json",
-      "sha256": "a390fa9e04578a6a352c75746c103edf79e96a88767ffe1881b4c4818f79359f",
-      "size_bytes": 30760
+      "sha256": "fe8820425499dea853315aba1eb0c6a7dd34250861bc0c6acbe63e35579b6d8f",
+      "size_bytes": 30856
     }
   },
   "digest_algorithm": "sha256",

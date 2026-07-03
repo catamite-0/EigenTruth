@@ -27,6 +27,7 @@
     "triple_min_slot_coverage": 1.0,
     "triple_refute_object_mismatch": false,
     "use_precomputed_retrieval_hits": true,
+    "verified_records_dir": null,
     "verifier_min_overlap": 0.65
   },
   "metadata": {
@@ -1051,6 +1052,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_overlap_0p95",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question",
       "retrieval": {
         "average_hits_per_record": 1.4298561151079137,
@@ -1084,9 +1088,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010306374389537662,
+        "mean_duration_seconds": 0.0010244953388980817,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006622893759049475,
+        "p95_duration_seconds": 0.006475732964463529,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -2103,6 +2107,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_overlap_0p8",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question",
       "retrieval": {
         "average_hits_per_record": 1.4298561151079137,
@@ -2136,9 +2143,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.001058953629261902,
+        "mean_duration_seconds": 0.0010262325234746314,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.007026759930886319,
+        "p95_duration_seconds": 0.006870866985991587,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -3159,6 +3166,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_overlap_0p65",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question",
       "retrieval": {
         "average_hits_per_record": 1.9694244604316546,
@@ -3192,9 +3202,9 @@
           "true": 165
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009204043971680819,
+        "mean_duration_seconds": 0.0009140551651585592,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.005410137190483512,
+        "p95_duration_seconds": 0.005274926521815362,
         "retrieval_hit_count": 1095,
         "retrieval_use_rate": 1.0,
         "selected": 365,
@@ -4215,6 +4225,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_overlap_0p5",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question",
       "retrieval": {
         "average_hits_per_record": 2.8111510791366907,
@@ -4248,9 +4261,9 @@
           "true": 233
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.003510523019018878,
+        "mean_duration_seconds": 0.003548218259559283,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.012625648872926831,
+        "p95_duration_seconds": 0.012689912924543023,
         "retrieval_hit_count": 1563,
         "retrieval_use_rate": 1.0,
         "selected": 521,
@@ -5017,6 +5030,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_answer_overlap_0p95",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question_answer",
       "retrieval": {
         "average_hits_per_record": 0.12410071942446044,
@@ -5050,9 +5066,9 @@
           "true": 9
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0013819295133504531,
+        "mean_duration_seconds": 0.0013870430259924867,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.00526571162045002,
+        "p95_duration_seconds": 0.00528353574918583,
         "retrieval_hit_count": 69,
         "retrieval_use_rate": 1.0,
         "selected": 23,
@@ -6040,6 +6056,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_answer_overlap_0p8",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question_answer",
       "retrieval": {
         "average_hits_per_record": 0.9676258992805755,
@@ -6073,9 +6092,9 @@
           "true": 81
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.002528887171717872,
+        "mean_duration_seconds": 0.0024376373321002166,
         "mean_retrieval_hits": 2.956043956043956,
-        "p95_duration_seconds": 0.018089314928511156,
+        "p95_duration_seconds": 0.018020214396528893,
         "retrieval_hit_count": 538,
         "retrieval_use_rate": 1.0,
         "selected": 182,
@@ -7065,6 +7084,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_answer_overlap_0p65",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question_answer",
       "retrieval": {
         "average_hits_per_record": 1.589928057553957,
@@ -7098,9 +7120,9 @@
           "true": 138
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0024124843538801716,
+        "mean_duration_seconds": 0.002409668978322549,
         "mean_retrieval_hits": 2.9864864864864864,
-        "p95_duration_seconds": 0.013695060013560578,
+        "p95_duration_seconds": 0.013447408215142787,
         "retrieval_hit_count": 884,
         "retrieval_use_rate": 1.0,
         "selected": 296,
@@ -8090,6 +8112,9 @@
         "verified_false_alarm": 0.088
       },
       "key": "question_answer_overlap_0p5",
+      "paths": {
+        "verified_records_jsonl": null
+      },
       "query_field": "question_answer",
       "retrieval": {
         "average_hits_per_record": 2.606115107913669,
@@ -8123,9 +8148,9 @@
           "true": 215
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.005174515178373111,
+        "mean_duration_seconds": 0.005162849670418733,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.025368346390314395,
+        "p95_duration_seconds": 0.025186986674088984,
         "retrieval_hit_count": 1449,
         "retrieval_use_rate": 1.0,
         "selected": 483,

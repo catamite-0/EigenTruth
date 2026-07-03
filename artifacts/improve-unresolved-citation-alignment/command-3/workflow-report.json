@@ -94,6 +94,7 @@
       "question_answer"
     ],
     "query_mode": "question",
+    "query_sweep_verified_records_dir": null,
     "repeats": 1,
     "retrieval_limit": 3,
     "retriever_min_overlaps": [
@@ -104,6 +105,9 @@
     ],
     "seed": 0,
     "signal": "truth_proj",
+    "source_family_filters": [
+      "off"
+    ],
     "source_kind": "external_citation_search_result",
     "target_route": "retrieval_groundedness",
     "verifier_min_overlap": 0.65

@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "citation_query_sweep_failure_review": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-query-sweep-failure-review.json",
+      "sha256": "462e03a1fb1352a80294920356da0c71ad0a591a999946da423dfd286a69ea28",
+      "size_bytes": 33537
+    },
+    "query_sweep_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../command-1/evidence-gate/citation-search-query-sweep.json",
+      "sha256": "efc516b798f4930343ad9636cf3f7042f9def6712cd3bb3732cf0aa8a5dda71f",
+      "size_bytes": 486259
+    },
+    "query_sweep_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../command-2/evidence-gate/citation-search-query-sweep.json",
+      "sha256": "f19839a980cd30b17e8e1960f3facf933e31aef7b8ee25c5c668400024dfbddb",
+      "size_bytes": 471705
+    },
+    "query_sweep_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../command-3/evidence-gate/citation-search-query-sweep.json",
+      "sha256": "e2eb0c35d541b3ed749f40549803706f0ed8157a79592d78a26022abef440240",
+      "size_bytes": 468524
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "dominant_recommendation": "tighten_false_alarm_calibration",
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "needs_alignment",
+    "sweep_count": 3,
+    "sweep_without_passing_strategy_count": 3,
+    "workflow": "citation_query_sweep_failure_review"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

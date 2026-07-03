@@ -1,0 +1,76 @@
+{
+  "artifacts": {
+    "approved_command_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-research-command-bindings-approved.json",
+      "sha256": "46b8dec6169343dc5aeae8c241edaafc6c7ef489514918890b473912f350489a",
+      "size_bytes": 68476
+    },
+    "base_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-frontier-research-binding-staging-v1/frontier-research-command-bindings-staged.json",
+      "sha256": "4b9c3c6988e6971ac514ff2c4441f5346bf732178bc119b25936e1232be293cb",
+      "size_bytes": 68235
+    },
+    "bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
+      "sha256": "829e43ae0614148e8f5e05fc8d0bed78dfb51a581b2b0be819cb99a025dd5cc7",
+      "size_bytes": 11743
+    },
+    "frontier_command_binding_review": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-command-binding-review.json",
+      "sha256": "076066c3b4b4ba3fdb6a8b5ca4242792f615ba0de626c3a648f736e9d10d09f2",
+      "size_bytes": 75850
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decisions.jsonl",
+      "sha256": "bcf803e98d6b51382426518bc0fdd9d33c1a6cfeb6c2fa02c00b7b56d74c5bdc",
+      "size_bytes": 316
+    },
+    "review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review-records.jsonl",
+      "sha256": "1bf5483154d89e6d7eb56446ce356dfe01f0d9290470fb902d2f4fa9ab066542",
+      "size_bytes": 422
+    },
+    "review_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review-template.jsonl",
+      "sha256": "809517b5c331c1f55717c431566a8b9f7282fdbc080ef41d0ee747e9067c5494",
+      "size_bytes": 565
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_entry_count": 1,
+    "blocked_entry_count": 0,
+    "entry_count": 1,
+    "runner": "review_frontier_research_queue_command_bindings",
+    "status": "ready_for_execution",
+    "workflow": "frontier_research_queue_command_binding_review"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

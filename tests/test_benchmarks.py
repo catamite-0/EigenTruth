@@ -36904,6 +36904,27 @@ def test_frontier_research_queue_bound_plan_dry_run_roundtrip(tmp_path):
     assert run_record.metadata["dry_run"] is True
 
 
+def test_bound_command_runner_rewrites_python_launcher_to_configured_interpreter():
+    module = importlib.import_module("benchmarks.run_runtime_drift_bound_command_plan")
+
+    parsed_python = module._parse_command(
+        "python benchmarks/example.py --flag",
+        python_executable="/venv/bin/python",
+    )
+    parsed_python3 = module._parse_command(
+        "python3 benchmarks/example.py --flag",
+        python_executable="/venv/bin/python",
+    )
+    parsed_script = module._parse_command(
+        "benchmarks/example.py --flag",
+        python_executable="/venv/bin/python",
+    )
+
+    assert parsed_python["argv"] == ("/venv/bin/python", "benchmarks/example.py", "--flag")
+    assert parsed_python3["argv"] == ("/venv/bin/python", "benchmarks/example.py", "--flag")
+    assert parsed_script["argv"] == ("/venv/bin/python", "benchmarks/example.py", "--flag")
+
+
 def test_frontier_research_queue_execute_requires_reviewed_bindings(tmp_path):
     plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
     bind_module = importlib.import_module(
@@ -58968,6 +58989,93 @@ def _write_query_sweep_fixture(
         }),
         encoding="utf-8",
     )
+
+
+def test_summarize_citation_query_sweep_failures_reports_dominant_actions(tmp_path):
+    module = importlib.import_module("benchmarks.summarize_citation_query_sweep_failures")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    query_sweep_path = tmp_path / "query-sweep.json"
+    output_path = tmp_path / "failure-review.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    query_sweep_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "blind_spot_retrieval_query_sweep",
+            "status": "complete",
+            "summary": {
+                "blind_spot_count": 5,
+                "best_strategy": "question_overlap_0p5",
+                "best_passing_strategy": None,
+            },
+            "strategies": [
+                {
+                    "key": "question_overlap_0p5",
+                    "blind_spot": {
+                        "target_route_refuted_count": 1,
+                        "records_with_retrieval_hits": 4,
+                        "target_route_selected_count": 4,
+                        "target_route_selected_rate": 0.8,
+                        "outcome_counts": {
+                            "corrected_refuted": 1,
+                            "false_supported": 1,
+                            "insufficient_evidence": 2,
+                            "not_selected_by_target_route": 1,
+                        },
+                    },
+                    "gate": {
+                        "pass": False,
+                        "verified_false_alarm": 0.12,
+                        "max_verified_false_alarm": 0.05,
+                        "blind_refuted_rate": 0.2,
+                        "min_blind_refuted_rate": 0.5,
+                    },
+                    "gap_analysis": {
+                        "gap_buckets": {
+                            "low_overlap_after_retrieval": {"count": 2},
+                            "no_retrieval_hits": {"count": 1},
+                        },
+                        "top_hit_sources": [
+                            {"value": "wikidata:Q1:P31:Q2", "count": 3},
+                        ],
+                    },
+                    "examples": {
+                        "false_supported": [{"record_index": 7, "question": "Q?", "answer": "A"}],
+                        "insufficient_evidence": [{"record_index": 8, "question": "Q2?", "answer": "A2"}],
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        query_sweep_paths=(query_sweep_path,),
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="citation-query-sweep-failure-review-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-query-sweep-failure-review-unit:0.1"
+    )
+    row = payload["sweeps"][0]
+
+    assert payload["status"] == "needs_alignment"
+    assert payload["summary"]["sweep_without_passing_strategy_count"] == 1
+    assert row["dominant_failure_bucket"] == "insufficient_evidence"
+    assert row["failure_buckets"]["false_supported"] == 1
+    assert "tighten_false_alarm_calibration" in row["recommendations"]
+    assert "improve_claim_evidence_alignment_rules" in row["recommendations"]
+    assert saved["sweeps"][0]["examples"]["false_supported"][0]["record_index"] == 7
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "citation_query_sweep_failure_review"
+    assert record.metadata["dominant_recommendation"] == "tighten_false_alarm_calibration"
+    assert record.metadata["suite"] == "unit"
 
 
 def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):

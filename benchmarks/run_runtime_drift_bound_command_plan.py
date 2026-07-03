@@ -351,7 +351,9 @@ def _parse_command(command: str, *, python_executable: str) -> dict[str, Any]:
         return {"status": "invalid_command", "argv": (), "error": str(exc)}
     if not argv:
         return {"status": "invalid_command", "argv": (), "error": "empty_command"}
-    if argv[0].endswith(".py"):
+    if Path(argv[0]).name in {"python", "python3"}:
+        argv = (str(python_executable), *argv[1:])
+    elif argv[0].endswith(".py"):
         argv = (str(python_executable), *argv)
     return {"status": "ready", "argv": argv, "error": None}
 

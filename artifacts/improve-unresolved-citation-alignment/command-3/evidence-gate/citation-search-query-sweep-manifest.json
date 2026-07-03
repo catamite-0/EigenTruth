@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "df46842cc34be4b484b24260ce9891a1c21a78ed45e1ce3d495b588e44e2f286",
-      "size_bytes": 467969
+      "sha256": "e2eb0c35d541b3ed749f40549803706f0ed8157a79592d78a26022abef440240",
+      "size_bytes": 468524
     },
     "blind_spots": {
       "exists": true,
@@ -49,7 +49,8 @@
     "best_strategy": "question_answer_overlap_0p8",
     "blind_spot_count": 89,
     "runner": "sweep_blind_spot_retrieval_queries",
-    "status": "complete"
+    "status": "complete",
+    "verified_records_dir": null
   },
   "schema_version": 1,
   "summary": {

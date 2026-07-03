@@ -16,6 +16,22 @@
       "sha256": "11161222fba1c6e6c4fc7b5ea5c1967aa1e2fe6ee22953c13b2ea0e59df9e339",
       "size_bytes": 18030
     },
+    "frontier_bound_command_run_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json",
+      "sha256": "6ad8ebbfbf8b9dd66385e3123ea8760db37a626c18fac39950663cb98a0f1d55",
+      "size_bytes": 22547
+    },
+    "frontier_command_binding_review_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-binding-review/frontier-command-binding-review.json",
+      "sha256": "076066c3b4b4ba3fdb6a8b5ca4242792f615ba0de626c3a648f736e9d10d09f2",
+      "size_bytes": 75850
+    },
     "mechanism_handoff_bundle": {
       "exists": true,
       "file_count": 1,
@@ -125,8 +141,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "5131b06b78f91924120ec8d2abe18603c96767ed3f1bb6f6d4580cccbff6c965",
-      "size_bytes": 25123
+      "sha256": "dd31177cbaa46c14673f2637871c64379e218d9de548b210e64026c5a747138c",
+      "size_bytes": 26704
     },
     "unresolved_queue": {
       "exists": true,
@@ -139,6 +155,7 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
+    "citation_query_failure_review": "diagnostic",
     "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
     "citation_query_sweep_failure_reason_counts": {
       "blind_refuted_rate_below_min": 24,
@@ -154,13 +171,14 @@
     "citation_status": "blocked",
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
-    "frontier_bound_command_run_count": 0,
-    "frontier_bound_command_succeeded_count": 0,
-    "frontier_command_binding_review_count": 0,
+    "frontier_bound_command_run": "reviewed_improve_unresolved_citation_alignment",
+    "frontier_bound_command_run_count": 1,
+    "frontier_bound_command_succeeded_count": 3,
+    "frontier_command_binding_review_count": 1,
     "frontier_queue_execution_smoke_count": 0,
     "frontier_queue_execution_smoke_manifest_verified_count": 0,
     "frontier_queue_execution_smoke_status": "not_configured",
-    "frontier_queue_execution_status": "not_configured",
+    "frontier_queue_execution_status": "promote",
     "model": "smollm2-l80",
     "next_action_count": 1,
     "semantic_gap_review": "diagnostic_verified_records_sidecar",
@@ -186,9 +204,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 17,
+    "artifact_count": 19,
     "directory_count": 0,
-    "file_count": 17,
+    "file_count": 19,
     "missing_count": 0
   }
 }

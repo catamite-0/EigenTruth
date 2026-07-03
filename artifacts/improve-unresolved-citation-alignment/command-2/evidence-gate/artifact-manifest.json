@@ -69,8 +69,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "6c24af1976e3171b5bfb1ec6b2e70b01ef0e4a572419d200b6bb390ec3d4917a",
-      "size_bytes": 471150
+      "sha256": "f19839a980cd30b17e8e1960f3facf933e31aef7b8ee25c5c668400024dfbddb",
+      "size_bytes": 471705
     },
     "query_sweep_comparison": {
       "exists": true,
@@ -85,7 +85,7 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-comparison-manifest.json",
-      "sha256": "c61643b629f464ca0f3c3eaa9599c7c8551ed083b7c10a90aa682873a4cb0c80",
+      "sha256": "88b039a7ef408fb94235367bae18456ef4c67c635105506e41a6dc2b456c7d07",
       "size_bytes": 1390
     },
     "query_sweep_manifest": {
@@ -93,8 +93,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-manifest.json",
-      "sha256": "c54c7ec00abe65395f0a12bd9d9ea337f4cece1d315f366c210da50342006ff8",
-      "size_bytes": 1986
+      "sha256": "183a7f96537d229297dfebc1e69986492dc777c09343ba43b7d25da65ca21ed7",
+      "size_bytes": 2020
     },
     "queue_report": {
       "exists": true,
@@ -125,8 +125,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-evidence-workflow.json",
-      "sha256": "971dde2946efbe2b2cbceee34ddb8b5c1e72439b2bb198f650b2407f3ddba294",
-      "size_bytes": 6422
+      "sha256": "42eb677deab0d0eaee8eb94d6b25a9c39a9f63a1b92b9f05a1f344cef42ec73a",
+      "size_bytes": 6560
     }
   },
   "digest_algorithm": "sha256",

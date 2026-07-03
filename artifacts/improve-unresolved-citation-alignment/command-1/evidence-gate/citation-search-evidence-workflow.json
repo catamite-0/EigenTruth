@@ -21,6 +21,7 @@
       "question_answer"
     ],
     "query_mode": "question_and_query",
+    "query_sweep_verified_records_dir": null,
     "repeats": 1,
     "retrieval_limit": 3,
     "retriever_min_overlaps": [
@@ -31,6 +32,9 @@
     ],
     "seed": 0,
     "signal": "truth_proj",
+    "source_family_filters": [
+      "off"
+    ],
     "source_kind": "external_citation_search_result",
     "target_route": "retrieval_groundedness",
     "verifier_min_overlap": 0.65
@@ -66,6 +70,7 @@
     "query_sweep_comparison": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-query-sweep-comparison.json",
     "query_sweep_comparison_manifest": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-query-sweep-comparison-manifest.json",
     "query_sweep_manifest": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-query-sweep-manifest.json",
+    "query_sweep_verified_records": null,
     "source_documents": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-source-docs.jsonl",
     "workflow_report": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-evidence-workflow.json"
   },
