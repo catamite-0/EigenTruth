@@ -47,6 +47,9 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     run as run_citation_search_handoff,
 )
 from benchmarks.compare_blind_spot_query_sweeps import run as run_query_sweep_comparison  # noqa: E402
+from benchmarks.summarize_citation_binding_audit_failures import (  # noqa: E402
+    run as run_binding_failure_review,
+)
 from benchmarks.sweep_blind_spot_retrieval_queries import (  # noqa: E402
     DEFAULT_MIN_OVERLAPS,
     DEFAULT_SOURCE_FAMILY_FILTERS,
@@ -147,6 +150,7 @@ def run(
     query_sweep_report: dict[str, Any] | None = None
     comparison_report: dict[str, Any] | None = None
     binding_audit_report: dict[str, Any] | None = None
+    binding_failure_review: dict[str, Any] | None = None
     corpus_path = paths["corpus"] if handoff["external_retrieval_corpus"] is not None else None
 
     if corpus_path is not None and audit_source_bindings:
@@ -163,6 +167,13 @@ def run(
             min_support_keyword_overlap=float(binding_min_support_keyword_overlap),
             min_entity_recall=float(binding_min_entity_recall),
             require_source_family_match=bool(require_binding_source_family_match),
+            metadata={**dict(metadata or {}), "source_workflow": WORKFLOW},
+            compact_json=compact_json,
+        )
+        binding_failure_review = run_binding_failure_review(
+            binding_audit_paths=(paths["binding_audit"],),
+            output_path=paths["binding_failure_review"],
+            max_examples_per_issue=3,
             metadata={**dict(metadata or {}), "source_workflow": WORKFLOW},
             compact_json=compact_json,
         )
@@ -284,6 +295,7 @@ def run(
         "summary": _summary(
             handoff=handoff,
             binding_audit_report=binding_audit_report,
+            binding_failure_review=binding_failure_review,
             provenance_report=provenance_report,
             query_sweep_report=query_sweep_report,
             comparison_report=comparison_report,
@@ -296,6 +308,7 @@ def run(
             active_corpus_path=corpus_path,
             has_corpus=corpus_path is not None,
             has_binding_audit=binding_audit_report is not None,
+            has_binding_failure_review=binding_failure_review is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
             has_comparison=comparison_report is not None,
@@ -317,6 +330,7 @@ def run(
             active_corpus_path=corpus_path,
             has_corpus=corpus_path is not None,
             has_binding_audit=binding_audit_report is not None,
+            has_binding_failure_review=binding_failure_review is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
             has_comparison=comparison_report is not None,
@@ -359,6 +373,16 @@ def run(
                 report,
                 "summary",
                 "query_sweep_failure_reason_counts",
+            ),
+            "binding_failure_dominant_issue": _nested(
+                report,
+                "summary",
+                "binding_failure_dominant_issue",
+            ),
+            "binding_failure_dominant_recommendation": _nested(
+                report,
+                "summary",
+                "binding_failure_dominant_recommendation",
             ),
             "query_sweep_no_hit_strategy_count": _nested_int(
                 report,
@@ -428,6 +452,16 @@ def run(
                     "summary",
                     "query_sweep_failure_reason_counts",
                 ),
+                "binding_failure_dominant_issue": _nested(
+                    report,
+                    "summary",
+                    "binding_failure_dominant_issue",
+                ),
+                "binding_failure_dominant_recommendation": _nested(
+                    report,
+                    "summary",
+                    "binding_failure_dominant_recommendation",
+                ),
                 "query_sweep_no_hit_strategy_count": _nested_int(
                     report,
                     "summary",
@@ -463,6 +497,7 @@ def _paths(output: Path) -> dict[str, Path]:
         "adapter_requests": output / "citation-search-adapter-requests.jsonl",
         "artifact_manifest": output / "artifact-manifest.json",
         "binding_audit": output / "citation-search-binding-audit.json",
+        "binding_failure_review": output / "citation-search-binding-failure-review.json",
         "binding_manifest": output / "citation-search-binding-audit-manifest.json",
         "bound_corpus": output / "citation-search-bound-corpus.json",
         "bound_source_documents": output / "citation-search-bound-source-docs.jsonl",
@@ -572,6 +607,7 @@ def _summary(
     *,
     handoff: Mapping[str, Any],
     binding_audit_report: Mapping[str, Any] | None,
+    binding_failure_review: Mapping[str, Any] | None,
     provenance_report: Mapping[str, Any] | None,
     query_sweep_report: Mapping[str, Any] | None,
     comparison_report: Mapping[str, Any] | None,
@@ -627,6 +663,20 @@ def _summary(
         ),
         "bound_request_count": _nested_int(binding_audit_report, "summary", "accepted_request_count"),
         "binding_issue_counts": _nested(binding_audit_report, "summary", "issue_counts"),
+        "binding_failure_review_status": (
+            None if binding_failure_review is None else binding_failure_review.get("status")
+        ),
+        "binding_failure_dominant_issue": _nested(binding_failure_review, "summary", "dominant_issue"),
+        "binding_failure_dominant_recommendation": _nested(
+            binding_failure_review,
+            "summary",
+            "dominant_recommendation",
+        ),
+        "binding_failure_recommendation_counts": _nested(
+            binding_failure_review,
+            "summary",
+            "recommendation_counts",
+        ),
         "provenance_status": None if provenance_report is None else provenance_report.get("status"),
         "provenance_passed": None if provenance_report is None else bool(provenance_report.get("passed")),
         "evidence_class": None if provenance_report is None else provenance_report.get("evidence_class"),
@@ -822,6 +872,7 @@ def _report_paths(
     active_corpus_path: Path | None,
     has_corpus: bool,
     has_binding_audit: bool,
+    has_binding_failure_review: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
@@ -839,6 +890,9 @@ def _report_paths(
         "external_retrieval_corpus": str(active_corpus_path) if has_corpus and active_corpus_path is not None else None,
         "raw_external_retrieval_corpus": str(paths["corpus"]) if has_corpus else None,
         "binding_audit": str(paths["binding_audit"]) if has_binding_audit else None,
+        "binding_failure_review": (
+            str(paths["binding_failure_review"]) if has_binding_failure_review else None
+        ),
         "bound_source_documents": str(paths["bound_source_documents"]) if has_binding_audit else None,
         "bound_retrieval_corpus": str(paths["bound_corpus"]) if has_binding_audit and has_corpus else None,
         "binding_manifest": str(paths["binding_manifest"]) if has_binding_audit else None,
@@ -870,6 +924,7 @@ def _manifest_artifacts(
     active_corpus_path: Path | None,
     has_corpus: bool,
     has_binding_audit: bool,
+    has_binding_failure_review: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
@@ -890,6 +945,7 @@ def _manifest_artifacts(
         "external_retrieval_corpus": active_corpus_path if has_corpus else None,
         "raw_external_retrieval_corpus": paths["corpus"] if has_corpus else None,
         "binding_audit": paths["binding_audit"] if has_binding_audit else None,
+        "binding_failure_review": paths["binding_failure_review"] if has_binding_failure_review else None,
         "bound_source_documents": paths["bound_source_documents"] if has_binding_audit else None,
         "bound_retrieval_corpus": paths["bound_corpus"] if has_binding_audit and has_corpus else None,
         "binding_manifest": paths["binding_manifest"] if has_binding_audit else None,

@@ -59246,6 +59246,109 @@ def test_summarize_citation_query_sweep_failures_reports_dominant_actions(tmp_pa
     assert record.metadata["suite"] == "unit"
 
 
+def test_summarize_citation_binding_audit_failures_reports_evidence_quality_gaps(tmp_path):
+    module = importlib.import_module("benchmarks.summarize_citation_binding_audit_failures")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    binding_audit_path = tmp_path / "binding-audit.json"
+    output_path = tmp_path / "binding-failure-review.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    binding_audit_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "citation_search_result_binding_audit",
+            "status": "ready",
+            "summary": {
+                "source_document_count": 3,
+                "accepted_source_document_count": 1,
+                "rejected_source_document_count": 2,
+                "accepted_request_count": 1,
+                "acceptance_rate": 1 / 3,
+                "accepted_request_coverage": 0.5,
+            },
+            "records": [
+                {
+                    "source_document_index": 1,
+                    "status": "accepted",
+                    "issue_codes": [],
+                    "request_id": "cite-search-alpha",
+                    "query": "What is Alpha?",
+                    "question_type": "definition",
+                    "source": "https://example.org/alpha",
+                    "alignment": {"status": "aligned", "keyword_overlap": 1.0},
+                    "intent": {"reason": "lexical_alignment_only"},
+                    "source_family": {"reason": "source_family_not_required"},
+                },
+                {
+                    "source_document_index": 2,
+                    "status": "rejected",
+                    "issue_codes": [
+                        "numeric_intent_requires_numeric_evidence",
+                        "evidence_alignment_insufficient_evidence",
+                    ],
+                    "request_id": "cite-search-passport",
+                    "query": "Do more than 20% of Americans have passports?",
+                    "question_type": "quantity",
+                    "source": "https://example.org/passports",
+                    "alignment": {
+                        "status": "insufficient_evidence",
+                        "keyword_overlap": 0.4,
+                        "number_recall": 0.0,
+                        "entity_recall": 1.0,
+                    },
+                    "intent": {"reason": "numeric_intent_requires_numeric_evidence"},
+                    "source_family": {"reason": "source_family_not_required"},
+                },
+                {
+                    "source_document_index": 3,
+                    "status": "rejected",
+                    "issue_codes": ["evidence_alignment_misaligned"],
+                    "request_id": "cite-search-beta",
+                    "query": "Who founded Beta Lab?",
+                    "question_type": "person",
+                    "source": "https://example.org/beta",
+                    "alignment": {
+                        "status": "misaligned",
+                        "keyword_overlap": 0.1,
+                        "number_recall": None,
+                        "entity_recall": 0.0,
+                    },
+                    "intent": {"reason": "person_intent_no_relation_constraint"},
+                    "source_family": {"reason": "source_family_not_required"},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        binding_audit_paths=(binding_audit_path,),
+        output_path=output_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="citation-binding-failure-review-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-binding-failure-review-unit:0.1"
+    )
+
+    assert payload["status"] == "needs_evidence_quality"
+    assert payload["summary"]["total_source_document_count"] == 3
+    assert payload["summary"]["total_accepted_source_document_count"] == 1
+    assert payload["summary"]["dominant_issue"] == "evidence_alignment_insufficient_evidence"
+    assert payload["summary"]["recommendation_counts"]["collect_numeric_or_statistical_evidence"] == 1
+    assert payload["summary"]["recommendation_counts"]["collect_claim_specific_evidence_spans"] == 1
+    assert saved["audits"][0]["issue_reviews"][0]["examples"][0]["request_id"] == "cite-search-passport"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "citation_binding_audit_failure_review"
+    assert record.metadata["dominant_recommendation"] == "collect_claim_specific_evidence_spans"
+    assert record.metadata["suite"] == "unit"
+
+
 def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
     module = importlib.import_module("benchmarks.plan_blind_spot_evidence_expansion")
     registry_module = importlib.import_module("eigentruth.registry")
@@ -65168,6 +65271,9 @@ def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
     )
     workflow_report = json.loads((output_dir / "citation-search-evidence-workflow.json").read_text(encoding="utf-8"))
     binding_report = json.loads((output_dir / "citation-search-binding-audit.json").read_text(encoding="utf-8"))
+    binding_failure_review = json.loads(
+        (output_dir / "citation-search-binding-failure-review.json").read_text(encoding="utf-8")
+    )
     query_sweep = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
 
     assert payload["config"]["audit_source_bindings"] is True
@@ -65175,10 +65281,24 @@ def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
     assert payload["summary"]["bound_source_document_count"] == 1
     assert payload["summary"]["bound_request_count"] == 1
     assert payload["summary"]["binding_issue_counts"]["numeric_intent_requires_numeric_evidence"] == 1
+    assert payload["summary"]["binding_failure_review_status"] == "needs_evidence_quality"
+    assert payload["summary"]["binding_failure_dominant_issue"] == "evidence_alignment_misaligned"
+    assert (
+        payload["summary"]["binding_failure_dominant_recommendation"]
+        == "collect_numeric_or_statistical_evidence"
+    )
     assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-bound-corpus.json")
     assert workflow_report["paths"]["raw_external_retrieval_corpus"].endswith("citation-search-corpus.json")
     assert workflow_report["paths"]["binding_audit"].endswith("citation-search-binding-audit.json")
+    assert workflow_report["paths"]["binding_failure_review"].endswith(
+        "citation-search-binding-failure-review.json"
+    )
     assert binding_report["summary"]["accepted_source_document_count"] == 1
+    assert binding_failure_review["summary"]["dominant_issue"] == "evidence_alignment_misaligned"
+    assert (
+        binding_failure_review["summary"]["recommendation_counts"]["collect_numeric_or_statistical_evidence"]
+        == 1
+    )
     assert query_sweep["source"]["corpus_paths"] == [str(output_dir / "citation-search-bound-corpus.json")]
 
 

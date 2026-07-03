@@ -946,6 +946,19 @@ Added the first monitor-first tool-selection audit layer:
   while verified false alarm remains `0.088` against the `0.05` gate. The next
   citation/search work is evidence-quality and route-quality improvement, not
   another provenance-binding repair.
+- `summarize_citation_binding_audit_failures.py` now turns those binding rejects
+  into a read-only evidence-quality review with issue buckets, question-type
+  counts, examples, and next-action recommendations. Citation evidence workflows
+  write it automatically when `--audit-source-bindings` is enabled, so the
+  remaining source-quality work can be routed to numeric/statistical collection,
+  causal/procedural collection, timestamped source collection, or
+  claim-specific evidence-span extraction instead of being hidden inside one
+  aggregate blocked gate. The command-3 replay's new review keeps the lane
+  blocked but makes the work concrete: `352` rejects are
+  `evidence_alignment_misaligned`, `264` are
+  `evidence_alignment_insufficient_evidence`, `48` need numeric/statistical
+  evidence, `16` need causal/procedural evidence, and `8` need temporal
+  evidence.
 - `run_external_citation_search_adapter_workflow.py` adds the local command
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the
