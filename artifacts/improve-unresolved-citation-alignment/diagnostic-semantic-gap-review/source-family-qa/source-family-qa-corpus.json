@@ -95,10 +95,56 @@
       "text": "What does Wikidata list as the description for English? West Germanic language"
     },
     {
+      "answer": "Poverty in Islam",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:1",
+        "alignment_source_document_id": "alignment-approved:5",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:98e52dac70c9ba47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q10294:P527:Q125727758",
+        "source_family": "reference",
+        "source_index": 4,
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)",
+        "subject": "poverty",
+        "title": "Reviewed alignment fact: poverty has part(s)"
+      },
+      "question": "What does Wikidata list as the has part(s) for poverty?",
+      "source": "wikidata:Q10294:P527:Q125727758",
+      "text": "What does Wikidata list as the has part(s) for poverty? Poverty in Islam"
+    },
+    {
+      "answer": "South Africa",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:2",
+        "alignment_source_document_id": "alignment-approved:6",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:c14d2eda98989026",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q317521:P27:Q258",
+        "source_family": "reference",
+        "source_index": 5,
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship",
+        "subject": "Africa",
+        "title": "Reviewed alignment fact: Africa country of citizenship"
+      },
+      "question": "What does Wikidata list as the country of citizenship for Africa?",
+      "source": "wikidata:Q317521:P27:Q258",
+      "text": "What does Wikidata list as the country of citizenship for Africa? South Africa"
+    },
+    {
       "answer": "unusual apparent anomaly in the sky that is not readily identifiable",
       "metadata": {
         "alignment_candidate_id": "fact:record-212:2",
-        "alignment_source_document_id": "alignment-approved:5",
+        "alignment_source_document_id": "alignment-approved:7",
         "extraction_rule": "wikidata_subject_property_value",
         "provider": "wikidata",
         "review_id": "review:0e7791b35159e135",
@@ -107,7 +153,7 @@
         "reviewer": "rule_based_alignment_fact_reviewer_v1",
         "source": "wikidata:Q421:description",
         "source_family": "reference",
-        "source_index": 4,
+        "source_index": 6,
         "statement_property": "description",
         "statement_property_label": "description",
         "subject": "unidentified flying object",
@@ -136,14 +182,14 @@
   },
   "summary": {
     "by_provider": {
-      "wikidata": 5
+      "wikidata": 7
     },
     "by_source_family": {
-      "reference": 5
+      "reference": 7
     },
-    "n_candidate_documents": 5,
-    "n_documents": 5,
-    "n_source_documents": 5,
+    "n_candidate_documents": 7,
+    "n_documents": 7,
+    "n_source_documents": 7,
     "skipped": {
       "duplicates": 0,
       "missing_fields": 0,

@@ -101,8 +101,56 @@
       },
       {
         "metadata": {
-          "alignment_candidate_id": "fact:record-212:2",
+          "alignment_candidate_id": "fact:record-133:1",
           "alignment_source_document_id": "alignment-approved:5",
+          "confidence": 0.9473684210526315,
+          "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+          "provider": "wikidata",
+          "review_id": "review:98e52dac70c9ba47",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-02T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q10294:P527:Q125727758",
+          "source_family": "reference",
+          "statement_property": "P527",
+          "statement_property_label": "has part(s)",
+          "subject": "poverty",
+          "value": "Poverty in Islam"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q10294:P527:Q125727758",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+        "title": "Reviewed alignment fact: poverty has part(s)"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:record-133:2",
+          "alignment_source_document_id": "alignment-approved:6",
+          "confidence": 0.9473684210526315,
+          "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+          "provider": "wikidata",
+          "review_id": "review:c14d2eda98989026",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-02T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q317521:P27:Q258",
+          "source_family": "reference",
+          "statement_property": "P27",
+          "statement_property_label": "country of citizenship",
+          "subject": "Africa",
+          "value": "South Africa"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q317521:P27:Q258",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+        "title": "Reviewed alignment fact: Africa country of citizenship"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:record-212:2",
+          "alignment_source_document_id": "alignment-approved:7",
           "confidence": 0.9523809523809523,
           "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
           "provider": "wikidata",
@@ -138,28 +186,30 @@
     },
     "status": "ready",
     "summary": {
-      "approved_source_document_count": 5,
+      "approved_source_document_count": 7,
       "by_property": {
+        "P27": 1,
+        "P527": 1,
         "description": 5
       },
       "by_provider": {
-        "wikidata": 5
+        "wikidata": 7
       },
       "by_source_family": {
-        "reference": 5
+        "reference": 7
       },
-      "needs_more_evidence_count": 0,
+      "needs_more_evidence_count": 3,
       "pending_review_count": 0,
       "rejected_count": 0,
-      "review_decision_count": 5,
-      "review_document_count": 5,
+      "review_decision_count": 10,
+      "review_document_count": 10,
       "skip_counts": {
-        "approved": 5,
+        "approved": 7,
         "duplicate_review_decision": 0,
         "invalid_review_decision": 0,
         "missing_candidate_id": 0,
         "missing_reviewer": 0,
-        "needs_more_evidence": 0,
+        "needs_more_evidence": 3,
         "pending_review": 0,
         "rejected": 0,
         "reserved_review_metadata": 0,
@@ -179,7 +229,8 @@
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "structured_fact_parsing": "worldbank_wikidata"
   },
   "paths": {
     "approved_source_documents": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-reviewed-promotion-gate/approved-source-documents.json",
@@ -248,6 +299,76 @@
       "value": "West Germanic language"
     },
     {
+      "alignment_candidate_id": "fact:record-133:1",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "property_hint": "has part(s):P527",
+      "record_type": "review_document",
+      "review_id": "review:98e52dac70c9ba47",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:5",
+      "subject": "poverty",
+      "value": "Poverty in Islam"
+    },
+    {
+      "alignment_candidate_id": "fact:record-133:2",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "property_hint": "country of citizenship:P27",
+      "record_type": "review_document",
+      "review_id": "review:c14d2eda98989026",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:6",
+      "subject": "Africa",
+      "value": "South Africa"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:1",
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "record_type": "review_document",
+      "review_id": "review:2f900f743f662ad8",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "Afghanistan",
+      "value": "42,647,492"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:2",
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "record_type": "review_document",
+      "review_id": "review:a4eadff53fd8a0ab",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "world",
+      "value": "100,616"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:3",
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "record_type": "review_document",
+      "review_id": "review:50ca6336ba613d77",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "world",
+      "value": "26,498,823"
+    },
+    {
       "alignment_candidate_id": "fact:record-212:2",
       "decision": "approved",
       "evidence_source": "wikidata:Q421:description",
@@ -257,7 +378,7 @@
       "reviewed_at": "2026-07-02T00:00:00Z",
       "reviewer": "rule_based_alignment_fact_reviewer_v1",
       "skip_reason": null,
-      "source_document_id": "alignment-approved:5",
+      "source_document_id": "alignment-approved:7",
       "subject": "unidentified flying object",
       "value": "unusual apparent anomaly in the sky that is not readily identifiable"
     }
@@ -368,6 +489,136 @@
       "value": "West Germanic language"
     },
     {
+      "alignment_candidate_id": "fact:record-133:1",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.9473684210526315,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "notes": "",
+      "property_hint": "has part(s):P527",
+      "property_label": "has part(s)",
+      "review_document_index": 5,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "poverty",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "Poverty in Islam"
+    },
+    {
+      "alignment_candidate_id": "fact:record-133:2",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.9473684210526315,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+      "notes": "",
+      "property_hint": "country of citizenship:P27",
+      "property_label": "country of citizenship",
+      "review_document_index": 6,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Africa",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "South Africa"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:1",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.9285714285714286,
+      "decision": "pending",
+      "evidence_source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: Afghanistan had Population, total of 42,647,492 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Middle East, North Africa, Afghanistan & Pakistan.",
+      "notes": "",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "property_label": "Population, total",
+      "review_document_index": 7,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Afghanistan",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "42,647,492"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:2",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.9285714285714286,
+      "decision": "pending",
+      "evidence_source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: St. Vincent and the Grenadines had Population, total of 100,616 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Latin America & Caribbean.",
+      "notes": "",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "property_label": "Population, total",
+      "review_document_index": 8,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "world",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "100,616"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:3",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.7857142857142857,
+      "decision": "pending",
+      "evidence_source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: Korea, Dem. People's Rep. had Population, total of 26,498,823 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: East Asia & Pacific.",
+      "notes": "",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "property_label": "Population, total",
+      "review_document_index": 9,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "world",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "26,498,823"
+    },
+    {
       "alignment_candidate_id": "fact:record-212:2",
       "allowed_decisions": [
         "approved",
@@ -381,7 +632,7 @@
       "notes": "",
       "property_hint": "description",
       "property_label": "description",
-      "review_document_index": 5,
+      "review_document_index": 10,
       "reviewed_at": "",
       "reviewer": "",
       "route_hints": [
@@ -402,28 +653,30 @@
   },
   "status": "ready_for_structured_qa",
   "summary": {
-    "approved_source_document_count": 5,
+    "approved_source_document_count": 7,
     "by_property": {
+      "P27": 1,
+      "P527": 1,
       "description": 5
     },
     "by_provider": {
-      "wikidata": 5
+      "wikidata": 7
     },
     "by_source_family": {
-      "reference": 5
+      "reference": 7
     },
-    "needs_more_evidence_count": 0,
+    "needs_more_evidence_count": 3,
     "pending_review_count": 0,
     "rejected_count": 0,
-    "review_decision_count": 5,
-    "review_document_count": 5,
+    "review_decision_count": 10,
+    "review_document_count": 10,
     "skip_counts": {
-      "approved": 5,
+      "approved": 7,
       "duplicate_review_decision": 0,
       "invalid_review_decision": 0,
       "missing_candidate_id": 0,
       "missing_reviewer": 0,
-      "needs_more_evidence": 0,
+      "needs_more_evidence": 3,
       "pending_review": 0,
       "rejected": 0,
       "reserved_review_metadata": 0,

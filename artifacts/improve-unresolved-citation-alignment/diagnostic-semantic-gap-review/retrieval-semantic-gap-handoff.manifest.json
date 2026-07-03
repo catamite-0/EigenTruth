@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "retrieval-semantic-gap-handoff.json",
-      "sha256": "47e858b94c05797b14cab37983ef1a2dfc7aed3479c6992251fff9f659804e49",
-      "size_bytes": 1030852
+      "sha256": "bb8bbd670a55845ea489c89c65c5ebb2e3d9401857e832369987094da1f5e2f8",
+      "size_bytes": 1044021
     },
     "verified_records_jsonl": {
       "exists": true,
@@ -20,7 +20,7 @@
   "digest_algorithm": "sha256",
   "metadata": {
     "candidate_count": 63,
-    "fact_candidate_count": 10,
+    "fact_candidate_count": 23,
     "mode": "false_negative_with_hits",
     "record_indices_json": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
     "status": "ready_for_handoff",

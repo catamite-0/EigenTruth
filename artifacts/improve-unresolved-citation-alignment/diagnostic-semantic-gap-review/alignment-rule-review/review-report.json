@@ -38,6 +38,46 @@
       "reviewer": "rule_based_alignment_fact_reviewer_v1"
     },
     {
+      "alignment_candidate_id": "fact:record-133:1",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:98e52dac70c9ba47",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:record-133:2",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:c14d2eda98989026",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:1",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source",
+      "review_id": "review:2f900f743f662ad8",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:2",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source",
+      "review_id": "review:a4eadff53fd8a0ab",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:3",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source",
+      "review_id": "review:50ca6336ba613d77",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
       "alignment_candidate_id": "fact:record-212:2",
       "decision": "approved",
       "notes": "wikidata_subject_property_value_closed",
@@ -57,7 +97,8 @@
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "structured_fact_parsing": "worldbank_wikidata"
   },
   "paths": {
     "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-rule-review/artifact-manifest.json",
@@ -172,6 +213,142 @@
       "value": "West Germanic language"
     },
     {
+      "alignment_candidate_id": "fact:record-133:1",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "has part(s):P527",
+      "reasons": [],
+      "record_index": 5,
+      "review_id": "review:98e52dac70c9ba47",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "poverty",
+      "value": "Poverty in Islam"
+    },
+    {
+      "alignment_candidate_id": "fact:record-133:2",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "country of citizenship:P27",
+      "reasons": [],
+      "record_index": 6,
+      "review_id": "review:c14d2eda98989026",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Africa",
+      "value": "South Africa"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:1",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "notes": "wikidata_source",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "reasons": [
+        "wikidata_source"
+      ],
+      "record_index": 7,
+      "review_id": "review:2f900f743f662ad8",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Afghanistan",
+      "value": "42,647,492"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:2",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "notes": "wikidata_source",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "reasons": [
+        "wikidata_source"
+      ],
+      "record_index": 8,
+      "review_id": "review:a4eadff53fd8a0ab",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "world",
+      "value": "100,616"
+    },
+    {
+      "alignment_candidate_id": "fact:record-190:3",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "notes": "wikidata_source",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "reasons": [
+        "wikidata_source"
+      ],
+      "record_index": 9,
+      "review_id": "review:50ca6336ba613d77",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "world",
+      "value": "26,498,823"
+    },
+    {
       "alignment_candidate_id": "fact:record-212:2",
       "checks": {
         "has_candidate_id": true,
@@ -190,7 +367,7 @@
       "notes": "wikidata_subject_property_value_closed",
       "property_hint": "description",
       "reasons": [],
-      "record_index": 5,
+      "record_index": 10,
       "review_id": "review:0e7791b35159e135",
       "reviewed_at": "2026-07-02T00:00:00Z",
       "reviewer": "rule_based_alignment_fact_reviewer_v1",
@@ -206,16 +383,21 @@
   },
   "status": "ready_for_promotion_gate",
   "summary": {
-    "approved_count": 5,
+    "approved_count": 7,
     "approved_property_counts": {
+      "P27": 1,
+      "P527": 1,
       "description": 5
     },
     "decision_counts": {
-      "approved": 5
+      "approved": 7,
+      "needs_more_evidence": 3
     },
-    "needs_more_evidence_count": 0,
-    "reason_counts": {},
-    "review_document_count": 5
+    "needs_more_evidence_count": 3,
+    "reason_counts": {
+      "wikidata_source": 3
+    },
+    "review_document_count": 10
   },
   "workflow": "alignment_fact_rule_review"
 }

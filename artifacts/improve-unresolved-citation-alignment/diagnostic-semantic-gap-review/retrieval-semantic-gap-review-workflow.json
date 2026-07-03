@@ -24,7 +24,8 @@
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
-    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar"
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "structured_fact_parsing": "worldbank_wikidata"
   },
   "paths": {
     "alignment_fact_review_corpus": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-fact-review-corpus.json",
@@ -66,38 +67,38 @@
   },
   "status": "covered_fact_route_promote",
   "summary": {
-    "approved_source_document_count": 5,
+    "approved_source_document_count": 7,
     "covered_fact_route_decision_accuracy": 1.0,
     "covered_fact_route_false_refuted_rate": 1.0,
     "covered_fact_route_false_supported_rate": 0.0,
-    "covered_fact_route_n_records": 10,
+    "covered_fact_route_n_records": 14,
     "covered_fact_route_status": "promote",
     "covered_fact_route_true_supported_rate": 1.0,
     "evaluated_source_record_count": 89,
-    "fact_review_document_count": 5,
-    "fact_review_input_candidate_count": 10,
+    "fact_review_document_count": 10,
+    "fact_review_input_candidate_count": 23,
     "fact_review_skipped": {
       "answer_value_matches_model_answer": 0,
-      "duplicate_candidate": 4,
+      "duplicate_candidate": 8,
       "generic_value": 0,
       "invalid_row": 0,
       "low_confidence": 0,
       "missing_required_fields": 0,
       "non_review_usage": 0,
       "property_value_invalid": 0,
-      "subject_not_in_evidence_span": 1,
+      "subject_not_in_evidence_span": 5,
       "value_equals_subject": 0,
       "value_not_in_evidence_span": 0
     },
-    "fact_review_skipped_count": 5,
+    "fact_review_skipped_count": 13,
     "pending_review_count": 0,
     "promotion_skip_counts": {
-      "approved": 5,
+      "approved": 7,
       "duplicate_review_decision": 0,
       "invalid_review_decision": 0,
       "missing_candidate_id": 0,
       "missing_reviewer": 0,
-      "needs_more_evidence": 0,
+      "needs_more_evidence": 3,
       "pending_review": 0,
       "rejected": 0,
       "reserved_review_metadata": 0,
@@ -105,12 +106,14 @@
       "unsupported_evidence_source": 0
     },
     "rejected_count": 0,
-    "rule_review_approved_count": 5,
-    "rule_review_document_count": 5,
-    "rule_review_needs_more_evidence_count": 0,
-    "rule_review_reason_counts": {},
+    "rule_review_approved_count": 7,
+    "rule_review_document_count": 10,
+    "rule_review_needs_more_evidence_count": 3,
+    "rule_review_reason_counts": {
+      "wikidata_source": 3
+    },
     "semantic_gap_candidate_count": 63,
-    "semantic_gap_fact_candidate_count": 10,
+    "semantic_gap_fact_candidate_count": 23,
     "semantic_gap_request_counts": {
       "claim_evidence_alignment_review": 63,
       "retrieval_query_refinement": 56,
@@ -118,8 +121,8 @@
       "world_model_rule_candidate": 9
     },
     "semantic_gap_total_request_count": 152,
-    "source_family_qa_candidate_document_count": 5,
-    "source_family_qa_document_count": 5,
+    "source_family_qa_candidate_document_count": 7,
+    "source_family_qa_document_count": 7,
     "source_family_qa_skipped": {
       "duplicates": 0,
       "missing_fields": 0,

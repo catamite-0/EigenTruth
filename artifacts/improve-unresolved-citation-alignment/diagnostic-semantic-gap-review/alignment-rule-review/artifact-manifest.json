@@ -5,45 +5,46 @@
       "file_count": 1,
       "kind": "file",
       "path": "../alignment-fact-review-corpus.json",
-      "sha256": "d1a590943422992ec1655b37e2467916294d1fceb4389976037067c1311ebdfd",
-      "size_bytes": 7656
+      "sha256": "2d7b1b274b6f18f9d5974c3eb5ae4fb35f5a52ffc5afb30b7b7416e3ce01b891",
+      "size_bytes": 14004
     },
     "alignment_fact_rule_review_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "review-report.json",
-      "sha256": "3c5370b0c061557dd8e9bd816a7596c046794924ff7f461c7de84b0e71534391",
-      "size_bytes": 8231
+      "sha256": "c19edee3452170405c2a4638d70872d9a9413fdf30fd08f72d2a228448d9869a",
+      "size_bytes": 14372
     },
     "review_decisions": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "review-decisions.jsonl",
-      "sha256": "1eb80afdf6d9be21de9a25c79c800d422abb781e110cefc9d868720cde48216e",
-      "size_bytes": 1271
+      "sha256": "a75345a8a1e52f1d9871a1da81ae2fcc1f8057d588f60cc1cbad9307f8bc5104",
+      "size_bytes": 2510
     },
     "review_records": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "review-records.jsonl",
-      "sha256": "761e47c60cf271fb35db73efb7364c7c112559b8af7fef66a1cb8802806495b3",
-      "size_bytes": 3676
+      "sha256": "005193ce794d729a8653f617c10a8861440853059d5e5c5edd16c0b9d266a689",
+      "size_bytes": 7259
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "approved_count": 5,
+    "approved_count": 7,
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "needs_more_evidence_count": 0,
+    "needs_more_evidence_count": 3,
     "parent_workflow": "retrieval_semantic_gap_review_workflow",
-    "review_document_count": 5,
+    "review_document_count": 10,
     "reviewer": "rule_based_alignment_fact_reviewer_v1",
     "status": "ready_for_promotion_gate",
+    "structured_fact_parsing": "worldbank_wikidata",
     "workflow": "alignment_fact_rule_review"
   },
   "schema_version": 1,

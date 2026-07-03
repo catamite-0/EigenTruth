@@ -48,6 +48,17 @@ DESCRIBED_SUBJECT_RE = re.compile(
     r"(?P<subject>.+?)\s+is\s+described\s+as\s+(?P<value>[^.]+)",
     re.IGNORECASE,
 )
+WIKIDATA_STRUCTURED_RE = re.compile(
+    r"^\s*According\s+to\s+Wikidata\s+structured\s+data,\s*"
+    r"(?P<subject>.+?)\s+has\s+(?P<relation>[^.]+)",
+    re.IGNORECASE,
+)
+WORLDBANK_STAT_RE = re.compile(
+    r"World\s+Bank\s+official\s+statistics\s+data[^:]*:\s*"
+    r"(?P<subject>.+?)\s+had\s+(?P<property>.+?)\s+of\s+"
+    r"(?P<value>[-+]?\d[\d,]*(?:\.\d+)?)\s+in\s+(?P<year>\d{4})\b",
+    re.IGNORECASE,
+)
 GENERIC_ENTITY_CANDIDATES = {
     "according",
     "did",
@@ -59,6 +70,18 @@ GENERIC_ENTITY_CANDIDATES = {
     "the",
     "truth",
     "yes",
+}
+WIKIDATA_PROPERTY_LABEL_BY_ID = {
+    "P17": "country",
+    "P27": "country of citizenship",
+    "P31": "instance of",
+    "P36": "capital",
+    "P106": "occupation",
+    "P112": "founder",
+    "P361": "part of",
+    "P495": "country of origin",
+    "P527": "has part(s)",
+    "P856": "official website",
 }
 
 
@@ -515,6 +538,7 @@ def _fact_candidates_for_target(target: Mapping[str, Any]) -> tuple[dict[str, An
                 "builder": WORKFLOW,
                 "gap_reason": target.get("gap_reason"),
                 "decision_rule": _mapping(target.get("route")).get("decision_rule"),
+                **_structured_fact_metadata(hit),
             },
         })
         if len(candidates) >= 3:
@@ -730,6 +754,9 @@ def _fact_subject(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
     parsed_description_subject = _extract_description_subject(str(hit.get("text", "")))
     if parsed_description_subject and _matches_target_entity(parsed_description_subject, target):
         return parsed_description_subject
+    parsed_structured_subject = _structured_fact_part(hit, "subject")
+    if parsed_structured_subject and _matches_target_entity(parsed_structured_subject, target):
+        return parsed_structured_subject
     return _clean_text(_first_nonempty(_target_entity_candidates(target)))
 
 
@@ -755,6 +782,9 @@ def _fact_property_hint(target: Mapping[str, Any], hit: Mapping[str, Any]) -> st
     source_property = _property_hint_from_source(hit)
     if source_property:
         return source_property
+    structured_property = _structured_property_hint(hit)
+    if structured_property:
+        return structured_property
     if DESCRIBED_AS_RE.search(str(hit.get("text", ""))):
         return "description"
     question_type = _clean_text(_mapping(target.get("statement")).get("question_type"))
@@ -768,6 +798,9 @@ def _fact_value(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
     alignment = _mapping(target.get("alignment"))
     claim_numbers = {_normalize_slot_value(item) for item in _sequence(alignment.get("claim_numbers"))}
     model_answer = _normalize_slot_value(_mapping(target.get("statement")).get("model_answer"))
+    structured_value = _structured_fact_part(hit, "value")
+    if structured_value:
+        return structured_value
     for value in _sequence(alignment.get("evidence_numbers")):
         text = _clean_text(value)
         normalized = _normalize_slot_value(text)
@@ -822,6 +855,112 @@ def _property_hint_from_source(hit: Mapping[str, Any]) -> str:
     if tail == "description":
         return "description"
     return ""
+
+
+def _structured_property_hint(hit: Mapping[str, Any]) -> str:
+    property_label = _structured_fact_part(hit, "property")
+    property_id = _source_property_id(hit)
+    if property_label and property_id:
+        return f"{property_label}:{property_id}"
+    if property_label:
+        return property_label
+    return property_id
+
+
+def _structured_fact_metadata(hit: Mapping[str, Any]) -> dict[str, str]:
+    reference_time = _structured_fact_part(hit, "year")
+    if reference_time:
+        return {"reference_time": reference_time}
+    return {}
+
+
+def _structured_fact_part(hit: Mapping[str, Any], key: str) -> str:
+    return _clean_text(_structured_fact_parts(hit).get(key))
+
+
+def _structured_fact_parts(hit: Mapping[str, Any]) -> dict[str, str]:
+    source = str(hit.get("source", "")).strip()
+    source_key = source.casefold()
+    text = str(hit.get("text", ""))
+    metadata = _mapping(hit.get("metadata"))
+    if source_key.startswith("worldbank:") or WORLDBANK_STAT_RE.search(text):
+        match = WORLDBANK_STAT_RE.search(text)
+        if match is not None:
+            return {
+                "subject": _clean_structured_part(match.group("subject")),
+                "property": _clean_structured_part(match.group("property")),
+                "value": _clean_structured_part(match.group("value")),
+                "year": _clean_structured_part(match.group("year")),
+            }
+        return {
+            "subject": _clean_structured_part(metadata.get("country_name")),
+            "property": _clean_structured_part(metadata.get("indicator_name")),
+            "value": _clean_structured_part(metadata.get("indicator_value")),
+            "year": _clean_structured_part(metadata.get("year") or metadata.get("date")),
+        }
+    if source_key.startswith("wikidata:") or WIKIDATA_STRUCTURED_RE.search(text):
+        subject = _clean_structured_part(_first_nonempty((
+            metadata.get("subject_label"),
+            metadata.get("subject"),
+            metadata.get("entity_name"),
+            metadata.get("entity"),
+        )))
+        property_label = _clean_structured_part(_first_nonempty((
+            metadata.get("statement_property_label"),
+            metadata.get("property_label"),
+        )))
+        value = _clean_structured_part(_first_nonempty((
+            metadata.get("object_label"),
+            metadata.get("value"),
+            metadata.get("answer"),
+        )))
+        if subject and property_label and value:
+            return {"subject": subject, "property": property_label, "value": value}
+        match = WIKIDATA_STRUCTURED_RE.search(text)
+        if match is None:
+            return {}
+        parsed_property, parsed_value = _split_wikidata_relation(
+            _clean_structured_part(match.group("relation")),
+            _source_property_id(hit),
+        )
+        return {
+            "subject": subject or _clean_structured_part(match.group("subject")),
+            "property": property_label or parsed_property,
+            "value": value or parsed_value,
+        }
+    return {}
+
+
+def _split_wikidata_relation(relation: str, property_id: str) -> tuple[str, str]:
+    relation = _clean_structured_part(relation)
+    property_label = WIKIDATA_PROPERTY_LABEL_BY_ID.get(property_id, "")
+    if property_label:
+        prefix = property_label.casefold()
+        relation_key = relation.casefold()
+        if relation_key == prefix:
+            return property_label, ""
+        if relation_key.startswith(prefix + " "):
+            return property_label, _clean_structured_part(relation[len(property_label):])
+    parts = relation.split()
+    if len(parts) < 2:
+        return relation, ""
+    return parts[0], " ".join(parts[1:])
+
+
+def _source_property_id(hit: Mapping[str, Any]) -> str:
+    source = str(hit.get("source", "")).strip()
+    parts = source.split(":")
+    if len(parts) >= 2 and parts[0].casefold() == "worldbank":
+        return parts[1].strip()
+    if len(parts) >= 3 and parts[0].casefold() == "wikidata":
+        property_id = parts[2].strip()
+        if re.fullmatch(r"P\d+", property_id):
+            return property_id
+    return ""
+
+
+def _clean_structured_part(value: Any) -> str:
+    return re.sub(r"\s+", " ", _clean_text(value)).strip(" \t\r\n.,;:!?\"'")
 
 
 def _extract_description_value(text: str) -> str:

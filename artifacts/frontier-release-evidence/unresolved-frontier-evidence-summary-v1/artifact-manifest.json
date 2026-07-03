@@ -109,8 +109,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "../../improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/retrieval-semantic-gap-review-workflow.json",
-      "sha256": "1ca79868ede5ca1b7c11722823393d21a629cba10b087c0a1653da622dc4b41c",
-      "size_bytes": 7775
+      "sha256": "2f80c9ccc73fa077181eeeddaaf7cce0622ea29477383a86cee197421a8a6a54",
+      "size_bytes": 7863
     },
     "source_family_coverage_audit_1": {
       "exists": true,
@@ -125,8 +125,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "f24293f082df0141072f56b95e30aa154ee8e490290a1d4b349259cb749c7537",
-      "size_bytes": 25068
+      "sha256": "5131b06b78f91924120ec8d2abe18603c96767ed3f1bb6f6d4580cccbff6c965",
+      "size_bytes": 25123
     },
     "unresolved_queue": {
       "exists": true,
@@ -164,13 +164,14 @@
     "model": "smollm2-l80",
     "next_action_count": 1,
     "semantic_gap_review": "diagnostic_verified_records_sidecar",
-    "semantic_gap_review_approved_source_document_count": 5,
+    "semantic_gap_review_approved_source_document_count": 7,
     "semantic_gap_review_promoted_workflow_count": 1,
     "semantic_gap_review_status": "promote",
     "semantic_gap_review_workflow_count": 1,
     "source": "frontier-v4",
     "source_family_acquisition_status": "covered",
     "status": "needs_evidence",
+    "structured_fact_parsing": "worldbank_wikidata",
     "unresolved_target_count": 88,
     "workflow": "unresolved_frontier_evidence_summary",
     "world_model_rule_audit_adjusted_remaining_task_count": 0,

@@ -5,39 +5,39 @@
       "file_count": 1,
       "kind": "file",
       "path": "covered-facts-scores.json",
-      "sha256": "49b998e797d7d6022828aa8336bd459539a6be66daa94a86be20e1cbf38e36a4",
-      "size_bytes": 16060
+      "sha256": "0405d30a04fcd455943f7a2aa60ef1500e77bc71ea4462d4589b6e36b39e5ec1",
+      "size_bytes": 22159
     },
     "qa_corpus": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../source-family-qa/source-family-qa-corpus.json",
-      "sha256": "2d339870b19e1f927dc91bc1ef2d20254278a44a204eb6ddd16d5d618bb86967",
-      "size_bytes": 6561
+      "sha256": "ae87775ebf41bd95cbf355e15271afa29e56de6303098bda86ec2a7f44980ea0",
+      "size_bytes": 8584
     },
     "route_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "structured-qa-route-summary.json",
-      "sha256": "f81fcb4de922b6ec17625b4dfc1f572814203bd89836ce4a03b408e426ea9b29",
-      "size_bytes": 8337
+      "sha256": "c802eaca4281deea9debf10259df2fa381337e6e58e13b6d92f5b2e100f4022f",
+      "size_bytes": 10664
     },
     "verified_records_jsonl": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "verified-records.jsonl",
-      "sha256": "8ee8769fc7c7a8017362b2dfaece1c614b6fc65a1d04f8e606b0cccf0775fd03",
-      "size_bytes": 44111
+      "sha256": "3eae13ba1abb6eb07080a5e976bcbadf23d08a7f0360a7c8facd09b7b54c6cf0",
+      "size_bytes": 60726
     },
     "verifier_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "structured-qa-verifier-report.json",
-      "sha256": "c958dd057e36513f5684320ad3e2af4f80b2a6a46d393189d9a54e535a4aa8e4",
+      "sha256": "55f1bfa0e8cdcd0ccf1682a0aa9de4e83d78ef7b0444b96aab014921d933d3c8",
       "size_bytes": 17885
     }
   },
@@ -47,10 +47,10 @@
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "fact_group_count": 1,
-    "n_false": 5,
-    "n_records": 10,
-    "n_true": 5,
+    "fact_group_count": 3,
+    "n_false": 7,
+    "n_records": 14,
+    "n_true": 7,
     "parent_workflow": "retrieval_semantic_gap_review_workflow",
     "promotes_covered_facts_route": true,
     "provider_count": 1,
@@ -59,6 +59,7 @@
     "signal": "truth_proj",
     "source_family_count": 1,
     "status": "promote",
+    "structured_fact_parsing": "worldbank_wikidata",
     "structured_qa_decision_accuracy": 1.0,
     "structured_qa_false_refuted_rate": 1.0,
     "structured_qa_false_supported_rate": 0.0,

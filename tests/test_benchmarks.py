@@ -8411,6 +8411,149 @@ def test_retrieval_semantic_gap_handoff_extracts_description_fact_candidates():
     assert review_records["record-10"]["skip_reason"] == "subject_not_in_evidence_span"
 
 
+def test_retrieval_semantic_gap_handoff_extracts_worldbank_stat_fact_from_text():
+    module = importlib.import_module("benchmarks.build_retrieval_semantic_gap_handoff")
+    review_module = importlib.import_module("benchmarks.build_alignment_fact_review_corpus")
+
+    payload = module.build_retrieval_semantic_gap_handoff(
+        [
+            {
+                "record_index": 190,
+                "label": 1,
+                "record": {
+                    "claim": {
+                        "text": "The population of Afghanistan is 330 million.",
+                        "claim_id": "afghanistan-population",
+                        "metadata": {},
+                    },
+                    "metadata": {
+                        "statement": {
+                            "question": "What is the population of the country?",
+                            "answer": "330 million",
+                            "question_type": "quantity",
+                        },
+                    },
+                    "final": {
+                        "status": "insufficient_evidence",
+                        "metadata": {
+                            "decision_rule": "low_overlap",
+                            "evidence_alignment": {
+                                "records": [
+                                    {
+                                        "claim_numbers": ["330"],
+                                        "evidence_numbers": ["42647492", "2024"],
+                                        "evidence_entities": ["Afghanistan"],
+                                        "issue_codes": ["missing_claim_number"],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                    "route": {
+                        "selected_route": "retrieval_groundedness",
+                        "selected_verifier": "GroundednessVerifier",
+                        "used_retrieval": True,
+                    },
+                    "retrieval_hits": [
+                        {
+                            "text": (
+                                "World Bank official statistics data for population country queries: "
+                                "Afghanistan had Population, total of 42,647,492 in 2024. "
+                                "Indicator code SP.POP.TOTL. Source: World Development Indicators."
+                            ),
+                            "source": "worldbank:SP.POP.TOTL:AFG:2024",
+                            "score": 1.0,
+                            "metadata": {
+                                "provider": "worldbank",
+                                "source_family": "official_statistics",
+                            },
+                        },
+                    ],
+                },
+            },
+        ],
+    )
+    candidate = payload["fact_candidates"][0]
+    review_payload = review_module.build_alignment_fact_review_corpus(payload["fact_candidates"])
+
+    assert payload["summary"]["fact_candidate_count"] == 1
+    assert candidate["subject"] == "Afghanistan"
+    assert candidate["property_hint"] == "Population, total:SP.POP.TOTL"
+    assert candidate["value"] == "42,647,492"
+    assert candidate["metadata"]["reference_time"] == "2024"
+    assert review_payload["corpus"]["summary"]["accepted_document_count"] == 1
+
+
+def test_retrieval_semantic_gap_handoff_extracts_wikidata_structured_fact_from_text():
+    module = importlib.import_module("benchmarks.build_retrieval_semantic_gap_handoff")
+    review_module = importlib.import_module("benchmarks.build_alignment_fact_review_corpus")
+
+    payload = module.build_retrieval_semantic_gap_handoff(
+        [
+            {
+                "record_index": 41,
+                "label": 1,
+                "record": {
+                    "claim": {
+                        "text": "Elon Musk is Canadian.",
+                        "claim_id": "elon-musk-canadian",
+                        "metadata": {},
+                    },
+                    "metadata": {
+                        "statement": {
+                            "question": "What is Elon Musk's country of citizenship?",
+                            "answer": "Canada",
+                            "question_type": "location",
+                        },
+                    },
+                    "final": {
+                        "status": "insufficient_evidence",
+                        "metadata": {
+                            "decision_rule": "low_overlap",
+                            "evidence_alignment": {
+                                "records": [
+                                    {
+                                        "claim_entities": ["Elon Musk", "Canada"],
+                                        "evidence_entities": ["Elon Musk", "South Africa"],
+                                        "issue_codes": ["missing_claim_entity"],
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                    "route": {
+                        "selected_route": "retrieval_groundedness",
+                        "selected_verifier": "GroundednessVerifier",
+                        "used_retrieval": True,
+                    },
+                    "retrieval_hits": [
+                        {
+                            "text": (
+                                "According to Wikidata structured data, Elon Musk has "
+                                "country of citizenship South Africa."
+                            ),
+                            "source": "wikidata:Q317521:P27:Q258",
+                            "score": 1.0,
+                            "metadata": {
+                                "provider": "wikidata",
+                                "source_family": "reference",
+                            },
+                        },
+                    ],
+                },
+            },
+        ],
+    )
+    candidate = payload["fact_candidates"][0]
+    review_payload = review_module.build_alignment_fact_review_corpus(payload["fact_candidates"])
+
+    assert payload["summary"]["fact_candidate_count"] == 1
+    assert candidate["subject"] == "Elon Musk"
+    assert candidate["property_hint"] == "country of citizenship:P27"
+    assert candidate["value"] == "South Africa"
+    assert review_payload["corpus"]["summary"]["accepted_document_count"] == 1
+
+
 def test_retrieval_semantic_gap_review_workflow_runs_covered_fact_route(tmp_path):
     module = importlib.import_module("benchmarks.run_retrieval_semantic_gap_review_workflow")
     registry_module = importlib.import_module("eigentruth.registry")

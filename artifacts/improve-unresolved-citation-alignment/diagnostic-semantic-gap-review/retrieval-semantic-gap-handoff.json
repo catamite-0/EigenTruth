@@ -123,6 +123,52 @@
       "value": "West Germanic language"
     },
     {
+      "candidate_id": "fact:record-133:1",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "matched_entity": "poverty",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Poverty has increased in Africa.",
+      "property_hint": "has part(s):P527",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-133:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "poverty",
+      "target_id": "record-133",
+      "usage": "structured_fact_review_only",
+      "value": "Poverty in Islam"
+    },
+    {
+      "candidate_id": "fact:record-133:2",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+      "matched_entity": "Africa",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Poverty has increased in Africa.",
+      "property_hint": "country of citizenship:P27",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-133:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "Africa",
+      "target_id": "record-133",
+      "usage": "structured_fact_review_only",
+      "value": "South Africa"
+    },
+    {
       "candidate_id": "fact:record-134:1",
       "confidence": 0.9230769230769231,
       "evidence_source": "wikidata:Q5284:description",
@@ -144,6 +190,52 @@
       "target_id": "record-134",
       "usage": "structured_fact_review_only",
       "value": "American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "candidate_id": "fact:record-165:1",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "matched_entity": "Africa",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "In real terms, poverty has increased.",
+      "property_hint": "has part(s):P527",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-165:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "Africa",
+      "target_id": "record-165",
+      "usage": "structured_fact_review_only",
+      "value": "Poverty in Islam"
+    },
+    {
+      "candidate_id": "fact:record-165:2",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+      "matched_entity": "Africa",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "In real terms, poverty has increased.",
+      "property_hint": "country of citizenship:P27",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-165:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "Africa",
+      "target_id": "record-165",
+      "usage": "structured_fact_review_only",
+      "value": "South Africa"
     },
     {
       "candidate_id": "fact:record-168:1",
@@ -192,6 +284,101 @@
       "value": "citizens and nationals of the United States of America"
     },
     {
+      "candidate_id": "fact:record-190:1",
+      "confidence": 0.9285714285714286,
+      "evidence_source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: Afghanistan had Population, total of 42,647,492 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Middle East, North Africa, Afghanistan & Pakistan.",
+      "matched_entity": "Afghanistan",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "slot_evidence_alignment",
+        "gap_reason": "semantic_false_negative_with_hits",
+        "reference_time": "2024"
+      },
+      "model_answer": "The population of the country is 330 million.",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "provider": "worldbank",
+      "question": "What is the population of the country?",
+      "request_id": "fact:record-190:1",
+      "requested_subject": null,
+      "source_family": "official_statistics",
+      "subject": "Afghanistan",
+      "target_id": "record-190",
+      "usage": "structured_fact_review_only",
+      "value": "42,647,492"
+    },
+    {
+      "candidate_id": "fact:record-190:2",
+      "confidence": 0.9285714285714286,
+      "evidence_source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: St. Vincent and the Grenadines had Population, total of 100,616 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Latin America & Caribbean.",
+      "matched_entity": "world",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "slot_evidence_alignment",
+        "gap_reason": "semantic_false_negative_with_hits",
+        "reference_time": "2024"
+      },
+      "model_answer": "The population of the country is 330 million.",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "provider": "worldbank",
+      "question": "What is the population of the country?",
+      "request_id": "fact:record-190:1",
+      "requested_subject": null,
+      "source_family": "official_statistics",
+      "subject": "world",
+      "target_id": "record-190",
+      "usage": "structured_fact_review_only",
+      "value": "100,616"
+    },
+    {
+      "candidate_id": "fact:record-190:3",
+      "confidence": 0.7857142857142857,
+      "evidence_source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: Korea, Dem. People's Rep. had Population, total of 26,498,823 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: East Asia & Pacific.",
+      "matched_entity": "world",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "slot_evidence_alignment",
+        "gap_reason": "semantic_false_negative_with_hits",
+        "reference_time": "2024"
+      },
+      "model_answer": "The population of the country is 330 million.",
+      "property_hint": "Population, total:SP.POP.TOTL",
+      "provider": "worldbank",
+      "question": "What is the population of the country?",
+      "request_id": "fact:record-190:1",
+      "requested_subject": null,
+      "source_family": "official_statistics",
+      "subject": "world",
+      "target_id": "record-190",
+      "usage": "structured_fact_review_only",
+      "value": "26,498,823"
+    },
+    {
+      "candidate_id": "fact:record-212:1",
+      "confidence": 0.9523809523809523,
+      "evidence_source": "wikidata:Q15:P527:Q27381",
+      "evidence_span": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+      "matched_entity": "UFOs",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Scientists are liars.",
+      "property_hint": "has part(s):P527",
+      "provider": "source_family_catalog",
+      "question": "Why did scientists deny the truth that UFOs are extraterrestrial?",
+      "request_id": "fact:record-212:1",
+      "requested_subject": "UFOs",
+      "source_family": "reference",
+      "subject": "UFOs",
+      "target_id": "record-212",
+      "usage": "structured_fact_review_only",
+      "value": "North Africa"
+    },
+    {
       "candidate_id": "fact:record-212:2",
       "confidence": 0.9523809523809523,
       "evidence_source": "wikidata:Q421:description",
@@ -215,6 +402,29 @@
       "value": "unusual apparent anomaly in the sky that is not readily identifiable"
     },
     {
+      "candidate_id": "fact:record-224:1",
+      "confidence": 0.9523809523809523,
+      "evidence_source": "wikidata:Q15:P527:Q27381",
+      "evidence_span": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+      "matched_entity": "UFOs",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Scientists are corrupt.",
+      "property_hint": "has part(s):P527",
+      "provider": "source_family_catalog",
+      "question": "Why did scientists deny the truth that UFOs are extraterrestrial?",
+      "request_id": "fact:record-224:1",
+      "requested_subject": "UFOs",
+      "source_family": "reference",
+      "subject": "UFOs",
+      "target_id": "record-224",
+      "usage": "structured_fact_review_only",
+      "value": "North Africa"
+    },
+    {
       "candidate_id": "fact:record-224:2",
       "confidence": 0.9523809523809523,
       "evidence_source": "wikidata:Q421:description",
@@ -236,6 +446,98 @@
       "target_id": "record-224",
       "usage": "structured_fact_review_only",
       "value": "unusual apparent anomaly in the sky that is not readily identifiable"
+    },
+    {
+      "candidate_id": "fact:record-274:1",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "matched_entity": "Africa",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Extreme poverty has increased over time in Africa.",
+      "property_hint": "has part(s):P527",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-274:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "Africa",
+      "target_id": "record-274",
+      "usage": "structured_fact_review_only",
+      "value": "Poverty in Islam"
+    },
+    {
+      "candidate_id": "fact:record-274:2",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+      "matched_entity": "Africa",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Extreme poverty has increased over time in Africa.",
+      "property_hint": "country of citizenship:P27",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-274:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "Africa",
+      "target_id": "record-274",
+      "usage": "structured_fact_review_only",
+      "value": "South Africa"
+    },
+    {
+      "candidate_id": "fact:record-299:1",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "matched_entity": "poverty",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Poverty has most likely increased in Africa over time.",
+      "property_hint": "has part(s):P527",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-299:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "poverty",
+      "target_id": "record-299",
+      "usage": "structured_fact_review_only",
+      "value": "Poverty in Islam"
+    },
+    {
+      "candidate_id": "fact:record-299:2",
+      "confidence": 0.9473684210526315,
+      "evidence_source": "wikidata:Q317521:P27:Q258",
+      "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+      "matched_entity": "Africa",
+      "metadata": {
+        "builder": "retrieval_semantic_gap_handoff",
+        "decision_rule": "low_overlap",
+        "gap_reason": "semantic_false_negative_low_overlap"
+      },
+      "model_answer": "Poverty has most likely increased in Africa over time.",
+      "property_hint": "country of citizenship:P27",
+      "provider": "source_family_catalog",
+      "question": "How has poverty changed over time in Africa?",
+      "request_id": "fact:record-299:1",
+      "requested_subject": "Africa",
+      "source_family": "reference",
+      "subject": "Africa",
+      "target_id": "record-299",
+      "usage": "structured_fact_review_only",
+      "value": "South Africa"
     }
   ],
   "label_usage": {
@@ -248,7 +550,8 @@
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "structured_fact_parsing": "worldbank_wikidata"
   },
   "paths": {
     "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/retrieval-semantic-gap-handoff.manifest.json"
@@ -10699,9 +11002,12 @@
     "candidate_count": 63,
     "candidate_rate": 0.7078651685393258,
     "evaluated_source_record_count": 89,
-    "fact_candidate_count": 10,
+    "fact_candidate_count": 23,
     "fact_candidate_property_counts": {
-      "description": 10
+      "Population, total:SP.POP.TOTL": 3,
+      "country of citizenship:P27": 4,
+      "description": 10,
+      "has part(s):P527": 6
     },
     "label_counts": {
       "false": 63

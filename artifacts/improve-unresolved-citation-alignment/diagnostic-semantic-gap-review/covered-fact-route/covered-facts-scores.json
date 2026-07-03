@@ -28,10 +28,18 @@
     0,
     1,
     0,
+    1,
+    0,
+    1,
+    0,
     1
   ],
   "scores": {
     "truth_proj": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
       0.0,
       0.0,
       0.0,
@@ -302,10 +310,138 @@
       "text": "What does Wikidata list as the description for English? 2020 single by Sam Smith"
     },
     {
+      "answer": "Poverty in Islam",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:1",
+        "alignment_source_document_id": "alignment-approved:5",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:p527",
+        "fact_type": "P527",
+        "known_answers": [
+          "Poverty in Islam"
+        ],
+        "label_generation": "source_family_known_answer",
+        "provider": "wikidata",
+        "review_id": "review:98e52dac70c9ba47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q10294:P527:Q125727758",
+        "source_family": "reference",
+        "source_index": 4,
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)",
+        "statement_style": "qa",
+        "subject": "poverty",
+        "title": "Reviewed alignment fact: poverty has part(s)"
+      },
+      "question": "What does Wikidata list as the has part(s) for poverty?",
+      "text": "What does Wikidata list as the has part(s) for poverty? Poverty in Islam"
+    },
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:1",
+        "alignment_source_document_id": "alignment-approved:5",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:p527",
+        "fact_type": "P527",
+        "false_answer_fact_group": "wikidata:reference:description",
+        "false_answer_provider": "wikidata",
+        "false_answer_source": "wikidata:Q99644917:description",
+        "false_answer_source_family": "reference",
+        "known_answers": [
+          "Poverty in Islam"
+        ],
+        "label_generation": "source_family_known_answer_mismatch",
+        "provider": "wikidata",
+        "review_id": "review:98e52dac70c9ba47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "source_index": 4,
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)",
+        "statement_style": "qa",
+        "subject": "poverty",
+        "title": "Reviewed alignment fact: poverty has part(s)"
+      },
+      "question": "What does Wikidata list as the has part(s) for poverty?",
+      "text": "What does Wikidata list as the has part(s) for poverty? 2020 single by Sam Smith"
+    },
+    {
+      "answer": "South Africa",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:2",
+        "alignment_source_document_id": "alignment-approved:6",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:p27",
+        "fact_type": "P27",
+        "known_answers": [
+          "South Africa"
+        ],
+        "label_generation": "source_family_known_answer",
+        "provider": "wikidata",
+        "review_id": "review:c14d2eda98989026",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q317521:P27:Q258",
+        "source_family": "reference",
+        "source_index": 5,
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship",
+        "statement_style": "qa",
+        "subject": "Africa",
+        "title": "Reviewed alignment fact: Africa country of citizenship"
+      },
+      "question": "What does Wikidata list as the country of citizenship for Africa?",
+      "text": "What does Wikidata list as the country of citizenship for Africa? South Africa"
+    },
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:2",
+        "alignment_source_document_id": "alignment-approved:6",
+        "claim_template_id": "qa",
+        "extraction_rule": "wikidata_subject_property_value",
+        "fact_group": "wikidata:reference:p27",
+        "fact_type": "P27",
+        "false_answer_fact_group": "wikidata:reference:description",
+        "false_answer_provider": "wikidata",
+        "false_answer_source": "wikidata:Q99644917:description",
+        "false_answer_source_family": "reference",
+        "known_answers": [
+          "South Africa"
+        ],
+        "label_generation": "source_family_known_answer_mismatch",
+        "provider": "wikidata",
+        "review_id": "review:c14d2eda98989026",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "source_index": 5,
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship",
+        "statement_style": "qa",
+        "subject": "Africa",
+        "title": "Reviewed alignment fact: Africa country of citizenship"
+      },
+      "question": "What does Wikidata list as the country of citizenship for Africa?",
+      "text": "What does Wikidata list as the country of citizenship for Africa? 2020 single by Sam Smith"
+    },
+    {
       "answer": "unusual apparent anomaly in the sky that is not readily identifiable",
       "metadata": {
         "alignment_candidate_id": "fact:record-212:2",
-        "alignment_source_document_id": "alignment-approved:5",
+        "alignment_source_document_id": "alignment-approved:7",
         "claim_template_id": "qa",
         "extraction_rule": "wikidata_subject_property_value",
         "fact_group": "wikidata:reference:description",
@@ -321,7 +457,7 @@
         "reviewer": "rule_based_alignment_fact_reviewer_v1",
         "source": "wikidata:Q421:description",
         "source_family": "reference",
-        "source_index": 4,
+        "source_index": 6,
         "statement_property": "description",
         "statement_property_label": "description",
         "statement_style": "qa",
@@ -335,7 +471,7 @@
       "answer": "2020 single by Sam Smith",
       "metadata": {
         "alignment_candidate_id": "fact:record-212:2",
-        "alignment_source_document_id": "alignment-approved:5",
+        "alignment_source_document_id": "alignment-approved:7",
         "claim_template_id": "qa",
         "extraction_rule": "wikidata_subject_property_value",
         "fact_group": "wikidata:reference:description",
@@ -355,7 +491,7 @@
         "reviewer": "rule_based_alignment_fact_reviewer_v1",
         "source": "wikidata:Q99644917:description",
         "source_family": "reference",
-        "source_index": 4,
+        "source_index": 6,
         "statement_property": "description",
         "statement_property_label": "description",
         "statement_style": "qa",
@@ -377,20 +513,40 @@
         "n_true": 5,
         "provider": "wikidata",
         "source_family": "reference"
+      },
+      "wikidata:reference:p27": {
+        "fact_group": "wikidata:reference:p27",
+        "fact_type": "P27",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "reference"
+      },
+      "wikidata:reference:p527": {
+        "fact_group": "wikidata:reference:p527",
+        "fact_type": "P527",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "reference"
       }
     },
     "by_provider": {
-      "wikidata": 5
+      "wikidata": 7
     },
     "by_source_family": {
-      "reference": 5
+      "reference": 7
     },
-    "fact_group_count": 1,
-    "n_false": 5,
-    "n_records": 10,
+    "fact_group_count": 3,
+    "n_false": 7,
+    "n_records": 14,
     "n_skipped_false_answer": 0,
-    "n_source_documents": 5,
-    "n_true": 5,
+    "n_source_documents": 7,
+    "n_true": 7,
     "provider_count": 1,
     "source_family_count": 1
   }

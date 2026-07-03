@@ -107,10 +107,140 @@
       "text": "What does the aligned evidence say is the description for English? West Germanic language"
     },
     {
+      "answer": "Poverty in Islam",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:1",
+        "alignment_review_document_id": "alignment-review:5",
+        "confidence": 0.9473684210526315,
+        "evidence_source": "wikidata:Q10294:P527:Q125727758",
+        "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "has part(s):P527",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)",
+        "subject": "poverty",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the has part(s) for poverty?",
+      "source": "wikidata:Q10294:P527:Q125727758",
+      "text": "What does the aligned evidence say is the has part(s) for poverty? Poverty in Islam"
+    },
+    {
+      "answer": "South Africa",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:2",
+        "alignment_review_document_id": "alignment-review:6",
+        "confidence": 0.9473684210526315,
+        "evidence_source": "wikidata:Q317521:P27:Q258",
+        "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "country of citizenship:P27",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship",
+        "subject": "Africa",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the country of citizenship for Africa?",
+      "source": "wikidata:Q317521:P27:Q258",
+      "text": "What does the aligned evidence say is the country of citizenship for Africa? South Africa"
+    },
+    {
+      "answer": "42,647,492",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-190:1",
+        "alignment_review_document_id": "alignment-review:7",
+        "confidence": 0.9285714285714286,
+        "evidence_source": "worldbank:SP.POP.TOTL:AFG:2024",
+        "evidence_span": "World Bank official statistics data for population country queries: Afghanistan had Population, total of 42,647,492 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Middle East, North Africa, Afghanistan & Pakistan.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "Population, total:SP.POP.TOTL",
+        "provider": "worldbank",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "official_statistics",
+        "statement_property": "SP.POP.TOTL",
+        "statement_property_label": "Population, total",
+        "subject": "Afghanistan",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the Population, total for Afghanistan?",
+      "source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "text": "What does the aligned evidence say is the Population, total for Afghanistan? 42,647,492"
+    },
+    {
+      "answer": "100,616",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-190:2",
+        "alignment_review_document_id": "alignment-review:8",
+        "confidence": 0.9285714285714286,
+        "evidence_source": "worldbank:SP.POP.TOTL:VCT:2024",
+        "evidence_span": "World Bank official statistics data for population country queries: St. Vincent and the Grenadines had Population, total of 100,616 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Latin America & Caribbean.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "Population, total:SP.POP.TOTL",
+        "provider": "worldbank",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "official_statistics",
+        "statement_property": "SP.POP.TOTL",
+        "statement_property_label": "Population, total",
+        "subject": "world",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the Population, total for world?",
+      "source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "text": "What does the aligned evidence say is the Population, total for world? 100,616"
+    },
+    {
+      "answer": "26,498,823",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-190:3",
+        "alignment_review_document_id": "alignment-review:9",
+        "confidence": 0.7857142857142857,
+        "evidence_source": "worldbank:SP.POP.TOTL:PRK:2024",
+        "evidence_span": "World Bank official statistics data for population country queries: Korea, Dem. People's Rep. had Population, total of 26,498,823 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: East Asia & Pacific.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "Population, total:SP.POP.TOTL",
+        "provider": "worldbank",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "official_statistics",
+        "statement_property": "SP.POP.TOTL",
+        "statement_property_label": "Population, total",
+        "subject": "world",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the Population, total for world?",
+      "source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "text": "What does the aligned evidence say is the Population, total for world? 26,498,823"
+    },
+    {
       "answer": "unusual apparent anomaly in the sky that is not readily identifiable",
       "metadata": {
         "alignment_candidate_id": "fact:record-212:2",
-        "alignment_review_document_id": "alignment-review:5",
+        "alignment_review_document_id": "alignment-review:10",
         "confidence": 0.9523809523809523,
         "evidence_source": "wikidata:Q421:description",
         "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
@@ -149,31 +279,36 @@
   },
   "status": "ready_for_review",
   "summary": {
-    "accepted_document_count": 5,
+    "accepted_document_count": 10,
     "by_property_hint": {
-      "description": 5
+      "Population, total:SP.POP.TOTL": 3,
+      "country of citizenship:P27": 1,
+      "description": 5,
+      "has part(s):P527": 1
     },
     "by_provider": {
-      "source_family_catalog": 5
+      "source_family_catalog": 7,
+      "worldbank": 3
     },
     "by_source_family": {
-      "reference": 5
+      "official_statistics": 3,
+      "reference": 7
     },
-    "input_candidate_count": 10,
+    "input_candidate_count": 23,
     "skipped": {
       "answer_value_matches_model_answer": 0,
-      "duplicate_candidate": 4,
+      "duplicate_candidate": 8,
       "generic_value": 0,
       "invalid_row": 0,
       "low_confidence": 0,
       "missing_required_fields": 0,
       "non_review_usage": 0,
       "property_value_invalid": 0,
-      "subject_not_in_evidence_span": 1,
+      "subject_not_in_evidence_span": 5,
       "value_equals_subject": 0,
       "value_not_in_evidence_span": 0
     },
-    "skipped_count": 5,
-    "unique_candidate_count": 10
+    "skipped_count": 13,
+    "unique_candidate_count": 23
   }
 }

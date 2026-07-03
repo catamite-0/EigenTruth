@@ -6,7 +6,8 @@
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "structured_fact_parsing": "worldbank_wikidata"
   },
   "paths": {
     "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/alignment-fact-review.manifest.json",
@@ -21,32 +22,37 @@
   },
   "status": "ready_for_review",
   "summary": {
-    "accepted_document_count": 5,
+    "accepted_document_count": 10,
     "by_property_hint": {
-      "description": 5
+      "Population, total:SP.POP.TOTL": 3,
+      "country of citizenship:P27": 1,
+      "description": 5,
+      "has part(s):P527": 1
     },
     "by_provider": {
-      "source_family_catalog": 5
+      "source_family_catalog": 7,
+      "worldbank": 3
     },
     "by_source_family": {
-      "reference": 5
+      "official_statistics": 3,
+      "reference": 7
     },
-    "input_candidate_count": 10,
+    "input_candidate_count": 23,
     "skipped": {
       "answer_value_matches_model_answer": 0,
-      "duplicate_candidate": 4,
+      "duplicate_candidate": 8,
       "generic_value": 0,
       "invalid_row": 0,
       "low_confidence": 0,
       "missing_required_fields": 0,
       "non_review_usage": 0,
       "property_value_invalid": 0,
-      "subject_not_in_evidence_span": 1,
+      "subject_not_in_evidence_span": 5,
       "value_equals_subject": 0,
       "value_not_in_evidence_span": 0
     },
-    "skipped_count": 5,
-    "unique_candidate_count": 10
+    "skipped_count": 13,
+    "unique_candidate_count": 23
   },
   "workflow": "alignment_fact_review_corpus_builder"
 }

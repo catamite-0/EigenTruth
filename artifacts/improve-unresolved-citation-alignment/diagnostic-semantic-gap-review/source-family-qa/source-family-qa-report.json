@@ -6,7 +6,8 @@
     "closure_action": "improve_unresolved_citation_alignment",
     "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "parent_workflow": "retrieval_semantic_gap_review_workflow"
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "structured_fact_parsing": "worldbank_wikidata"
   },
   "paths": {
     "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/source-family-qa/artifact-manifest.json",
@@ -22,14 +23,14 @@
   "status": "ready",
   "summary": {
     "by_provider": {
-      "wikidata": 5
+      "wikidata": 7
     },
     "by_source_family": {
-      "reference": 5
+      "reference": 7
     },
-    "n_candidate_documents": 5,
-    "n_documents": 5,
-    "n_source_documents": 5,
+    "n_candidate_documents": 7,
+    "n_documents": 7,
+    "n_source_documents": 7,
     "skipped": {
       "duplicates": 0,
       "missing_fields": 0,
