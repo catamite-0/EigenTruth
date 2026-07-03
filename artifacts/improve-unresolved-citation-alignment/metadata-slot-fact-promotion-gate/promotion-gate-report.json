@@ -1,0 +1,586 @@
+{
+  "approved_source_documents": {
+    "corpus_type": "alignment_review_approved_source_documents",
+    "description": "Approved alignment fact-review source documents. These are inputs for source-family structured QA corpus construction, not a broad route promotion by themselves.",
+    "documents": [
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+          "alignment_source_document_id": "alignment-approved:1",
+          "confidence": 0.871818,
+          "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+          "provider": "wikidata",
+          "review_id": "review:f824d0d0b4337e82",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-03T00:00:00+00:00",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q1860:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "structured_evidence_slots": {
+            "statement_property": [
+              "description"
+            ],
+            "statement_property_label": [
+              "description"
+            ],
+            "subject": [
+              "English"
+            ],
+            "value": [
+              "West Germanic language"
+            ]
+          },
+          "subject": "English",
+          "value": "West Germanic language"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "title": "Reviewed alignment fact: English description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:7efecb96df3cdbac",
+          "alignment_source_document_id": "alignment-approved:2",
+          "confidence": 0.843846,
+          "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+          "provider": "wikidata",
+          "review_id": "review:5213651e1f2bb3df",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-03T00:00:00+00:00",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q846570:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "structured_evidence_slots": {
+            "statement_property": [
+              "description"
+            ],
+            "statement_property_label": [
+              "description"
+            ],
+            "subject": [
+              "Americans"
+            ],
+            "value": [
+              "citizens and nationals of the United States of America"
+            ]
+          },
+          "subject": "Americans",
+          "value": "citizens and nationals of the United States of America"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+        "title": "Reviewed alignment fact: Americans description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:048a582348764d1e",
+          "alignment_source_document_id": "alignment-approved:3",
+          "confidence": 0.962727,
+          "evidence_span": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+          "provider": "wikidata",
+          "review_id": "review:127ba68c0b9c936a",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-03T00:00:00+00:00",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q11660:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "structured_evidence_slots": {
+            "statement_property": [
+              "description"
+            ],
+            "statement_property_label": [
+              "description"
+            ],
+            "subject": [
+              "artificial intelligence"
+            ],
+            "value": [
+              "field that develops and studies software enabling machines to exhibit intelligent behavior"
+            ]
+          },
+          "subject": "artificial intelligence",
+          "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q11660:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+        "title": "Reviewed alignment fact: artificial intelligence description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+          "alignment_source_document_id": "alignment-approved:4",
+          "confidence": 0.856667,
+          "evidence_span": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+          "provider": "wikidata",
+          "review_id": "review:493c95339ac7ce47",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-03T00:00:00+00:00",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q15:P527:Q27381",
+          "source_family": "reference",
+          "statement_property": "P527",
+          "statement_property_label": "has part",
+          "structured_evidence_slots": {
+            "statement_property": [
+              "P527"
+            ],
+            "statement_property_label": [
+              "has part(s)"
+            ],
+            "subject": [
+              "Africa"
+            ],
+            "value": [
+              "North Africa"
+            ]
+          },
+          "subject": "Africa",
+          "value": "North Africa"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q15:P527:Q27381",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+        "title": "Reviewed alignment fact: Africa has part"
+      }
+    ],
+    "label_usage": {
+      "labels_copied_to_document_metadata": false,
+      "labels_used_for_documents": false,
+      "model_answers_copied_to_document_metadata": false,
+      "request_ids_copied_to_document_metadata": false,
+      "target_ids_copied_to_document_metadata": false
+    },
+    "schema_version": 1,
+    "source": {
+      "builder": "alignment_fact_review_promotion_gate",
+      "review_corpus_type": "alignment_structured_fact_review_corpus"
+    },
+    "status": "ready",
+    "summary": {
+      "approved_source_document_count": 4,
+      "by_property": {
+        "P527": 1,
+        "description": 3
+      },
+      "by_provider": {
+        "wikidata": 4
+      },
+      "by_source_family": {
+        "reference": 4
+      },
+      "needs_more_evidence_count": 4,
+      "pending_review_count": 0,
+      "rejected_count": 0,
+      "review_decision_count": 8,
+      "review_document_count": 8,
+      "skip_counts": {
+        "approved": 4,
+        "duplicate_review_decision": 0,
+        "invalid_review_decision": 0,
+        "missing_candidate_id": 0,
+        "missing_reviewer": 0,
+        "needs_more_evidence": 4,
+        "pending_review": 0,
+        "rejected": 0,
+        "reserved_review_metadata": 0,
+        "unknown_candidate_id": 0,
+        "unsupported_evidence_source": 0
+      }
+    }
+  },
+  "label_usage": {
+    "labels_copied_to_outputs": false,
+    "labels_used_for_gate": false,
+    "model_answers_copied_to_source_documents": false,
+    "request_ids_copied_to_source_documents": false,
+    "target_ids_copied_to_source_documents": false
+  },
+  "metadata": {
+    "source_workflow": "metadata_slot_fact_extraction"
+  },
+  "paths": {
+    "approved_source_documents": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/approved-source-documents.json",
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/artifact-manifest.json",
+    "records_jsonl": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/promotion-gate-records.jsonl",
+    "report": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/promotion-gate-report.json",
+    "review_corpus": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/alignment-fact-review-corpus.json",
+    "review_decision_template": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/review-decision-template.jsonl",
+    "review_decisions": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/review-decisions.jsonl"
+  },
+  "records": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q1860:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:f824d0d0b4337e82",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:1",
+      "subject": "English",
+      "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:7efecb96df3cdbac",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q846570:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:5213651e1f2bb3df",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:2",
+      "subject": "Americans",
+      "value": "citizens and nationals of the United States of America"
+    },
+    {
+      "alignment_candidate_id": "fact:dea94f12f246bc7f",
+      "decision": "needs_more_evidence",
+      "evidence_source": "openalex:https://openalex.org/W2132611552",
+      "property_hint": "country:P17",
+      "record_type": "review_document",
+      "review_id": "review:76e28f2526ef96d3",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "Europe",
+      "value": "Cancer"
+    },
+    {
+      "alignment_candidate_id": "fact:541b60d1498e1e46",
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:IMN:2024",
+      "property_hint": "country:P17",
+      "record_type": "review_document",
+      "review_id": "review:09edc9b2ac087f49",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "Isle of Man",
+      "value": "Isle"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q11660:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:127ba68c0b9c936a",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:3",
+      "subject": "artificial intelligence",
+      "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q15:P527:Q27381",
+      "property_hint": "has_part:P527",
+      "record_type": "review_document",
+      "review_id": "review:493c95339ac7ce47",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:4",
+      "subject": "Africa",
+      "value": "North Africa"
+    },
+    {
+      "alignment_candidate_id": "fact:cf59b5b765e0d28d",
+      "decision": "needs_more_evidence",
+      "evidence_source": "official_site:0c45d32f81d9",
+      "property_hint": "founded_by:P112",
+      "record_type": "review_document",
+      "review_id": "review:da4846d7cb36d710",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "Elon Musk",
+      "value": "Official Tesla"
+    },
+    {
+      "alignment_candidate_id": "fact:c933c25151badc95",
+      "decision": "needs_more_evidence",
+      "evidence_source": "openalex:https://openalex.org/W2150031895",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:b41d0715ff83ddb5",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": "needs_more_evidence",
+      "source_document_id": null,
+      "subject": "Netherlands",
+      "value": "In"
+    }
+  ],
+  "review_template": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.871818,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q1860:description",
+      "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 1,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "English",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:7efecb96df3cdbac",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.843846,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q846570:description",
+      "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 2,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Americans",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "citizens and nationals of the United States of America"
+    },
+    {
+      "alignment_candidate_id": "fact:dea94f12f246bc7f",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.871818,
+      "decision": "pending",
+      "evidence_source": "openalex:https://openalex.org/W2132611552",
+      "evidence_span": "OpenAlex scholarly metadata title: Cancer survival in Europe 1999\u20132007 by country and age: results of EUROCARE-5\u2014a population-based study.",
+      "notes": "",
+      "property_hint": "country:P17",
+      "property_label": "country",
+      "review_document_index": 3,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Europe",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "Cancer"
+    },
+    {
+      "alignment_candidate_id": "fact:541b60d1498e1e46",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.871818,
+      "decision": "pending",
+      "evidence_source": "worldbank:SP.POP.TOTL:IMN:2024",
+      "evidence_span": "World Bank official statistics data for population country queries: Isle of Man had Population, total of 84,160 in 2024.",
+      "notes": "",
+      "property_hint": "country:P17",
+      "property_label": "country",
+      "review_document_index": 4,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Isle of Man",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "Isle"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.962727,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q11660:description",
+      "evidence_span": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 5,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "artificial intelligence",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.856667,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q15:P527:Q27381",
+      "evidence_span": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+      "notes": "",
+      "property_hint": "has_part:P527",
+      "property_label": "has part",
+      "review_document_index": 6,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Africa",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "North Africa"
+    },
+    {
+      "alignment_candidate_id": "fact:cf59b5b765e0d28d",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.99,
+      "decision": "pending",
+      "evidence_source": "official_site:0c45d32f81d9",
+      "evidence_span": "Official Tesla profile stating that Elon Musk co-founded and leads Tesla, SpaceX, Neuralink, and The Boring Company, and describing his Tesla product, engineering, and manufacturing leadership.",
+      "notes": "",
+      "property_hint": "founded_by:P112",
+      "property_label": "founded by",
+      "review_document_index": 7,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Elon Musk",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "Official Tesla"
+    },
+    {
+      "alignment_candidate_id": "fact:c933c25151badc95",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.94,
+      "decision": "pending",
+      "evidence_source": "openalex:https://openalex.org/W2150031895",
+      "evidence_span": "In terms of quality and efficiency of the health care system, The Netherlands is, with some notable exceptions (e.g.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 8,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Netherlands",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "In"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Requires explicit review approval before alignment fact-review rows can become structured source documents. This gate does not promote verifier evidence or open-domain coverage.",
+  "source": {
+    "review_corpus_status": "ready_for_review",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready_for_structured_qa",
+  "summary": {
+    "approved_source_document_count": 4,
+    "by_property": {
+      "P527": 1,
+      "description": 3
+    },
+    "by_provider": {
+      "wikidata": 4
+    },
+    "by_source_family": {
+      "reference": 4
+    },
+    "needs_more_evidence_count": 4,
+    "pending_review_count": 0,
+    "rejected_count": 0,
+    "review_decision_count": 8,
+    "review_document_count": 8,
+    "skip_counts": {
+      "approved": 4,
+      "duplicate_review_decision": 0,
+      "invalid_review_decision": 0,
+      "missing_candidate_id": 0,
+      "missing_reviewer": 0,
+      "needs_more_evidence": 4,
+      "pending_review": 0,
+      "rejected": 0,
+      "reserved_review_metadata": 0,
+      "unknown_candidate_id": 0,
+      "unsupported_evidence_source": 0
+    }
+  },
+  "workflow": "alignment_fact_review_promotion_gate"
+}

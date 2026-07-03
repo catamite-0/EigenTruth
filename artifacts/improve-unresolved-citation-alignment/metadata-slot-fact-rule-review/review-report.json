@@ -1,0 +1,340 @@
+{
+  "config": {
+    "decision_output_schema": "promotion_gate_review_decisions",
+    "reviewed_at": "2026-07-03T00:00:00+00:00",
+    "reviewer": "rule_based_alignment_fact_reviewer_v1"
+  },
+  "decisions": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:f824d0d0b4337e82",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:7efecb96df3cdbac",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:5213651e1f2bb3df",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:dea94f12f246bc7f",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source; property_matches_source",
+      "review_id": "review:76e28f2526ef96d3",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:541b60d1498e1e46",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source; property_matches_source",
+      "review_id": "review:09edc9b2ac087f49",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:127ba68c0b9c936a",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+      "decision": "approved",
+      "notes": "wikidata_subject_property_value_closed",
+      "review_id": "review:493c95339ac7ce47",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:cf59b5b765e0d28d",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source; property_matches_source; property_in_evidence",
+      "review_id": "review:da4846d7cb36d710",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    },
+    {
+      "alignment_candidate_id": "fact:c933c25151badc95",
+      "decision": "needs_more_evidence",
+      "notes": "wikidata_source; property_matches_source; property_in_evidence",
+      "review_id": "review:b41d0715ff83ddb5",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_decisions": false,
+    "labels_used_for_review": false,
+    "model_answers_copied_to_decisions": false,
+    "request_ids_copied_to_decisions": false,
+    "target_ids_copied_to_decisions": false
+  },
+  "metadata": {
+    "source_workflow": "metadata_slot_fact_extraction"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/artifact-manifest.json",
+    "review_corpus": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/alignment-fact-review-corpus.json",
+    "review_decisions": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/review-decisions.jsonl",
+    "review_records": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/review-records.jsonl",
+    "review_report": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/review-report.json"
+  },
+  "records": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q1860:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 1,
+      "review_id": "review:f824d0d0b4337e82",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "English",
+      "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:7efecb96df3cdbac",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q846570:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 2,
+      "review_id": "review:5213651e1f2bb3df",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Americans",
+      "value": "citizens and nationals of the United States of America"
+    },
+    {
+      "alignment_candidate_id": "fact:dea94f12f246bc7f",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": false,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "openalex:https://openalex.org/W2132611552",
+      "notes": "wikidata_source; property_matches_source",
+      "property_hint": "country:P17",
+      "reasons": [
+        "wikidata_source",
+        "property_matches_source"
+      ],
+      "record_index": 3,
+      "review_id": "review:76e28f2526ef96d3",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Europe",
+      "value": "Cancer"
+    },
+    {
+      "alignment_candidate_id": "fact:541b60d1498e1e46",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": false,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "worldbank:SP.POP.TOTL:IMN:2024",
+      "notes": "wikidata_source; property_matches_source",
+      "property_hint": "country:P17",
+      "reasons": [
+        "wikidata_source",
+        "property_matches_source"
+      ],
+      "record_index": 4,
+      "review_id": "review:09edc9b2ac087f49",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Isle of Man",
+      "value": "Isle"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q11660:description",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "description",
+      "reasons": [],
+      "record_index": 5,
+      "review_id": "review:127ba68c0b9c936a",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "artificial intelligence",
+      "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": true,
+        "property_matches_source": true,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": true
+      },
+      "decision": "approved",
+      "evidence_source": "wikidata:Q15:P527:Q27381",
+      "notes": "wikidata_subject_property_value_closed",
+      "property_hint": "has_part:P527",
+      "reasons": [],
+      "record_index": 6,
+      "review_id": "review:493c95339ac7ce47",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Africa",
+      "value": "North Africa"
+    },
+    {
+      "alignment_candidate_id": "fact:cf59b5b765e0d28d",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": false,
+        "property_matches_source": false,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "official_site:0c45d32f81d9",
+      "notes": "wikidata_source; property_matches_source; property_in_evidence",
+      "property_hint": "founded_by:P112",
+      "reasons": [
+        "wikidata_source",
+        "property_matches_source",
+        "property_in_evidence"
+      ],
+      "record_index": 7,
+      "review_id": "review:da4846d7cb36d710",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Elon Musk",
+      "value": "Official Tesla"
+    },
+    {
+      "alignment_candidate_id": "fact:c933c25151badc95",
+      "checks": {
+        "has_candidate_id": true,
+        "has_subject": true,
+        "has_value": true,
+        "no_reserved_metadata": true,
+        "property_in_evidence": false,
+        "property_matches_source": false,
+        "subject_in_evidence": true,
+        "value_in_evidence": true,
+        "value_is_specific": true,
+        "wikidata_source": false
+      },
+      "decision": "needs_more_evidence",
+      "evidence_source": "openalex:https://openalex.org/W2150031895",
+      "notes": "wikidata_source; property_matches_source; property_in_evidence",
+      "property_hint": "description",
+      "reasons": [
+        "wikidata_source",
+        "property_matches_source",
+        "property_in_evidence"
+      ],
+      "record_index": 8,
+      "review_id": "review:b41d0715ff83ddb5",
+      "reviewed_at": "2026-07-03T00:00:00+00:00",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "subject": "Netherlands",
+      "value": "In"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Rule-based review of alignment fact-review rows. Approval means the row has a closed Wikidata subject/property/value evidence span, not broad open-domain route coverage.",
+  "source": {
+    "review_corpus_status": "ready_for_review",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready_for_promotion_gate",
+  "summary": {
+    "approved_count": 4,
+    "approved_property_counts": {
+      "P527": 1,
+      "description": 3
+    },
+    "decision_counts": {
+      "approved": 4,
+      "needs_more_evidence": 4
+    },
+    "needs_more_evidence_count": 4,
+    "reason_counts": {
+      "property_in_evidence": 2,
+      "property_matches_source": 4,
+      "wikidata_source": 4
+    },
+    "review_document_count": 8
+  },
+  "workflow": "alignment_fact_rule_review"
+}

@@ -59848,6 +59848,12 @@ def test_build_alignment_fact_review_corpus_filters_candidates(tmp_path):
             "provider": "worldbank",
             "confidence": 0.91,
             "usage": "structured_fact_review_only",
+            "structured_evidence_slots": {
+                "subject": ["Alpha"],
+                "statement_property": ["P1082"],
+                "statement_property_label": ["population"],
+                "value": ["123"],
+            },
         },
         {
             "candidate_id": "fact:alpha-population",
@@ -59952,6 +59958,8 @@ def test_build_alignment_fact_review_corpus_filters_candidates(tmp_path):
     assert saved["documents"][0]["answer"] == "123"
     assert metadata["statement_property"] == "P1082"
     assert metadata["statement_property_label"] == "population"
+    assert metadata["structured_evidence_slots"]["subject"] == ["Alpha"]
+    assert metadata["structured_evidence_slots"]["value"] == ["123"]
     assert metadata["review_required"] is True
     assert metadata["route_hints"] == ["structured_qa", "alignment_fact_review"]
     assert "model_answer" not in metadata
@@ -59963,6 +59971,65 @@ def test_build_alignment_fact_review_corpus_filters_candidates(tmp_path):
     assert record.metadata["workflow"] == "alignment_fact_review_corpus_builder"
     assert record.metadata["document_count"] == 1
     assert record.metadata["suite"] == "unit"
+
+
+def test_promote_alignment_fact_review_corpus_preserves_structured_slots():
+    module = importlib.import_module("benchmarks.promote_alignment_fact_review_corpus")
+    review_corpus = {
+        "corpus_type": "alignment_structured_fact_review_corpus",
+        "documents": [
+            {
+                "question": "What does the aligned evidence say is the description for English?",
+                "answer": "West Germanic language",
+                "source": "wikidata:Q1860:description",
+                "metadata": {
+                    "alignment_candidate_id": "fact:english-description",
+                    "provider": "source_family_catalog",
+                    "source_family": "reference",
+                    "evidence_source": "wikidata:Q1860:description",
+                    "evidence_span": (
+                        "According to Wikidata entity metadata, English is described as "
+                        "West Germanic language."
+                    ),
+                    "property_hint": "description",
+                    "statement_property": "description",
+                    "statement_property_label": "description",
+                    "subject": "English",
+                    "confidence": 0.87,
+                    "structured_evidence_slots": {
+                        "subject": ["English"],
+                        "statement_property": ["description"],
+                        "statement_property_label": ["description"],
+                        "value": ["West Germanic language"],
+                    },
+                    "request_id": "must-not-copy",
+                    "model_answer": "No.",
+                },
+            }
+        ],
+    }
+    decisions = [
+        {
+            "alignment_candidate_id": "fact:english-description",
+            "decision": "approved",
+            "reviewer": "rule_based_alignment_fact_reviewer_v1",
+            "review_id": "review:english-description",
+        }
+    ]
+
+    payload = module.promote_alignment_fact_review_corpus(
+        review_corpus,
+        review_decisions=decisions,
+    )
+    document = payload["approved_source_documents"]["documents"][0]
+    metadata = document["metadata"]
+
+    assert payload["status"] == "ready_for_structured_qa"
+    assert metadata["provider"] == "wikidata"
+    assert list(metadata["structured_evidence_slots"]["subject"]) == ["English"]
+    assert list(metadata["structured_evidence_slots"]["value"]) == ["West Germanic language"]
+    assert "request_id" not in metadata
+    assert "model_answer" not in metadata
 
 
 def test_fetch_blind_spot_wikidata_evidence_writes_clean_source_docs(tmp_path, monkeypatch):

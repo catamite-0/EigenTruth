@@ -2477,6 +2477,54 @@
       "name": "improve-unresolved-citation-alignment-metadata-slot-audit",
       "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-alignment-audit/alignment-audit.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/artifact-manifest.json",
+        "corpus_type": "alignment_structured_fact_review_corpus",
+        "document_count": 8,
+        "input_candidate_count": 22,
+        "source_workflow": "metadata_slot_fact_extraction",
+        "status": "ready_for_review",
+        "unique_candidate_count": 22,
+        "workflow": "alignment_fact_review_corpus_builder"
+      },
+      "name": "improve-unresolved-citation-alignment-metadata-slot-fact-review-corpus",
+      "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/alignment-fact-review-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_count": 4,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/artifact-manifest.json",
+        "needs_more_evidence_count": 4,
+        "review_document_count": 8,
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source_workflow": "metadata_slot_fact_extraction",
+        "status": "ready_for_promotion_gate",
+        "workflow": "alignment_fact_rule_review"
+      },
+      "name": "improve-unresolved-citation-alignment-metadata-slot-fact-rule-review",
+      "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-rule-review/review-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_source_document_count": 4,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/artifact-manifest.json",
+        "pending_review_count": 0,
+        "promotes_verifier_evidence": false,
+        "review_document_count": 8,
+        "source_workflow": "metadata_slot_fact_extraction",
+        "status": "ready_for_structured_qa",
+        "workflow": "alignment_fact_review_promotion_gate"
+      },
+      "name": "improve-unresolved-citation-alignment-metadata-slot-fact-promotion-gate",
+      "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/promotion-gate-report.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

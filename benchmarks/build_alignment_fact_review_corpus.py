@@ -366,6 +366,9 @@ def _document_from_candidate(candidate: Mapping[str, Any], *, document_index: in
         "route_hints": ("structured_qa", "alignment_fact_review"),
         "fact_status": "candidate_review_required",
     }
+    structured_slots = _json_safe(candidate.get("structured_evidence_slots"))
+    if isinstance(structured_slots, Mapping) and structured_slots:
+        metadata["structured_evidence_slots"] = structured_slots
     document_metadata = {
         key: _json_safe(value)
         for key, value in metadata.items()

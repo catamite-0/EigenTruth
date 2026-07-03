@@ -512,29 +512,33 @@ def _approved_source_document(
         return None
     source_document_id = f"alignment-approved:{source_index}"
     review_id = _clean_text(decision.get("review_id"))
+    source_metadata = {
+        "provider": provider,
+        "source_family": _source_family_for_provider(provider, metadata),
+        "source": evidence_source,
+        "statement_property": statement_property,
+        "statement_property_label": property_label,
+        "subject": subject,
+        "value": value,
+        "alignment_candidate_id": candidate_id,
+        "alignment_source_document_id": source_document_id,
+        "review_id": review_id,
+        "reviewer": _reviewer(decision),
+        "reviewed_at": _clean_text(decision.get("reviewed_at")),
+        "review_status": "approved",
+        "evidence_span": _clean_text(metadata.get("evidence_span")),
+        "confidence": _json_safe(metadata.get("confidence")),
+    }
+    structured_slots = _json_safe(metadata.get("structured_evidence_slots"))
+    if isinstance(structured_slots, Mapping) and structured_slots:
+        source_metadata["structured_evidence_slots"] = structured_slots
     return {
         "source": evidence_source,
         "provider": provider,
         "source_family": _source_family_for_provider(provider, metadata),
         "title": f"Reviewed alignment fact: {subject} {property_label}",
         "text": _clean_text(metadata.get("evidence_span")) or _clean_text(document.get("text")),
-        "metadata": {
-            "provider": provider,
-            "source_family": _source_family_for_provider(provider, metadata),
-            "source": evidence_source,
-            "statement_property": statement_property,
-            "statement_property_label": property_label,
-            "subject": subject,
-            "value": value,
-            "alignment_candidate_id": candidate_id,
-            "alignment_source_document_id": source_document_id,
-            "review_id": review_id,
-            "reviewer": _reviewer(decision),
-            "reviewed_at": _clean_text(decision.get("reviewed_at")),
-            "review_status": "approved",
-            "evidence_span": _clean_text(metadata.get("evidence_span")),
-            "confidence": _json_safe(metadata.get("confidence")),
-        },
+        "metadata": source_metadata,
     }
 
 

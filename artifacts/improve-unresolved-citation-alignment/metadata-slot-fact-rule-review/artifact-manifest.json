@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../metadata-slot-fact-review-corpus/alignment-fact-review-corpus.json",
+      "sha256": "fa7bd47caae2bf96f447513d2317dee05fe225454ed1bbe3f4568ed44ac854a6",
+      "size_bytes": 12975
+    },
+    "alignment_fact_rule_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-report.json",
+      "sha256": "667dc24ddce34443e27a5f45332fd39ad2d6668fd27c53705de8ae9c0b31cd11",
+      "size_bytes": 12295
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decisions.jsonl",
+      "sha256": "ef5c5c8bfef203f3bde8462e10c38c836445d6628f1609d205ec38014b868576",
+      "size_bytes": 2208
+    },
+    "review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-records.jsonl",
+      "sha256": "8bc13cc32e0357447c6235ddf158371124620459a7dec634f7b59c8fd7a3c7de",
+      "size_bytes": 6145
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_count": 4,
+    "needs_more_evidence_count": 4,
+    "review_document_count": 8,
+    "reviewer": "rule_based_alignment_fact_reviewer_v1",
+    "source_workflow": "metadata_slot_fact_extraction",
+    "status": "ready_for_promotion_gate",
+    "workflow": "alignment_fact_rule_review"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}
