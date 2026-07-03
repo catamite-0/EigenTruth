@@ -326,9 +326,9 @@
       "best_answer_entity_collision_count": 5,
       "best_answer_value_supported_count": 4,
       "best_candidate_fact_coverage_count": 16,
-      "best_covered_fact_retrieval_blind_refuted_count": 28,
-      "best_covered_fact_retrieval_blind_refuted_rate": 0.3146067415730337,
-      "best_covered_fact_retrieval_verified_false_alarm": 0.272,
+      "best_covered_fact_retrieval_blind_refuted_count": 16,
+      "best_covered_fact_retrieval_blind_refuted_rate": 0.1797752808988764,
+      "best_covered_fact_retrieval_verified_false_alarm": 0.088,
       "best_covered_fact_route_decision_accuracy": 1.0,
       "best_covered_fact_route_false_refuted_rate": 1.0,
       "best_mapping_target_count": 89,
@@ -407,16 +407,16 @@
         }
       ],
       "covered_fact_retrieval_query_sweep_count": 1,
-      "covered_fact_retrieval_query_sweep_passing_count": 0,
+      "covered_fact_retrieval_query_sweep_passing_count": 1,
       "covered_fact_retrieval_query_sweeps": [
         {
-          "best_blind_refuted_count": 28,
-          "best_blind_refuted_rate": 0.3146067415730337,
-          "best_gate_pass": false,
-          "best_passing_blind_refuted_count": null,
-          "best_passing_strategy": null,
+          "best_blind_refuted_count": 16,
+          "best_blind_refuted_rate": 0.1797752808988764,
+          "best_gate_pass": true,
+          "best_passing_blind_refuted_count": 16,
+          "best_passing_strategy": "question_overlap_0p8",
           "best_strategy": "question_overlap_0p8",
-          "best_verified_false_alarm": 0.272,
+          "best_verified_false_alarm": 0.088,
           "blind_spot_count": 89,
           "index": 1,
           "max_verified_false_alarm": 0.2,
@@ -424,12 +424,12 @@
           "query_fields": [
             "question"
           ],
-          "records_with_retrieval_hits": 28,
+          "records_with_retrieval_hits": 16,
           "retrieval_limit": 3,
           "status": "complete",
           "strategy_count": 3,
           "target_route": "retrieval_structured_qa",
-          "target_route_selected_count": 28,
+          "target_route_selected_count": 16,
           "workflow": "blind_spot_retrieval_query_sweep"
         }
       ],
@@ -831,7 +831,7 @@
     }
   },
   "metadata": {
-    "refresh_reason": "covered_fact_retrieval_qa_diagnostic",
+    "refresh_reason": "covered_fact_retrieval_qa_source_record_guard",
     "source_workflow": "covered_fact_retrieval_qa_corpus_builder"
   },
   "next_actions": [
@@ -862,8 +862,8 @@
       "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use",
       "semantic_gap_best_candidate_fact_coverage_count": 16,
-      "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": 28,
-      "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": 0.272,
+      "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": 16,
+      "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": 0.088,
       "semantic_gap_best_records_with_joined_facts": 48,
       "semantic_gap_covered_fact_retrieval_qa_document_count": 41,
       "semantic_gap_covered_fact_retrieval_query_sweep_count": 1,
@@ -980,8 +980,8 @@
     "semantic_gap_review_best_answer_entity_collision_count": 5,
     "semantic_gap_review_best_answer_value_supported_count": 4,
     "semantic_gap_review_best_candidate_fact_coverage_count": 16,
-    "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": 28,
-    "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.272,
+    "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.088,
     "semantic_gap_review_best_no_joined_fact_count": 41,
     "semantic_gap_review_best_records_with_joined_facts": 48,
     "semantic_gap_review_covered_fact_mapping_audit_count": 1,

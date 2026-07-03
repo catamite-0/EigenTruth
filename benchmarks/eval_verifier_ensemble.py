@@ -1067,8 +1067,9 @@ def _verify_records(
             VerificationStatus.NOT_APPLICABLE,
         } and record.retrieval_documents:
             fixture_documents = _retrieval_document_payloads(record.retrieval_documents)
-            if fixture_documents:
-                runner = retrieval_qa_runner(fixture_documents)
+            fixture_qa_documents = _retrieval_qa_scope_documents(record, fixture_documents)
+            if fixture_qa_documents:
+                runner = retrieval_qa_runner(fixture_qa_documents)
                 if runner is not None:
                     attempted_routes.append("retrieval_structured_qa")
                     retrieval_qa_result = _timed_verify(
@@ -1085,7 +1086,7 @@ def _verify_records(
                         final = retrieval_qa_result
                         selected_route = "retrieval_structured_qa"
                         selected_verifier = "QuestionAnswerVerifier"
-                        selected_retrieval_hits = fixture_documents
+                        selected_retrieval_hits = fixture_qa_documents
             hit_documents: tuple[Mapping[str, Any], ...] = ()
             if final.status in {
                 VerificationStatus.INSUFFICIENT_EVIDENCE,
@@ -1105,7 +1106,7 @@ def _verify_records(
                         limit=retrieval_limit,
                     )
                     hit_documents = tuple(hit.to_dict() for hit in hits)
-            qa_documents = hit_documents
+            qa_documents = _retrieval_qa_scope_documents(record, hit_documents)
             has_retrieval_alignment_signal = _record_has_retrieval_alignment_signal(record)
             if qa_documents and retrieval_qa_result is None:
                 runner = retrieval_qa_runner(qa_documents)
@@ -1452,6 +1453,53 @@ def _retrieval_document_payloads(
             "metadata": dict(item.get("metadata", {})),
         })
     return tuple(payloads)
+
+
+def _retrieval_qa_scope_documents(
+    record: ClaimEvidenceRecord,
+    documents: Sequence[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    """Filter target-specific QA documents to their source score row."""
+    scope_indexes = _record_scope_indexes(record)
+    scoped = []
+    for document in documents:
+        metadata = document.get("metadata")
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        if not _is_target_specific_qa_document(metadata):
+            scoped.append(document)
+            continue
+        source_index = _non_negative_int(metadata.get("source_record_index"))
+        if source_index is not None and source_index in scope_indexes:
+            scoped.append(document)
+    return tuple(scoped)
+
+
+def _is_target_specific_qa_document(metadata: Mapping[str, Any]) -> bool:
+    correction_scope = str(metadata.get("correction_scope") or "").strip()
+    if correction_scope == "target_specific_covered_fact_candidate":
+        return True
+    if correction_scope.startswith("target_specific_"):
+        return True
+    return _non_negative_int(metadata.get("source_record_index")) is not None
+
+
+def _record_scope_indexes(record: ClaimEvidenceRecord) -> frozenset[int]:
+    indexes: set[int] = set()
+    _add_scope_index(indexes, record.metadata.get("index"))
+    statement = record.metadata.get("statement")
+    if isinstance(statement, Mapping):
+        for key in ("record_index", "source_index", "row_index", "index"):
+            _add_scope_index(indexes, statement.get(key))
+    claim_metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
+    for key in ("record_index", "source_index", "row_index", "index"):
+        _add_scope_index(indexes, claim_metadata.get(key))
+    return frozenset(indexes)
+
+
+def _add_scope_index(indexes: set[int], value: Any) -> None:
+    index = _non_negative_int(value)
+    if index is not None:
+        indexes.add(index)
 
 
 def _state_context(record: ClaimEvidenceRecord, state_checks: Mapping[str, Any]) -> dict[str, Any]:

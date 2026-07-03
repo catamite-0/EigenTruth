@@ -11474,6 +11474,96 @@ def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
     assert quality["false_refuted_rate"] == pytest.approx(1.0)
 
 
+def test_eval_verifier_ensemble_scopes_target_specific_retrieval_qa_hits(tmp_path):
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    fixture_path = tmp_path / "fixture.json"
+    verified_path = tmp_path / "verified-records.jsonl"
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 0, 1, 1],
+        "scores": {"truth_proj": [0.9, 0.8, 0.1, 0.2]},
+        "statements": [
+            {"question": "Q1?", "answer": "Wrong", "text": "Q1? Wrong"},
+            {"question": "Q2?", "answer": "Wrong2", "text": "Q2? Wrong2"},
+            {"question": "Q1?", "answer": "Alternative", "text": "Q1? Alternative"},
+            {"question": "Q2?", "answer": "Alternative2", "text": "Q2? Alternative2"},
+        ],
+    }
+    scores_path.write_text(json.dumps(dump), encoding="utf-8")
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "question": "Q1?",
+                    "answer": "Corrected",
+                    "text": "Q1? Corrected",
+                    "source": "qa:q1:target-specific",
+                    "metadata": {
+                        "correction_scope": "target_specific_covered_fact_candidate",
+                        "source_record_index": 0,
+                    },
+                },
+                {
+                    "question": "Q2?",
+                    "answer": "Corrected2",
+                    "text": "Q2? Corrected2",
+                    "source": "qa:q2:target-specific",
+                    "metadata": {
+                        "correction_scope": "target_specific_covered_fact_candidate",
+                        "source_record_index": 1,
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.build_evidence_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_corpus((corpus_path,)),
+        retriever_min_overlap=1.0,
+        retrieval_limit=1,
+        query_field="question",
+    )
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=1.0,
+        retrieval_limit=1,
+        verified_records_path=verified_path,
+    )
+    records = [
+        json.loads(line)["record"]
+        for line in verified_path.read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert fixture["summary"]["records_with_hits"] == 4
+    assert payload["runs"][0]["route_summary"]["selected_counts"] == {
+        "retrieval_structured_qa": 2,
+        "groundedness": 2,
+    }
+    assert records[0]["route"]["selected_route"] == "retrieval_structured_qa"
+    assert records[0]["final"]["status"] == "refuted"
+    assert records[1]["route"]["selected_route"] == "retrieval_structured_qa"
+    assert records[1]["final"]["status"] == "refuted"
+    assert records[2]["route"]["selected_route"] == "groundedness"
+    assert records[2]["route"]["selected_verifier"] == "GroundednessVerifier"
+    assert records[2]["final"]["status"] != "refuted"
+    assert records[3]["route"]["selected_route"] == "groundedness"
+    assert records[3]["route"]["selected_verifier"] == "GroundednessVerifier"
+    assert records[3]["final"]["status"] != "refuted"
+
+
 def test_eval_verifier_ensemble_reports_semantic_text_cache_hits(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
