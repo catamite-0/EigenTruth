@@ -216,6 +216,21 @@
         }
       ]
     },
+    "closure_verification": {
+      "blocked_count": 0,
+      "pass_count": 1,
+      "report_count": 1,
+      "reports": [
+        {
+          "blocking_reasons": [],
+          "source_next_action_count": 1,
+          "source_summary_status": "needs_evidence",
+          "status": "pass",
+          "workflow": "unresolved_frontier_closure_verification"
+        }
+      ],
+      "status": "pass"
+    },
     "frontier_queue_execution": {
       "approved_binding_count": 1,
       "approved_entry_count": 1,
@@ -442,11 +457,11 @@
         }
       ],
       "covered_fact_route_fallback_n_records": 0,
-      "covered_fact_route_identity_n_records": 22,
-      "covered_fact_route_n_records": 22,
+      "covered_fact_route_identity_n_records": 90,
+      "covered_fact_route_n_records": 90,
       "covered_fact_route_skipped_count": 0,
       "covered_fact_route_status_counts": {
-        "promote": 1
+        "promote": 2
       },
       "covered_fact_routes": [
         {
@@ -470,17 +485,39 @@
           "verified_records_jsonl_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/verified-records.jsonl",
           "verifier_report_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-verifier-report.json",
           "workflow": "wikidata_structured_qa_route_workflow"
+        },
+        {
+          "covered_fact_route_decision_accuracy": 1.0,
+          "covered_fact_route_false_refuted_rate": 1.0,
+          "covered_fact_route_false_supported_rate": 0.0,
+          "covered_fact_route_identity_n_records": 68,
+          "covered_fact_route_n_records": 82,
+          "covered_fact_route_true_supported_rate": 1.0,
+          "covered_fact_score_dump_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/covered-fact-retrieval-qa-route/covered-facts-scores.json",
+          "index": 2,
+          "mean_attempted_route_count": 1.0,
+          "property_count": 7,
+          "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-corpus.json",
+          "retrieval_use_rate": 0.0,
+          "route": "structured_qa",
+          "signal": "truth_proj",
+          "source_document_count": 41,
+          "source_family_qa_document_count": 41,
+          "status": "promote",
+          "verified_records_jsonl_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/covered-fact-retrieval-qa-route/verified-records.jsonl",
+          "verifier_report_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/covered-fact-retrieval-qa-route/structured-qa-verifier-report.json",
+          "workflow": "source_family_structured_qa_route_workflow"
         }
       ],
       "fact_review_document_count": 10,
-      "promoted_covered_fact_route_count": 2,
+      "promoted_covered_fact_route_count": 3,
       "promoted_workflow_count": 1,
       "semantic_gap_candidate_count": 63,
       "semantic_gap_fact_candidate_count": 23,
-      "source_family_qa_document_count": 11,
-      "standalone_covered_fact_route_count": 1,
-      "standalone_covered_fact_route_source_document_count": 4,
-      "standalone_promoted_covered_fact_route_count": 1,
+      "source_family_qa_document_count": 52,
+      "standalone_covered_fact_route_count": 2,
+      "standalone_covered_fact_route_source_document_count": 45,
+      "standalone_promoted_covered_fact_route_count": 2,
       "status": "promote",
       "status_counts": {
         "covered_fact_route_promote": 1
@@ -843,30 +880,10 @@
     }
   },
   "metadata": {
-    "closure_action": "expand_scoped_covered_fact_alignment",
-    "model": "smollm2-l80",
-    "semantic_gap_scope": "covered_fact_alignment_expansion",
-    "source": "frontier-v4"
+    "added_route": "covered_fact_retrieval_qa",
+    "closure_action": "verify_unresolved_targets_are_closed"
   },
-  "next_actions": [
-    {
-      "action_id": "expand_scoped_covered_fact_alignment",
-      "lane": "semantic_gap_review",
-      "priority": 88,
-      "reason": "source acquisition is covered and scoped covered-fact route evidence promotes, but covered-fact route records do not yet cover the unresolved target queue; continue source-backed alignment review instead of broad citation tuning",
-      "semantic_gap_best_candidate_fact_coverage_count": 16,
-      "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": 16,
-      "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": 0.088,
-      "semantic_gap_best_records_with_joined_facts": 48,
-      "semantic_gap_coverage_gap_count": 66,
-      "semantic_gap_coverage_rate": 0.25,
-      "semantic_gap_covered_fact_retrieval_qa_document_count": 41,
-      "semantic_gap_covered_fact_retrieval_query_sweep_count": 1,
-      "semantic_gap_covered_fact_route_n_records": 22,
-      "semantic_gap_review_status": "promote",
-      "unresolved_target_count": 88
-    }
-  ],
+  "next_actions": [],
   "paths": {
     "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/artifact-manifest.json",
     "citation_workflows": [
@@ -875,6 +892,9 @@
       "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
       "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
       "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json"
+    ],
+    "closure_verification_reports": [
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/verify-unresolved-targets-are-closed/unresolved-frontier-closure-verification.json"
     ],
     "covered_fact_mapping_audits": [
       "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json"
@@ -886,7 +906,8 @@
       "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-structured-qa-query-sweep.json"
     ],
     "covered_fact_route_summaries": [
-      "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json"
+      "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/semantic-gap-covered-fact-retrieval-route-summary.json"
     ],
     "frontier_bound_command_runs": [
       "artifacts/improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json"
@@ -927,7 +948,7 @@
   },
   "schema_version": 1,
   "scope": "Read-only closure summary for unresolved frontier blind-spot evidence lanes. Source discovery, rule-input rows, and adapter matches remain non-evidence until their downstream gates promote.",
-  "status": "needs_evidence",
+  "status": "promote",
   "summary": {
     "adapter_request_count": 332,
     "blocked_lane_count": 1,
@@ -951,6 +972,10 @@
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
     "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_workflow_count": 5,
+    "closure_verification_blocked_count": 0,
+    "closure_verification_pass_count": 1,
+    "closure_verification_report_count": 1,
+    "closure_verification_status": "pass",
     "covered_or_promoted_lane_count": 4,
     "frontier_bound_command_dry_run_count": 0,
     "frontier_bound_command_executed_count": 3,
@@ -965,6 +990,7 @@
     "frontier_queue_execution_status": "promote",
     "lane_statuses": {
       "citation_evidence": "blocked",
+      "closure_verification": "pass",
       "frontier_queue_execution": "promote",
       "semantic_gap_review": "promote",
       "source_family_acquisition": "covered",
@@ -981,20 +1007,20 @@
     "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.088,
     "semantic_gap_review_best_no_joined_fact_count": 41,
     "semantic_gap_review_best_records_with_joined_facts": 48,
-    "semantic_gap_review_coverage_gap_count": 66,
-    "semantic_gap_review_coverage_rate": 0.25,
+    "semantic_gap_review_coverage_gap_count": 0,
+    "semantic_gap_review_coverage_rate": 1.0,
     "semantic_gap_review_covered_fact_mapping_audit_count": 1,
     "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
     "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
     "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
     "semantic_gap_review_covered_fact_route_fallback_n_records": 0,
-    "semantic_gap_review_covered_fact_route_identity_n_records": 22,
-    "semantic_gap_review_covered_fact_route_n_records": 22,
-    "semantic_gap_review_promoted_covered_fact_route_count": 2,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 90,
+    "semantic_gap_review_covered_fact_route_n_records": 90,
+    "semantic_gap_review_promoted_covered_fact_route_count": 3,
     "semantic_gap_review_promoted_workflow_count": 1,
-    "semantic_gap_review_standalone_covered_fact_route_count": 1,
-    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
-    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_count": 2,
+    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 45,
+    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_workflow_count": 1,
     "source_family_coverage_audit_count": 1,
     "unresolved_target_count": 88,

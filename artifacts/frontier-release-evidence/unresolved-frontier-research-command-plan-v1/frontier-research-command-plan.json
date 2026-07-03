@@ -5,108 +5,7 @@
     "include_action_ids": [],
     "only_active_research_queue": false
   },
-  "entries": [
-    {
-      "action_id": "improve_unresolved_citation_alignment",
-      "action_type": "workflow_plan",
-      "binding_hints": {
-        "action_id": "improve_unresolved_citation_alignment",
-        "bound_output_dir": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment",
-        "command_templates_need_binding": true,
-        "input_bindings": [
-          {
-            "name": "bound_command_template_values",
-            "placeholder": "...",
-            "required": true,
-            "status": "unbound"
-          }
-        ],
-        "output_bindings": [
-          {
-            "name": "unresolved_citation_alignment_workflow_report",
-            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
-            "status": "planned"
-          },
-          {
-            "name": "unresolved_citation_alignment_artifact_manifest",
-            "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-artifact-manifest.json",
-            "status": "planned"
-          }
-        ]
-      },
-      "command_status": "needs_inputs",
-      "command_summary": {
-        "command_template_count": 3,
-        "missing_input_count": 1,
-        "placeholder_count": 18,
-        "planned_output_count": 2
-      },
-      "command_templates": [
-        "python benchmarks/run_source_family_citation_search_workflow.py --queue artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-official-site-catalog-v1/official-site-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl --scores artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json --blind-spots artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json --controlled-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json --output-dir ... --workflow-report ... --artifact-manifest ... --registry ... --name ... --version ... --query-mode question_and_query --target-route retrieval_groundedness --query-fields question,question_answer,citation_question,citation_entity --retriever-min-overlaps 0.95,0.8,0.65,0.5 --source-family-filters planned_rerank,off --retrieval-limit 3 --verifier-min-overlap 0.65 --metadata closure_action=improve_unresolved_citation_alignment --metadata diagnostic_query_mode=question_and_query --adapter-diversify-source-families",
-        "python benchmarks/run_source_family_citation_search_workflow.py --queue artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-official-site-catalog-v1/official-site-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl --scores artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json --blind-spots artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json --controlled-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json --output-dir ... --workflow-report ... --artifact-manifest ... --registry ... --name ... --version ... --query-mode queue_query --target-route retrieval_groundedness --query-fields question,question_answer,citation_question,citation_entity --retriever-min-overlaps 0.95,0.8,0.65,0.5 --source-family-filters planned_rerank,off --retrieval-limit 3 --verifier-min-overlap 0.65 --metadata closure_action=improve_unresolved_citation_alignment --metadata diagnostic_query_mode=queue_query --adapter-diversify-source-families",
-        "python benchmarks/run_source_family_citation_search_workflow.py --queue artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-official-site-catalog-v1/official-site-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl --source-catalog artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl --scores artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json --blind-spots artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json --controlled-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/../../truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json --output-dir ... --workflow-report ... --artifact-manifest ... --registry ... --name ... --version ... --query-mode question --target-route retrieval_groundedness --query-fields question,question_answer,citation_question,citation_entity --retriever-min-overlaps 0.95,0.8,0.65,0.5 --source-family-filters planned_rerank,off --retrieval-limit 3 --verifier-min-overlap 0.65 --metadata closure_action=improve_unresolved_citation_alignment --metadata diagnostic_query_mode=question --adapter-diversify-source-families"
-      ],
-      "entry_id": "frontier-research-0001",
-      "evidence_routes": [
-        "citation_evidence",
-        "source_family_acquisition"
-      ],
-      "metadata": {
-        "approved_source_document_count": 0,
-        "batch_count": 0,
-        "closure_output_count": 2,
-        "collection_task_count": 0,
-        "command_status_counts": {},
-        "lane_counts": {},
-        "missing_command_count": 0,
-        "promoted_rule_request_ids": [],
-        "query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
-        "query_sweep_failure_reason_counts": {
-          "blind_refuted_rate_below_min": 24,
-          "verified_false_alarm_above_max": 24
-        },
-        "query_sweep_no_hit_strategy_count": 0,
-        "query_sweep_recommended_next_action_counts": {
-          "improve_claim_intent_alignment_or_query_construction": 3,
-          "tighten_false_alarm_calibration": 3
-        },
-        "query_sweep_target_route_not_selected_strategy_count": 0,
-        "query_sweep_verified_false_alarm_above_max_strategy_count": 24,
-        "ready_command_count": 0,
-        "remaining_rule_family_counts": {},
-        "request_type_counts": {},
-        "required_input_count": 0,
-        "rule_only_batch_count": 0,
-        "semantic_gap_candidate_count": 0,
-        "semantic_gap_fact_candidate_count": 0,
-        "source_backed_batch_count": 0,
-        "source_family_qa_document_count": 0,
-        "task_source_family_counts": {},
-        "workflow_keys": {
-          "source_summary_workflow": "unresolved_frontier_evidence_summary"
-        }
-      },
-      "missing_inputs": [
-        "bound_command_template_values"
-      ],
-      "planned_outputs": [
-        {
-          "name": "unresolved_citation_alignment_workflow_report",
-          "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
-          "status": "planned"
-        },
-        {
-          "name": "unresolved_citation_alignment_artifact_manifest",
-          "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-artifact-manifest.json",
-          "status": "planned"
-        }
-      ],
-      "priority": 88,
-      "required_inputs": [],
-      "source_gap_ids": [],
-      "title": "Rerun unresolved citation alignment candidates"
-    }
-  ],
+  "entries": [],
   "metadata": {},
   "paths": {
     "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/artifact-manifest.json",
@@ -119,25 +18,20 @@
     "research_lifecycle_status": null,
     "research_refresh_status": null,
     "research_source_alignment_status": null,
-    "status": "needs_evidence",
+    "status": "promote",
     "workflow": "unresolved_frontier_evidence_summary"
   },
-  "status": "needs_inputs",
+  "status": "empty",
   "summary": {
-    "action_ids": [
-      "improve_unresolved_citation_alignment"
-    ],
-    "command_count": 3,
-    "entry_count": 1,
-    "evidence_route_counts": {
-      "citation_evidence": 1,
-      "source_family_acquisition": 1
-    },
+    "action_ids": [],
+    "command_count": 0,
+    "entry_count": 0,
+    "evidence_route_counts": {},
     "missing_command_template_count": 0,
-    "missing_input_count": 1,
-    "needs_input_entry_count": 1,
-    "placeholder_count": 18,
-    "planned_output_count": 2,
+    "missing_input_count": 0,
+    "needs_input_entry_count": 0,
+    "placeholder_count": 0,
+    "planned_output_count": 0,
     "ready_entry_count": 0
   },
   "workflow": "frontier_research_queue_command_plan"

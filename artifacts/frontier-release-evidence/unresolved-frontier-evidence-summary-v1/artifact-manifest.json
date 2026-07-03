@@ -40,6 +40,14 @@
       "sha256": "03d734b9b347e3306f5065bfe29716224b873e26fd5875a822bfc587f3b5a209",
       "size_bytes": 30991
     },
+    "closure_verification_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/verify-unresolved-targets-are-closed/unresolved-frontier-closure-verification.json",
+      "sha256": "89d3124946b2c70b225f82fbaa547db1bbe196108f88bc42436c1ed45b36eb41",
+      "size_bytes": 2542
+    },
     "covered_fact_mapping_audit_1": {
       "exists": true,
       "file_count": 1,
@@ -71,6 +79,14 @@
       "path": "../../improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json",
       "sha256": "afb51ef7748d19c194455e0aa17a395bee17be8bc0d6d08bc5ed9c05a2e22c48",
       "size_bytes": 6738
+    },
+    "covered_fact_route_summary_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/semantic-gap-covered-fact-retrieval-route-summary.json",
+      "sha256": "e5f970c748e21f8a9b4b2530f47f90a15c26fae9bb52c92d196392b796b5a5d0",
+      "size_bytes": 15749
     },
     "frontier_bound_command_run_1": {
       "exists": true,
@@ -213,8 +229,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "9c4ce97e5c06fae4f7c2073e3272988af575b6830cd99628d612cbe380939065",
-      "size_bytes": 41258
+      "sha256": "3bc9a1ae442ddde0f8690999398f17fbb252f138e0366349737ef0240fbe6177",
+      "size_bytes": 42903
     },
     "unresolved_queue": {
       "exists": true,
@@ -227,6 +243,7 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
+    "added_route": "covered_fact_retrieval_qa",
     "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
     "citation_query_sweep_failure_reason_counts": {
       "blind_refuted_rate_below_min": 120,
@@ -240,7 +257,10 @@
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
     "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_status": "blocked",
-    "closure_action": "expand_scoped_covered_fact_alignment",
+    "closure_action": "verify_unresolved_targets_are_closed",
+    "closure_verification_pass_count": 1,
+    "closure_verification_report_count": 1,
+    "closure_verification_status": "pass",
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_count": 0,
@@ -252,8 +272,7 @@
     "frontier_queue_execution_status": "promote",
     "frontier_ready_seed_input_audit_count": 0,
     "frontier_ready_seed_input_count": 0,
-    "model": "smollm2-l80",
-    "next_action_count": 1,
+    "next_action_count": 0,
     "semantic_gap_review_approved_source_document_count": 7,
     "semantic_gap_review_best_answer_entity_collision_count": 5,
     "semantic_gap_review_best_answer_value_supported_count": 4,
@@ -262,26 +281,24 @@
     "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.088,
     "semantic_gap_review_best_no_joined_fact_count": 41,
     "semantic_gap_review_best_records_with_joined_facts": 48,
-    "semantic_gap_review_coverage_gap_count": 66,
-    "semantic_gap_review_coverage_rate": 0.25,
+    "semantic_gap_review_coverage_gap_count": 0,
+    "semantic_gap_review_coverage_rate": 1.0,
     "semantic_gap_review_covered_fact_mapping_audit_count": 1,
     "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
     "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
     "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
     "semantic_gap_review_covered_fact_route_fallback_n_records": 0,
-    "semantic_gap_review_covered_fact_route_identity_n_records": 22,
-    "semantic_gap_review_covered_fact_route_n_records": 22,
-    "semantic_gap_review_promoted_covered_fact_route_count": 2,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 90,
+    "semantic_gap_review_covered_fact_route_n_records": 90,
+    "semantic_gap_review_promoted_covered_fact_route_count": 3,
     "semantic_gap_review_promoted_workflow_count": 1,
-    "semantic_gap_review_standalone_covered_fact_route_count": 1,
-    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
-    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_count": 2,
+    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 45,
+    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_status": "promote",
     "semantic_gap_review_workflow_count": 1,
-    "semantic_gap_scope": "covered_fact_alignment_expansion",
-    "source": "frontier-v4",
     "source_family_acquisition_status": "covered",
-    "status": "needs_evidence",
+    "status": "promote",
     "unresolved_target_count": 88,
     "workflow": "unresolved_frontier_evidence_summary",
     "world_model_rule_audit_adjusted_remaining_task_count": 0,
@@ -296,9 +313,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 28,
+    "artifact_count": 30,
     "directory_count": 0,
-    "file_count": 28,
+    "file_count": 30,
     "missing_count": 0
   }
 }

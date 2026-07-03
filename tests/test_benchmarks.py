@@ -36667,6 +36667,142 @@ def test_frontier_research_queue_command_plan_templates_scoped_alignment_expansi
     assert "closure_action=expand_scoped_covered_fact_alignment" in command
 
 
+def test_frontier_research_queue_command_plan_templates_scoped_alignment_qa_route(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    qa_corpus_path = tmp_path / "covered-fact-retrieval-qa-corpus.json"
+    qa_report_path = tmp_path / "covered-fact-retrieval-qa-report.json"
+    qa_corpus_path.write_text(
+        json.dumps({
+            "corpus_type": "source_family_structured_qa",
+            "documents": [],
+        }),
+        encoding="utf-8",
+    )
+    qa_report_path.write_text(
+        json.dumps({
+            "workflow": "covered_fact_retrieval_qa_corpus_builder",
+            "status": "ready",
+            "summary": {"n_documents": 2, "n_questions": 1},
+            "paths": {"qa_corpus": str(qa_corpus_path)},
+        }),
+        encoding="utf-8",
+    )
+    summary = {
+        "workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_evidence",
+        "paths": {"covered_fact_retrieval_qa_reports": [str(qa_report_path)]},
+        "next_actions": [
+            {
+                "action_id": "expand_scoped_covered_fact_alignment",
+                "lane": "semantic_gap_review",
+                "priority": 88,
+                "reason": "covered-fact retrieval QA corpus is ready",
+                "semantic_gap_coverage_gap_count": 66,
+                "semantic_gap_coverage_rate": 0.25,
+                "unresolved_target_count": 88,
+            }
+        ],
+    }
+
+    payload = plan_module.build_frontier_research_queue_command_plan(
+        source=summary,
+        output_dir=tmp_path,
+    )
+    entry = payload["entries"][0]
+    command = entry["command_templates"][0]
+    requirements = requirements_module.frontier_command_requirement_summary(
+        command,
+        index=1,
+    )
+
+    assert payload["status"] == "needs_inputs"
+    assert entry["action_id"] == "expand_scoped_covered_fact_alignment"
+    assert entry["metadata"]["source_covered_fact_retrieval_qa_report_count"] == 1
+    assert entry["metadata"]["covered_fact_retrieval_qa_route_command_count"] == 1
+    assert entry["planned_outputs"] == (
+        {
+            "name": "semantic_gap_covered_fact_retrieval_route_summary",
+            "path": str(
+                tmp_path
+                / "expand-scoped-covered-fact-alignment"
+                / "semantic-gap-covered-fact-retrieval-route-summary.json"
+            ),
+            "status": "planned",
+        },
+        {
+            "name": "semantic_gap_covered_fact_retrieval_route_manifest",
+            "path": str(
+                tmp_path
+                / "expand-scoped-covered-fact-alignment"
+                / "semantic-gap-covered-fact-retrieval-route-manifest.json"
+            ),
+            "status": "planned",
+        },
+    )
+    assert "run_source_family_structured_qa_route_workflow.py" in command
+    assert "run_retrieval_semantic_gap_review_workflow.py" not in command
+    assert f"--qa-corpus {qa_corpus_path}" in command
+    assert "--score-name semantic-gap-covered-fact-retrieval-qa" in command
+    assert "--signal truth_proj" in command
+    assert "closure_action=expand_scoped_covered_fact_alignment" in command
+    assert "source=covered_fact_retrieval_qa" in command
+    assert requirements["script"] == "benchmarks/run_source_family_structured_qa_route_workflow.py"
+    assert requirements["status"] == "ready"
+
+
+def test_frontier_research_queue_command_plan_templates_unresolved_closure(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    summary_path = tmp_path / "unresolved-frontier-evidence-summary.json"
+    summary_path.write_text(
+        json.dumps({
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "needs_evidence",
+            "next_actions": [
+                {
+                    "action_id": "verify_unresolved_targets_are_closed",
+                    "lane": "unresolved_queue",
+                    "priority": 70,
+                    "reason": "terminal closure check required",
+                    "unresolved_target_count": 2,
+                    "semantic_gap_covered_fact_route_n_records": 2,
+                    "semantic_gap_covered_fact_route_identity_n_records": 2,
+                    "semantic_gap_coverage_gap_count": 0,
+                    "semantic_gap_coverage_rate": 1.0,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(
+        source=summary_path,
+        output_dir=tmp_path,
+    )
+    entry = payload["entries"][0]
+    command = entry["command_templates"][0]
+    requirements = requirements_module.frontier_command_requirement_summary(
+        command,
+        index=1,
+    )
+
+    assert payload["status"] == "needs_inputs"
+    assert entry["action_id"] == "verify_unresolved_targets_are_closed"
+    assert entry["title"] == "Verify unresolved target closure"
+    assert entry["metadata"]["unresolved_target_count"] == 2
+    assert entry["metadata"]["semantic_gap_coverage_gap_count"] == 0
+    assert "verify_unresolved_frontier_closure.py" in command
+    assert f"--summary {summary_path}" in command
+    assert "closure_action=verify_unresolved_targets_are_closed" in command
+    assert requirements["script"] == "benchmarks/verify_unresolved_frontier_closure.py"
+    assert requirements["status"] == "ready"
+
+
 def test_frontier_research_queue_requirement_checks_cover_control_plane_commands():
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
     commands = {
@@ -36732,6 +36868,15 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "--lane-queue lane-queue.json --collection-corpus corpus.json "
             "--source-catalog catalog.jsonl --batch-id batch-1 --output-dir batch "
             "--json lane-batch.json --artifact-manifest manifest.json"
+        ),
+        "covered_fact_retrieval_qa_route": (
+            "python benchmarks/run_source_family_structured_qa_route_workflow.py "
+            "--qa-corpus qa.json --output-dir out --json route.json "
+            "--artifact-manifest manifest.json"
+        ),
+        "unresolved_closure": (
+            "python benchmarks/verify_unresolved_frontier_closure.py "
+            "--summary summary.json --json closure.json --artifact-manifest manifest.json"
         ),
         "crossref_catalog": (
             "python benchmarks/run_crossref_source_family_catalog_adapter.py "
@@ -36805,14 +36950,24 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "source_family_source_catalog",
         ),
     )
+    covered_fact_retrieval_qa_route_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["covered_fact_retrieval_qa_route"],
+        index=12,
+        required_inputs=("source_family_covered_fact_retrieval_qa_corpus",),
+    )
+    unresolved_closure_inputs = requirements_module.frontier_command_requirement_summary(
+        commands["unresolved_closure"],
+        index=13,
+        required_inputs=("unresolved_frontier_evidence_summary",),
+    )
     crossref_inputs = requirements_module.frontier_command_requirement_summary(
         commands["crossref_catalog"],
-        index=12,
+        index=14,
         required_inputs=("source_family_collection_tasks",),
     )
     seeded_inputs = requirements_module.frontier_command_requirement_summary(
         commands["seeded_catalog"],
-        index=13,
+        index=15,
         required_inputs=("source_family_collection_tasks", "source_family_url_seeds"),
     )
 
@@ -36828,6 +36983,8 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         "structured_qa_lane_queue": "ready",
         "structured_qa_lane_reruns": "ready",
         "structured_qa_lane_batch": "ready",
+        "covered_fact_retrieval_qa_route": "ready",
+        "unresolved_closure": "ready",
         "crossref_catalog": "ready",
         "seeded_catalog": "ready",
     }
@@ -36889,6 +37046,15 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         },
         {"input": "source_family_source_catalog", "flag": "--source-catalog"},
     )
+    assert covered_fact_retrieval_qa_route_inputs["required_input_flags"] == (
+        {
+            "input": "source_family_covered_fact_retrieval_qa_corpus",
+            "flag": "--qa-corpus",
+        },
+    )
+    assert unresolved_closure_inputs["required_input_flags"] == (
+        {"input": "unresolved_frontier_evidence_summary", "flag": "--summary"},
+    )
     assert crossref_inputs["required_input_flags"] == (
         {"input": "source_family_collection_tasks", "flag": "--tasks"},
     )
@@ -36898,7 +37064,7 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     )
     seed_bind_inputs = requirements_module.frontier_command_requirement_summary(
         commands["seed_bind"],
-        index=14,
+        index=16,
         required_inputs=("frontier_input_binding_audit", "frontier_command_bindings"),
     )
     assert seed_bind_inputs["required_input_flags"] == (
@@ -63086,6 +63252,116 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     ])
     cli_payload = json.loads(cli_report_path.read_text(encoding="utf-8"))
     assert cli_payload["metadata"] == {"model": "unit", "source": "cli"}
+
+
+def test_unresolved_frontier_closure_verification_closes_terminal_action(tmp_path):
+    summary_module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
+    closure_module = importlib.import_module("benchmarks.verify_unresolved_frontier_closure")
+
+    unresolved_queue = {
+        "workflow": "unresolved_blind_spot_evidence_queue",
+        "status": "ready_for_adapter_execution",
+        "summary": {"target_count": 2},
+    }
+    covered_coverage = {
+        "workflow": "source_family_coverage_audit",
+        "status": "covered",
+        "summary": {
+            "request_count": 2,
+            "request_with_results_count": 2,
+            "request_with_target_family_count": 2,
+            "request_missing_target_family_count": 0,
+            "covered_target_source_family_counts": {"reference": 2},
+            "missing_target_source_family_counts": {},
+        },
+    }
+    standalone_route = {
+        "workflow": "source_family_structured_qa_route_workflow",
+        "status": "promote",
+        "score_dump_summary": {"n_records": 2, "n_source_documents": 1},
+        "route_metrics": {
+            "decision_accuracy": 1.0,
+            "false_refuted_rate": 1.0,
+            "false_supported_rate": 0.0,
+            "true_supported_rate": 1.0,
+        },
+    }
+    succeeded_run = {
+        "workflow": "frontier_research_queue_bound_command_run",
+        "status": "succeeded",
+        "config": {"executes_commands": True, "require_reviewed_bindings": True},
+        "summary": {
+            "command_count": 1,
+            "executed_count": 1,
+            "succeeded_count": 1,
+            "failed_count": 0,
+            "missing_output_count": 0,
+        },
+    }
+    bundle = {
+        "workflow": "mechanism_handoff_evidence_bundle",
+        "status": "promote",
+        "summary": {"trace_count": 1, "target_count": 1},
+    }
+
+    terminal_payload = summary_module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=unresolved_queue,
+        source_family_coverage_audits=(covered_coverage,),
+        covered_fact_route_summaries=(standalone_route,),
+        frontier_bound_command_runs=(succeeded_run,),
+        mechanism_handoff_bundle=bundle,
+    )
+    terminal_actions = {action["action_id"] for action in terminal_payload["next_actions"]}
+    assert terminal_payload["status"] == "needs_evidence"
+    assert terminal_actions == {"verify_unresolved_targets_are_closed"}
+
+    source_summary = {
+        **terminal_payload,
+        "summary": {
+            **terminal_payload["summary"],
+            "semantic_gap_review_covered_fact_route_identity_n_records": 2,
+        },
+    }
+    closure_report = closure_module.verify_unresolved_frontier_closure(source_summary)
+    promoted_payload = summary_module.summarize_unresolved_frontier_evidence(
+        unresolved_queue=unresolved_queue,
+        source_family_coverage_audits=(covered_coverage,),
+        covered_fact_route_summaries=(standalone_route,),
+        frontier_bound_command_runs=(succeeded_run,),
+        mechanism_handoff_bundle=bundle,
+        closure_verification_reports=(closure_report,),
+    )
+
+    assert closure_report["status"] == "pass"
+    assert promoted_payload["status"] == "promote"
+    assert promoted_payload["next_actions"] == ()
+    assert promoted_payload["lanes"]["closure_verification"]["status"] == "pass"
+    assert promoted_payload["summary"]["closure_verification_pass_count"] == 1
+
+    summary_path = tmp_path / "summary.json"
+    closure_path = tmp_path / "closure.json"
+    manifest_path = tmp_path / "closure-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    summary_path.write_text(json.dumps(source_summary), encoding="utf-8")
+    cli_report = closure_module.run(
+        SimpleNamespace(
+            summary=str(summary_path),
+            json=str(closure_path),
+            artifact_manifest=str(manifest_path),
+            registry=str(registry_path),
+            name="closure-unit",
+            version="0.1",
+            min_coverage_rate=1.0,
+            metadata=["suite=unit"],
+            compact_json=False,
+        )
+    )
+
+    assert cli_report["status"] == "pass"
+    assert json.loads(closure_path.read_text(encoding="utf-8"))["workflow"] == (
+        "unresolved_frontier_closure_verification"
+    )
+    assert summary_module.load_and_verify_artifact_manifest(manifest_path).passed is True
 
 
 def test_unresolved_frontier_evidence_summary_dedupes_covered_fact_route_records(

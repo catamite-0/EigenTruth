@@ -150,6 +150,17 @@ REQUIRED_COMMAND_FLAGS = {
         "--workflow-report",
         "--artifact-manifest",
     ),
+    "benchmarks/run_source_family_structured_qa_route_workflow.py": (
+        "--qa-corpus",
+        "--output-dir",
+        "--json",
+        "--artifact-manifest",
+    ),
+    "benchmarks/verify_unresolved_frontier_closure.py": (
+        "--summary",
+        "--json",
+        "--artifact-manifest",
+    ),
     "benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py": (
         "--input-tasks",
         "--numeric-bindings",
@@ -250,6 +261,12 @@ REQUIRED_INPUT_FLAGS = {
     "benchmarks/run_retrieval_semantic_gap_review_workflow.py": {
         "source_bound_verified_records_jsonl": "--verified-records-jsonl",
         "detectability_blind_spot_record_indices_json": "--record-indices-json",
+    },
+    "benchmarks/run_source_family_structured_qa_route_workflow.py": {
+        "source_family_covered_fact_retrieval_qa_corpus": "--qa-corpus",
+    },
+    "benchmarks/verify_unresolved_frontier_closure.py": {
+        "unresolved_frontier_evidence_summary": "--summary",
     },
     "benchmarks/audit_source_family_coverage.py": {
         "source_family_citation_search_requests": "--requests",

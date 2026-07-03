@@ -1,0 +1,102 @@
+{
+  "checks": [
+    {
+      "actual": "unresolved_frontier_evidence_summary",
+      "expected": "unresolved_frontier_evidence_summary",
+      "name": "source_workflow",
+      "status": "pass"
+    },
+    {
+      "actual": "needs_evidence",
+      "expected": [
+        "needs_evidence",
+        "promote"
+      ],
+      "name": "source_status",
+      "status": "pass"
+    },
+    {
+      "actual": [
+        "verify_unresolved_targets_are_closed"
+      ],
+      "expected": [
+        "verify_unresolved_targets_are_closed"
+      ],
+      "name": "terminal_next_actions",
+      "status": "pass"
+    },
+    {
+      "actual": "covered",
+      "expected": "covered",
+      "name": "source_family_acquisition_status",
+      "status": "pass"
+    },
+    {
+      "actual": "promote",
+      "expected": "promote",
+      "name": "semantic_gap_review_status",
+      "status": "pass"
+    },
+    {
+      "actual": "promote",
+      "expected": "promote",
+      "name": "frontier_queue_execution_status",
+      "status": "pass"
+    },
+    {
+      "actual": "promote",
+      "expected": "promote",
+      "name": "world_model_rules_status",
+      "status": "pass"
+    },
+    {
+      "actual": 0.0,
+      "expected_max": 0,
+      "name": "semantic_gap_review_coverage_gap_count",
+      "status": "pass"
+    },
+    {
+      "actual": 1.0,
+      "expected_min": 1.0,
+      "name": "semantic_gap_review_coverage_rate",
+      "status": "pass"
+    },
+    {
+      "actual": 90.0,
+      "expected_min": 88,
+      "name": "semantic_gap_review_covered_fact_route_identity_n_records",
+      "status": "pass"
+    }
+  ],
+  "config": {
+    "min_coverage_rate": 1.0
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "status": "pass"
+  },
+  "metadata": {
+    "closure_action": "verify_unresolved_targets_are_closed"
+  },
+  "schema_version": 1,
+  "source_summary": {
+    "next_action_count": 1,
+    "next_action_ids": [
+      "verify_unresolved_targets_are_closed"
+    ],
+    "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+    "status": "needs_evidence",
+    "workflow": "unresolved_frontier_evidence_summary"
+  },
+  "status": "pass",
+  "summary": {
+    "blocked_check_count": 0,
+    "check_count": 10,
+    "passed_check_count": 10,
+    "semantic_gap_review_coverage_gap_count": 0,
+    "semantic_gap_review_coverage_rate": 1.0,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 90,
+    "unresolved_target_count": 88
+  },
+  "workflow": "unresolved_frontier_closure_verification"
+}
