@@ -1662,6 +1662,11 @@ Added the first monitor-first tool-selection audit layer:
   queue, the summary emits `expand_scoped_covered_fact_alignment` with
   coverage gap/rate metadata, and the planner lowers it back through
   `run_retrieval_semantic_gap_review_workflow.py --run-covered-fact-route`.
+- The checked-in unresolved summary has been refreshed with that semantic:
+  `22/88` unresolved targets are covered by the promoted scoped route, leaving
+  `66` records for the next covered-fact alignment expansion pass while
+  source-family acquisition, world-model rules, and frontier queue execution
+  remain promoted/covered.
 - `frontier_queue_execution_smoke.py` now exercises the same source-family seed
   staging path before the reviewed command dry-run path, so release smoke catches
   regressions in both non-evidence handoffs without executing child workflows.
