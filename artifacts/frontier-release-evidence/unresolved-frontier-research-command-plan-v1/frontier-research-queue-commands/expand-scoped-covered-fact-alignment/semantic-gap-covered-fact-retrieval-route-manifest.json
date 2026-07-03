@@ -1,0 +1,72 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-fact-retrieval-qa-route/covered-facts-scores.json",
+      "sha256": "71ea7944a937000bd9a1d9191be9654d70086b490571bf5392c6be324f7eb153",
+      "size_bytes": 150300
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-corpus.json",
+      "sha256": "ac2e6bb4d00d538c3cf8178e6902eb7d847ce073d647dd27b31ba992c5cd15c4",
+      "size_bytes": 43491
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "semantic-gap-covered-fact-retrieval-route-summary.json",
+      "sha256": "e5f970c748e21f8a9b4b2530f47f90a15c26fae9bb52c92d196392b796b5a5d0",
+      "size_bytes": 15749
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-fact-retrieval-qa-route/verified-records.jsonl",
+      "sha256": "4e6db32bd1ac2abb78d0692a912791ca1899184794c5c23d7ee9fb022b4af3e0",
+      "size_bytes": 416745
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-fact-retrieval-qa-route/structured-qa-verifier-report.json",
+      "sha256": "2aa6c2555af8f17250d29706bc024928927c0cc0a7dda477a7d93b9d6ca85b59",
+      "size_bytes": 18193
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "closure_action": "expand_scoped_covered_fact_alignment",
+    "fact_group_count": 7,
+    "n_false": 41,
+    "n_records": 82,
+    "n_true": 41,
+    "promotes_covered_facts_route": true,
+    "provider_count": 1,
+    "route": "structured_qa",
+    "score_name": "semantic-gap-covered-fact-retrieval-qa",
+    "signal": "truth_proj",
+    "source": "covered_fact_retrieval_qa",
+    "source_family_count": 1,
+    "status": "promote",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "workflow": "source_family_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

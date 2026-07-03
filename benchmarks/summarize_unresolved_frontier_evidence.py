@@ -73,6 +73,7 @@ def summarize_unresolved_frontier_evidence(
     covered_fact_mapping_audits: Sequence[Mapping[str, Any]] = (),
     covered_fact_retrieval_qa_reports: Sequence[Mapping[str, Any]] = (),
     covered_fact_retrieval_query_sweeps: Sequence[Mapping[str, Any]] = (),
+    closure_verification_reports: Sequence[Mapping[str, Any]] = (),
     input_binding_audits: Sequence[Mapping[str, Any]] = (),
     frontier_command_bindings: Sequence[Mapping[str, Any]] = (),
     frontier_command_binding_reviews: Sequence[Mapping[str, Any]] = (),
@@ -122,8 +123,11 @@ def summarize_unresolved_frontier_evidence(
         "frontier_queue_execution": frontier_queue_lane,
         "world_model_rules": rule_lane,
     }
-    next_actions = _next_actions(lanes)
-    summary = _summary(lanes)
+    closure_lane = _closure_verification_lane(closure_verification_reports)
+    if closure_verification_reports:
+        lanes["closure_verification"] = closure_lane
+    next_actions = _next_actions(lanes, closure_verification=closure_lane)
+    summary = _summary(lanes, closure_verification=closure_lane)
     status = "promote" if not next_actions else "needs_evidence"
     return {
         "schema_version": 1,
@@ -151,6 +155,7 @@ def run(
     covered_fact_mapping_audit_paths: Sequence[str | Path] = (),
     covered_fact_retrieval_qa_report_paths: Sequence[str | Path] = (),
     covered_fact_retrieval_query_sweep_paths: Sequence[str | Path] = (),
+    closure_verification_report_paths: Sequence[str | Path] = (),
     input_binding_audit_paths: Sequence[str | Path] = (),
     frontier_command_binding_paths: Sequence[str | Path] = (),
     frontier_command_binding_review_paths: Sequence[str | Path] = (),
@@ -197,6 +202,9 @@ def run(
     covered_fact_retrieval_query_sweeps = tuple(
         _load_mapping(path) for path in covered_fact_retrieval_query_sweep_paths
     )
+    closure_verification_reports = tuple(
+        _load_mapping(path) for path in closure_verification_report_paths
+    )
     input_binding_audits = tuple(_load_mapping(path) for path in input_binding_audit_paths)
     frontier_command_bindings = tuple(
         _load_mapping(path) for path in frontier_command_binding_paths
@@ -240,6 +248,7 @@ def run(
         covered_fact_mapping_audits=covered_fact_mappings,
         covered_fact_retrieval_qa_reports=covered_fact_retrieval_qa_reports,
         covered_fact_retrieval_query_sweeps=covered_fact_retrieval_query_sweeps,
+        closure_verification_reports=closure_verification_reports,
         input_binding_audits=input_binding_audits,
         frontier_command_bindings=frontier_command_bindings,
         frontier_command_binding_reviews=frontier_command_reviews,
@@ -279,6 +288,9 @@ def run(
         ),
         "covered_fact_retrieval_query_sweeps": tuple(
             str(path) for path in covered_fact_retrieval_query_sweep_paths
+        ),
+        "closure_verification_reports": tuple(
+            str(path) for path in closure_verification_report_paths
         ),
         "input_binding_audits": tuple(str(path) for path in input_binding_audit_paths),
         "frontier_command_bindings": tuple(str(path) for path in frontier_command_binding_paths),
@@ -330,6 +342,7 @@ def run(
             covered_fact_mapping_audit_paths=covered_fact_mapping_audit_paths,
             covered_fact_retrieval_qa_report_paths=covered_fact_retrieval_qa_report_paths,
             covered_fact_retrieval_query_sweep_paths=covered_fact_retrieval_query_sweep_paths,
+            closure_verification_report_paths=closure_verification_report_paths,
             input_binding_audit_paths=input_binding_audit_paths,
             frontier_command_binding_paths=frontier_command_binding_paths,
             frontier_command_binding_review_paths=frontier_command_binding_review_paths,
@@ -454,6 +467,15 @@ def run(
                         "best_covered_fact_retrieval_verified_false_alarm"
                     ]
                 ),
+                "closure_verification_status": payload["summary"][
+                    "closure_verification_status"
+                ],
+                "closure_verification_report_count": payload["summary"][
+                    "closure_verification_report_count"
+                ],
+                "closure_verification_pass_count": payload["summary"][
+                    "closure_verification_pass_count"
+                ],
                 "frontier_queue_execution_status": payload["lanes"][
                     "frontier_queue_execution"
                 ]["status"],
@@ -2033,7 +2055,47 @@ def _world_model_rule_lane(
     }
 
 
-def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]]:
+def _closure_verification_lane(
+    closure_verification_reports: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    report_rows = tuple(
+        {
+            "workflow": str(report.get("workflow") or ""),
+            "status": str(report.get("status") or "unknown"),
+            "source_summary_status": _nested(report, "source_summary", "status"),
+            "source_next_action_count": _nested(
+                report,
+                "source_summary",
+                "next_action_count",
+            ),
+            "blocking_reasons": _string_tuple(
+                _nested(report, "decision", "blocking_reasons")
+            ),
+        }
+        for report in closure_verification_reports
+    )
+    pass_count = sum(1 for row in report_rows if row["status"] == "pass")
+    blocked_count = sum(1 for row in report_rows if row["status"] != "pass")
+    if pass_count:
+        status = "pass"
+    elif report_rows:
+        status = "blocked"
+    else:
+        status = "missing"
+    return {
+        "status": status,
+        "report_count": len(report_rows),
+        "pass_count": pass_count,
+        "blocked_count": blocked_count,
+        "reports": report_rows,
+    }
+
+
+def _next_actions(
+    lanes: Mapping[str, Mapping[str, Any]],
+    *,
+    closure_verification: Mapping[str, Any],
+) -> list[dict[str, Any]]:
     actions: list[dict[str, Any]] = []
     source = lanes["source_family_acquisition"]
     citation = lanes["citation_evidence"]
@@ -2315,12 +2377,26 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
                 )
             ),
         })
-    if _int(queue.get("target_count")) and not actions:
+    if _int(queue.get("target_count")) and not actions and closure_verification.get("status") != "pass":
         actions.append({
             "action_id": "verify_unresolved_targets_are_closed",
             "priority": 70,
             "lane": "unresolved_queue",
             "reason": "unresolved targets remain in the source queue even though lane gates passed",
+            "unresolved_target_count": queue.get("target_count", 0),
+            "semantic_gap_covered_fact_route_n_records": semantic.get(
+                "covered_fact_route_n_records", 0
+            ),
+            "semantic_gap_covered_fact_route_identity_n_records": semantic.get(
+                "covered_fact_route_identity_n_records", 0
+            ),
+            "semantic_gap_coverage_gap_count": _semantic_gap_coverage_gap_count(
+                semantic,
+                queue,
+            ),
+            "semantic_gap_coverage_rate": _semantic_gap_coverage_rate(semantic, queue),
+            "closure_verification_status": closure_verification.get("status"),
+            "closure_verification_report_count": closure_verification.get("report_count", 0),
         })
     return actions
 
@@ -2372,7 +2448,11 @@ def _semantic_gap_coverage_rate(
     return min(_int(semantic.get("covered_fact_route_n_records")) / target_count, 1.0)
 
 
-def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+def _summary(
+    lanes: Mapping[str, Mapping[str, Any]],
+    *,
+    closure_verification: Mapping[str, Any],
+) -> dict[str, Any]:
     lane_statuses = {name: str(lane.get("status") or "unknown") for name, lane in lanes.items()}
     return {
         "unresolved_target_count": _int(lanes["unresolved_queue"].get("target_count")),
@@ -2563,6 +2643,10 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         "mechanism_handoff_trace_count": _int(
             lanes["world_model_rules"].get("mechanism_handoff_trace_count")
         ),
+        "closure_verification_status": str(closure_verification.get("status") or "missing"),
+        "closure_verification_report_count": _int(closure_verification.get("report_count")),
+        "closure_verification_pass_count": _int(closure_verification.get("pass_count")),
+        "closure_verification_blocked_count": _int(closure_verification.get("blocked_count")),
         "lane_statuses": lane_statuses,
         "blocked_lane_count": sum(
             1
@@ -2596,6 +2680,7 @@ def _write_manifest(
     covered_fact_mapping_audit_paths: Sequence[str | Path],
     covered_fact_retrieval_qa_report_paths: Sequence[str | Path],
     covered_fact_retrieval_query_sweep_paths: Sequence[str | Path],
+    closure_verification_report_paths: Sequence[str | Path],
     input_binding_audit_paths: Sequence[str | Path],
     frontier_command_binding_paths: Sequence[str | Path],
     frontier_command_binding_review_paths: Sequence[str | Path],
@@ -2649,6 +2734,10 @@ def _write_manifest(
     artifacts.update({
         f"covered_fact_retrieval_query_sweep_{idx}": path
         for idx, path in enumerate(covered_fact_retrieval_query_sweep_paths, start=1)
+    })
+    artifacts.update({
+        f"closure_verification_report_{idx}": path
+        for idx, path in enumerate(closure_verification_report_paths, start=1)
     })
     artifacts.update({
         f"input_binding_audit_{idx}": path
@@ -2855,6 +2944,21 @@ def _write_manifest(
                 "lanes",
                 "semantic_gap_review",
                 "best_covered_fact_retrieval_verified_false_alarm",
+            ),
+            "closure_verification_status": _nested(
+                payload,
+                "summary",
+                "closure_verification_status",
+            ),
+            "closure_verification_report_count": _nested(
+                payload,
+                "summary",
+                "closure_verification_report_count",
+            ),
+            "closure_verification_pass_count": _nested(
+                payload,
+                "summary",
+                "closure_verification_pass_count",
             ),
             "frontier_queue_execution_status": _nested(
                 payload, "lanes", "frontier_queue_execution", "status"
@@ -3235,6 +3339,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--covered-fact-mapping-audit", action="append", default=[])
     parser.add_argument("--covered-fact-retrieval-qa-report", action="append", default=[])
     parser.add_argument("--covered-fact-retrieval-query-sweep", action="append", default=[])
+    parser.add_argument("--closure-verification-report", action="append", default=[])
     parser.add_argument("--input-binding-audit", action="append", default=[])
     parser.add_argument("--frontier-command-bindings", action="append", default=[])
     parser.add_argument("--frontier-command-binding-review", action="append", default=[])
@@ -3272,6 +3377,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         covered_fact_retrieval_query_sweep_paths=tuple(
             args.covered_fact_retrieval_query_sweep or ()
         ),
+        closure_verification_report_paths=tuple(args.closure_verification_report or ()),
         input_binding_audit_paths=tuple(args.input_binding_audit or ()),
         frontier_command_binding_paths=tuple(args.frontier_command_bindings or ()),
         frontier_command_binding_review_paths=tuple(

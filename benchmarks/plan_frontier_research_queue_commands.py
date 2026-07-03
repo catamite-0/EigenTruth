@@ -656,6 +656,14 @@ def _unresolved_summary_actions(
             )
         elif action_id == "repair_frontier_queue_command_execution":
             actions.append(_unresolved_frontier_queue_repair_action(payload, action, source_path=source_path))
+        elif action_id == "verify_unresolved_targets_are_closed":
+            actions.append(
+                _unresolved_closure_verification_action(
+                    payload,
+                    action,
+                    source_path=source_path,
+                )
+            )
         elif action_id == "stage_frontier_queue_seed_inputs":
             actions.append(
                 _unresolved_frontier_queue_seed_input_action(
@@ -1065,8 +1073,21 @@ def _unresolved_semantic_gap_review_action(
 ) -> Mapping[str, Any]:
     action_id = str(action.get("action_id") or "complete_retrieval_semantic_gap_review")
     workflow_paths = _string_tuple(_nested(payload, "paths", "semantic_gap_review_workflows"))
+    qa_report_paths = _string_tuple(_nested(payload, "paths", "covered_fact_retrieval_qa_reports"))
     commands: list[str] = []
+    qa_route_command_count = 0
+    if action_id == "expand_scoped_covered_fact_alignment":
+        for qa_report_path in qa_report_paths:
+            qa_route_commands = _covered_fact_retrieval_qa_route_commands(
+                qa_report_path,
+                source_path=source_path,
+                closure_action=action_id,
+            )
+            qa_route_command_count += len(qa_route_commands)
+            commands.extend(qa_route_commands)
     for workflow_path in workflow_paths:
+        if action_id == "expand_scoped_covered_fact_alignment" and commands:
+            break
         commands.extend(
             _semantic_gap_review_commands(
                 workflow_path,
@@ -1089,6 +1110,19 @@ def _unresolved_semantic_gap_review_action(
             "source_bound_verified_records_jsonl",
             "detectability_blind_spot_record_indices_json",
         )
+    closure_outputs = (
+        (
+            "semantic_gap_covered_fact_retrieval_route_summary",
+            "semantic_gap_covered_fact_retrieval_route_manifest",
+        )
+        if qa_route_command_count
+        else (
+            "semantic_gap_review_workflow_report",
+            "semantic_gap_review_artifact_manifest",
+            "semantic_gap_covered_fact_route_summary",
+            "semantic_gap_covered_fact_route_manifest",
+        )
+    )
     return {
         **dict(action),
         "title": (
@@ -1105,14 +1139,11 @@ def _unresolved_semantic_gap_review_action(
         "suggested_commands": tuple(commands),
         "metadata": {
             "required_inputs": required_inputs,
-            "closure_outputs": (
-                "semantic_gap_review_workflow_report",
-                "semantic_gap_review_artifact_manifest",
-                "semantic_gap_covered_fact_route_summary",
-                "semantic_gap_covered_fact_route_manifest",
-            ),
+            "closure_outputs": closure_outputs,
             "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
             "source_semantic_gap_workflow_count": len(workflow_paths),
+            "source_covered_fact_retrieval_qa_report_count": len(qa_report_paths),
+            "covered_fact_retrieval_qa_route_command_count": qa_route_command_count,
             "reason": str(action.get("reason") or ""),
             "semantic_gap_candidate_count": _int_or_zero(
                 action.get("semantic_gap_candidate_count")
@@ -1136,6 +1167,127 @@ def _unresolved_semantic_gap_review_action(
             "unresolved_target_count": _int_or_zero(action.get("unresolved_target_count")),
         },
     }
+
+
+def _unresolved_closure_verification_action(
+    payload: Mapping[str, Any],
+    action: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+) -> Mapping[str, Any]:
+    command = _unresolved_closure_verification_command(source_path=source_path)
+    required_inputs = () if source_path is not None else ("unresolved_frontier_evidence_summary",)
+    return {
+        **dict(action),
+        "title": "Verify unresolved target closure",
+        "action_type": "workflow_plan",
+        "evidence_routes": (
+            "unresolved_queue",
+            "semantic_gap_review",
+            "frontier_release_evidence",
+        ),
+        "suggested_commands": (command,),
+        "metadata": {
+            "required_inputs": required_inputs,
+            "closure_outputs": (
+                "unresolved_frontier_closure_verification",
+                "unresolved_frontier_closure_verification_manifest",
+            ),
+            "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
+            "closure_verification_workflow": "unresolved_frontier_closure_verification",
+            "reason": str(action.get("reason") or ""),
+            "unresolved_target_count": _int_or_zero(action.get("unresolved_target_count")),
+            "semantic_gap_covered_fact_route_n_records": _int_or_zero(
+                action.get("semantic_gap_covered_fact_route_n_records")
+            ),
+            "semantic_gap_covered_fact_route_identity_n_records": _int_or_zero(
+                action.get("semantic_gap_covered_fact_route_identity_n_records")
+            ),
+            "semantic_gap_coverage_gap_count": _int_or_zero(
+                action.get("semantic_gap_coverage_gap_count")
+            ),
+            "semantic_gap_coverage_rate": action.get("semantic_gap_coverage_rate"),
+        },
+    }
+
+
+def _unresolved_closure_verification_command(*, source_path: Path | None) -> str:
+    parts: list[Any] = [
+        "python",
+        "benchmarks/verify_unresolved_frontier_closure.py",
+        "--summary",
+        "..." if source_path is None else str(source_path),
+        "--json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--metadata",
+        "closure_action=verify_unresolved_targets_are_closed",
+    ]
+    return _shell_join(parts)
+
+
+def _covered_fact_retrieval_qa_route_commands(
+    qa_report_path_value: str,
+    *,
+    source_path: Path | None,
+    closure_action: str,
+) -> tuple[str, ...]:
+    qa_report_path = _resolve_path(qa_report_path_value, base=source_path)
+    qa_report = _load_optional_json(qa_report_path)
+    qa_corpus = _resolve_path(_nested(qa_report, "paths", "qa_corpus"), base=qa_report_path)
+    if qa_corpus is None:
+        return ()
+    return (
+        _covered_fact_retrieval_qa_route_command(
+            qa_corpus=qa_corpus,
+            closure_action=closure_action,
+        ),
+    )
+
+
+def _covered_fact_retrieval_qa_route_command(
+    *,
+    qa_corpus: Path,
+    closure_action: str,
+) -> str:
+    parts: list[Any] = [
+        "python",
+        "benchmarks/run_source_family_structured_qa_route_workflow.py",
+        "--qa-corpus",
+        str(qa_corpus),
+        "--output-dir",
+        "...",
+        "--json",
+        "...",
+        "--artifact-manifest",
+        "...",
+        "--registry",
+        "...",
+        "--name",
+        "...",
+        "--version",
+        "...",
+        "--score-name",
+        "semantic-gap-covered-fact-retrieval-qa",
+        "--signal",
+        "truth_proj",
+        "--alpha",
+        "0.1",
+        "--seed",
+        "0",
+        "--metadata",
+        f"closure_action={closure_action}",
+        "--metadata",
+        "source=covered_fact_retrieval_qa",
+    ]
+    return _shell_join(parts)
 
 
 def _semantic_gap_review_commands(
@@ -2126,6 +2278,12 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             ),
             "source_family_qa_document_count": _int_or_zero(
                 metadata.get("source_family_qa_document_count")
+            ),
+            "source_covered_fact_retrieval_qa_report_count": _int_or_zero(
+                metadata.get("source_covered_fact_retrieval_qa_report_count")
+            ),
+            "covered_fact_retrieval_qa_route_command_count": _int_or_zero(
+                metadata.get("covered_fact_retrieval_qa_route_command_count")
             ),
             "semantic_gap_covered_fact_route_n_records": _int_or_zero(
                 metadata.get("semantic_gap_covered_fact_route_n_records")

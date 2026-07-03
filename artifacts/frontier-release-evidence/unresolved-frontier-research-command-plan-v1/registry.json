@@ -55,6 +55,151 @@
       "name": "unresolved-frontier-research-command-plan",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
       "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "command_count": 1,
+        "entry_count": 1,
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "missing_command_template_count": 0,
+        "missing_input_count": 1,
+        "needs_input_entry_count": 1,
+        "only_active_research_queue": false,
+        "placeholder_count": 6,
+        "ready_entry_count": 0,
+        "source_path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+        "source_research_alignment_status": null,
+        "source_research_lifecycle_status": null,
+        "source_workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_inputs",
+        "workflow": "frontier_research_queue_command_plan"
+      },
+      "name": "unresolved-frontier-research-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+      "version": "0.3"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "command_count": 1,
+        "entry_count": 1,
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "missing_command_template_count": 0,
+        "missing_input_count": 1,
+        "needs_input_entry_count": 1,
+        "only_active_research_queue": false,
+        "placeholder_count": 6,
+        "ready_entry_count": 0,
+        "source_path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+        "source_research_alignment_status": null,
+        "source_research_lifecycle_status": null,
+        "source_workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_inputs",
+        "workflow": "frontier_research_queue_command_plan"
+      },
+      "name": "unresolved-frontier-research-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+      "version": "0.4"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/semantic-gap-covered-fact-retrieval-route-manifest.json",
+        "closure_action": "expand_scoped_covered_fact_alignment",
+        "fact_group_count": 7,
+        "n_records": 82,
+        "provider_count": 1,
+        "route": "structured_qa",
+        "source": "covered_fact_retrieval_qa",
+        "source_family_count": 1,
+        "status": "promote",
+        "workflow": "source_family_structured_qa_route_workflow"
+      },
+      "name": "semantic-gap-covered-fact-retrieval-qa-route",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/semantic-gap-covered-fact-retrieval-route-summary.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "command_count": 0,
+        "entry_count": 1,
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "missing_command_template_count": 1,
+        "missing_input_count": 0,
+        "needs_input_entry_count": 0,
+        "only_active_research_queue": false,
+        "placeholder_count": 0,
+        "ready_entry_count": 0,
+        "source_path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+        "source_research_alignment_status": null,
+        "source_research_lifecycle_status": null,
+        "source_workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_commands",
+        "workflow": "frontier_research_queue_command_plan"
+      },
+      "name": "unresolved-frontier-research-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+      "version": "0.5"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/verify-unresolved-targets-are-closed/unresolved-frontier-closure-verification-manifest.json",
+        "closure_action": "verify_unresolved_targets_are_closed",
+        "semantic_gap_review_coverage_gap_count": 0,
+        "source_summary": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+        "status": "pass",
+        "unresolved_target_count": 88,
+        "workflow": "unresolved_frontier_closure_verification"
+      },
+      "name": "unresolved-frontier-closure-verification",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/verify-unresolved-targets-are-closed/unresolved-frontier-closure-verification.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "command_count": 0,
+        "entry_count": 0,
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "missing_command_template_count": 0,
+        "missing_input_count": 0,
+        "needs_input_entry_count": 0,
+        "only_active_research_queue": false,
+        "placeholder_count": 0,
+        "ready_entry_count": 0,
+        "source_path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+        "source_research_alignment_status": null,
+        "source_research_lifecycle_status": null,
+        "source_workflow": "unresolved_frontier_evidence_summary",
+        "status": "empty",
+        "workflow": "frontier_research_queue_command_plan"
+      },
+      "name": "unresolved-frontier-research-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+      "version": "0.6"
     }
   ],
   "schema_version": 1

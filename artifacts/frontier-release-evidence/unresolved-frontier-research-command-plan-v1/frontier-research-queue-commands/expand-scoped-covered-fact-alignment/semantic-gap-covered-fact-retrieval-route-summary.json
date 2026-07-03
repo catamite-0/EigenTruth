@@ -1,0 +1,541 @@
+{
+  "alpha": 0.1,
+  "covered_fact_score_dump_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/covered-fact-retrieval-qa-route/covered-facts-scores.json",
+  "fact_group_count": 7,
+  "fact_group_metrics": {
+    "wikidata:unknown_family:description": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:description",
+      "fact_type": "description",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 9
+        },
+        "true": {
+          "supported": 9
+        }
+      },
+      "n_decided_supported_or_refuted": 18,
+      "n_false": 9,
+      "n_records": 18,
+      "n_source_documents": 0,
+      "n_true": 9,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 18
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 9,
+        "supported": 9
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:unknown_family:p106": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:p106",
+      "fact_type": "P106",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 1
+        },
+        "true": {
+          "supported": 1
+        }
+      },
+      "n_decided_supported_or_refuted": 2,
+      "n_false": 1,
+      "n_records": 2,
+      "n_source_documents": 0,
+      "n_true": 1,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 2
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 1,
+        "supported": 1
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:unknown_family:p112": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:p112",
+      "fact_type": "P112",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 3
+        },
+        "true": {
+          "supported": 3
+        }
+      },
+      "n_decided_supported_or_refuted": 6,
+      "n_false": 3,
+      "n_records": 6,
+      "n_source_documents": 0,
+      "n_true": 3,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 6
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 3,
+        "supported": 3
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:unknown_family:p170": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:p170",
+      "fact_type": "P170",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 2
+        },
+        "true": {
+          "supported": 2
+        }
+      },
+      "n_decided_supported_or_refuted": 4,
+      "n_false": 2,
+      "n_records": 4,
+      "n_source_documents": 0,
+      "n_true": 2,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 4
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 2,
+        "supported": 2
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:unknown_family:p279": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:p279",
+      "fact_type": "P279",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 7
+        },
+        "true": {
+          "supported": 7
+        }
+      },
+      "n_decided_supported_or_refuted": 14,
+      "n_false": 7,
+      "n_records": 14,
+      "n_source_documents": 0,
+      "n_true": 7,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 14
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 7,
+        "supported": 7
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:unknown_family:p31": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:p31",
+      "fact_type": "P31",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 17
+        },
+        "true": {
+          "supported": 17
+        }
+      },
+      "n_decided_supported_or_refuted": 34,
+      "n_false": 17,
+      "n_records": 34,
+      "n_source_documents": 0,
+      "n_true": 17,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 34
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 17,
+        "supported": 17
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "wikidata:unknown_family:p793": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "fact_group": "wikidata:unknown_family:p793",
+      "fact_type": "P793",
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 2
+        },
+        "true": {
+          "supported": 2
+        }
+      },
+      "n_decided_supported_or_refuted": 4,
+      "n_false": 2,
+      "n_records": 4,
+      "n_source_documents": 0,
+      "n_true": 2,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 4
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 2,
+        "supported": 2
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "metadata": {
+    "closure_action": "expand_scoped_covered_fact_alignment",
+    "source": "covered_fact_retrieval_qa"
+  },
+  "next_step": "Use this only as covered-fact route-quality evidence. Map product claims or blind spots into these exact questions before creating a correction handoff.",
+  "provider_count": 1,
+  "provider_metrics": {
+    "wikidata": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 41
+        },
+        "true": {
+          "supported": 41
+        }
+      },
+      "n_decided_supported_or_refuted": 82,
+      "n_false": 41,
+      "n_records": 82,
+      "n_true": 41,
+      "provider": "wikidata",
+      "selected_route_counts": {
+        "structured_qa": 82
+      },
+      "status_counts": {
+        "refuted": 41,
+        "supported": 41
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-corpus.json",
+  "qa_corpus_summary": {
+    "by_property": {
+      "P106": 1,
+      "P112": 3,
+      "P170": 2,
+      "P279": 7,
+      "P31": 17,
+      "P793": 2,
+      "description": 9
+    },
+    "included_status_counts": {
+      "candidate_fact_coverage": 41
+    },
+    "mapping_record_count": 89,
+    "n_documents": 41,
+    "n_questions": 16,
+    "skipped": {
+      "answer_entity_collision": 0,
+      "answer_value_supported": 0,
+      "duplicate_fact": 1,
+      "missing_fact_answer": 0,
+      "missing_question": 0,
+      "status_not_included": 73,
+      "without_facts": 0
+    }
+  },
+  "qa_verifier": {
+    "decided_records": 82,
+    "enabled": true
+  },
+  "route": "structured_qa",
+  "route_metrics": {
+    "attempted_route_count_observations": 82,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 82,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 41,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 41
+      }
+    },
+    "max_duration_seconds": 0.00017715198919177055,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.00010645746895134812,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.00010645746895134812,
+    "n_decided_supported_or_refuted": 82,
+    "n_false": 41,
+    "n_true": 41,
+    "p95_duration_seconds": 0.0001227314292918891,
+    "p95_selected_route_duration_seconds": 0.0001227314292918891,
+    "p99_duration_seconds": 0.0001651283481623977,
+    "p99_selected_route_duration_seconds": 0.0001651283481623977,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 82,
+    "selected_route_duration_observations": 82,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 82.0,
+    "total_duration_seconds": 0.008729512454010546,
+    "total_selected_route_duration_seconds": 0.008729512454010546,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "schema_version": 1,
+  "scope": "covered source-family structured QA facts, not open-domain TruthfulQA route coverage",
+  "score_dump_summary": {
+    "by_fact_group": {
+      "wikidata:unknown_family:description": {
+        "fact_group": "wikidata:unknown_family:description",
+        "fact_type": "description",
+        "n_false": 9,
+        "n_records": 18,
+        "n_source_documents": 9,
+        "n_true": 9,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      },
+      "wikidata:unknown_family:p106": {
+        "fact_group": "wikidata:unknown_family:p106",
+        "fact_type": "P106",
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      },
+      "wikidata:unknown_family:p112": {
+        "fact_group": "wikidata:unknown_family:p112",
+        "fact_type": "P112",
+        "n_false": 3,
+        "n_records": 6,
+        "n_source_documents": 3,
+        "n_true": 3,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      },
+      "wikidata:unknown_family:p170": {
+        "fact_group": "wikidata:unknown_family:p170",
+        "fact_type": "P170",
+        "n_false": 2,
+        "n_records": 4,
+        "n_source_documents": 2,
+        "n_true": 2,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      },
+      "wikidata:unknown_family:p279": {
+        "fact_group": "wikidata:unknown_family:p279",
+        "fact_type": "P279",
+        "n_false": 7,
+        "n_records": 14,
+        "n_source_documents": 7,
+        "n_true": 7,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      },
+      "wikidata:unknown_family:p31": {
+        "fact_group": "wikidata:unknown_family:p31",
+        "fact_type": "P31",
+        "n_false": 17,
+        "n_records": 34,
+        "n_source_documents": 17,
+        "n_true": 17,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      },
+      "wikidata:unknown_family:p793": {
+        "fact_group": "wikidata:unknown_family:p793",
+        "fact_type": "P793",
+        "n_false": 2,
+        "n_records": 4,
+        "n_source_documents": 2,
+        "n_true": 2,
+        "provider": "wikidata",
+        "source_family": "unknown_family"
+      }
+    },
+    "by_provider": {
+      "wikidata": 41
+    },
+    "by_source_family": {
+      "unknown_family": 41
+    },
+    "fact_group_count": 7,
+    "n_false": 41,
+    "n_records": 82,
+    "n_skipped_false_answer": 0,
+    "n_source_documents": 41,
+    "n_true": 41,
+    "provider_count": 1,
+    "source_family_count": 1
+  },
+  "score_name": "semantic-gap-covered-fact-retrieval-qa",
+  "selected_route_counts": {
+    "structured_qa": 82
+  },
+  "signal": "truth_proj",
+  "source_family_count": 1,
+  "source_family_metrics": {
+    "unknown_family": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 41
+        },
+        "true": {
+          "supported": 41
+        }
+      },
+      "n_decided_supported_or_refuted": 82,
+      "n_false": 41,
+      "n_records": 82,
+      "n_true": 41,
+      "selected_route_counts": {
+        "structured_qa": 82
+      },
+      "source_family": "unknown_family",
+      "status_counts": {
+        "refuted": 41,
+        "supported": 41
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "status": "promote",
+  "structured_qa_metrics": {
+    "attempted_route_count_observations": 82,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 82,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 41,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 41
+      }
+    },
+    "max_duration_seconds": 0.00017715198919177055,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.00010645746895134812,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.00010645746895134812,
+    "n_decided_supported_or_refuted": 82,
+    "n_false": 41,
+    "n_true": 41,
+    "p95_duration_seconds": 0.0001227314292918891,
+    "p95_selected_route_duration_seconds": 0.0001227314292918891,
+    "p99_duration_seconds": 0.0001651283481623977,
+    "p99_selected_route_duration_seconds": 0.0001651283481623977,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 82,
+    "selected_route_duration_observations": 82,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 82.0,
+    "total_duration_seconds": 0.008729512454010546,
+    "total_selected_route_duration_seconds": 0.008729512454010546,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "verification_status_counts": {
+    "error": 0,
+    "insufficient_evidence": 0,
+    "not_applicable": 0,
+    "refuted": 41,
+    "supported": 41
+  },
+  "verified_records_jsonl_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/covered-fact-retrieval-qa-route/verified-records.jsonl",
+  "verifier_report_path": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/expand-scoped-covered-fact-alignment/covered-fact-retrieval-qa-route/structured-qa-verifier-report.json",
+  "workflow": "source_family_structured_qa_route_workflow"
+}

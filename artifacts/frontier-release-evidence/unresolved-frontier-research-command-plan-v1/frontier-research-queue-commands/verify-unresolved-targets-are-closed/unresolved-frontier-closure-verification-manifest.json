@@ -1,0 +1,38 @@
+{
+  "artifacts": {
+    "closure_verification_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-frontier-closure-verification.json",
+      "sha256": "89d3124946b2c70b225f82fbaa547db1bbe196108f88bc42436c1ed45b36eb41",
+      "size_bytes": 2542
+    },
+    "unresolved_frontier_evidence_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "sha256": "9370b4ea192673b05d6675f43794f8a578cc10dea0d51cf57cc6e42b910ae275",
+      "size_bytes": 42269
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_action": "verify_unresolved_targets_are_closed",
+    "semantic_gap_review_coverage_gap_count": 0,
+    "semantic_gap_review_coverage_rate": 1.0,
+    "source_next_action_count": 1,
+    "source_summary_status": "needs_evidence",
+    "status": "pass",
+    "unresolved_target_count": 88,
+    "workflow": "unresolved_frontier_closure_verification"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}
