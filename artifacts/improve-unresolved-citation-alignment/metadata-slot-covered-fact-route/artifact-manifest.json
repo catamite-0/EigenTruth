@@ -1,0 +1,103 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "eaffc167a1117be27a3d19406dc86eb3a46b57ba7c9cca4a8b490d084de75181",
+      "size_bytes": 13430
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../metadata-slot-source-family-qa/source-family-qa-corpus.json",
+      "sha256": "4e52eefcf559afae285706ec992ed8faddaafb28a887bc9a6b178d141f309afb",
+      "size_bytes": 6891
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-route-summary.json",
+      "sha256": "afb51ef7748d19c194455e0aa17a395bee17be8bc0d6d08bc5ed9c05a2e22c48",
+      "size_bytes": 6738
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "16e6488de0d4e43f36ef561e0fbd7e58fc5e2a18f7ed488845c1fe5d9ca19dce",
+      "size_bytes": 34121
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-verifier-report.json",
+      "sha256": "0b0b6c26629b50874bf9bf3d420f54d93b7c31d15f5522596be55007ff4e5c0e",
+      "size_bytes": 17625
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.2,
+    "covered_fact_property_count": 2,
+    "covered_fact_property_description_decision_accuracy": 1.0,
+    "covered_fact_property_description_decision_error_rate": 0.0,
+    "covered_fact_property_description_false_refuted_rate": 1.0,
+    "covered_fact_property_description_false_supported_rate": 0.0,
+    "covered_fact_property_description_insufficient_evidence_rate": 0.0,
+    "covered_fact_property_description_n_false": 3,
+    "covered_fact_property_description_n_records": 6,
+    "covered_fact_property_description_n_source_documents": 3,
+    "covered_fact_property_description_n_true": 3,
+    "covered_fact_property_description_statement_property_label": "description",
+    "covered_fact_property_description_true_refuted_rate": 0.0,
+    "covered_fact_property_description_true_supported_rate": 1.0,
+    "covered_fact_property_ids": [
+      "P527",
+      "description"
+    ],
+    "covered_fact_property_max_false_supported_rate": 0.0,
+    "covered_fact_property_min_decision_accuracy": 1.0,
+    "covered_fact_property_min_false_refuted_rate": 1.0,
+    "covered_fact_property_min_records": 2.0,
+    "covered_fact_property_min_source_documents": 1.0,
+    "covered_fact_property_p527_decision_accuracy": 1.0,
+    "covered_fact_property_p527_decision_error_rate": 0.0,
+    "covered_fact_property_p527_false_refuted_rate": 1.0,
+    "covered_fact_property_p527_false_supported_rate": 0.0,
+    "covered_fact_property_p527_insufficient_evidence_rate": 0.0,
+    "covered_fact_property_p527_n_false": 1,
+    "covered_fact_property_p527_n_records": 2,
+    "covered_fact_property_p527_n_source_documents": 1,
+    "covered_fact_property_p527_n_true": 1,
+    "covered_fact_property_p527_statement_property_label": "has part",
+    "covered_fact_property_p527_true_refuted_rate": 0.0,
+    "covered_fact_property_p527_true_supported_rate": 1.0,
+    "n_false": 4,
+    "n_records": 8,
+    "n_true": 4,
+    "promotes_covered_facts_route": true,
+    "property_count": 2,
+    "route": "structured_qa",
+    "score_name": "metadata-slot-covered-facts",
+    "signal": "truth_proj",
+    "status": "promote",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "structured_qa_property_count": 2,
+    "workflow": "wikidata_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

@@ -7657,6 +7657,12 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
                         "statement_property": "P36",
                         "statement_property_label": "capital",
                         "country": "France",
+                        "structured_evidence_slots": {
+                            "subject": ["France"],
+                            "statement_property": ["P36"],
+                            "statement_property_label": ["capital"],
+                            "value": ["Paris"],
+                        },
                     },
                 },
                 {
@@ -7725,6 +7731,11 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
     score_dump = json.loads((output_dir / "covered-facts-scores.json").read_text(encoding="utf-8"))
     report = json.loads((output_dir / "structured-qa-verifier-report.json").read_text(encoding="utf-8"))
     manifest = json.loads((output_dir / "artifact-manifest.json").read_text(encoding="utf-8"))
+    verified_records = [
+        json.loads(line)
+        for line in (output_dir / "verified-records.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     belgium_known = {
         statement["answer"]
         for statement in score_dump["statements"]
@@ -7749,6 +7760,10 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
     assert score_dump["summary"]["n_source_documents"] == 5
     assert score_dump["summary"]["n_true"] == 5
     assert score_dump["summary"]["property_count"] == 2
+    assert score_dump["statements"][0]["metadata"]["structured_evidence_slots"]["subject"] == ["France"]
+    assert verified_records[0]["record"]["metadata"]["statement"]["metadata"]["structured_evidence_slots"][
+        "value"
+    ] == ["Paris"]
     assert score_dump["summary"]["by_property"]["P36"]["n_source_documents"] == 2
     assert score_dump["summary"]["by_property"]["P36"]["n_records"] == 4
     assert score_dump["summary"]["by_property"]["P37"]["n_source_documents"] == 3
@@ -60026,6 +60041,46 @@ def test_promote_alignment_fact_review_corpus_preserves_structured_slots():
 
     assert payload["status"] == "ready_for_structured_qa"
     assert metadata["provider"] == "wikidata"
+    assert list(metadata["structured_evidence_slots"]["subject"]) == ["English"]
+    assert list(metadata["structured_evidence_slots"]["value"]) == ["West Germanic language"]
+    assert "request_id" not in metadata
+    assert "model_answer" not in metadata
+
+
+def test_build_source_family_qa_corpus_preserves_structured_slots():
+    module = importlib.import_module("benchmarks.build_source_family_qa_corpus")
+    source_documents = [
+        {
+            "source": "wikidata:Q1860:description",
+            "provider": "wikidata",
+            "source_family": "reference",
+            "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
+            "metadata": {
+                "provider": "wikidata",
+                "source_family": "reference",
+                "statement_property": "description",
+                "statement_property_label": "description",
+                "subject": "English",
+                "value": "West Germanic language",
+                "alignment_candidate_id": "fact:english-description",
+                "review_status": "approved",
+                "structured_evidence_slots": {
+                    "subject": ["English"],
+                    "statement_property": ["description"],
+                    "statement_property_label": ["description"],
+                    "value": ["West Germanic language"],
+                },
+            },
+        }
+    ]
+
+    payload = module.build_source_family_qa_corpus(source_documents)
+    document = payload["documents"][0]
+    metadata = document["metadata"]
+
+    assert payload["summary"]["n_documents"] == 1
+    assert document["question"] == "What does Wikidata list as the description for English?"
+    assert document["answer"] == "West Germanic language"
     assert list(metadata["structured_evidence_slots"]["subject"]) == ["English"]
     assert list(metadata["structured_evidence_slots"]["value"]) == ["West Germanic language"]
     assert "request_id" not in metadata

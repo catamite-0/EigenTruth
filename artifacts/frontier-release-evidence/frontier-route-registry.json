@@ -2525,6 +2525,42 @@
       "name": "improve-unresolved-citation-alignment-metadata-slot-fact-promotion-gate",
       "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/promotion-gate-report.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/artifact-manifest.json",
+        "candidate_document_count": 4,
+        "corpus_type": "source_family_structured_qa_external_evidence",
+        "document_count": 4,
+        "source_workflow": "metadata_slot_fact_extraction",
+        "status": "ready",
+        "workflow": "source_family_structured_qa_corpus_builder"
+      },
+      "name": "improve-unresolved-citation-alignment-metadata-slot-source-family-qa",
+      "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/source-family-qa-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/artifact-manifest.json",
+        "decision_accuracy": 1.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "n_records": 8,
+        "n_source_documents": 4,
+        "promotes_covered_facts_route": true,
+        "property_count": 2,
+        "route": "structured_qa",
+        "sample_scope": "metadata_slot_small_covered_facts",
+        "source_workflow": "metadata_slot_fact_extraction",
+        "status": "promote",
+        "workflow": "wikidata_structured_qa_route_workflow"
+      },
+      "name": "improve-unresolved-citation-alignment-metadata-slot-covered-fact-route",
+      "path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

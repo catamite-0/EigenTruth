@@ -1,0 +1,39 @@
+{
+  "config": {
+    "skip_qid_values": true
+  },
+  "metadata": {
+    "source_workflow": "metadata_slot_fact_extraction"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/artifact-manifest.json",
+    "qa_corpus": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/source-family-qa-corpus.json",
+    "report": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/source-family-qa-report.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "source_paths": [
+      "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-promotion-gate/approved-source-documents.json"
+    ]
+  },
+  "status": "ready",
+  "summary": {
+    "by_provider": {
+      "wikidata": 4
+    },
+    "by_source_family": {
+      "reference": 4
+    },
+    "n_candidate_documents": 4,
+    "n_documents": 4,
+    "n_source_documents": 4,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  },
+  "workflow": "source_family_structured_qa_corpus_builder"
+}

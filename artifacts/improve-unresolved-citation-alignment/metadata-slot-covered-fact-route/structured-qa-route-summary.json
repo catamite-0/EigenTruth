@@ -1,0 +1,219 @@
+{
+  "alpha": 0.2,
+  "covered_fact_score_dump_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/covered-facts-scores.json",
+  "fact_verifier": {
+    "decided_records": 0,
+    "enabled": false
+  },
+  "next_step": "Use this covered-facts route as the property-level correction path; keep lexical retrieval gated separately for broad open-domain coverage.",
+  "property_count": 2,
+  "property_metrics": {
+    "P527": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 1
+        },
+        "true": {
+          "supported": 1
+        }
+      },
+      "n_decided_supported_or_refuted": 2,
+      "n_false": 1,
+      "n_records": 2,
+      "n_source_documents": 1,
+      "n_true": 1,
+      "selected_route_counts": {
+        "structured_qa": 2
+      },
+      "statement_property": "P527",
+      "statement_property_label": "has part",
+      "status_counts": {
+        "refuted": 1,
+        "supported": 1
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "description": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 3
+        },
+        "true": {
+          "supported": 3
+        }
+      },
+      "n_decided_supported_or_refuted": 6,
+      "n_false": 3,
+      "n_records": 6,
+      "n_source_documents": 3,
+      "n_true": 3,
+      "selected_route_counts": {
+        "structured_qa": 6
+      },
+      "statement_property": "description",
+      "statement_property_label": "description",
+      "status_counts": {
+        "refuted": 3,
+        "supported": 3
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/source-family-qa-corpus.json",
+  "qa_verifier": {
+    "decided_records": 8,
+    "enabled": true
+  },
+  "route": "structured_qa",
+  "route_metrics": {
+    "attempted_route_count_observations": 8,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 8,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 4,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 4
+      }
+    },
+    "max_duration_seconds": 0.00015701400116086006,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.00011803924280684441,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.00011803924280684441,
+    "n_decided_supported_or_refuted": 8,
+    "n_false": 4,
+    "n_true": 4,
+    "p95_duration_seconds": 0.00014431774616241452,
+    "p95_selected_route_duration_seconds": 0.00014431774616241452,
+    "p99_duration_seconds": 0.00015447475016117096,
+    "p99_selected_route_duration_seconds": 0.00015447475016117096,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 8,
+    "selected_route_duration_observations": 8,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 8.0,
+    "total_duration_seconds": 0.0009443139424547553,
+    "total_selected_route_duration_seconds": 0.0009443139424547553,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "schema_version": 1,
+  "scope": "covered Wikidata QA facts, not open-domain TruthfulQA route coverage",
+  "score_dump_summary": {
+    "by_property": {
+      "P527": {
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "statement_property": "P527",
+        "statement_property_label": "has part"
+      },
+      "description": {
+        "n_false": 3,
+        "n_records": 6,
+        "n_source_documents": 3,
+        "n_true": 3,
+        "statement_property": "description",
+        "statement_property_label": "description"
+      }
+    },
+    "n_false": 4,
+    "n_records": 8,
+    "n_skipped_false_answer": 0,
+    "n_source_documents": 4,
+    "n_true": 4,
+    "property_count": 2
+  },
+  "selected_route_counts": {
+    "structured_qa": 8
+  },
+  "signal": "truth_proj",
+  "status": "promote",
+  "structured_qa_metrics": {
+    "attempted_route_count_observations": 8,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 8,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 4,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 4
+      }
+    },
+    "max_duration_seconds": 0.00015701400116086006,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.00011803924280684441,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.00011803924280684441,
+    "n_decided_supported_or_refuted": 8,
+    "n_false": 4,
+    "n_true": 4,
+    "p95_duration_seconds": 0.00014431774616241452,
+    "p95_selected_route_duration_seconds": 0.00014431774616241452,
+    "p99_duration_seconds": 0.00015447475016117096,
+    "p99_selected_route_duration_seconds": 0.00015447475016117096,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 8,
+    "selected_route_duration_observations": 8,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 8.0,
+    "total_duration_seconds": 0.0009443139424547553,
+    "total_selected_route_duration_seconds": 0.0009443139424547553,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "verification_status_counts": {
+    "error": 0,
+    "insufficient_evidence": 0,
+    "not_applicable": 0,
+    "refuted": 4,
+    "supported": 4
+  },
+  "verified_records_jsonl_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/verified-records.jsonl",
+  "verifier_report_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-verifier-report.json",
+  "workflow": "wikidata_structured_qa_route_workflow"
+}

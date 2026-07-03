@@ -71,6 +71,7 @@ PROVENANCE_METADATA_KEYS = (
     "review_status",
     "reviewed_at",
     "reviewer",
+    "structured_evidence_slots",
 )
 
 
