@@ -41791,6 +41791,10 @@ def test_frontier_queue_execution_smoke_writes_manifest_and_registry(tmp_path):
     )
 
     assert payload["status"] == "pass"
+    assert payload["summary"]["seed_command_plan_entry_count"] == 1
+    assert payload["summary"]["seed_binding_status"] == "ready_for_binding_review"
+    assert payload["summary"]["seed_applied_input_count"] == 1
+    assert payload["summary"]["seed_applied_placeholder_count"] == 1
     assert payload["summary"]["staged_upstream_output_count"] == 1
     assert payload["summary"]["remaining_placeholder_count"] == 0
     assert payload["summary"]["dry_run_count"] == 2
@@ -41798,10 +41802,14 @@ def test_frontier_queue_execution_smoke_writes_manifest_and_registry(tmp_path):
     assert payload["label_usage"]["executes_child_commands"] is False
     assert payload["manifest_verification"]["passed"] is True
     assert manifest_verification.passed is True
+    assert Path(payload["paths"]["seed_binding_stage_report"]).exists()
+    assert Path(payload["paths"]["seed_staged_bindings"]).exists()
     assert Path(payload["paths"]["dry_run_report"]).exists()
     assert payload["registry_record"] == module.SMOKE_RECORD_KEY
     assert payload["registry_manifest_record"] == module.SMOKE_MANIFEST_RECORD_KEY
-    assert registry.get(module.SMOKE_RECORD_KEY).metadata["status"] == "pass"
+    record = registry.get(module.SMOKE_RECORD_KEY)
+    assert record.metadata["status"] == "pass"
+    assert record.metadata["seed_applied_placeholder_count"] == 1
     assert registry.get(module.SMOKE_MANIFEST_RECORD_KEY).metadata["status"] == "pass"
 
 

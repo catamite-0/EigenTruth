@@ -1656,6 +1656,9 @@ Added the first monitor-first tool-selection audit layer:
   control plane: a ready seed audit plus staged command bindings produces a
   `stage_frontier_queue_seed_inputs` next action and a reviewable
   `bind_frontier_research_queue_seed_inputs.py` command template.
+- `frontier_queue_execution_smoke.py` now exercises the same source-family seed
+  staging path before the reviewed command dry-run path, so release smoke catches
+  regressions in both non-evidence handoffs without executing child workflows.
 - `run_frontier_research_queue_input_fill_commands.py` then consumes that audit
   report and creates a dry-run or explicit execution report for only the
   audit-ready fill commands. Real execution is gated on the whole audit being

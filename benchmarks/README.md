@@ -7174,10 +7174,12 @@ python benchmarks/frontier_queue_execution_smoke.py \
   --output-dir artifacts/frontier-queue-execution-smoke
 ```
 
-The smoke writes the unresolved summary, command plan, binding scaffold, staged
-bindings, reviewed bindings, approved bound plan, dry-run report, artifact
-manifest, and registry record. It verifies the manifest recursively and keeps
-all artifacts marked as non-evidence; no child frontier workflow is executed.
+The smoke writes the seed-stage unresolved summary, seed command plan,
+seed-staged bindings, execution unresolved summary, command plan, binding
+scaffold, staged bindings, reviewed bindings, approved bound plan, dry-run
+report, artifact manifest, and registry record. It verifies the manifest
+recursively and keeps all artifacts marked as non-evidence; no child frontier
+workflow is executed.
 Pass the resulting `frontier-queue-execution-smoke.json` to
 `summarize_unresolved_frontier_evidence.py --frontier-queue-execution-smoke`
 when you want the unresolved closure summary and release registry workflow to
