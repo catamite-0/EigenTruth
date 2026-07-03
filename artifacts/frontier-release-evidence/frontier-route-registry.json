@@ -2647,6 +2647,65 @@
       "name": "unresolved-frontier-evidence-summary",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
       "version": "0.8"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
+        "citation_query_sweep_failure_reason_counts": {
+          "blind_refuted_rate_below_min": 120,
+          "verified_false_alarm_above_max": 120
+        },
+        "citation_query_sweep_no_hit_strategy_count": 0,
+        "citation_query_sweep_recommended_next_action_counts": {
+          "improve_claim_intent_alignment_or_query_construction": 6,
+          "tighten_false_alarm_calibration": 6
+        },
+        "citation_query_sweep_target_route_not_selected_strategy_count": 0,
+        "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
+        "citation_status": "blocked",
+        "closure_update": "metadata_slot_covered_fact_route",
+        "frontier_bound_command_run_count": 1,
+        "frontier_bound_command_succeeded_count": 3,
+        "frontier_command_binding_review_count": 1,
+        "frontier_queue_execution_smoke_count": 1,
+        "frontier_queue_execution_smoke_manifest_verified_count": 1,
+        "frontier_queue_execution_smoke_status": "pass",
+        "frontier_queue_execution_status": "promote",
+        "manifest_summary": {
+          "artifact_count": 25,
+          "directory_count": 0,
+          "file_count": 25,
+          "missing_count": 0
+        },
+        "next_action_count": 1,
+        "sample_scope": "metadata_slot_small_covered_facts",
+        "semantic_gap_review_approved_source_document_count": 7,
+        "semantic_gap_review_promoted_covered_fact_route_count": 2,
+        "semantic_gap_review_promoted_workflow_count": 1,
+        "semantic_gap_review_standalone_covered_fact_route_count": 1,
+        "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
+        "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
+        "semantic_gap_review_status": "promote",
+        "semantic_gap_review_workflow_count": 1,
+        "source_family_acquisition_status": "covered",
+        "source_workflow": "reviewed_citation_alignment_rerun",
+        "status": "needs_evidence",
+        "unresolved_target_count": 88,
+        "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_adjusted_remaining_task_count": 0,
+        "world_model_rule_audit_requeue_suggestion_count": 8,
+        "world_model_rule_combined_rule_input_count": 0,
+        "world_model_rule_combined_unfilled_task_count": 0,
+        "world_model_rule_input_fill_adapter_ready": false,
+        "world_model_rule_input_fill_rollup_status": null,
+        "world_model_rule_remaining_task_count": 8,
+        "world_model_rule_requeue_outstanding_count": 0,
+        "world_model_rule_status": "promote"
+      },
+      "name": "unresolved-frontier-evidence-summary",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "version": "0.9"
     }
   ],
   "schema_version": 1

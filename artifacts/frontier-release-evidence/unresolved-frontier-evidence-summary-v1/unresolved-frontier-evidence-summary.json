@@ -326,13 +326,43 @@
       "best_covered_fact_route_decision_accuracy": 1.0,
       "best_covered_fact_route_false_refuted_rate": 1.0,
       "blocked_workflow_count": 0,
-      "covered_fact_route_n_records": 14,
+      "covered_fact_route_n_records": 22,
       "covered_fact_route_skipped_count": 0,
+      "covered_fact_route_status_counts": {
+        "promote": 1
+      },
+      "covered_fact_routes": [
+        {
+          "covered_fact_route_decision_accuracy": 1.0,
+          "covered_fact_route_false_refuted_rate": 1.0,
+          "covered_fact_route_false_supported_rate": 0.0,
+          "covered_fact_route_n_records": 8,
+          "covered_fact_route_true_supported_rate": 1.0,
+          "covered_fact_score_dump_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/covered-facts-scores.json",
+          "index": 1,
+          "mean_attempted_route_count": 1.0,
+          "property_count": 2,
+          "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/source-family-qa-corpus.json",
+          "retrieval_use_rate": 0.0,
+          "route": "structured_qa",
+          "signal": "truth_proj",
+          "source_document_count": 4,
+          "source_family_qa_document_count": 4,
+          "status": "promote",
+          "verified_records_jsonl_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/verified-records.jsonl",
+          "verifier_report_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-verifier-report.json",
+          "workflow": "wikidata_structured_qa_route_workflow"
+        }
+      ],
       "fact_review_document_count": 10,
+      "promoted_covered_fact_route_count": 2,
       "promoted_workflow_count": 1,
       "semantic_gap_candidate_count": 63,
       "semantic_gap_fact_candidate_count": 23,
-      "source_family_qa_document_count": 7,
+      "source_family_qa_document_count": 11,
+      "standalone_covered_fact_route_count": 1,
+      "standalone_covered_fact_route_source_document_count": 4,
+      "standalone_promoted_covered_fact_route_count": 1,
       "status": "promote",
       "status_counts": {
         "covered_fact_route_promote": 1
@@ -694,8 +724,8 @@
     }
   },
   "metadata": {
-    "closure_update": "frontier_queue_execution_smoke",
-    "sample_scope": "control_plane_health",
+    "closure_update": "metadata_slot_covered_fact_route",
+    "sample_scope": "metadata_slot_small_covered_facts",
     "source_workflow": "reviewed_citation_alignment_rerun"
   },
   "next_actions": [
@@ -725,7 +755,7 @@
       "query_sweep_target_route_not_selected_strategy_count": 0,
       "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use",
-      "semantic_gap_covered_fact_route_n_records": 14,
+      "semantic_gap_covered_fact_route_n_records": 22,
       "semantic_gap_review_status": "promote",
       "unresolved_target_count": 88
     }
@@ -738,6 +768,9 @@
       "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
       "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
       "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json"
+    ],
+    "covered_fact_route_summaries": [
+      "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json"
     ],
     "frontier_bound_command_runs": [
       "artifacts/improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json"
@@ -823,8 +856,12 @@
     "mechanism_handoff_trace_count": 9,
     "missing_lane_count": 0,
     "semantic_gap_review_approved_source_document_count": 7,
-    "semantic_gap_review_covered_fact_route_n_records": 14,
+    "semantic_gap_review_covered_fact_route_n_records": 22,
+    "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
+    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
     "semantic_gap_review_workflow_count": 1,
     "source_family_coverage_audit_count": 1,
     "unresolved_target_count": 88,

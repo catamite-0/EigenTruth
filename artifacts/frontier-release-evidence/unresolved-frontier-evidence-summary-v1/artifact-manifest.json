@@ -40,6 +40,14 @@
       "sha256": "03d734b9b347e3306f5065bfe29716224b873e26fd5875a822bfc587f3b5a209",
       "size_bytes": 30991
     },
+    "covered_fact_route_summary_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json",
+      "sha256": "afb51ef7748d19c194455e0aa17a395bee17be8bc0d6d08bc5ed9c05a2e22c48",
+      "size_bytes": 6738
+    },
     "frontier_bound_command_run_1": {
       "exists": true,
       "file_count": 1,
@@ -181,8 +189,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "53f08dec826bc6dd134a1cc41d4798270ddff7959177939570497146b5003d5e",
-      "size_bytes": 33526
+      "sha256": "75356bf99404d5856dd8a16f0cc9475eb0c81d7807b281dfd85498ca1fab8640",
+      "size_bytes": 35592
     },
     "unresolved_queue": {
       "exists": true,
@@ -208,7 +216,7 @@
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
     "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_status": "blocked",
-    "closure_update": "frontier_queue_execution_smoke",
+    "closure_update": "metadata_slot_covered_fact_route",
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_review_count": 1,
@@ -217,9 +225,13 @@
     "frontier_queue_execution_smoke_status": "pass",
     "frontier_queue_execution_status": "promote",
     "next_action_count": 1,
-    "sample_scope": "control_plane_health",
+    "sample_scope": "metadata_slot_small_covered_facts",
     "semantic_gap_review_approved_source_document_count": 7,
+    "semantic_gap_review_promoted_covered_fact_route_count": 2,
     "semantic_gap_review_promoted_workflow_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
+    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
     "semantic_gap_review_status": "promote",
     "semantic_gap_review_workflow_count": 1,
     "source_family_acquisition_status": "covered",
@@ -239,9 +251,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 24,
+    "artifact_count": 25,
     "directory_count": 0,
-    "file_count": 24,
+    "file_count": 25,
     "missing_count": 0
   }
 }
