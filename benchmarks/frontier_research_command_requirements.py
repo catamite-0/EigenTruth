@@ -69,6 +69,12 @@ REQUIRED_COMMAND_FLAGS = {
         "--report-json",
         "--artifact-manifest",
     ),
+    "benchmarks/build_citation_binding_source_family_tasks.py": (
+        "--collection-plan",
+        "--tasks-jsonl",
+        "--report-json",
+        "--artifact-manifest",
+    ),
     "benchmarks/build_source_family_structured_qa_lane_execution_queue.py": (
         "--triage",
         "--collection-corpus",
@@ -239,6 +245,9 @@ REQUIRED_INPUT_FLAGS = {
     },
     "benchmarks/plan_source_family_catalog_collection.py": {
         "source_family_acquisition_plan": "--acquisition-plan",
+    },
+    "benchmarks/build_citation_binding_source_family_tasks.py": {
+        "citation_binding_evidence_collection_plan": "--collection-plan",
     },
     "benchmarks/build_source_family_structured_qa_lane_execution_queue.py": {
         "source_family_structured_qa_gap_triage": "--triage",

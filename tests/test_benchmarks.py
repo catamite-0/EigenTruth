@@ -36286,6 +36286,145 @@ def test_frontier_research_queue_command_plan_accepts_source_family_collection_p
     assert "--seeds ..." in binding["bound_commands"][4]
 
 
+def test_frontier_research_queue_command_plan_accepts_citation_binding_collection_plan(
+    tmp_path,
+):
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    scaffold_module = importlib.import_module(
+        "benchmarks.scaffold_frontier_research_queue_bindings"
+    )
+    stage_module = importlib.import_module(
+        "benchmarks.stage_frontier_research_queue_binding_suggestions"
+    )
+    requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
+    collection_plan_path = tmp_path / "citation-binding-collection-plan.json"
+    requests_path = tmp_path / "citation-binding-collection-requests.jsonl"
+    command_plan_path = tmp_path / "citation-binding-source-family-command-plan.json"
+    scaffold_path = tmp_path / "citation-binding-source-family-binding-scaffold.json"
+    staged_bindings_path = tmp_path / "citation-binding-source-family-staged-bindings.json"
+    requests = [
+        {
+            "collection_request_id": "citation-binding:numeric:a",
+            "lane": "numeric_statistical_evidence",
+            "priority": "high",
+            "request_id": "cite-search-population",
+            "query": "Ireland population",
+            "question_type": "quantity",
+            "requires_timestamp": True,
+            "preferred_source_families": ["official_statistics", "official"],
+            "query_seeds": ["Ireland population", "Ireland population official statistics"],
+        },
+        {
+            "collection_request_id": "citation-binding:span:b",
+            "lane": "claim_specific_evidence_span",
+            "priority": "medium",
+            "request_id": "cite-search-gum",
+            "query": "gum swallowing myth",
+            "question_type": "definition",
+            "preferred_source_families": ["scholarly", "news"],
+            "query_seeds": ["gum swallowing myth"],
+        },
+        {
+            "collection_request_id": "citation-binding:review:c",
+            "lane": "claim_alignment_review",
+            "priority": "medium",
+            "request_id": "cite-search-review",
+            "query": "review-only rejected binding",
+            "question_type": "definition",
+            "preferred_source_families": [],
+        },
+    ]
+    requests_path.write_text(
+        "\n".join(json.dumps(request) for request in requests) + "\n",
+        encoding="utf-8",
+    )
+    collection_plan_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "citation_binding_evidence_collection_plan",
+            "status": "ready_for_collection",
+            "paths": {"collection_requests": requests_path.name},
+            "summary": {
+                "collection_request_count": 3,
+                "lane_counts": {
+                    "claim_alignment_review": 1,
+                    "claim_specific_evidence_span": 1,
+                    "numeric_statistical_evidence": 1,
+                },
+                "priority_counts": {"high": 1, "medium": 2},
+                "preferred_source_family_counts": {
+                    "news": 1,
+                    "official": 1,
+                    "official_statistics": 1,
+                    "scholarly": 1,
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = plan_module.build_frontier_research_queue_command_plan(
+        source=collection_plan_path,
+        json_path=command_plan_path,
+    )
+    scaffold = scaffold_module.scaffold_frontier_research_queue_bindings(
+        command_plan=command_plan_path,
+        json_path=scaffold_path,
+        registry_output_path=tmp_path / "registry.json",
+    )
+    staged = stage_module.stage_frontier_research_queue_binding_suggestions(
+        scaffold=scaffold_path,
+        bindings_json_path=staged_bindings_path,
+        stage_upstream_outputs=True,
+    )
+
+    entry = payload["entries"][0]
+    commands = entry["command_templates"]
+    requirements = [
+        requirements_module.frontier_command_requirement_summary(command, index=index)
+        for index, command in enumerate(commands, start=1)
+    ]
+    placeholders = {
+        (item["command_index"], item["flag"]): item
+        for item in scaffold["entries"][0]["placeholder_records"]
+    }
+    binding = staged["bindings"]["run_citation_binding_source_family_collection"]
+
+    assert payload["source"]["workflow"] == "citation_binding_evidence_collection_plan"
+    assert payload["status"] == "needs_inputs"
+    assert payload["summary"]["command_count"] == 7
+    assert entry["action_id"] == "run_citation_binding_source_family_collection"
+    assert entry["metadata"]["collection_request_count"] == 3
+    assert entry["metadata"]["task_source_family_counts"] == {
+        "news": 1,
+        "official": 1,
+        "official_statistics": 1,
+        "scholarly": 1,
+    }
+    assert [item["script"] for item in requirements] == [
+        "benchmarks/build_citation_binding_source_family_tasks.py",
+        "benchmarks/run_crossref_source_family_catalog_adapter.py",
+        "benchmarks/run_openalex_source_family_catalog_adapter.py",
+        "benchmarks/run_worldbank_source_family_catalog_adapter.py",
+        "benchmarks/run_gdelt_source_family_catalog_adapter.py",
+        "benchmarks/run_seeded_url_source_family_catalog_adapter.py",
+        "benchmarks/run_official_site_source_family_catalog_adapter.py",
+    ]
+    assert {item["status"] for item in requirements} == {"ready"}
+    assert "build_citation_binding_source_family_tasks.py" in commands[0]
+    assert str(collection_plan_path) in commands[0]
+    assert "--metadata source=citation_binding_evidence_collection_plan" in commands[1]
+    assert placeholders[(2, "--tasks")]["suggested_binding"] == {
+        "review_required": True,
+        "reason": "input_or_report_path",
+        "input_name_hint": "source_family_collection_tasks",
+        "flag": "--tasks",
+    }
+    assert staged["staging_summary"]["staged_upstream_output_count"] == 6
+    assert "source-family-collection-tasks.jsonl" in binding["bound_commands"][1]
+    assert "--seeds ..." in binding["bound_commands"][5]
+
+
 def test_frontier_research_queue_binding_scaffold_handles_structured_qa_lane_sidecars():
     scaffold_module = importlib.import_module(
         "benchmarks.scaffold_frontier_research_queue_bindings"
@@ -36532,6 +36671,11 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             "--acquisition-plan acquisition.jsonl --tasks-jsonl tasks.jsonl "
             "--report-json collection.json --artifact-manifest manifest.json"
         ),
+        "citation_binding_source_family_tasks": (
+            "python benchmarks/build_citation_binding_source_family_tasks.py "
+            "--collection-plan citation-binding-plan.json --report-json collection.json "
+            "--tasks-jsonl tasks.jsonl --artifact-manifest manifest.json"
+        ),
         "structured_qa_lane_queue": (
             "python benchmarks/build_source_family_structured_qa_lane_execution_queue.py "
             "--triage triage.json --collection-corpus corpus.json --output-dir lanes "
@@ -36589,9 +36733,16 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
             required_inputs=("source_family_acquisition_plan",),
         )
     )
+    citation_binding_source_family_inputs = (
+        requirements_module.frontier_command_requirement_summary(
+            commands["citation_binding_source_family_tasks"],
+            index=8,
+            required_inputs=("citation_binding_evidence_collection_plan",),
+        )
+    )
     structured_lane_queue_inputs = requirements_module.frontier_command_requirement_summary(
         commands["structured_qa_lane_queue"],
-        index=8,
+        index=9,
         required_inputs=(
             "source_family_structured_qa_gap_triage",
             "source_family_structured_qa_fact_collection_corpus",
@@ -36599,7 +36750,7 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     )
     structured_lane_rerun_inputs = requirements_module.frontier_command_requirement_summary(
         commands["structured_qa_lane_reruns"],
-        index=9,
+        index=10,
         required_inputs=(
             "source_family_structured_qa_lane_execution_queue",
             "source_family_structured_qa_fact_collection_corpus",
@@ -36608,7 +36759,7 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     )
     structured_lane_batch_inputs = requirements_module.frontier_command_requirement_summary(
         commands["structured_qa_lane_batch"],
-        index=10,
+        index=11,
         required_inputs=(
             "source_family_structured_qa_lane_execution_queue",
             "source_family_structured_qa_fact_collection_corpus",
@@ -36617,12 +36768,12 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     )
     crossref_inputs = requirements_module.frontier_command_requirement_summary(
         commands["crossref_catalog"],
-        index=11,
+        index=12,
         required_inputs=("source_family_collection_tasks",),
     )
     seeded_inputs = requirements_module.frontier_command_requirement_summary(
         commands["seeded_catalog"],
-        index=12,
+        index=13,
         required_inputs=("source_family_collection_tasks", "source_family_url_seeds"),
     )
 
@@ -36633,6 +36784,7 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
         "run": "ready",
         "source_family_audit": "ready",
         "source_family_collection": "ready",
+        "citation_binding_source_family_tasks": "ready",
         "structured_qa_lane_queue": "ready",
         "structured_qa_lane_reruns": "ready",
         "structured_qa_lane_batch": "ready",
@@ -36658,6 +36810,12 @@ def test_frontier_research_queue_requirement_checks_cover_control_plane_commands
     assert summaries["source_family_collection"]["required_input_flags"] == ()
     assert source_family_collection_inputs["required_input_flags"] == (
         {"input": "source_family_acquisition_plan", "flag": "--acquisition-plan"},
+    )
+    assert citation_binding_source_family_inputs["required_input_flags"] == (
+        {
+            "input": "citation_binding_evidence_collection_plan",
+            "flag": "--collection-plan",
+        },
     )
     assert structured_lane_queue_inputs["required_input_flags"] == (
         {"input": "source_family_structured_qa_gap_triage", "flag": "--triage"},
@@ -63974,6 +64132,142 @@ def test_plan_source_family_catalog_collection_deduplicates_family_tasks(tmp_pat
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "source_family_catalog_collection_plan"
     assert record.metadata["collection_task_count"] == 3
+    assert record.metadata["suite"] == "unit"
+
+
+def test_build_citation_binding_source_family_tasks_bridges_collectable_lanes(tmp_path):
+    module = importlib.import_module("benchmarks.build_citation_binding_source_family_tasks")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    collection_plan_path = tmp_path / "citation-binding-collection-plan.json"
+    requests_path = tmp_path / "citation-binding-collection-requests.jsonl"
+    tasks_path = tmp_path / "citation-binding-source-family-tasks.jsonl"
+    report_path = tmp_path / "citation-binding-source-family-plan.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    requests = [
+        {
+            "collection_request_id": "citation-binding:numeric:a",
+            "lane": "numeric_statistical_evidence",
+            "priority": "high",
+            "request_id": "cite-search-population-a",
+            "query": "Ireland population",
+            "question_type": "quantity",
+            "requires_timestamp": True,
+            "preferred_source_families": ["official_statistics", "official", "scholarly"],
+            "issue_codes": ["numeric_intent_requires_numeric_evidence"],
+            "required_fields": ["source_value", "unit", "reference_time"],
+            "adapter_hints": ["world_bank_or_statistics", "official_site"],
+            "query_seeds": ["Ireland population", "Ireland census population"],
+        },
+        {
+            "collection_request_id": "citation-binding:numeric:b",
+            "lane": "numeric_statistical_evidence",
+            "priority": "high",
+            "request_id": "cite-search-population-b",
+            "query": "Ireland population",
+            "question_type": "quantity",
+            "requires_timestamp": True,
+            "preferred_source_families": ["official"],
+            "issue_codes": ["numeric_intent_requires_numeric_evidence"],
+            "required_fields": ["source_value", "unit"],
+            "adapter_hints": ["official_site"],
+            "query_seeds": ["Ireland population official statistics"],
+        },
+        {
+            "collection_request_id": "citation-binding:span:c",
+            "lane": "claim_specific_evidence_span",
+            "priority": "medium",
+            "request_id": "cite-search-span",
+            "query": "gum swallowing myth",
+            "question_type": "definition",
+            "preferred_source_families": ["reference", "domain_specific"],
+            "issue_codes": ["evidence_alignment_insufficient_overlap"],
+            "required_fields": ["evidence_span", "source_citation"],
+            "adapter_hints": ["span_extraction"],
+            "query_seeds": ["gum swallowing myth"],
+        },
+        {
+            "collection_request_id": "citation-binding:review:d",
+            "lane": "claim_alignment_review",
+            "priority": "medium",
+            "request_id": "cite-search-review",
+            "query": "review-only rejected binding",
+            "question_type": "definition",
+            "preferred_source_families": [],
+            "issue_codes": ["evidence_alignment_misaligned_subject"],
+            "required_fields": ["claim_subject", "candidate_subject"],
+            "adapter_hints": ["alignment_review"],
+        },
+    ]
+    requests_path.write_text(
+        "\n".join(json.dumps(request) for request in requests) + "\n",
+        encoding="utf-8",
+    )
+    collection_plan_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "citation_binding_evidence_collection_plan",
+            "status": "ready_for_collection",
+            "paths": {"collection_requests": requests_path.name},
+            "summary": {
+                "collection_request_count": 4,
+                "lane_counts": {
+                    "claim_alignment_review": 1,
+                    "claim_specific_evidence_span": 1,
+                    "numeric_statistical_evidence": 2,
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_citation_binding_source_family_tasks(
+        collection_plan_path=collection_plan_path,
+        tasks_jsonl_path=tasks_path,
+        report_json_path=report_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="citation-binding-source-family-bridge-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    tasks = [json.loads(line) for line in tasks_path.read_text(encoding="utf-8").splitlines()]
+    official_task = next(task for task in tasks if task["source_family"] == "official")
+    domain_task = next(task for task in tasks if task["source_family"] == "domain_specific")
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-binding-source-family-bridge-unit:0.1"
+    )
+
+    assert payload["workflow"] == "source_family_catalog_collection_plan"
+    assert payload["bridge_workflow"] == "citation_binding_source_family_task_bridge"
+    assert payload["status"] == "ready_for_source_collection"
+    assert payload["summary"]["collection_request_count"] == 4
+    assert payload["summary"]["collectable_request_count"] == 3
+    assert payload["summary"]["review_only_request_count"] == 1
+    assert payload["summary"]["collection_task_count"] == 4
+    assert payload["summary"]["task_source_family_counts"] == {
+        "domain_specific": 1,
+        "official": 1,
+        "official_statistics": 1,
+        "scholarly": 1,
+    }
+    assert payload["summary"]["unsupported_source_family_counts"] == {"reference": 1}
+    assert official_task["not_verifier_evidence"] is True
+    assert official_task["usage"] == "source_catalog_collection_only"
+    assert official_task["origin_workflow"] == "citation_binding_evidence_collection_plan"
+    assert official_task["request_count"] == 2
+    assert official_task["collection_request_ids"] == [
+        "citation-binding:numeric:a",
+        "citation-binding:numeric:b",
+    ]
+    assert "official_site_search" in official_task["provider_hints"]
+    assert any("official" in query for query in official_task["search_queries"])
+    assert domain_task["collection_request_ids"] == ["citation-binding:span:c"]
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "source_family_catalog_collection_plan"
+    assert record.metadata["bridge_workflow"] == "citation_binding_source_family_task_bridge"
+    assert record.metadata["collection_task_count"] == 4
     assert record.metadata["suite"] == "unit"
 
 

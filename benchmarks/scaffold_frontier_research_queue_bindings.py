@@ -338,6 +338,13 @@ def _placeholder_suggestion(
             "input_name_hint": "source_family_url_seeds",
             "flag": flag,
         }, output_index, previous_report_path
+    if normalized == "tasks":
+        return {
+            "review_required": True,
+            "reason": "input_or_report_path",
+            "input_name_hint": "source_family_collection_tasks",
+            "flag": flag,
+        }, output_index, previous_report_path
     if normalized == "source_catalog":
         return {
             "review_required": True,

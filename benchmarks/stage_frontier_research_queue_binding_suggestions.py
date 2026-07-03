@@ -305,6 +305,9 @@ def _remember_output(
         return
     if flag == "acquisition_plan_jsonl":
         available_outputs["source_family_acquisition_plan"] = replacement
+    elif flag == "tasks_jsonl":
+        available_outputs["source_family_collection_tasks"] = replacement
+        available_outputs["tasks"] = replacement
     elif flag == "rule_inputs_jsonl":
         available_outputs["rule_inputs"] = replacement
     elif flag == "rule_results_jsonl":

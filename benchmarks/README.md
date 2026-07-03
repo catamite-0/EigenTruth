@@ -3017,6 +3017,42 @@ official-site commands for `official`, and seeded URL commands for
 seed URL sidecars remain placeholders for the existing scaffold/bind/review
 steps.
 
+## `build_citation_binding_source_family_tasks.py`
+
+Bridges `plan_citation_binding_evidence_collection.py` output into the same
+`source_family_catalog_collection_plan` task schema used by the provider
+adapters. It consumes the plan JSON and its optional
+`paths.collection_requests` JSONL sidecar, emits only source-collectable
+official/statistical/scholarly/news/domain-specific tasks, and keeps
+review-only lanes plus unsupported families such as `reference` out of adapter
+execution. The output remains `not_verifier_evidence=true`; it is collection
+work, not promoted evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-binding-source-family-tasks
+
+python benchmarks/build_citation_binding_source_family_tasks.py \
+  --collection-plan artifacts/truthfulqa-frontier-smollm2-l80-source-family-citation-workflow/citation-search-binding-evidence-collection-plan.json \
+  --report-json "$OUT/source-family-catalog-collection-plan.json" \
+  --tasks-jsonl "$OUT/source-family-catalog-collection-tasks.jsonl" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-citation-binding-source-family-tasks \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=citation_binding_evidence_collection_plan
+```
+
+The resulting report can be fed directly to
+`plan_frontier_research_queue_commands.py` like any other source-family
+collection plan. The command planner also accepts the original
+`citation_binding_evidence_collection_plan` report and emits a chained
+`build_citation_binding_source_family_tasks.py` command followed by provider
+adapter templates; `stage_frontier_research_queue_binding_suggestions.py
+--stage-upstream-outputs` can carry the generated `--tasks-jsonl` sidecar into
+the adapters' `--tasks` placeholders while leaving seed URLs and other
+source-backed inputs under review.
+
 ## `run_crossref_source_family_catalog_adapter.py`
 
 Executes the scholarly slice of the source-family collection plan through the

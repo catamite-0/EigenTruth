@@ -1069,6 +1069,13 @@ Added the first monitor-first tool-selection audit layer:
   search, official-site search, statistics APIs/catalogs, and news archives.
   This is still not evidence, but it is the executable boundary for the next
   source-specific adapter pass.
+- `build_citation_binding_source_family_tasks.py` now gives citation-binding
+  audit rejects the same collection boundary. It consumes the
+  `citation_binding_evidence_collection_plan` plus request sidecar, skips
+  review-only/provenance-repair lanes, drops unsupported families such as
+  `reference`, and emits adapter-ready `source_family_catalog_collection_plan`
+  tasks for official/statistical/scholarly/news/domain-specific follow-up
+  without converting any rejected binding into verifier evidence.
 - `run_crossref_source_family_catalog_adapter.py` now fills the first real
   provider-specific slice of that graph. The registered Crossref scholarly
   catalog consumes `21` scholarly tasks, runs `42` bibliographic query variants,
@@ -1558,7 +1565,11 @@ Added the first monitor-first tool-selection audit layer:
   now also accepts `unresolved_frontier_evidence_summary` reports and lowers
   blocked citation alignment plus partial world-model rule lanes into the same
   reviewable command-plan format, with source-backed binding values still left
-  as placeholders.
+  as placeholders. It also accepts `citation_binding_evidence_collection_plan`
+  reports directly, emits a bridge command for
+  `build_citation_binding_source_family_tasks.py`, and then appends the
+  supported source-family adapter templates so the rejected-binding collection
+  lane can enter the same scaffold/bind/review/execute control plane.
 - `scaffold_frontier_research_queue_bindings.py` now turns that command plan
   into a review scaffold plus deliberately empty bindings skeleton. On the
   current default refreshed queue it surfaces `53` ordered placeholders and
