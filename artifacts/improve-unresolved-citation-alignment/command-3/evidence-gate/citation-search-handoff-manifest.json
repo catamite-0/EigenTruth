@@ -21,24 +21,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-corpus.json",
-      "sha256": "5e4cb9b50a7cbe4154a64d30343ef5e7fc196f4ff69c71a2734208b9cd7f5072",
-      "size_bytes": 3114673
+      "sha256": "141c191f046844233e767f21818189e1a15eeedbaaf11b7a827c8cb44ccde451",
+      "size_bytes": 4092325
     },
     "citation_search_handoff": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-handoff.json",
-      "sha256": "7117205c54b71b6902152380763b4151eb5911370961818ce353a89d02fd24c6",
-      "size_bytes": 6556509
+      "sha256": "c4709f20f36dddf7e1dc46e79a8a581693a5489c725aaf64180d7a482b3b8390",
+      "size_bytes": 8567005
     },
     "citation_search_source_documents": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-source-docs.jsonl",
-      "sha256": "9f1a64fe29d650478525a9029c855fc3c2e19554a136bb5bfe85ff7a93e01cc1",
-      "size_bytes": 2719832
+      "sha256": "21cae506613522882079a8062ccdf18da75c83b90899c22f87fe840330b17837",
+      "size_bytes": 3444484
     },
     "unresolved_blind_spot_evidence_queue": {
       "exists": true,

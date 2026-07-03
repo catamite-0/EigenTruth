@@ -56,6 +56,31 @@ RESERVED_EXTERNAL_FIELDS = {
     "source_index",
     "target_id",
 }
+SAFE_RESULT_METADATA_FIELDS = {
+    "subject",
+    "subject_label",
+    "entity",
+    "entity_name",
+    "country",
+    "country_name",
+    "organization_name",
+    "location_name",
+    "predicate",
+    "property",
+    "property_label",
+    "statement_property",
+    "statement_property_label",
+    "indicator",
+    "indicator_name",
+    "object",
+    "object_text",
+    "value",
+    "fact_value",
+    "reference_year",
+    "year",
+    "time_period",
+    "retrieval_index_text",
+}
 
 
 def build_citation_search_adapter_handoff(
@@ -499,6 +524,7 @@ def _source_document(
     provider = _clean(result.get("provider") or result.get("source_provider")) or "external_citation_search"
     source = _clean(result.get("source")) or url or f"citation-search:{provider}:{request['request_id']}"
     metadata = {
+        **_safe_result_metadata(result),
         "external_source": True,
         "source_kind": source_kind,
         "provider": provider,
@@ -564,6 +590,14 @@ def _source_binding_metadata(
         value = result_metadata.get(key, request_metadata.get(key))
         if value is not None:
             metadata[key] = value
+    return metadata
+
+
+def _safe_result_metadata(result: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = dict(_mapping(result.get("metadata")))
+    for key in SAFE_RESULT_METADATA_FIELDS:
+        if key in result and key not in metadata:
+            metadata[key] = result[key]
     return metadata
 
 

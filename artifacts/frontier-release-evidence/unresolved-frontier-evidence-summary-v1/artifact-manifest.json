@@ -16,12 +16,36 @@
       "sha256": "11161222fba1c6e6c4fc7b5ea5c1967aa1e2fe6ee22953c13b2ea0e59df9e339",
       "size_bytes": 18030
     },
+    "citation_workflow_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "sha256": "5b7411431fe6bb57bad7c81526d353666bd34cd460575e46f6f2935b6fd21e6c",
+      "size_bytes": 31013
+    },
+    "citation_workflow_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "sha256": "03e85cf66adc4f32a33911eedc08ba8c45cf96f8a828d2a46fbb918145792036",
+      "size_bytes": 30979
+    },
+    "citation_workflow_5": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-3/workflow-report.json",
+      "sha256": "03d734b9b347e3306f5065bfe29716224b873e26fd5875a822bfc587f3b5a209",
+      "size_bytes": 30991
+    },
     "frontier_bound_command_run_1": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../../improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json",
-      "sha256": "e854240f77b66c738fac7c28087676d419d328fdd876b9e40a1712ef26c5974e",
+      "sha256": "c6d65987ee8d4a78f60e820a7f033834689875832cf78c49147e168c03dc963d",
       "size_bytes": 23936
     },
     "frontier_command_binding_review_1": {
@@ -141,8 +165,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "dd31177cbaa46c14673f2637871c64379e218d9de548b210e64026c5a747138c",
-      "size_bytes": 26704
+      "sha256": "8e3c39f69fabd7080196ef05a12b70b7cdf46f87fc29f836611e5b14a9adfae1",
+      "size_bytes": 32209
     },
     "unresolved_queue": {
       "exists": true,
@@ -155,23 +179,19 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "citation_query_failure_review": "diagnostic",
-    "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
+    "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
     "citation_query_sweep_failure_reason_counts": {
-      "blind_refuted_rate_below_min": 24,
-      "verified_false_alarm_above_max": 24
+      "blind_refuted_rate_below_min": 120,
+      "verified_false_alarm_above_max": 120
     },
     "citation_query_sweep_no_hit_strategy_count": 0,
     "citation_query_sweep_recommended_next_action_counts": {
-      "improve_claim_intent_alignment_or_query_construction": 3,
-      "tighten_false_alarm_calibration": 3
+      "improve_claim_intent_alignment_or_query_construction": 6,
+      "tighten_false_alarm_calibration": 6
     },
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
-    "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 24,
+    "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_status": "blocked",
-    "closure_action": "improve_unresolved_citation_alignment",
-    "description_subject_matching": "entity_or_acronym",
-    "frontier_bound_command_run": "reviewed_improve_unresolved_citation_alignment",
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_review_count": 1,
@@ -179,17 +199,14 @@
     "frontier_queue_execution_smoke_manifest_verified_count": 0,
     "frontier_queue_execution_smoke_status": "not_configured",
     "frontier_queue_execution_status": "promote",
-    "model": "smollm2-l80",
     "next_action_count": 1,
-    "semantic_gap_review": "diagnostic_verified_records_sidecar",
     "semantic_gap_review_approved_source_document_count": 7,
     "semantic_gap_review_promoted_workflow_count": 1,
     "semantic_gap_review_status": "promote",
     "semantic_gap_review_workflow_count": 1,
-    "source": "frontier-v4",
     "source_family_acquisition_status": "covered",
+    "source_workflow": "reviewed_citation_alignment_rerun",
     "status": "needs_evidence",
-    "structured_fact_parsing": "worldbank_wikidata",
     "unresolved_target_count": 88,
     "workflow": "unresolved_frontier_evidence_summary",
     "world_model_rule_audit_adjusted_remaining_task_count": 0,
@@ -204,9 +221,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 19,
+    "artifact_count": 22,
     "directory_count": 0,
-    "file_count": 19,
+    "file_count": 22,
     "missing_count": 0
   }
 }

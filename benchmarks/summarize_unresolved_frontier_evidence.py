@@ -473,6 +473,7 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     query_sweep_no_passing_strategy_count = 0
     query_sweep_failure_reason_counts: Counter[str] = Counter()
     query_sweep_recommended_next_action_counts: Counter[str] = Counter()
+    query_sweep_best_strategy_counts: Counter[str] = Counter()
     query_sweep_best_observed_strategy_counts: Counter[str] = Counter()
     query_sweep_no_hit_strategy_count = 0
     query_sweep_target_route_not_selected_strategy_count = 0
@@ -533,6 +534,9 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                 str(action)
                 for action in _string_tuple(evidence.get("query_sweep_recommended_next_actions"))
             )
+        best_strategy = str(evidence.get("query_sweep_best_strategy") or "").strip()
+        if best_strategy:
+            query_sweep_best_strategy_counts[best_strategy] += 1
         query_sweep_no_hit_strategy_count += _int(
             evidence.get("query_sweep_no_hit_strategy_count")
         )
@@ -673,6 +677,9 @@ def _citation_lane(workflows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         ),
         "query_sweep_recommended_next_action_counts": dict(
             sorted(query_sweep_recommended_next_action_counts.items())
+        ),
+        "query_sweep_best_strategy_counts": dict(
+            sorted(query_sweep_best_strategy_counts.items())
         ),
         "query_sweep_no_hit_strategy_count": query_sweep_no_hit_strategy_count,
         "query_sweep_target_route_not_selected_strategy_count": (
@@ -1342,6 +1349,9 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "query_sweep_best_observed_strategy_counts": citation.get(
                 "query_sweep_best_observed_strategy_counts", {}
             ),
+            "query_sweep_best_strategy_counts": citation.get(
+                "query_sweep_best_strategy_counts", {}
+            ),
             "semantic_gap_review_status": semantic.get("status"),
             "semantic_gap_covered_fact_route_n_records": semantic.get(
                 "covered_fact_route_n_records", 0
@@ -1534,6 +1544,9 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
                     "query_sweep_recommended_next_action_counts"
                 )
             )
+        ),
+        "citation_query_sweep_best_strategy_counts": dict(
+            _mapping(lanes["citation_evidence"].get("query_sweep_best_strategy_counts"))
         ),
         "citation_query_sweep_no_hit_strategy_count": _int(
             lanes["citation_evidence"].get("query_sweep_no_hit_strategy_count")

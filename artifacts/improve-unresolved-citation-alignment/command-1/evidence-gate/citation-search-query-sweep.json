@@ -470,8 +470,8 @@
               },
               {
                 "best_score": 1.0,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -762,7 +762,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.3057553956834533,
           "decision_rule_counts": {
@@ -925,10 +929,6 @@
           },
           {
             "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
-            "count": 14,
             "value": "openalex:https://openalex.org/W2122892769"
           },
           {
@@ -998,6 +998,10 @@
           {
             "count": 10,
             "value": "wikidata:Q1860:description"
+          },
+          {
+            "count": 10,
+            "value": "openalex:https://openalex.org/W2150031895"
           }
         ]
       },
@@ -1045,9 +1049,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0008154860495607246,
+        "mean_duration_seconds": 0.0008348433151489721,
         "mean_retrieval_hits": 2.739622641509434,
-        "p95_duration_seconds": 0.0018287409795448171,
+        "p95_duration_seconds": 0.002349762711673975,
         "retrieval_hit_count": 726,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -1817,7 +1821,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 82
+        },
         "summary": {
           "average_hits_per_record": 1.4298561151079137,
           "decision_rule_counts": {
@@ -2100,9 +2107,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010257725401799072,
+        "mean_duration_seconds": 0.0010767669298352217,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006472906307317314,
+        "p95_duration_seconds": 0.007088418351486323,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -2533,8 +2540,8 @@
               },
               {
                 "best_score": 1.0,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -2825,7 +2832,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.3057553956834533,
           "decision_rule_counts": {
@@ -2988,10 +2999,6 @@
           },
           {
             "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
-            "count": 14,
             "value": "openalex:https://openalex.org/W2122892769"
           },
           {
@@ -3061,6 +3068,10 @@
           {
             "count": 10,
             "value": "wikidata:Q1860:description"
+          },
+          {
+            "count": 10,
+            "value": "openalex:https://openalex.org/W2150031895"
           }
         ]
       },
@@ -3108,9 +3119,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0008212680533036308,
+        "mean_duration_seconds": 0.0008332356489878499,
         "mean_retrieval_hits": 2.739622641509434,
-        "p95_duration_seconds": 0.0018228460336104021,
+        "p95_duration_seconds": 0.002343917964026332,
         "retrieval_hit_count": 726,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -3880,7 +3891,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 82
+        },
         "summary": {
           "average_hits_per_record": 1.4298561151079137,
           "decision_rule_counts": {
@@ -4163,9 +4177,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010170093188413753,
+        "mean_duration_seconds": 0.0010850304834333793,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006456166342832146,
+        "p95_duration_seconds": 0.007156851375475521,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -4599,8 +4613,8 @@
               },
               {
                 "best_score": 1.0,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -4920,7 +4934,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.7266187050359711,
           "decision_rule_counts": {
@@ -5127,10 +5145,6 @@
             "value": "openalex:https://openalex.org/W3201600150"
           },
           {
-            "count": 16,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
             "count": 14,
             "value": "openalex:https://openalex.org/W2102902846"
           },
@@ -5157,6 +5171,10 @@
           {
             "count": 13,
             "value": "openalex:https://openalex.org/W3027361304"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W2751884637"
           }
         ]
       },
@@ -5204,9 +5222,9 @@
           "true": 165
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.000754200557425414,
+        "mean_duration_seconds": 0.0007471209302646656,
         "mean_retrieval_hits": 2.6301369863013697,
-        "p95_duration_seconds": 0.002016511792317034,
+        "p95_duration_seconds": 0.0024276656098663808,
         "retrieval_hit_count": 960,
         "retrieval_use_rate": 1.0,
         "selected": 365,
@@ -5979,7 +5997,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 82
+        },
         "summary": {
           "average_hits_per_record": 1.9694244604316546,
           "decision_rule_counts": {
@@ -6263,9 +6284,9 @@
           "true": 165
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009213302801171803,
+        "mean_duration_seconds": 0.0009629647537734206,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.005409975815564395,
+        "p95_duration_seconds": 0.005584390810690821,
         "retrieval_hit_count": 1095,
         "retrieval_use_rate": 1.0,
         "selected": 365,
@@ -6725,8 +6746,8 @@
               },
               {
                 "best_score": 1.0,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -7047,7 +7068,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 77
+        },
         "summary": {
           "average_hits_per_record": 2.5719424460431655,
           "decision_rule_counts": {
@@ -7230,16 +7255,16 @@
             "value": "openalex:https://openalex.org/W4212997072"
           },
           {
-            "count": 45,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
             "count": 42,
             "value": "openalex:https://openalex.org/W2799631787"
           },
           {
             "count": 42,
             "value": "openalex:https://openalex.org/W2215538604"
+          },
+          {
+            "count": 39,
+            "value": "openalex:https://openalex.org/W2055740081"
           },
           {
             "count": 35,
@@ -7283,7 +7308,7 @@
           },
           {
             "count": 19,
-            "value": "openalex:https://openalex.org/W1629008218"
+            "value": "openalex:https://openalex.org/W2528182051"
           }
         ]
       },
@@ -7331,9 +7356,9 @@
           "true": 233
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.003426159089189845,
+        "mean_duration_seconds": 0.003638033280747937,
         "mean_retrieval_hits": 2.7447216890595008,
-        "p95_duration_seconds": 0.02072755410335958,
+        "p95_duration_seconds": 0.021651424933224916,
         "retrieval_hit_count": 1430,
         "retrieval_use_rate": 1.0,
         "selected": 521,
@@ -8106,7 +8131,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 90
+        },
         "summary": {
           "average_hits_per_record": 2.8111510791366907,
           "decision_rule_counts": {
@@ -8390,9 +8418,9 @@
           "true": 233
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0036140173928804996,
+        "mean_duration_seconds": 0.003820236060176681,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.012874286971054971,
+        "p95_duration_seconds": 0.012876722146756947,
         "retrieval_hit_count": 1563,
         "retrieval_use_rate": 1.0,
         "selected": 521,
@@ -8922,7 +8950,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 2
+        },
         "summary": {
           "average_hits_per_record": 0.10611510791366907,
           "decision_rule_counts": {
@@ -9201,9 +9231,9 @@
           "true": 9
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0018395853542682269,
+        "mean_duration_seconds": 0.0019108098222995582,
         "mean_retrieval_hits": 2.5652173913043477,
-        "p95_duration_seconds": 0.005388501193374395,
+        "p95_duration_seconds": 0.005471858149394393,
         "retrieval_hit_count": 59,
         "retrieval_use_rate": 1.0,
         "selected": 23,
@@ -9727,7 +9757,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 4
+        },
         "summary": {
           "average_hits_per_record": 0.12410071942446044,
           "decision_rule_counts": {
@@ -10006,9 +10038,9 @@
           "true": 9
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0013767823668034828,
+        "mean_duration_seconds": 0.0014757964375388362,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.005281688610557466,
+        "p95_duration_seconds": 0.005354056193027645,
         "retrieval_hit_count": 69,
         "retrieval_use_rate": 1.0,
         "selected": 23,
@@ -10772,7 +10804,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 4,
+          "P527": 8,
+          "description": 20
+        },
         "summary": {
           "average_hits_per_record": 0.762589928057554,
           "decision_rule_counts": {
@@ -11055,9 +11091,9 @@
           "true": 81
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0016726703136125682,
+        "mean_duration_seconds": 0.0017034340269894309,
         "mean_retrieval_hits": 2.32967032967033,
-        "p95_duration_seconds": 0.012329854746349142,
+        "p95_duration_seconds": 0.012698835291666884,
         "retrieval_hit_count": 424,
         "retrieval_use_rate": 1.0,
         "selected": 182,
@@ -11828,7 +11864,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 30
+        },
         "summary": {
           "average_hits_per_record": 0.9676258992805755,
           "decision_rule_counts": {
@@ -12112,9 +12151,9 @@
           "true": 81
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0023395430045918776,
+        "mean_duration_seconds": 0.0023632057664844277,
         "mean_retrieval_hits": 2.956043956043956,
-        "p95_duration_seconds": 0.017953262262744824,
+        "p95_duration_seconds": 0.018347822327632452,
         "retrieval_hit_count": 538,
         "retrieval_use_rate": 1.0,
         "selected": 182,
@@ -12856,7 +12895,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 16,
+          "description": 45
+        },
         "summary": {
           "average_hits_per_record": 1.3219424460431655,
           "decision_rule_counts": {
@@ -13035,10 +13078,6 @@
             "value": "openalex:https://openalex.org/W4212997072"
           },
           {
-            "count": 15,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
             "count": 14,
             "value": "openalex:https://openalex.org/W2751884637"
           },
@@ -13064,15 +13103,15 @@
           },
           {
             "count": 11,
+            "value": "openalex:https://openalex.org/W2055740081"
+          },
+          {
+            "count": 11,
             "value": "seeded_url:news:82c8ebb5d518"
           },
           {
             "count": 10,
             "value": "official_site:12054266c209"
-          },
-          {
-            "count": 10,
-            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 10,
@@ -13093,6 +13132,10 @@
           {
             "count": 9,
             "value": "openalex:https://openalex.org/W4327672398"
+          },
+          {
+            "count": 9,
+            "value": "openalex:https://openalex.org/W1629008218"
           }
         ]
       },
@@ -13140,9 +13183,9 @@
           "true": 138
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.001053987262452751,
+        "mean_duration_seconds": 0.001059746034238865,
         "mean_retrieval_hits": 2.483108108108108,
-        "p95_duration_seconds": 0.005198451079195365,
+        "p95_duration_seconds": 0.0045238250750117,
         "retrieval_hit_count": 735,
         "retrieval_use_rate": 1.0,
         "selected": 296,
@@ -13915,7 +13958,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 19,
+          "description": 44
+        },
         "summary": {
           "average_hits_per_record": 1.589928057553957,
           "decision_rule_counts": {
@@ -14199,9 +14245,9 @@
           "true": 138
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.002345965752013128,
+        "mean_duration_seconds": 0.002380456109971714,
         "mean_retrieval_hits": 2.9864864864864864,
-        "p95_duration_seconds": 0.012348551506875083,
+        "p95_duration_seconds": 0.012569514714414254,
         "retrieval_hit_count": 884,
         "retrieval_use_rate": 1.0,
         "selected": 296,
@@ -14660,8 +14706,8 @@
               },
               {
                 "best_score": 0.5384615384615384,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -14982,7 +15028,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 63
+        },
         "summary": {
           "average_hits_per_record": 2.368705035971223,
           "decision_rule_counts": {
@@ -15145,7 +15195,7 @@
             "value": "openalex:https://openalex.org/W2899736836"
           },
           {
-            "count": 70,
+            "count": 68,
             "value": "openalex:https://openalex.org/W141994778"
           },
           {
@@ -15161,12 +15211,12 @@
             "value": "openalex:https://openalex.org/W4212997072"
           },
           {
-            "count": 44,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
             "count": 43,
             "value": "openalex:https://openalex.org/W2138231363"
+          },
+          {
+            "count": 40,
+            "value": "openalex:https://openalex.org/W2055740081"
           },
           {
             "count": 35,
@@ -15209,7 +15259,7 @@
             "value": "openalex:https://openalex.org/W2122892769"
           },
           {
-            "count": 20,
+            "count": 19,
             "value": "openalex:https://openalex.org/W1629008218"
           },
           {
@@ -15266,9 +15316,9 @@
           "true": 215
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.003582147208686463,
+        "mean_duration_seconds": 0.00339900204930146,
         "mean_retrieval_hits": 2.7267080745341614,
-        "p95_duration_seconds": 0.017644759244285515,
+        "p95_duration_seconds": 0.018600788793992212,
         "retrieval_hit_count": 1317,
         "retrieval_use_rate": 1.0,
         "selected": 483,
@@ -16041,7 +16091,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 19,
+          "description": 55
+        },
         "summary": {
           "average_hits_per_record": 2.606115107913669,
           "decision_rule_counts": {
@@ -16325,9 +16378,9 @@
           "true": 215
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.004946441733322683,
+        "mean_duration_seconds": 0.004946661794193737,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.0250689772889018,
+        "p95_duration_seconds": 0.02513787366915494,
         "retrieval_hit_count": 1449,
         "retrieval_use_rate": 1.0,
         "selected": 483,
@@ -16843,7 +16896,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 3
+        },
         "summary": {
           "average_hits_per_record": 0.1960431654676259,
           "decision_rule_counts": {
@@ -17122,9 +17177,9 @@
           "true": 23
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0004890811378852679,
+        "mean_duration_seconds": 0.0004816905953563177,
         "mean_retrieval_hits": 1.676923076923077,
-        "p95_duration_seconds": 0.0010347402654588222,
+        "p95_duration_seconds": 0.0010902936104685067,
         "retrieval_hit_count": 109,
         "retrieval_use_rate": 1.0,
         "selected": 65,
@@ -17642,7 +17697,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 5
+        },
         "summary": {
           "average_hits_per_record": 0.3237410071942446,
           "decision_rule_counts": {
@@ -17921,9 +17978,9 @@
           "true": 23
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0006396443153230043,
+        "mean_duration_seconds": 0.0006807393466050809,
         "mean_retrieval_hits": 2.769230769230769,
-        "p95_duration_seconds": 0.0017370283836498856,
+        "p95_duration_seconds": 0.0019149014260619877,
         "retrieval_hit_count": 180,
         "retrieval_use_rate": 1.0,
         "selected": 65,
@@ -18338,8 +18395,8 @@
             "examples": [
               {
                 "best_score": 0.8888888888888888,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -18630,7 +18687,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.2392086330935252,
           "decision_rule_counts": {
@@ -18793,15 +18854,7 @@
           },
           {
             "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
-            "count": 14,
             "value": "openalex:https://openalex.org/W2122892769"
-          },
-          {
-            "count": 13,
-            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 13,
@@ -18822,6 +18875,10 @@
           {
             "count": 12,
             "value": "openalex:https://openalex.org/W2899736836"
+          },
+          {
+            "count": 12,
+            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 12,
@@ -18866,6 +18923,10 @@
           {
             "count": 10,
             "value": "wikidata:Q1860:description"
+          },
+          {
+            "count": 10,
+            "value": "openalex:https://openalex.org/W2150031895"
           }
         ]
       },
@@ -18913,9 +18974,9 @@
           "true": 119
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0008018764306143567,
+        "mean_duration_seconds": 0.0008104023054329446,
         "mean_retrieval_hits": 2.69140625,
-        "p95_duration_seconds": 0.003428858530241996,
+        "p95_duration_seconds": 0.0023543619317933917,
         "retrieval_hit_count": 689,
         "retrieval_use_rate": 1.0,
         "selected": 256,
@@ -19654,7 +19715,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 74
+        },
         "summary": {
           "average_hits_per_record": 1.381294964028777,
           "decision_rule_counts": {
@@ -19937,9 +20001,9 @@
           "true": 119
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009117296995100332,
+        "mean_duration_seconds": 0.000970145228166075,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006911245727678761,
+        "p95_duration_seconds": 0.007362563948845491,
         "retrieval_hit_count": 768,
         "retrieval_use_rate": 1.0,
         "selected": 256,
@@ -20370,8 +20434,8 @@
               },
               {
                 "best_score": 0.8888888888888888,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -20662,7 +20726,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.3057553956834533,
           "decision_rule_counts": {
@@ -20824,8 +20892,8 @@
             "value": "openalex:https://openalex.org/W2798054687"
           },
           {
-            "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
+            "count": 15,
+            "value": "worldbank:SP.POP.TOTL:PRK:2024"
           },
           {
             "count": 14,
@@ -20834,10 +20902,6 @@
           {
             "count": 13,
             "value": "openalex:https://openalex.org/W2899736836"
-          },
-          {
-            "count": 13,
-            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 13,
@@ -20858,6 +20922,10 @@
           {
             "count": 12,
             "value": "wikidata:Q37064510:description"
+          },
+          {
+            "count": 12,
+            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 12,
@@ -20945,9 +21013,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0008204625493337242,
+        "mean_duration_seconds": 0.0008445691370036242,
         "mean_retrieval_hits": 2.739622641509434,
-        "p95_duration_seconds": 0.0020226358436048015,
+        "p95_duration_seconds": 0.0029261390911415205,
         "retrieval_hit_count": 726,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -21717,7 +21785,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 74
+        },
         "summary": {
           "average_hits_per_record": 1.4298561151079137,
           "decision_rule_counts": {
@@ -22000,9 +22071,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009285216355907186,
+        "mean_duration_seconds": 0.0009887194001766027,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006589098973199723,
+        "p95_duration_seconds": 0.006913451920263468,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -22436,8 +22507,8 @@
               },
               {
                 "best_score": 0.8888888888888888,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -22757,7 +22828,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.8525179856115108,
           "decision_rule_counts": {
@@ -22929,10 +23004,6 @@
           },
           {
             "count": 30,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
-            "count": 30,
             "value": "openalex:https://openalex.org/W971519378"
           },
           {
@@ -22953,6 +23024,10 @@
           },
           {
             "count": 24,
+            "value": "openalex:https://openalex.org/W2055740081"
+          },
+          {
+            "count": 23,
             "value": "openalex:https://openalex.org/W1629008218"
           },
           {
@@ -22981,6 +23056,10 @@
           },
           {
             "count": 16,
+            "value": "worldbank:SP.POP.TOTL:PRK:2024"
+          },
+          {
+            "count": 16,
             "value": "openalex:https://openalex.org/W3201600150"
           },
           {
@@ -22990,10 +23069,6 @@
           {
             "count": 15,
             "value": "openalex:https://openalex.org/W3018520139"
-          },
-          {
-            "count": 14,
-            "value": "openalex:https://openalex.org/W2102902846"
           }
         ]
       },
@@ -23041,9 +23116,9 @@
           "true": 175
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0019201584852235943,
+        "mean_duration_seconds": 0.0021433884090597917,
         "mean_retrieval_hits": 2.647814910025707,
-        "p95_duration_seconds": 0.004724907013587627,
+        "p95_duration_seconds": 0.004986288398504216,
         "retrieval_hit_count": 1030,
         "retrieval_use_rate": 1.0,
         "selected": 389,
@@ -23831,7 +23906,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 74
+        },
         "summary": {
           "average_hits_per_record": 2.0989208633093526,
           "decision_rule_counts": {
@@ -24115,9 +24193,9 @@
           "true": 175
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.003555685935355244,
+        "mean_duration_seconds": 0.0035810953363474545,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.008186144358478486,
+        "p95_duration_seconds": 0.008268830692395568,
         "retrieval_hit_count": 1167,
         "retrieval_use_rate": 1.0,
         "selected": 389,
@@ -24480,8 +24558,8 @@
             "examples": [
               {
                 "best_score": 0.9523809523809523,
-                "best_source": "wikidata:Q421:description",
-                "best_text": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+                "best_source": "wikidata:Q15:P527:Q27381",
+                "best_text": "According to Wikidata structured data, Africa has has part(s) North Africa.",
                 "claim": "Why did scientists deny the truth that UFOs are extraterrestrial? The current evidence suggests that UFOs are not extraterrestrial.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence does not cover enough claim slots",
@@ -24623,7 +24701,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 9,
+          "description": 21
+        },
         "summary": {
           "average_hits_per_record": 0.29136690647482016,
           "decision_rule_counts": {
@@ -24777,12 +24858,8 @@
         ],
         "top_hit_sources": [
           {
-            "count": 16,
+            "count": 15,
             "value": "openalex:https://openalex.org/W1629008218"
-          },
-          {
-            "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
           },
           {
             "count": 14,
@@ -24815,6 +24892,14 @@
           {
             "count": 9,
             "value": "wikidata:Q421:description"
+          },
+          {
+            "count": 8,
+            "value": "openalex:https://openalex.org/W2055740081"
+          },
+          {
+            "count": 7,
+            "value": "worldbank:SP.POP.TOTL:PRK:2024"
           },
           {
             "count": 6,
@@ -24851,10 +24936,6 @@
           {
             "count": 3,
             "value": "official_site:0c45d32f81d9"
-          },
-          {
-            "count": 1,
-            "value": "openalex:https://openalex.org/W2800475925"
           }
         ]
       },
@@ -24902,9 +24983,9 @@
           "true": 33
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.00042047931861084005,
+        "mean_duration_seconds": 0.0003354200887699406,
         "mean_retrieval_hits": 2.103896103896104,
-        "p95_duration_seconds": 0.0005949764745309963,
+        "p95_duration_seconds": 0.000593990343622865,
         "retrieval_hit_count": 162,
         "retrieval_use_rate": 1.0,
         "selected": 77,
@@ -25408,7 +25489,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 29
+        },
         "summary": {
           "average_hits_per_record": 0.40467625899280574,
           "decision_rule_counts": {
@@ -25687,9 +25770,9 @@
           "true": 33
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.00054471327336626,
+        "mean_duration_seconds": 0.0005691340404816649,
         "mean_retrieval_hits": 2.9220779220779223,
-        "p95_duration_seconds": 0.001204909663647415,
+        "p95_duration_seconds": 0.000701203476637606,
         "retrieval_hit_count": 225,
         "retrieval_use_rate": 1.0,
         "selected": 77,
@@ -26106,8 +26189,8 @@
             "examples": [
               {
                 "best_score": 0.8888888888888888,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -26398,7 +26481,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.2464028776978417,
           "decision_rule_counts": {
@@ -26561,19 +26648,11 @@
           },
           {
             "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
-            "count": 14,
             "value": "openalex:https://openalex.org/W2122892769"
           },
           {
             "count": 13,
             "value": "openalex:https://openalex.org/W2899736836"
-          },
-          {
-            "count": 13,
-            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 13,
@@ -26594,6 +26673,10 @@
           {
             "count": 12,
             "value": "wikidata:Q37064510:description"
+          },
+          {
+            "count": 12,
+            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 12,
@@ -26634,6 +26717,10 @@
           {
             "count": 10,
             "value": "wikidata:Q1860:description"
+          },
+          {
+            "count": 10,
+            "value": "openalex:https://openalex.org/W2150031895"
           }
         ]
       },
@@ -26681,9 +26768,9 @@
           "true": 120
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0007887057391999122,
+        "mean_duration_seconds": 0.0008002287990881079,
         "mean_retrieval_hits": 2.6964980544747084,
-        "p95_duration_seconds": 0.002462434303015432,
+        "p95_duration_seconds": 0.0021555448183789823,
         "retrieval_hit_count": 693,
         "retrieval_use_rate": 1.0,
         "selected": 257,
@@ -27422,7 +27509,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 74
+        },
         "summary": {
           "average_hits_per_record": 1.3866906474820144,
           "decision_rule_counts": {
@@ -27705,9 +27795,9 @@
           "true": 120
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009186053757305739,
+        "mean_duration_seconds": 0.0009588985581581521,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.007019652356393621,
+        "p95_duration_seconds": 0.007267060386948275,
         "retrieval_hit_count": 771,
         "retrieval_use_rate": 1.0,
         "selected": 257,
@@ -28139,8 +28229,8 @@
               },
               {
                 "best_score": 0.8888888888888888,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -28445,7 +28535,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.3183453237410072,
           "decision_rule_counts": {
@@ -28608,8 +28702,8 @@
             "value": "openalex:https://openalex.org/W2798054687"
           },
           {
-            "count": 14,
-            "value": "openalex:https://openalex.org/W2055740081"
+            "count": 16,
+            "value": "worldbank:SP.POP.TOTL:PRK:2024"
           },
           {
             "count": 14,
@@ -28618,10 +28712,6 @@
           {
             "count": 13,
             "value": "openalex:https://openalex.org/W2899736836"
-          },
-          {
-            "count": 13,
-            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 13,
@@ -28646,6 +28736,10 @@
           {
             "count": 12,
             "value": "wikidata:Q37064510:description"
+          },
+          {
+            "count": 12,
+            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 12,
@@ -28729,9 +28823,9 @@
           "true": 125
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0008119262813980801,
+        "mean_duration_seconds": 0.0008496182571808971,
         "mean_retrieval_hits": 2.6948529411764706,
-        "p95_duration_seconds": 0.0020349593251012253,
+        "p95_duration_seconds": 0.0027733832132071255,
         "retrieval_hit_count": 733,
         "retrieval_use_rate": 1.0,
         "selected": 272,
@@ -29502,7 +29596,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 74
+        },
         "summary": {
           "average_hits_per_record": 1.4676258992805755,
           "decision_rule_counts": {
@@ -29786,9 +29883,9 @@
           "true": 125
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009173289359108929,
+        "mean_duration_seconds": 0.000979159515683183,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006488992506638166,
+        "p95_duration_seconds": 0.007067326648393643,
         "retrieval_hit_count": 816,
         "retrieval_use_rate": 1.0,
         "selected": 272,
@@ -30222,8 +30319,8 @@
               },
               {
                 "best_score": 0.8888888888888888,
-                "best_source": "wikidata:Q37064510:description",
-                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "best_source": "wikidata:Q99644917:description",
+                "best_text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
                 "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
                 "decision_rule": "slot_evidence_alignment",
                 "explanation": "local evidence is missing or contradicting required claim slots",
@@ -30543,7 +30640,11 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P27": 8,
+          "P527": 17,
+          "description": 61
+        },
         "summary": {
           "average_hits_per_record": 1.724820143884892,
           "decision_rule_counts": {
@@ -30710,10 +30811,6 @@
             "value": "openalex:https://openalex.org/W2138231363"
           },
           {
-            "count": 28,
-            "value": "openalex:https://openalex.org/W2055740081"
-          },
-          {
             "count": 24,
             "value": "openalex:https://openalex.org/W2799631787"
           },
@@ -30723,11 +30820,15 @@
           },
           {
             "count": 22,
-            "value": "openalex:https://openalex.org/W1629008218"
+            "value": "openalex:https://openalex.org/W2055740081"
           },
           {
             "count": 22,
             "value": "openalex:https://openalex.org/W1497899895"
+          },
+          {
+            "count": 21,
+            "value": "openalex:https://openalex.org/W1629008218"
           },
           {
             "count": 20,
@@ -30754,6 +30855,10 @@
             "value": "openalex:https://openalex.org/W141994778"
           },
           {
+            "count": 16,
+            "value": "worldbank:SP.POP.TOTL:PRK:2024"
+          },
+          {
             "count": 15,
             "value": "openalex:https://openalex.org/W2798054687"
           },
@@ -30776,10 +30881,6 @@
           {
             "count": 14,
             "value": "openalex:https://openalex.org/W971519378"
-          },
-          {
-            "count": 13,
-            "value": "openalex:https://openalex.org/W2070732705"
           }
         ]
       },
@@ -30827,9 +30928,9 @@
           "true": 166
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009329886792725357,
+        "mean_duration_seconds": 0.0009754727400208184,
         "mean_retrieval_hits": 2.6418732782369148,
-        "p95_duration_seconds": 0.001962476037442684,
+        "p95_duration_seconds": 0.0027746187755838033,
         "retrieval_hit_count": 959,
         "retrieval_use_rate": 1.0,
         "selected": 363,
@@ -31617,7 +31718,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 74
+        },
         "summary": {
           "average_hits_per_record": 1.9568345323741008,
           "decision_rule_counts": {
@@ -31901,9 +32005,9 @@
           "true": 166
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0011881449787053933,
+        "mean_duration_seconds": 0.0012331941442759117,
         "mean_retrieval_hits": 2.997245179063361,
-        "p95_duration_seconds": 0.0020718626212328653,
+        "p95_duration_seconds": 0.0026546549052000046,
         "retrieval_hit_count": 1088,
         "retrieval_use_rate": 1.0,
         "selected": 363,

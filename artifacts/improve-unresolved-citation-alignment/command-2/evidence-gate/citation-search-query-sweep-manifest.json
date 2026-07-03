@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "db1940232409e82fa118070605a52e205ef74abb8ce5ca388b7d9c53de0c7f08",
-      "size_bytes": 1822853
+      "sha256": "60f6853fa72156df325b19bd0222bd43f674eb3d0d7620db014f8a96c0f662c7",
+      "size_bytes": 1823283
     },
     "blind_spots": {
       "exists": true,
@@ -21,8 +21,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-corpus.json",
-      "sha256": "cad601a97161d33b68ac9239a7c7d962e89513b2a3dd8fc58d5fb6111abe1295",
-      "size_bytes": 3094205
+      "sha256": "c5e25b2650db218f249aab783012ffe7ce33c0a4ff3466f61a5bf388f222770e",
+      "size_bytes": 4072273
     },
     "scores": {
       "exists": true,

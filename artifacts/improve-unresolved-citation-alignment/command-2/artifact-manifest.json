@@ -21,7 +21,7 @@
       "file_count": 1,
       "kind": "file",
       "path": "evidence-gate/artifact-manifest.json",
-      "sha256": "c7dd0acbff63f0b02e97658a56205f577f17497228c5f85b335271771062bed1",
+      "sha256": "e7d8d973b875a0eeb38525037179b62e036823fb16489cd5e37d540353619f10",
       "size_bytes": 5808
     },
     "evidence_workflow": {

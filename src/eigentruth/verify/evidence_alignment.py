@@ -487,6 +487,10 @@ class _TextFeatures:
             negated=any(token in _NEGATION_TOKENS for token in tokens),
         )
 
+    @classmethod
+    def from_evidence(cls, evidence: EvidenceAlignmentEvidence) -> "_TextFeatures":
+        return cls.from_text(_evidence_feature_text(evidence))
+
 
 def _alignment_record_for_claim(
     claim: Claim,
@@ -519,8 +523,10 @@ def _alignment_record_for_claim(
         )
 
     best_evidence = _best_evidence(claim_features, selected_evidence)
-    evidence_features = _TextFeatures.from_text("\n".join(item.text for item in selected_evidence))
-    best_features = _TextFeatures.from_text(best_evidence.text)
+    evidence_features = _TextFeatures.from_text(
+        "\n".join(_evidence_feature_text(item) for item in selected_evidence)
+    )
+    best_features = _TextFeatures.from_evidence(best_evidence)
     keyword_overlap = _recall(claim_features.keywords, evidence_features.keywords)
     number_recall = _recall(claim_features.numbers, evidence_features.numbers)
     entity_recall = _recall(claim_features.entities, evidence_features.entities)
@@ -594,6 +600,11 @@ def _alignment_record_for_claim(
             "best_evidence_negated_for_alignment": best_negated,
             "min_refute_keyword_overlap": policy.min_refute_keyword_overlap,
             "min_support_keyword_overlap": policy.min_support_keyword_overlap,
+            "structured_evidence_slots": tuple(
+                _structured_evidence_slot_summary(item)
+                for item in selected_evidence[:5]
+                if _structured_evidence_slot_values(item)
+            ),
             "selected_evidence": tuple(_evidence_summary(item) for item in selected_evidence[:5]),
         },
     )
@@ -641,14 +652,18 @@ def _best_evidence(
     claim_features: _TextFeatures,
     evidence_items: Sequence[EvidenceAlignmentEvidence],
 ) -> EvidenceAlignmentEvidence:
+    def rank(item: EvidenceAlignmentEvidence) -> tuple[float, float, float, float]:
+        item_features = _TextFeatures.from_evidence(item)
+        return (
+            _recall(claim_features.numbers, item_features.numbers) or 0.0,
+            _recall(claim_features.entities, item_features.entities) or 0.0,
+            _recall(claim_features.keywords, item_features.keywords) or 0.0,
+            item.score,
+        )
+
     return max(
         evidence_items,
-        key=lambda item: (
-            _recall(claim_features.numbers, _TextFeatures.from_text(item.text).numbers) or 0.0,
-            _recall(claim_features.entities, _TextFeatures.from_text(item.text).entities) or 0.0,
-            _recall(claim_features.keywords, _TextFeatures.from_text(item.text).keywords) or 0.0,
-            item.score,
-        ),
+        key=rank,
     )
 
 
@@ -732,6 +747,57 @@ def _evidence_summary(evidence: EvidenceAlignmentEvidence) -> dict[str, Any]:
         "citation_id": evidence.citation_id,
         "claim_id": evidence.claim_id,
     }
+
+
+def _evidence_feature_text(evidence: EvidenceAlignmentEvidence) -> str:
+    parts = [evidence.text, *_structured_evidence_slot_values(evidence)]
+    return "\n".join(part for part in parts if part)
+
+
+def _structured_evidence_slot_summary(evidence: EvidenceAlignmentEvidence) -> dict[str, Any]:
+    return {
+        "source": evidence.source,
+        "slot_values": _structured_evidence_slot_values(evidence),
+    }
+
+
+def _structured_evidence_slot_values(evidence: EvidenceAlignmentEvidence) -> tuple[str, ...]:
+    values: list[str] = []
+    metadata = _mapping(evidence.metadata)
+    _extend_structured_slot_values(values, metadata, _STRUCTURED_EVIDENCE_SLOT_KEYS)
+    for key in _STRUCTURED_EVIDENCE_CONTAINER_KEYS:
+        nested = metadata.get(key)
+        if isinstance(nested, Mapping):
+            _extend_structured_slot_values(values, nested, _STRUCTURED_EVIDENCE_SLOT_KEYS)
+    return tuple(dict.fromkeys(values))
+
+
+def _extend_structured_slot_values(
+    values: list[str],
+    metadata: Mapping[str, Any],
+    keys: Sequence[str],
+) -> None:
+    for key in keys:
+        if key in metadata:
+            values.extend(_slot_value_strings(metadata[key]))
+
+
+def _slot_value_strings(value: Any) -> tuple[str, ...]:
+    if value is None or isinstance(value, bool):
+        return ()
+    if isinstance(value, Mapping):
+        values: list[str] = []
+        for key in ("label", "name", "text", "value", "object"):
+            if key in value:
+                values.extend(_slot_value_strings(value[key]))
+        return tuple(values)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        values: list[str] = []
+        for item in value:
+            values.extend(_slot_value_strings(item))
+        return tuple(values)
+    text = str(value).strip()
+    return (text,) if text else ()
 
 
 def _alignment_strength(record: EvidenceAlignmentRecord) -> float:
@@ -998,6 +1064,38 @@ _GENERIC_EVIDENCE_ENTITIES = {
     "statistics",
     "world",
 }
+_STRUCTURED_EVIDENCE_SLOT_KEYS = (
+    "subject",
+    "subject_label",
+    "entity",
+    "entity_name",
+    "country",
+    "country_name",
+    "organization_name",
+    "location_name",
+    "predicate",
+    "property",
+    "property_label",
+    "statement_property",
+    "statement_property_label",
+    "indicator",
+    "indicator_name",
+    "object",
+    "object_text",
+    "value",
+    "fact_value",
+    "reference_year",
+    "year",
+    "time_period",
+)
+_STRUCTURED_EVIDENCE_CONTAINER_KEYS = (
+    "fact",
+    "facts",
+    "structured_fact",
+    "structured_facts",
+    "structured_slots",
+    "slots",
+)
 _STOPWORDS = {
     "about",
     "after",

@@ -61008,6 +61008,12 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
         "question_answer_overlap_0p5": 1,
         "question_overlap_0p65": 1,
     }
+    assert payload["lanes"]["citation_evidence"]["query_sweep_best_strategy_counts"] == {
+        "question_overlap_0p65": 2,
+    }
+    assert payload["summary"]["citation_query_sweep_best_strategy_counts"] == {
+        "question_overlap_0p65": 2,
+    }
     assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_records_with_hits_sum"] == 2
     assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_records_with_hits_max"] == 2
     assert payload["lanes"]["citation_evidence"]["query_sweep_best_observed_total_hits_sum"] == 4
@@ -61082,6 +61088,9 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     assert citation_action["query_sweep_best_observed_strategy_counts"] == {
         "question_answer_overlap_0p5": 1,
         "question_overlap_0p65": 1,
+    }
+    assert citation_action["query_sweep_best_strategy_counts"] == {
+        "question_overlap_0p65": 2,
     }
     assert citation_action["query_sweep_no_hit_strategy_count"] == 1
     requeue_action = next(
@@ -61807,6 +61816,11 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
                     "provider": "unit-search",
                     "rank": 1,
                     "published_at": "2026-01-01",
+                    "metadata": {
+                        "entity": "Alpha Syndrome",
+                        "property": "definition",
+                        "value": "fictional condition",
+                    },
                 },
                 {
                     "title": "",
@@ -61853,6 +61867,9 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert "model_answer" not in requests[0]
     assert "target_id" not in requests[0]
     assert source_docs[0]["metadata"]["provider"] == "unit-search"
+    assert source_docs[0]["metadata"]["entity"] == "Alpha Syndrome"
+    assert source_docs[0]["metadata"]["property"] == "definition"
+    assert source_docs[0]["metadata"]["value"] == "fictional condition"
     assert source_docs[0]["metadata"]["source_queue_request_sha256"] == requests[0]["metadata"][
         "source_queue_request_sha256"
     ]
@@ -61865,6 +61882,9 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert corpus["summary"]["n_documents"] == 1
     assert corpus["label_usage"]["labels_used_for_documents"] is False
     assert corpus["documents"][0]["metadata"]["source_kind"] == "unit_citation_search_result"
+    assert corpus["documents"][0]["metadata"]["entity"] == "Alpha Syndrome"
+    assert corpus["documents"][0]["metadata"]["property"] == "definition"
+    assert corpus["documents"][0]["metadata"]["value"] == "fictional condition"
     assert corpus["documents"][0]["metadata"]["source_queue_request_sha256"] == requests[0]["metadata"][
         "source_queue_request_sha256"
     ]
@@ -61873,6 +61893,48 @@ def test_citation_search_adapter_handoff_sanitizes_requests_and_ingests_results(
     assert record.metadata["workflow"] == "citation_search_adapter_handoff"
     assert record.metadata["source_document_count"] == 1
     assert record.metadata["suite"] == "unit"
+
+
+def test_citation_search_adapter_handoff_rejects_reserved_result_metadata():
+    module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+    raw_queue_request = {
+        "queue_id": "queue:record-2:external_citation:1",
+        "source_request_id": "cite:record-2:1",
+        "target_id": "record-2",
+        "record_index": 2,
+        "adapter_family": "external_citation_search",
+        "request_type": "external_citation",
+        "question_type": "definition",
+        "question": "What is Alpha Syndrome?",
+        "model_answer": "A moon.",
+        "query": "Alpha Syndrome A moon.",
+        "usage": "source_discovery_only",
+    }
+    queue_report = {
+        "schema_version": 1,
+        "workflow": "unresolved_blind_spot_evidence_queue",
+        "status": "ready_for_adapter_execution",
+        "summary": {"target_count": 1, "adapter_request_count": 1},
+        "adapter_requests": [raw_queue_request],
+    }
+    request_id = module._adapter_request_id(raw_queue_request)
+
+    with pytest.raises(ValueError, match="reserved metadata keys: model_answer"):
+        module.build_citation_search_adapter_handoff(
+            queue_report,
+            adapter_results=(
+                {
+                    "request_id": request_id,
+                    "results": [
+                        {
+                            "title": "Alpha Syndrome reference",
+                            "snippet": "Alpha Syndrome is a fictional condition.",
+                            "metadata": {"model_answer": "A moon."},
+                        },
+                    ],
+                },
+            ),
+        )
 
 
 def test_citation_search_adapter_handoff_selects_execution_batch(tmp_path):

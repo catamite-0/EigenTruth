@@ -1,8 +1,6 @@
 {
   "metadata": {
-    "closure_action": "improve_unresolved_citation_alignment",
-    "model": "smollm2-l80",
-    "source": "frontier-v4"
+    "source_workflow": "improve_unresolved_citation_alignment"
   },
   "paths": {
     "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-citation-query-sweep-failure-review/artifact-manifest.json"
@@ -247,15 +245,7 @@
         },
         {
           "count": 14,
-          "value": "openalex:https://openalex.org/W2055740081"
-        },
-        {
-          "count": 14,
           "value": "openalex:https://openalex.org/W2122892769"
-        },
-        {
-          "count": 13,
-          "value": "openalex:https://openalex.org/W1629008218"
         },
         {
           "count": 13,
@@ -279,7 +269,15 @@
         },
         {
           "count": 12,
+          "value": "openalex:https://openalex.org/W1629008218"
+        },
+        {
+          "count": 12,
           "value": "seeded_url:news:82c8ebb5d518"
+        },
+        {
+          "count": 12,
+          "value": "openalex:https://openalex.org/W2751884637"
         }
       ],
       "verified_false_alarm": 0.088

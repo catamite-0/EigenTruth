@@ -3350,6 +3350,40 @@ def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
     assert report["summary"]["misalignment_rate"] == pytest.approx(1.0)
 
 
+def test_evidence_alignment_verifier_uses_structured_evidence_metadata_slots():
+    claim = Claim("Afghanistan had Population, total of 330 million in 2024.", claim_id="afg")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "World Bank official statistics data for population country queries.",
+                "source": "worldbank:SP.POP.TOTL:AFG:2024",
+                "metadata": {
+                    "country_name": "Afghanistan",
+                    "indicator_name": "Population, total",
+                    "reference_year": "2024",
+                    "value": 42647492,
+                    "source_family": "official_statistics",
+                },
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "missing_claim_entity" not in record["issue_codes"]
+    assert "42647492" in record["evidence_numbers"]
+    assert "afghanistan" in record["evidence_entities"]
+    assert record["metadata"]["structured_evidence_slots"][0]["slot_values"] == (
+        "Afghanistan",
+        "Population, total",
+        "42647492",
+        "2024",
+    )
+
+
 def test_evidence_alignment_verifier_does_not_refute_unbound_entity_numeric_slot():
     claim = Claim("What is the population of the country? The population of the country is 330 million.")
     verifier = EvidenceAlignmentVerifier(

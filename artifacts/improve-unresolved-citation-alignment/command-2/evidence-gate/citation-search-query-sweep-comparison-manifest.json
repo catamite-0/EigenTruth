@@ -13,8 +13,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "db1940232409e82fa118070605a52e205ef74abb8ce5ca388b7d9c53de0c7f08",
-      "size_bytes": 1822853
+      "sha256": "60f6853fa72156df325b19bd0222bd43f674eb3d0d7620db014f8a96c0f662c7",
+      "size_bytes": 1823283
     },
     "query_sweep_comparison": {
       "exists": true,

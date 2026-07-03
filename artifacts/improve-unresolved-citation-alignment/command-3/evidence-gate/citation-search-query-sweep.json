@@ -806,7 +806,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.2823741007194245,
           "decision_rule_counts": {
@@ -1090,9 +1093,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0012317473552066762,
+        "mean_duration_seconds": 0.001271079846148221,
         "mean_retrieval_hits": 2.690566037735849,
-        "p95_duration_seconds": 0.008089688955806196,
+        "p95_duration_seconds": 0.008383904700167477,
         "retrieval_hit_count": 713,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -1862,7 +1865,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 82
+        },
         "summary": {
           "average_hits_per_record": 1.4298561151079137,
           "decision_rule_counts": {
@@ -2145,9 +2151,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010225725417324113,
+        "mean_duration_seconds": 0.0010762418782830519,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.0065031550591811505,
+        "p95_duration_seconds": 0.0071158274309709646,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -2914,7 +2920,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.2823741007194245,
           "decision_rule_counts": {
@@ -3198,9 +3207,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0012311874739474283,
+        "mean_duration_seconds": 0.001309399873035837,
         "mean_retrieval_hits": 2.690566037735849,
-        "p95_duration_seconds": 0.008135681925341486,
+        "p95_duration_seconds": 0.008734854031354189,
         "retrieval_hit_count": 713,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -3970,7 +3979,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 82
+        },
         "summary": {
           "average_hits_per_record": 1.4298561151079137,
           "decision_rule_counts": {
@@ -4253,9 +4265,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010323541489306767,
+        "mean_duration_seconds": 0.001073782427570308,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006587930303066968,
+        "p95_duration_seconds": 0.007063641678541896,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -5024,7 +5036,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.6906474820143884,
           "decision_rule_counts": {
@@ -5308,9 +5323,9 @@
           "true": 165
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010383320640619488,
+        "mean_duration_seconds": 0.0010682354955487464,
         "mean_retrieval_hits": 2.5753424657534247,
-        "p95_duration_seconds": 0.007679297588765638,
+        "p95_duration_seconds": 0.007978158746846032,
         "retrieval_hit_count": 940,
         "retrieval_use_rate": 1.0,
         "selected": 365,
@@ -6083,7 +6098,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 82
+        },
         "summary": {
           "average_hits_per_record": 1.9694244604316546,
           "decision_rule_counts": {
@@ -6367,9 +6385,9 @@
           "true": 165
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009228804824899321,
+        "mean_duration_seconds": 0.0009580982386530058,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.0054272928507998605,
+        "p95_duration_seconds": 0.005610260460525753,
         "retrieval_hit_count": 1095,
         "retrieval_use_rate": 1.0,
         "selected": 365,
@@ -7160,7 +7178,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 72
+        },
         "summary": {
           "average_hits_per_record": 2.5485611510791366,
           "decision_rule_counts": {
@@ -7444,9 +7465,9 @@
           "true": 233
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0036616029404193135,
+        "mean_duration_seconds": 0.0037288411679961887,
         "mean_retrieval_hits": 2.719769673704415,
-        "p95_duration_seconds": 0.020402536145411432,
+        "p95_duration_seconds": 0.021478204056620598,
         "retrieval_hit_count": 1417,
         "retrieval_use_rate": 1.0,
         "selected": 521,
@@ -8219,7 +8240,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 90
+        },
         "summary": {
           "average_hits_per_record": 2.8111510791366907,
           "decision_rule_counts": {
@@ -8503,9 +8527,9 @@
           "true": 233
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0037081770012566315,
+        "mean_duration_seconds": 0.00359401536006981,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.01281672006007284,
+        "p95_duration_seconds": 0.01296542992349714,
         "retrieval_hit_count": 1563,
         "retrieval_use_rate": 1.0,
         "selected": 521,
@@ -9023,7 +9047,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 2
+        },
         "summary": {
           "average_hits_per_record": 0.10071942446043165,
           "decision_rule_counts": {
@@ -9294,9 +9320,9 @@
           "true": 9
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0018976483314128761,
+        "mean_duration_seconds": 0.0019596671336330473,
         "mean_retrieval_hits": 2.5454545454545454,
-        "p95_duration_seconds": 0.0053651347639970485,
+        "p95_duration_seconds": 0.005475180019857362,
         "retrieval_hit_count": 56,
         "retrieval_use_rate": 1.0,
         "selected": 22,
@@ -9808,7 +9834,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 4
+        },
         "summary": {
           "average_hits_per_record": 0.11870503597122302,
           "decision_rule_counts": {
@@ -10079,9 +10107,9 @@
           "true": 9
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0014275637487034228,
+        "mean_duration_seconds": 0.0015868630196729844,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.005312490108190104,
+        "p95_duration_seconds": 0.005487912381067872,
         "retrieval_hit_count": 66,
         "retrieval_use_rate": 1.0,
         "selected": 22,
@@ -10789,7 +10817,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 6,
+          "description": 20
+        },
         "summary": {
           "average_hits_per_record": 0.7068345323741008,
           "decision_rule_counts": {
@@ -11073,9 +11104,9 @@
           "true": 78
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.001719531896551048,
+        "mean_duration_seconds": 0.0017615171308182395,
         "mean_retrieval_hits": 2.2716763005780347,
-        "p95_duration_seconds": 0.010943482024595143,
+        "p95_duration_seconds": 0.011629760754294694,
         "retrieval_hit_count": 393,
         "retrieval_use_rate": 1.0,
         "selected": 173,
@@ -11789,7 +11820,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 16,
+          "description": 30
+        },
         "summary": {
           "average_hits_per_record": 0.9334532374100719,
           "decision_rule_counts": {
@@ -12073,9 +12107,9 @@
           "true": 78
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.01073532991550023,
+        "mean_duration_seconds": 0.003122733992718246,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.07561145268846306,
+        "p95_duration_seconds": 0.018747645965777344,
         "retrieval_hit_count": 519,
         "retrieval_use_rate": 1.0,
         "selected": 173,
@@ -12844,7 +12878,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 41
+        },
         "summary": {
           "average_hits_per_record": 1.2661870503597121,
           "decision_rule_counts": {
@@ -13128,9 +13165,9 @@
           "true": 137
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0014254137135014451,
+        "mean_duration_seconds": 0.0014949710634215895,
         "mean_retrieval_hits": 2.4275862068965517,
-        "p95_duration_seconds": 0.008253642707131805,
+        "p95_duration_seconds": 0.008553444308927283,
         "retrieval_hit_count": 704,
         "retrieval_use_rate": 1.0,
         "selected": 290,
@@ -13872,7 +13909,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 19,
+          "description": 43
+        },
         "summary": {
           "average_hits_per_record": 1.564748201438849,
           "decision_rule_counts": {
@@ -14156,9 +14196,9 @@
           "true": 137
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0028060610646960036,
+        "mean_duration_seconds": 0.0025709408528075137,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.013500146771548318,
+        "p95_duration_seconds": 0.013707831280771646,
         "retrieval_hit_count": 870,
         "retrieval_use_rate": 1.0,
         "selected": 290,
@@ -14948,7 +14988,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 58
+        },
         "summary": {
           "average_hits_per_record": 2.3345323741007196,
           "decision_rule_counts": {
@@ -15232,9 +15275,9 @@
           "true": 215
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0036928729208641326,
+        "mean_duration_seconds": 0.00375931742302225,
         "mean_retrieval_hits": 2.6873706004140785,
-        "p95_duration_seconds": 0.01846433462342246,
+        "p95_duration_seconds": 0.018891738797537954,
         "retrieval_hit_count": 1298,
         "retrieval_use_rate": 1.0,
         "selected": 483,
@@ -15976,7 +16019,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 19,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 2.606115107913669,
           "decision_rule_counts": {
@@ -16260,9 +16306,9 @@
           "true": 215
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.005036114268419458,
+        "mean_duration_seconds": 0.005076848662951981,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.02524382702540606,
+        "p95_duration_seconds": 0.02544410417322069,
         "retrieval_hit_count": 1449,
         "retrieval_use_rate": 1.0,
         "selected": 483,
@@ -16744,7 +16790,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 3
+        },
         "summary": {
           "average_hits_per_record": 0.1510791366906475,
           "decision_rule_counts": {
@@ -17011,9 +17059,9 @@
           "true": 16
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0003713057755470969,
+        "mean_duration_seconds": 0.00039196989585667155,
         "mean_retrieval_hits": 1.9534883720930232,
-        "p95_duration_seconds": 0.00100719362962991,
+        "p95_duration_seconds": 0.0010928755975328386,
         "retrieval_hit_count": 84,
         "retrieval_use_rate": 1.0,
         "selected": 43,
@@ -17497,7 +17545,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 5
+        },
         "summary": {
           "average_hits_per_record": 0.23201438848920863,
           "decision_rule_counts": {
@@ -17764,9 +17814,9 @@
           "true": 16
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0005099342345411694,
+        "mean_duration_seconds": 0.0005269517504805049,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.001717143040150404,
+        "p95_duration_seconds": 0.0018837652634829283,
         "retrieval_hit_count": 129,
         "retrieval_use_rate": 1.0,
         "selected": 43,
@@ -18499,7 +18549,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.2014388489208634,
           "decision_rule_counts": {
@@ -18782,9 +18835,9 @@
           "true": 119
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0010389518574811518,
+        "mean_duration_seconds": 0.0012229617714183405,
         "mean_retrieval_hits": 2.609375,
-        "p95_duration_seconds": 0.008019595028599724,
+        "p95_duration_seconds": 0.00827681805822067,
         "retrieval_hit_count": 668,
         "retrieval_use_rate": 1.0,
         "selected": 256,
@@ -19523,7 +19576,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 80
+        },
         "summary": {
           "average_hits_per_record": 1.381294964028777,
           "decision_rule_counts": {
@@ -19806,9 +19862,9 @@
           "true": 119
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009486902717981138,
+        "mean_duration_seconds": 0.0009918491537064256,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.007109917467460036,
+        "p95_duration_seconds": 0.007659251830773428,
         "retrieval_hit_count": 768,
         "retrieval_use_rate": 1.0,
         "selected": 256,
@@ -20575,7 +20631,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.2805755395683454,
           "decision_rule_counts": {
@@ -20859,9 +20918,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0012323232771793626,
+        "mean_duration_seconds": 0.0012908443892023192,
         "mean_retrieval_hits": 2.6867924528301885,
-        "p95_duration_seconds": 0.008162142988294362,
+        "p95_duration_seconds": 0.008424297766759991,
         "retrieval_hit_count": 712,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -21631,7 +21690,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 80
+        },
         "summary": {
           "average_hits_per_record": 1.4298561151079137,
           "decision_rule_counts": {
@@ -21914,9 +21976,9 @@
           "true": 122
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009316677262760559,
+        "mean_duration_seconds": 0.000997472976615547,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006488755089230835,
+        "p95_duration_seconds": 0.007124646520242094,
         "retrieval_hit_count": 795,
         "retrieval_use_rate": 1.0,
         "selected": 265,
@@ -22685,7 +22747,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.8093525179856116,
           "decision_rule_counts": {
@@ -22969,9 +23034,9 @@
           "true": 172
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0021474692529043207,
+        "mean_duration_seconds": 0.0022009903051007492,
         "mean_retrieval_hits": 2.612987012987013,
-        "p95_duration_seconds": 0.008162345201708375,
+        "p95_duration_seconds": 0.008429320668801664,
         "retrieval_hit_count": 1006,
         "retrieval_use_rate": 1.0,
         "selected": 385,
@@ -23759,7 +23824,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 80
+        },
         "summary": {
           "average_hits_per_record": 2.077338129496403,
           "decision_rule_counts": {
@@ -24043,9 +24111,9 @@
           "true": 172
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.00712106795074394,
+        "mean_duration_seconds": 0.0038963982399988486,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.008505146694369605,
+        "p95_duration_seconds": 0.008354154741391537,
         "retrieval_hit_count": 1155,
         "retrieval_use_rate": 1.0,
         "selected": 385,
@@ -24543,7 +24611,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 21
+        },
         "summary": {
           "average_hits_per_record": 0.2643884892086331,
           "decision_rule_counts": {
@@ -24822,9 +24892,9 @@
           "true": 26
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0005731414788617537,
+        "mean_duration_seconds": 0.0005780249314669233,
         "mean_retrieval_hits": 2.2615384615384615,
-        "p95_duration_seconds": 0.0008981308201327905,
+        "p95_duration_seconds": 0.0009452117374166828,
         "retrieval_hit_count": 147,
         "retrieval_use_rate": 1.0,
         "selected": 65,
@@ -25324,7 +25394,9 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "description": 29
+        },
         "summary": {
           "average_hits_per_record": 0.35071942446043164,
           "decision_rule_counts": {
@@ -25603,9 +25675,9 @@
           "true": 26
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0006115175658263839,
+        "mean_duration_seconds": 0.0006290533042584474,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.0014396095648407901,
+        "p95_duration_seconds": 0.0015774409985169727,
         "retrieval_hit_count": 195,
         "retrieval_use_rate": 1.0,
         "selected": 65,
@@ -26340,7 +26412,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.2068345323741008,
           "decision_rule_counts": {
@@ -26623,9 +26698,9 @@
           "true": 120
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009918606492187031,
+        "mean_duration_seconds": 0.001044233903517142,
         "mean_retrieval_hits": 2.6108949416342413,
-        "p95_duration_seconds": 0.0068204516544937924,
+        "p95_duration_seconds": 0.0074405737221240895,
         "retrieval_hit_count": 671,
         "retrieval_use_rate": 1.0,
         "selected": 257,
@@ -27364,7 +27439,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 80
+        },
         "summary": {
           "average_hits_per_record": 1.3866906474820144,
           "decision_rule_counts": {
@@ -27647,9 +27725,9 @@
           "true": 120
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009148429262955538,
+        "mean_duration_seconds": 0.001062178116831711,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006899711024016126,
+        "p95_duration_seconds": 0.008229464758187532,
         "retrieval_hit_count": 771,
         "retrieval_use_rate": 1.0,
         "selected": 257,
@@ -28417,7 +28495,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.289568345323741,
           "decision_rule_counts": {
@@ -28701,9 +28782,9 @@
           "true": 125
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0011859217257177293,
+        "mean_duration_seconds": 0.001322680564258275,
         "mean_retrieval_hits": 2.636029411764706,
-        "p95_duration_seconds": 0.008234173245728015,
+        "p95_duration_seconds": 0.00840152958407998,
         "retrieval_hit_count": 717,
         "retrieval_use_rate": 1.0,
         "selected": 272,
@@ -29474,7 +29555,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 80
+        },
         "summary": {
           "average_hits_per_record": 1.4676258992805755,
           "decision_rule_counts": {
@@ -29758,9 +29842,9 @@
           "true": 125
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0009219797733856146,
+        "mean_duration_seconds": 0.0009879175820113981,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.006641316600143907,
+        "p95_duration_seconds": 0.007033186161424963,
         "retrieval_hit_count": 816,
         "retrieval_use_rate": 1.0,
         "selected": 272,
@@ -30529,7 +30613,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 8,
+          "description": 56
+        },
         "summary": {
           "average_hits_per_record": 1.6798561151079137,
           "decision_rule_counts": {
@@ -30813,9 +30900,9 @@
           "true": 162
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0013508411246617247,
+        "mean_duration_seconds": 0.001160714392909291,
         "mean_retrieval_hits": 2.6089385474860336,
-        "p95_duration_seconds": 0.005317119194660334,
+        "p95_duration_seconds": 0.005425983277382326,
         "retrieval_hit_count": 934,
         "retrieval_use_rate": 1.0,
         "selected": 358,
@@ -31603,7 +31690,10 @@
             }
           }
         },
-        "hit_property_counts": {},
+        "hit_property_counts": {
+          "P527": 12,
+          "description": 80
+        },
         "summary": {
           "average_hits_per_record": 1.9316546762589928,
           "decision_rule_counts": {
@@ -31887,9 +31977,9 @@
           "true": 162
         },
         "mean_attempted_route_count": 2.0,
-        "mean_duration_seconds": 0.0014436984416513637,
+        "mean_duration_seconds": 0.0013740470258300531,
         "mean_retrieval_hits": 3.0,
-        "p95_duration_seconds": 0.0019401683704927562,
+        "p95_duration_seconds": 0.003651819244259889,
         "retrieval_hit_count": 1074,
         "retrieval_use_rate": 1.0,
         "selected": 358,

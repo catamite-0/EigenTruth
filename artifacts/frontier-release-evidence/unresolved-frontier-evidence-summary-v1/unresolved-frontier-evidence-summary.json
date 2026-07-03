@@ -3,45 +3,51 @@
     "citation_evidence": {
       "blocking_reason_counts": {
         "child_gate": 3,
-        "query_sweep": 1,
-        "query_sweep_comparison": 1
+        "query_sweep": 4,
+        "query_sweep_comparison": 4
       },
-      "comparison_failed_count": 4,
+      "comparison_failed_count": 7,
       "comparison_pass_count": 0,
       "comparison_status_counts": {
-        "blocked": 4
+        "blocked": 7
       },
       "max_source_document_count": 2222,
       "provenance_failed_count": 0,
-      "provenance_pass_count": 4,
+      "provenance_pass_count": 7,
       "provenance_status_counts": {
-        "pass": 4
+        "pass": 7
       },
       "query_sweep_best_observed_records_with_hits_max": 521,
-      "query_sweep_best_observed_records_with_hits_sum": 1563,
+      "query_sweep_best_observed_records_with_hits_sum": 3126,
       "query_sweep_best_observed_strategy_counts": {
-        "question_overlap_0p5": 3
+        "question_overlap_0p5": 6
       },
       "query_sweep_best_observed_total_hits_max": 1563,
-      "query_sweep_best_observed_total_hits_sum": 4689,
-      "query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
+      "query_sweep_best_observed_total_hits_sum": 9378,
+      "query_sweep_best_strategy_counts": {
+        "citation_question_overlap_0p8_sf_planned_rerank": 1,
+        "question_answer_overlap_0p8": 1,
+        "question_answer_overlap_0p8_sf_planned_rerank": 1,
+        "question_overlap_0p65": 1
+      },
+      "query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
       "query_sweep_failure_reason_counts": {
-        "blind_refuted_rate_below_min": 24,
-        "verified_false_alarm_above_max": 24
+        "blind_refuted_rate_below_min": 120,
+        "verified_false_alarm_above_max": 120
       },
       "query_sweep_no_hit_strategy_count": 0,
-      "query_sweep_no_passing_strategy_count": 4,
+      "query_sweep_no_passing_strategy_count": 7,
       "query_sweep_recommended_next_action_counts": {
-        "improve_claim_intent_alignment_or_query_construction": 3,
-        "tighten_false_alarm_calibration": 3
+        "improve_claim_intent_alignment_or_query_construction": 6,
+        "tighten_false_alarm_calibration": 6
       },
       "query_sweep_target_route_not_selected_strategy_count": 0,
-      "query_sweep_verified_false_alarm_above_max_strategy_count": 24,
+      "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
       "status": "blocked",
       "status_counts": {
-        "blocked": 2
+        "blocked": 5
       },
-      "workflow_count": 2,
+      "workflow_count": 5,
       "workflows": [
         {
           "adapter_request_count": 260,
@@ -99,6 +105,114 @@
           "source_document_count": 2222,
           "status": "blocked",
           "workflow": "citation_search_batch_evidence_rollup"
+        },
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 3,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [
+            "blind_refuted_rate_below_min",
+            "verified_false_alarm_above_max"
+          ],
+          "query_sweep_best_observed_strategy": "question_overlap_0p5",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "citation_question_overlap_0p8_sf_planned_rerank",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 32,
+            "verified_false_alarm_above_max": 32
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [
+            "improve_claim_intent_alignment_or_query_construction",
+            "tighten_false_alarm_calibration"
+          ],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
+          "source_document_count": 741,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        },
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 4,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [
+            "blind_refuted_rate_below_min",
+            "verified_false_alarm_above_max"
+          ],
+          "query_sweep_best_observed_strategy": "question_overlap_0p5",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "question_answer_overlap_0p8",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 32,
+            "verified_false_alarm_above_max": 32
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [
+            "improve_claim_intent_alignment_or_query_construction",
+            "tighten_false_alarm_calibration"
+          ],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
+          "source_document_count": 741,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        },
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 5,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [
+            "blind_refuted_rate_below_min",
+            "verified_false_alarm_above_max"
+          ],
+          "query_sweep_best_observed_strategy": "question_overlap_0p5",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "question_answer_overlap_0p8_sf_planned_rerank",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 32,
+            "verified_false_alarm_above_max": 32
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [
+            "improve_claim_intent_alignment_or_query_construction",
+            "tighten_false_alarm_calibration"
+          ],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
+          "source_document_count": 740,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
         }
       ]
     },
@@ -558,14 +672,7 @@
     }
   },
   "metadata": {
-    "citation_query_failure_review": "diagnostic",
-    "closure_action": "improve_unresolved_citation_alignment",
-    "description_subject_matching": "entity_or_acronym",
-    "frontier_bound_command_run": "reviewed_improve_unresolved_citation_alignment",
-    "model": "smollm2-l80",
-    "semantic_gap_review": "diagnostic_verified_records_sidecar",
-    "source": "frontier-v4",
-    "structured_fact_parsing": "worldbank_wikidata"
+    "source_workflow": "reviewed_citation_alignment_rerun"
   },
   "next_actions": [
     {
@@ -573,20 +680,26 @@
       "lane": "citation_evidence",
       "priority": 88,
       "query_sweep_best_observed_strategy_counts": {
-        "question_overlap_0p5": 3
+        "question_overlap_0p5": 6
       },
-      "query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
+      "query_sweep_best_strategy_counts": {
+        "citation_question_overlap_0p8_sf_planned_rerank": 1,
+        "question_answer_overlap_0p8": 1,
+        "question_answer_overlap_0p8_sf_planned_rerank": 1,
+        "question_overlap_0p65": 1
+      },
+      "query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
       "query_sweep_failure_reason_counts": {
-        "blind_refuted_rate_below_min": 24,
-        "verified_false_alarm_above_max": 24
+        "blind_refuted_rate_below_min": 120,
+        "verified_false_alarm_above_max": 120
       },
       "query_sweep_no_hit_strategy_count": 0,
       "query_sweep_recommended_next_action_counts": {
-        "improve_claim_intent_alignment_or_query_construction": 3,
-        "tighten_false_alarm_calibration": 3
+        "improve_claim_intent_alignment_or_query_construction": 6,
+        "tighten_false_alarm_calibration": 6
       },
       "query_sweep_target_route_not_selected_strategy_count": 0,
-      "query_sweep_verified_false_alarm_above_max_strategy_count": 24,
+      "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use",
       "semantic_gap_covered_fact_route_n_records": 14,
       "semantic_gap_review_status": "promote",
@@ -597,7 +710,10 @@
     "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/artifact-manifest.json",
     "citation_workflows": [
       "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
-      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json"
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json"
     ],
     "frontier_bound_command_runs": [
       "artifacts/improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json"
@@ -636,20 +752,26 @@
   "summary": {
     "adapter_request_count": 332,
     "blocked_lane_count": 1,
-    "citation_provenance_pass_count": 4,
-    "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
+    "citation_provenance_pass_count": 7,
+    "citation_query_sweep_best_strategy_counts": {
+      "citation_question_overlap_0p8_sf_planned_rerank": 1,
+      "question_answer_overlap_0p8": 1,
+      "question_answer_overlap_0p8_sf_planned_rerank": 1,
+      "question_overlap_0p65": 1
+    },
+    "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
     "citation_query_sweep_failure_reason_counts": {
-      "blind_refuted_rate_below_min": 24,
-      "verified_false_alarm_above_max": 24
+      "blind_refuted_rate_below_min": 120,
+      "verified_false_alarm_above_max": 120
     },
     "citation_query_sweep_no_hit_strategy_count": 0,
     "citation_query_sweep_recommended_next_action_counts": {
-      "improve_claim_intent_alignment_or_query_construction": 3,
-      "tighten_false_alarm_calibration": 3
+      "improve_claim_intent_alignment_or_query_construction": 6,
+      "tighten_false_alarm_calibration": 6
     },
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
-    "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 24,
-    "citation_workflow_count": 2,
+    "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
+    "citation_workflow_count": 5,
     "covered_or_promoted_lane_count": 4,
     "frontier_bound_command_dry_run_count": 0,
     "frontier_bound_command_executed_count": 3,
