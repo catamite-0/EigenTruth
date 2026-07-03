@@ -1,0 +1,545 @@
+"""Tests for active frontier artifact reference audits."""
+
+import json
+
+from benchmarks.audit_frontier_artifact_references import (
+    build_frontier_artifact_reference_audit,
+)
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, load_and_verify_artifact_manifest
+
+
+def test_frontier_artifact_reference_audit_reports_missing_refs_and_verified_manifest(tmp_path):
+    artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
+    artifact_dir.mkdir(parents=True)
+    comparison_path = artifact_dir / "frontier-audit-comparison.json"
+    comparison_path.write_text('{"workflow":"frontier_release_evidence_comparison"}\n', encoding="utf-8")
+    manifest_path = artifact_dir / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"frontier_audit_comparison": comparison_path},
+                root=artifact_dir,
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "docs" / "experiment-plan.md"
+    doc_path.parent.mkdir(parents=True)
+    doc_path.write_text(
+        "\n".join((
+            "current artifacts:",
+            "`artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json`",
+            "`artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json`",
+            "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json`",
+        ))
+        + "\n",
+        encoding="utf-8",
+    )
+    cached_contract_path = (
+        tmp_path
+        / "artifacts"
+        / "smollm2_product_promotion_contract_v1_9"
+        / "product-promotion-contract.json"
+    )
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{cached_contract_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {"workflow": "product_promotion_contract", "source_status": "promote"},
+            },
+        }),
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "audit" / "frontier-artifact-reference-audit.json"
+    audit_manifest_path = tmp_path / "audit" / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6|smollm2_product_promotion_contract_v1_9",
+        json_cache_paths=(json_cache_path,),
+        json_path=report_path,
+        artifact_manifest_path=audit_manifest_path,
+        registry_path=registry_path,
+        name="frontier-artifact-reference-audit",
+        version="0.1",
+        metadata={"release": "test"},
+    )
+
+    references = {reference["path"]: reference for reference in payload["references"]}
+    registry_record = ArtifactRegistry.load_json(registry_path).get(
+        "report:frontier-artifact-reference-audit:0.1"
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["reference_count"] == 3
+    assert payload["summary"]["missing_count"] == 1
+    assert payload["summary"]["missing_recoverable_from_json_cache_count"] == 1
+    assert payload["summary"]["missing_unrecoverable_count"] == 0
+    assert payload["summary"]["manifest_verified_count"] == 1
+    assert payload["summary"]["recommended_action_ids"] == (
+        "restore_cached_json_artifacts",
+        "export_product_promotion_contract_v1_9",
+        "rerun_frontier_artifact_reference_audit",
+    )
+    assert payload["recommended_actions"][0]["action_id"] == "restore_cached_json_artifacts"
+    assert payload["recommended_actions"][0]["affected_paths"] == (
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+    )
+    assert payload["recommended_actions"][1]["action_id"] == "export_product_promotion_contract_v1_9"
+    assert payload["recommended_actions"][1]["suggested_commands"][0].startswith(
+        "python benchmarks/export_product_promotion_contract.py"
+    )
+    assert references[
+        "artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json"
+    ]["manifest_verification"]["passed"] is True
+    assert references[
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    ]["status"] == "missing"
+    assert references[
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    ]["recoverable_from_json_cache"] is True
+    assert references[
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    ]["json_cache_sources"][0]["workflow"] == "product_promotion_contract"
+    assert payload["artifact_manifest_summary"]["missing_count"] == 1
+    assert payload["registry_record"] == "report:frontier-artifact-reference-audit:0.1"
+    assert registry_record.metadata["status"] == "blocked"
+    assert registry_record.metadata["missing_count"] == 1
+    assert report_path.exists()
+    assert audit_manifest_path.exists()
+    assert load_and_verify_artifact_manifest(audit_manifest_path).passed is True
+
+
+def test_frontier_artifact_reference_audit_handoff_command_uses_current_frontier_groups(tmp_path):
+    contract_path = (
+        tmp_path
+        / "artifacts"
+        / "smollm2_product_promotion_contract_v1_9"
+        / "product-promotion-contract.json"
+    )
+    contract_path.parent.mkdir(parents=True)
+    contract_path.write_text(
+        json.dumps({"workflow": "product_promotion_contract", "source_status": "promote"}),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "\n".join((
+            "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff.json`",
+            "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract-evidence-handoff-audit.json`",
+            "`artifacts/smollm2_product_promotion_contract_v1_9/evidence-handoff-artifact-manifest.json`",
+        ))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="smollm2_product_promotion_contract_v1_9",
+    )
+    handoff_action = next(
+        action
+        for action in payload["recommended_actions"]
+        if action["action_id"] == "export_product_promotion_contract_v1_9_evidence_handoff"
+    )
+    command = handoff_action["suggested_commands"][0]
+
+    assert (
+        "--frontier-release-evidence "
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    ) in command
+    assert (
+        "--required-groups "
+        "promotion,pre_generation,counterfactual,triple_audit,covered_fact_property,action_gate,frontier_release_evidence"
+    ) in command
+    assert handoff_action["metadata"]["frontier_release_evidence"] == (
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    )
+    assert handoff_action["metadata"]["required_groups"] == (
+        "promotion",
+        "pre_generation",
+        "counterfactual",
+        "triple_audit",
+        "covered_fact_property",
+        "action_gate",
+        "frontier_release_evidence",
+    )
+
+
+def test_frontier_artifact_reference_audit_v6_rebuild_action_has_commands(tmp_path):
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "\n".join((
+            "`artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json`",
+            "`artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json`",
+        ))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+    )
+    source_action = next(
+        action
+        for action in payload["recommended_actions"]
+        if action["action_id"] == "rebuild_frontier_mechanism_handoff_sources"
+    )
+    rebuild_action = next(
+        action
+        for action in payload["recommended_actions"]
+        if action["action_id"] == "rebuild_frontier_audit_release_candidate_v6"
+    )
+    bundle_command, release_command = rebuild_action["suggested_commands"]
+
+    assert source_action["suggested_commands"][0].startswith(
+        "python benchmarks/run_frontier_mechanism_handoff_source_workflow.py"
+    )
+    assert (
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-candidate-handoff/world-model-rule-candidate-handoff.json"
+    ) in source_action["affected_paths"]
+    assert (
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json"
+    ) in source_action["affected_paths"]
+    assert source_action["metadata"]["missing_prerequisite_paths"] == (
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-africa-poverty-promotion-gate/"
+        "world-model-rule-candidate-promotion-gate.json",
+        "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-"
+        "mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+    )
+    assert source_action["metadata"]["fallback_handoff_commands"][0].startswith(
+        "python benchmarks/build_world_model_rule_candidate_handoff.py"
+    )
+    assert bundle_command.startswith("python benchmarks/build_mechanism_handoff_evidence_bundle.py")
+    assert "truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle" in bundle_command
+    assert release_command.startswith("python benchmarks/run_release_candidate_registry_workflow.py")
+    assert (
+        "--route-registry artifacts/frontier-release-evidence/frontier-route-registry.json"
+    ) in release_command
+    assert (
+        "--frontier-release-evidence "
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    ) in release_command
+    assert (
+        "--structured-fact-canonical-route-key "
+        "benchmark_manifest:wikidata-country-core-facts-structured-fact-canonical-route:0.1"
+    ) in release_command
+    assert rebuild_action["metadata"]["route_registry"] == (
+        "artifacts/frontier-release-evidence/frontier-route-registry.json"
+    )
+    assert rebuild_action["metadata"]["frontier_release_evidence"] == (
+        "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json"
+    )
+    assert rebuild_action["metadata"]["depends_on_action_ids"] == (
+        "rebuild_frontier_mechanism_handoff_sources",
+    )
+
+
+def test_frontier_artifact_reference_audit_passes_when_filtered_refs_exist(tmp_path):
+    artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
+    artifact_dir.mkdir(parents=True)
+    report_path = artifact_dir / "frontier-audit-comparison.json"
+    report_path.write_text("{}\n", encoding="utf-8")
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+        verify_manifests=False,
+    )
+
+    assert payload["status"] == "passed"
+    assert payload["summary"]["existing_count"] == 1
+    assert payload["blocking_reasons"] == ()
+    assert payload["recommended_actions"] == ()
+
+
+def test_frontier_artifact_reference_audit_restores_cached_json_payload(tmp_path):
+    contract_path = (
+        tmp_path
+        / "artifacts"
+        / "smollm2_product_promotion_contract_v1_9"
+        / "product-promotion-contract.json"
+    )
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{contract_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {
+                    "workflow": "product_promotion_contract",
+                    "source_status": "promote",
+                    "model_id": "fixture-model",
+                    "source_path": str(contract_path),
+                    "nested": {
+                        "paths": (
+                            str(contract_path),
+                            str(tmp_path.parent / "outside.json"),
+                        ),
+                    },
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="smollm2_product_promotion_contract_v1_9",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+    restored_payload = json.loads(contract_path.read_text(encoding="utf-8"))
+
+    assert payload["status"] == "passed"
+    assert payload["summary"]["missing_count"] == 0
+    assert payload["summary"]["recommended_action_ids"] == ()
+    assert payload["restore_report"]["restored_count"] == 1
+    assert payload["restore_report"]["restored"][0]["source"] == "document_reference"
+    assert payload["restore_report"]["restored"][0]["path"] == (
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    )
+    assert payload["restore_report"]["restored"][0]["normalized_absolute_path_count"] == 2
+    assert restored_payload["workflow"] == "product_promotion_contract"
+    assert restored_payload["model_id"] == "fixture-model"
+    assert restored_payload["source_path"] == (
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json"
+    )
+    assert restored_payload["nested"]["paths"] == [
+        "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+        str(tmp_path.parent / "outside.json"),
+    ]
+
+
+def test_frontier_artifact_reference_audit_restore_skips_paths_outside_root(tmp_path):
+    escaped_path = (tmp_path / "artifacts" / ".." / ".." / "outside.json").resolve()
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{escaped_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {"workflow": "escaped"},
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text("`artifacts/../../outside.json`\n", encoding="utf-8")
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="outside",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["missing_count"] == 1
+    assert payload["summary"]["missing_recoverable_from_json_cache_count"] == 1
+    assert payload["restore_report"]["restored_count"] == 0
+    assert payload["restore_report"]["skipped"] == (
+        {
+            "path": "artifacts/../../outside.json",
+            "source": "document_reference",
+            "reason": "path_outside_root",
+        },
+    )
+    assert not escaped_path.exists()
+
+
+def test_frontier_artifact_reference_audit_restores_manifest_child_from_cache(tmp_path):
+    artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
+    artifact_dir.mkdir(parents=True)
+    child_path = tmp_path / "artifacts" / "frontier-child" / "child-report.json"
+    child_path.parent.mkdir(parents=True)
+    child_payload = {
+        "workflow": "child_report",
+        "source_path": "artifacts/frontier-child/child-report.json",
+    }
+    child_path.write_text(json.dumps(child_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path = artifact_dir / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest({"child_report": child_path}, root=artifact_dir),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    child_path.unlink()
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{child_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": child_payload,
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+    restored_payload = json.loads(child_path.read_text(encoding="utf-8"))
+
+    assert payload["status"] == "passed"
+    assert payload["summary"]["manifest_verified_count"] == 1
+    assert payload["summary"]["manifest_child_missing_count"] == 0
+    assert payload["restore_report"]["restored_count"] == 1
+    assert payload["restore_report"]["restored"][0]["source"] == "manifest_child"
+    assert payload["restore_report"]["restored"][0]["manifest_path"] == (
+        "artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json"
+    )
+    assert payload["restore_report"]["restored"][0]["artifact_name"] == "child_report"
+    assert restored_payload["source_path"] == "artifacts/frontier-child/child-report.json"
+
+
+def test_frontier_artifact_reference_audit_restores_compact_manifest_child_from_cache(tmp_path):
+    artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
+    artifact_dir.mkdir(parents=True)
+    child_path = tmp_path / "artifacts" / "frontier-child" / "compact-child-report.json"
+    child_path.parent.mkdir(parents=True)
+    child_payload = {
+        "workflow": "compact_child_report",
+        "status": "promote",
+        "source_path": "artifacts/frontier-child/compact-child-report.json",
+    }
+    compact_child_text = json.dumps(child_payload, sort_keys=True, separators=(",", ":")) + "\n"
+    child_path.write_text(compact_child_text, encoding="utf-8")
+    manifest_path = artifact_dir / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest({"compact_child_report": child_path}, root=artifact_dir),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    child_path.unlink()
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{child_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": child_payload,
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+
+    assert payload["status"] == "passed"
+    assert payload["summary"]["manifest_verified_count"] == 1
+    assert payload["restore_report"]["restored_count"] == 1
+    assert payload["restore_report"]["restored"][0]["restore_serialization"] == "compact"
+    assert child_path.read_text(encoding="utf-8") == compact_child_text
+
+
+def test_frontier_artifact_reference_audit_skips_manifest_child_digest_mismatch(tmp_path):
+    artifact_dir = tmp_path / "artifacts" / "frontier-audit-release-candidate-v6"
+    artifact_dir.mkdir(parents=True)
+    child_path = tmp_path / "artifacts" / "frontier-child" / "child-report.json"
+    child_path.parent.mkdir(parents=True)
+    expected_payload = {
+        "workflow": "child_report",
+        "value": "expected",
+    }
+    child_path.write_text(json.dumps(expected_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path = artifact_dir / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest({"child_report": child_path}, root=artifact_dir),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    child_path.unlink()
+    json_cache_path = tmp_path / "artifact-json-cache.json"
+    json_cache_path.write_text(
+        json.dumps({
+            f"{child_path}:10:20:30:40:cached": {
+                "error": None,
+                "payload": {
+                    "workflow": "child_report",
+                    "value": "drifted",
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "README.md"
+    doc_path.write_text(
+        "`artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json`\n",
+        encoding="utf-8",
+    )
+
+    payload = build_frontier_artifact_reference_audit(
+        doc_paths=(doc_path,),
+        root=tmp_path,
+        include_regex="frontier-audit-release-candidate-v6",
+        json_cache_paths=(json_cache_path,),
+        restore_json_cache_artifacts=True,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["manifest_failed_count"] == 1
+    assert payload["summary"]["manifest_child_recoverable_from_json_cache_count"] == 0
+    assert payload["restore_report"]["restored_count"] == 0
+    assert payload["restore_report"]["skipped_count"] == 0
+    digest_mismatch = payload["references"][0]["manifest_missing_json_cache_sources"][0][
+        "json_cache_digest_mismatch"
+    ]
+    assert digest_mismatch["expected_sha256"] != digest_mismatch["restored_sha256"]
+    assert not child_path.exists()

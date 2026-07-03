@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "alignment_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-records.jsonl",
+      "sha256": "17bceeb6b5b73531bbf3168bbd520658924d3b028f28e4be232cae3efe84306a",
+      "size_bytes": 423532
+    },
+    "blind_spot_alignment_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-audit.json",
+      "sha256": "a98a32f1e68fb4568a6736a9ffe6b6ec2ba66218c4648d20c2784dc215b709d9",
+      "size_bytes": 550606
+    },
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json",
+      "sha256": "335ce97244bd0fd359879ccf7bfa7175ef7b27cdecb2b64144a692b15fb6940a",
+      "size_bytes": 1848815
+    },
+    "evidence_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../command-1/evidence-gate/citation-search-source-docs.jsonl",
+      "sha256": "be8b70d4345b7f36bdccf7e2aca7a79f84ec9a74a01fb74f8858612fff7882fd",
+      "size_bytes": 3456244
+    },
+    "structured_fact_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-fact-candidates.jsonl",
+      "sha256": "14e9371e05325cd7bf316accf87417373c3104ea30deff22a1e0fa2b26d5f5cf",
+      "size_bytes": 18283
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alignment_request_count": 89,
+    "fact_candidate_count": 22,
+    "source_workflow": "metadata_slot_fact_extraction",
+    "status": "ready_for_fact_review",
+    "top_alignment_status": "needs_property_or_subject_alignment",
+    "top_gap_reason": "property_only_alignment",
+    "workflow": "blind_spot_alignment_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

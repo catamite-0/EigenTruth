@@ -71,10 +71,14 @@ def build_selfcheck_fixture(
             dropped_records += 1
             continue
         total_samples += len(samples)
-        records.append({
+        claim_metadata = dict(statement.get("metadata", {}))
+        for key in ("features", "requires_triple_audit", "triples", "claim_triples"):
+            if key in statement:
+                claim_metadata[key] = statement[key]
+        record = {
             "claim": claim_text,
             "claim_id": claim_id,
-            "claim_metadata": dict(statement.get("metadata", {})),
+            "claim_metadata": claim_metadata,
             "selfcheck_samples": list(samples),
             "metadata": {
                 "index": idx,
@@ -87,7 +91,11 @@ def build_selfcheck_fixture(
                     "source": "score_dump_or_external_samples",
                 },
             },
-        })
+        }
+        for key in ("features", "requires_triple_audit", "triples", "claim_triples"):
+            if key in statement:
+                record[key] = statement[key]
+        records.append(record)
 
     records_with_samples = sum(1 for record in records if record["selfcheck_samples"])
     records_meeting_min = sum(

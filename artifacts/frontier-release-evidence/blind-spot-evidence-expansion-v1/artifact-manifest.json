@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-expansion-plan.json",
+      "sha256": "99b0359db3e170c221630cdf80710db2f1dd8ca45650aaf561d524e4c1ba16cf",
+      "size_bytes": 452509
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../detectability-taxonomy-rerun-queue-v2/reruns/smollm2-l80/blind-spots.json",
+      "sha256": "d4e4cac478ce6cd3edddd58f9ae7de8791f91881dae1a0e7e9363a3bd887277f",
+      "size_bytes": 130790
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "high_priority_count": 65,
+    "runner": "plan_blind_spot_evidence_expansion",
+    "status": "needs_evidence_collection",
+    "target_count": 89,
+    "top_question_type": "definition",
+    "top_route": "structured_fact"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

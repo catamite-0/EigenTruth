@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "collection_plan_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-plan.json",
+      "sha256": "5b399ee573f3750f86154410fb3978f64fa43e27eac93813d098ebb564d263d7",
+      "size_bytes": 50588
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-worldbank-source-family-coverage-audit-v1/source-family-acquisition-plan.jsonl",
+      "sha256": "427103f1c61a905e935f7c3943b475e3d433dd321cdd35ded85429ab967ab79e",
+      "size_bytes": 200607
+    },
+    "source_family_collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-catalog-collection-tasks.jsonl",
+      "sha256": "1f450329f961fcb036a34cde6a68bdb4139f6c35aa0aa1820b6d3c703be3a495",
+      "size_bytes": 63899
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_row_count": 192,
+    "collection_task_count": 33,
+    "family_gap_count": 228,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "ready_for_source_collection",
+    "workflow": "source_family_catalog_collection_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

@@ -11,6 +11,13 @@ Usage::
 
 __version__ = "0.2.0"
 
+from eigentruth.core.factuality_probe import (
+    ClaimFactualityProbeArtifact,
+    ClaimFactualityScore,
+    claim_factuality_diagnostics,
+    load_claim_factuality_probe,
+    pool_claim_hidden_states,
+)
 from eigentruth.core.inside import (
     cluster_assignment_entropy,
     embedding_semantic_entropy,
@@ -110,6 +117,8 @@ __all__ = [
     "TruthSubspace",
     "RepresentationSubspace",
     "AttentionSoftTargetProbeArtifact",
+    "ClaimFactualityProbeArtifact",
+    "ClaimFactualityScore",
     "ConceptArtifact",
     "AttentionPathwayMetrics",
     "PromptAnswerPathwayMetrics",
@@ -126,6 +135,7 @@ __all__ = [
     "prompt_answer_pathway_metrics",
     "residual_contribution_profile",
     "trajectory_convergence_metrics",
+    "claim_factuality_diagnostics",
     "RepTelemetryCallback",
     "RepresentationTelemetryRecorder",
     "RepresentationTelemetryReport",
@@ -145,7 +155,9 @@ __all__ = [
     "lexical_semantic_energy",
     "lexical_semantic_entropy",
     "load_attention_soft_target_probe",
+    "load_claim_factuality_probe",
     "load_concept_artifact",
+    "pool_claim_hidden_states",
     "semantic_energy_score",
     "soft_error_rate_targets",
     "spectral_effective_rank",

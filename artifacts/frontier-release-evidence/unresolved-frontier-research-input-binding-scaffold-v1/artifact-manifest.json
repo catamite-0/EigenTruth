@@ -1,0 +1,84 @@
+{
+  "artifacts": {
+    "entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-entity-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "frontier_research_queue_input_binding_scaffold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-input-binding-scaffold.json",
+      "sha256": "488c3fc52513967685b377ef170696b3fa5d22e0ca84396dc682b8e9a5c4102b",
+      "size_bytes": 2911
+    },
+    "input_collection_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
+      "sha256": "3ecd588cb48f19915fd3590f4e5f61ec76b13fb424903f0d1c107d659b475e86",
+      "size_bytes": 3320
+    },
+    "mechanism_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-mechanism-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "numeric_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-numeric-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "review_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-input-review-requests.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "subject_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-subject-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "temporal_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-backed-temporal-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "binding_skeleton_count": 0,
+    "expanded_task_count": 0,
+    "review_request_count": 0,
+    "runner": "scaffold_frontier_research_queue_input_bindings",
+    "status": "empty",
+    "workflow": "frontier_research_queue_input_binding_scaffold"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

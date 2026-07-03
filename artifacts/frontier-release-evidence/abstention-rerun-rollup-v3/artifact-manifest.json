@@ -1,0 +1,60 @@
+{
+  "artifacts": {
+    "abstention_rerun_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep.json",
+      "sha256": "61de50f370cedbe247a10cc2801189230245432577fa30cb16076daf85ee36d5",
+      "size_bytes": 4198506
+    },
+    "frontier_abstention_evidence_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../abstention-rerun-queue-v2/frontier-abstention-rerun-queue.json",
+      "sha256": "256c0668673e876d43a1fc5769a3df85984723048c270556d382109f392615b0",
+      "size_bytes": 8416
+    },
+    "frontier_abstention_evidence_rerun_rollup": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-abstention-rerun-rollup.json",
+      "sha256": "a8812e25832f188febb7d8fab81af15fb5c405095eb25ed571555f67e825b94d",
+      "size_bytes": 17542
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 2,
+    "candidate_gate_diagnostics": {
+      "best_passing_score_name_counts": {},
+      "candidate_blocking_reason_counts": {},
+      "recommended_blocking_reason_counts": {},
+      "recommended_missed_passing_candidate_seed_count": 0,
+      "reports_with_all_seeds_passing_candidate_count": 0,
+      "reports_with_any_seed_passing_candidate_count": 0,
+      "reports_with_candidate_gate_diagnostics_count": 0,
+      "reports_with_recommended_missed_passing_candidate_count": 0,
+      "reports_without_candidate_gate_diagnostics_count": 2,
+      "seed_without_passing_candidate_count": 0
+    },
+    "missing_report_count": 0,
+    "passed": true,
+    "passing_candidate_count": 2,
+    "profile": "gate_budget_sweep",
+    "promotion_ready": true,
+    "runner": "rollup_frontier_abstention_evidence_reruns",
+    "source": "verifier-fusion-abstention-stability-v2",
+    "status": "promote",
+    "workflow": "frontier_abstention_evidence_rerun_rollup"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

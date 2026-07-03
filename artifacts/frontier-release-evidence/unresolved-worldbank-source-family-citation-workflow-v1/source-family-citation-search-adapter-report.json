@@ -1,0 +1,45 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "diversify_source_families": true,
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.05
+  },
+  "input_path": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_workflow": "source_family_citation_search_workflow"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "source_family_catalog": 322,
+      "worldbank": 217
+    },
+    "catalog_source_family_counts": {
+      "official_statistics": 217,
+      "reference": 322
+    },
+    "request_count": 260,
+    "request_error_count": 0,
+    "request_with_results_count": 244,
+    "result_count": 728,
+    "result_provider_counts": {
+      "source_family_catalog": 524,
+      "worldbank": 204
+    },
+    "result_source_family_counts": {
+      "official_statistics": 204,
+      "reference": 524
+    },
+    "source_document_count": 539
+  },
+  "workflow": "source_family_citation_search_adapter"
+}

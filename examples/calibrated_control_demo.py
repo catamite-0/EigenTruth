@@ -11,10 +11,11 @@ used by default; otherwise the script falls back to the Qwen l80 artifact and
 then toy thresholds. When the SmolLM2 structured-retrieval-audit release
 candidate is present, its product promotion contract supplies the default
 verifier route, calibrated control defaults, adapter-family metadata, and
-required-audit metadata. When that contract carries promoted release-efficiency
-evidence, it also supplies the default runtime profile unless an explicit or
-pre-generation profile is selected; pass it explicitly with
-`--promotion-contract` to also enforce its runtime budget policy.
+required-audit metadata. When the contract has a sibling enriched handoff
+manifest, the trace also records its frontier-audit evidence summary. When that
+contract carries promoted release-efficiency evidence, it supplies the default
+runtime profile unless an explicit or pre-generation profile is selected; pass it
+explicitly with `--promotion-contract` to also enforce its runtime budget policy.
 """
 
 from __future__ import annotations
@@ -27,7 +28,12 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from eigentruth.adapters import CachedRetriever, CalculatorVerifier, InMemoryRetriever, RetrievalActionExecutor
-from eigentruth.calibration import CalibrationArtifact, CalibrationScore
+from eigentruth.calibration import (
+    CalibrationArtifact,
+    CalibrationScore,
+    MultipleTestingConformalArtifact,
+    SequentialConformalArtifact,
+)
 from eigentruth.control import (
     RUNTIME_PROFILE_NAMES,
     ActionExecutorRegistry,
@@ -73,27 +79,11 @@ DEFAULT_QWEN_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "qwen05_truthfulqa_l80_best_calibration.json"
 )
 DEFAULT_PROMOTION_CONTRACT_FILENAMES = (
+    "smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+    "smollm2_product_promotion_contract_v1_8/product-promotion-contract.json",
+    "smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
     "smollm2_product_promotion_contract_v1_5/product-promotion-contract.json",
-    (
-        "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
-        "staged_release_candidate_v1_5_registry_workflow.json"
-    ),
-    (
-        "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
-        "staged_release_candidate_v1_4_registry_workflow.json"
-    ),
-    (
-        "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
-        "staged_release_candidate_registry_workflow.json"
-    ),
-    (
-        "smollm2_l20_inside_trigger_budget_derived_structured_retrieval_audit_"
-        "staged_release_candidate_registry_workflow.json"
-    ),
-    (
-        "smollm2_l20_inside_trigger_budget_derived_retrieval_adapter_gated_"
-        "staged_release_candidate_registry_workflow.json"
-    ),
+    "smollm2_l8_selected_fusion_product_promotion_contract_v0_3/product-promotion-contract.json",
 )
 DEFAULT_PROMOTION_CONTRACT_PATHS = tuple(
     Path(__file__).resolve().parents[1]
@@ -149,6 +139,20 @@ def load_artifact(path: str | None) -> CalibrationArtifact:
     return CalibrationArtifact.load_json(path)
 
 
+def load_multiple_testing_gate(path: str | None) -> MultipleTestingConformalArtifact | None:
+    """Load an optional conformal multiple-testing runtime gate artifact."""
+    if path is None:
+        return None
+    return MultipleTestingConformalArtifact.load_json(path)
+
+
+def load_sequential_gate(path: str | None) -> SequentialConformalArtifact | None:
+    """Load an optional sequential conformal runtime gate artifact."""
+    if path is None:
+        return None
+    return SequentialConformalArtifact.load_json(path)
+
+
 def artifact_source(path: str | None) -> str:
     """Return a stable source label for trace metadata."""
     if path is not None:
@@ -181,12 +185,49 @@ def parse_json_mapping(value: str, *, name: str) -> dict[str, Any]:
     return parsed
 
 
+def parse_json_mapping_or_path(value: str, *, name: str) -> dict[str, Any]:
+    """Parse a JSON object from an inline value or local file path."""
+    raw = str(value).strip()
+    if raw.startswith("@"):
+        text = Path(raw[1:]).read_text(encoding="utf-8")
+    elif raw.startswith("{"):
+        text = raw
+    else:
+        path = Path(raw)
+        text = path.read_text(encoding="utf-8") if path.exists() else raw
+    return parse_json_mapping(text, name=name)
+
+
 def parse_json_sequence(value: str, *, name: str) -> list[Any]:
     """Parse a JSON list from a CLI argument."""
     parsed = json.loads(value)
     if not isinstance(parsed, list):
         raise ValueError(f"{name} must be a JSON list.")
     return parsed
+
+
+def _parse_diagnostic_values(mapping: Mapping[str, Any], *, name: str) -> dict[str, Any]:
+    diagnostics: dict[str, Any] = {}
+    for key, score in mapping.items():
+        if isinstance(score, bool):
+            diagnostics[str(key)] = score
+            continue
+        try:
+            diagnostics[str(key)] = float(score)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} values must be numeric.") from exc
+    return diagnostics
+
+
+def parse_diagnostics_sequence(value: str, *, name: str) -> tuple[dict[str, Any], ...]:
+    """Parse a JSON list of diagnostic objects."""
+    parsed = parse_json_sequence(value, name=name)
+    diagnostics: list[dict[str, Any]] = []
+    for index, item in enumerate(parsed):
+        if not isinstance(item, dict):
+            raise ValueError(f"{name}[{index}] must be a JSON object.")
+        diagnostics.append(_parse_diagnostic_values(item, name=f"{name}[{index}]"))
+    return tuple(diagnostics)
 
 
 def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeBudgetPolicy | None:
@@ -263,9 +304,9 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     )
     return ProductRuntimeBudgetPolicy(
         max_total_seconds=base_policy.max_total_seconds if max_total_seconds is None else max_total_seconds,
-        max_phase_seconds={key: float(value) for key, value in phase_seconds.items()},
-        max_phase_p95_seconds={key: float(value) for key, value in phase_p95_seconds.items()},
-        max_phase_p99_seconds={key: float(value) for key, value in phase_p99_seconds.items()},
+        max_phase_seconds={str(key): value for key, value in phase_seconds.items()},
+        max_phase_p95_seconds={str(key): value for key, value in phase_p95_seconds.items()},
+        max_phase_p99_seconds={str(key): value for key, value in phase_p99_seconds.items()},
         max_mean_route_duration_seconds=(
             base_policy.max_mean_route_duration_seconds
             if max_mean_route_duration_seconds is None
@@ -307,7 +348,7 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
             else max_retrieval_hit_count
         ),
         min_cache_hit_rate=base_policy.min_cache_hit_rate if min_cache_hit_rate is None else min_cache_hit_rate,
-        min_named_cache_hit_rate={key: float(value) for key, value in named_cache_hit_rate.items()},
+        min_named_cache_hit_rate={str(key): value for key, value in named_cache_hit_rate.items()},
         min_verification_skip_rate=(
             base_policy.min_verification_skip_rate
             if min_verification_skip_rate is None
@@ -605,6 +646,98 @@ def verifier_route_attempts_from_runtime_profile(
     return None if value is None else _positive_int(value, name="max_verifier_route_attempts")
 
 
+def multiple_testing_gate_metadata(
+    artifact: MultipleTestingConformalArtifact | None,
+    *,
+    source: str | None,
+) -> dict[str, Any]:
+    """Return trace metadata for an optional multiple-testing gate artifact."""
+    if artifact is None:
+        return {
+            "multiple_testing_gate_enabled": False,
+            "multiple_testing_gate_source": None,
+            "multiple_testing_gate_model_id": None,
+            "multiple_testing_gate_target_layer": None,
+            "multiple_testing_gate_signals": (),
+            "multiple_testing_gate_alpha": None,
+            "multiple_testing_gate_method": None,
+        }
+    return {
+        "multiple_testing_gate_enabled": True,
+        "multiple_testing_gate_source": source,
+        "multiple_testing_gate_model_id": artifact.model_id,
+        "multiple_testing_gate_target_layer": artifact.target_layer,
+        "multiple_testing_gate_signals": artifact.signal_names(),
+        "multiple_testing_gate_alpha": artifact.alpha,
+        "multiple_testing_gate_method": artifact.method,
+    }
+
+
+def sequential_gate_metadata(
+    artifact: SequentialConformalArtifact | None,
+    *,
+    source: str | None,
+) -> dict[str, Any]:
+    """Return trace metadata for an optional sequential conformal gate artifact."""
+    if artifact is None:
+        return {
+            "sequential_gate_enabled": False,
+            "sequential_gate_source": None,
+            "sequential_gate_model_id": None,
+            "sequential_gate_target_layer": None,
+            "sequential_gate_signal": None,
+            "sequential_gate_alpha": None,
+            "sequential_gate_schedule": None,
+            "sequential_gate_direction": None,
+        }
+    return {
+        "sequential_gate_enabled": True,
+        "sequential_gate_source": source,
+        "sequential_gate_model_id": artifact.model_id,
+        "sequential_gate_target_layer": artifact.target_layer,
+        "sequential_gate_signal": artifact.signal_name,
+        "sequential_gate_alpha": artifact.alpha,
+        "sequential_gate_schedule": artifact.schedule,
+        "sequential_gate_direction": artifact.direction,
+    }
+
+
+def sequence_decision_summary(decisions: tuple[Any, ...]) -> dict[str, Any]:
+    """Summarize a sequence of risk decisions for compact product traces."""
+    action_counts: dict[str, int] = {}
+    risk_counts: dict[str, int] = {}
+    gate_status_counts: dict[str, int] = {}
+    multiple_gate_status_counts: dict[str, int] = {}
+    rejected_indices: list[int] = []
+    multiple_rejected_indices: list[int] = []
+    for index, decision in enumerate(decisions):
+        action = decision.action.value
+        risk = decision.risk_level.value
+        action_counts[action] = action_counts.get(action, 0) + 1
+        risk_counts[risk] = risk_counts.get(risk, 0) + 1
+        gate = decision.diagnostics.get("sequential_gate")
+        if isinstance(gate, Mapping):
+            status = str(gate.get("status", "unknown"))
+            gate_status_counts[status] = gate_status_counts.get(status, 0) + 1
+            if gate.get("rejected") is True:
+                rejected_indices.append(index)
+        multiple_gate = decision.diagnostics.get("multiple_testing_gate")
+        if isinstance(multiple_gate, Mapping):
+            status = str(multiple_gate.get("status", "unknown"))
+            multiple_gate_status_counts[status] = multiple_gate_status_counts.get(status, 0) + 1
+            if multiple_gate.get("rejected") is True or status == "rejected":
+                multiple_rejected_indices.append(index)
+    return {
+        "decision_count": len(decisions),
+        "action_counts": action_counts,
+        "risk_level_counts": risk_counts,
+        "sequential_gate_status_counts": gate_status_counts,
+        "sequential_gate_rejected_indices": tuple(rejected_indices),
+        "multiple_testing_gate_status_counts": multiple_gate_status_counts,
+        "multiple_testing_gate_rejected_indices": tuple(multiple_rejected_indices),
+    }
+
+
 def control_policy_config_from_promotion_contract(
     promotion_contract: ProductPromotionContract | None,
 ) -> ControlPolicyConfig | None:
@@ -691,6 +824,104 @@ def runtime_profile_from_release_efficiency(
     return profile
 
 
+def run_decision_sequence(
+    args: argparse.Namespace,
+    *,
+    artifact: CalibrationArtifact,
+    multiple_testing_gate: MultipleTestingConformalArtifact | None,
+    sequential_gate: SequentialConformalArtifact | None,
+    promotion_contract_metadata: Mapping[str, Any],
+    control_policy_config: ControlPolicyConfig | None,
+    control_policy_source: str | None,
+) -> dict[str, Any]:
+    """Run a sequence-level risk replay without invoking the verifier/action loop."""
+    diagnostics_sequence = parse_diagnostics_sequence(
+        str(getattr(args, "diagnostics_sequence")),
+        name="--diagnostics-sequence",
+    )
+    controller = RiskController(
+        artifact,
+        policy_config=control_policy_config,
+        multiple_testing_gate=multiple_testing_gate,
+        sequential_gate=sequential_gate,
+    )
+    decisions = controller.decide_sequence(diagnostics_sequence)
+    summary = sequence_decision_summary(decisions)
+    runtime_budget_policy = runtime_budget_policy_from_args(args)
+    metadata = {
+        "artifact_model_id": artifact.model_id,
+        "artifact_source": artifact_source(getattr(args, "artifact", None)),
+        "artifact_target_layer": artifact.target_layer,
+        "artifact_scores": artifact.score_names(),
+        "source": "examples/calibrated_control_demo.py",
+        "loop_version": "0.4-sequence",
+        "sequence_length": len(decisions),
+        "sequence_decision_summary": summary,
+        **multiple_testing_gate_metadata(
+            multiple_testing_gate,
+            source=getattr(args, "multiple_testing_gate", None),
+        ),
+        **sequential_gate_metadata(
+            sequential_gate,
+            source=getattr(args, "sequential_gate", None),
+        ),
+        **dict(promotion_contract_metadata),
+        "effective_control_policy_config": (
+            None if control_policy_config is None else control_policy_config.to_dict()
+        ),
+        "control_policy_source": control_policy_source,
+    }
+    if runtime_budget_policy is not None:
+        metadata["runtime_budget"] = {
+            "passed": False,
+            "policy": runtime_budget_policy.to_dict(),
+            "failures": (
+                {
+                    "metric": "unsupported_trace_format",
+                    "reason": (
+                        "runtime budget cannot be evaluated for "
+                        "risk_decision_sequence traces"
+                    ),
+                    "trace_format": "risk_decision_sequence",
+                },
+            ),
+        }
+    payload = {
+        "trace_format": "risk_decision_sequence",
+        "request_id": getattr(args, "request_id", "demo-request"),
+        "diagnostics_sequence": diagnostics_sequence,
+        "risk_decisions": tuple(decision.to_dict() for decision in decisions),
+        "events": tuple(
+            {
+                "event_type": "sequence_risk_decision",
+                "payload": {
+                    "sequence_index": index,
+                    "decision": decision.to_dict(),
+                },
+                "created_at": None,
+            }
+            for index, decision in enumerate(decisions)
+        ),
+        "metadata": metadata,
+    }
+    output_path = Path(args.output) if getattr(args, "output", None) else None
+    if getattr(args, "registry", None) and output_path is None:
+        output_path = Path(args.registry).with_name(f"{args.request_id}_sequence_trace.json")
+    if output_path is not None:
+        output_path.write_text(
+            _json_text(payload, compact=bool(getattr(args, "compact_json", False))),
+            encoding="utf-8",
+        )
+    if getattr(args, "registry", None):
+        ArtifactRegistry.load_json(args.registry).record_trace(
+            name=getattr(args, "request_id", "demo-request"),
+            path=str(output_path) if output_path is not None else "stdout",
+            version="0.4-sequence",
+            metadata=metadata,
+        ).save_json()
+    return payload
+
+
 def load_runtime_profile_selector_policy(path: str | None) -> RuntimeProfileSelectorPolicy | None:
     """Load an optional runtime-profile selector policy from JSON."""
     if path is None:
@@ -721,6 +952,14 @@ def resolve_pre_generation_assessment(
         if getattr(args, "pre_generation_metadata", None) is None
         else parse_json_mapping(args.pre_generation_metadata, name="--pre-generation-metadata")
     )
+    learned_risk = (
+        None
+        if getattr(args, "pre_generation_learned_risk", None) is None
+        else parse_json_mapping_or_path(
+            args.pre_generation_learned_risk,
+            name="--pre-generation-learned-risk",
+        )
+    )
     policy = load_pre_generation_risk_policy(getattr(args, "pre_generation_risk_policy", None))
     if requested in (None, "off"):
         return None, policy, metadata
@@ -730,6 +969,7 @@ def resolve_pre_generation_assessment(
         select_pre_generation_profile(
             getattr(args, "text", ""),
             metadata=metadata,
+            learned_risk=learned_risk,
             risk_policy=policy,
         ),
         policy,
@@ -831,11 +1071,20 @@ def _normalized_route_name(value: str | None) -> str | None:
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
+    multiple_testing_gate = load_multiple_testing_gate(
+        getattr(args, "multiple_testing_gate", None)
+    )
+    sequential_gate = load_sequential_gate(getattr(args, "sequential_gate", None))
     explicit_promotion_contract = getattr(args, "promotion_contract", None) is not None
     runtime_evidence_bundle = load_product_runtime_evidence_bundle(
         getattr(args, "promotion_contract", None),
         default_contract_paths=DEFAULT_PROMOTION_CONTRACT_PATHS,
         manifest_path=getattr(args, "promotion_contract_manifest", None),
+        evidence_handoff_manifest_path=getattr(
+            args,
+            "promotion_contract_evidence_handoff_manifest",
+            None,
+        ),
         registry_path=getattr(args, "promotion_contract_registry", None),
         registry_key=getattr(args, "promotion_contract_registry_key", None),
     )
@@ -869,6 +1118,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else runtime_evidence_bundle.runtime_metadata(
             budget_enabled=explicit_promotion_contract,
             verify_manifest=bool(getattr(args, "verify_promotion_contract_manifest", False)),
+            verify_evidence_handoff_manifest=bool(
+                getattr(
+                    args,
+                    "verify_promotion_contract_evidence_handoff_manifest",
+                    False,
+                )
+            ),
             verify_selfcheck_signal_fusion_manifest=verify_selfcheck_signal_fusion_manifest,
             include_selfcheck_signal_fusion_record=include_selfcheck_signal_fusion_record,
         )
@@ -879,7 +1135,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         if args.diagnostics is None
         else parse_json_mapping(args.diagnostics, name="--diagnostics")
     )
-    resolved_diagnostics = {key: float(value) for key, value in diagnostics.items()}
+    resolved_diagnostics = _parse_diagnostic_values(diagnostics, name="--diagnostics")
     facts = None if args.facts is None else parse_json_mapping(args.facts, name="--facts")
     evidence = None if args.evidence is None else parse_json_sequence(args.evidence, name="--evidence")
     refutations = None if args.refutations is None else parse_json_mapping(args.refutations, name="--refutations")
@@ -899,7 +1155,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     control_policy_source = (
         None if control_policy_config is None else "promotion_contract_feedback_policy"
     )
-    controller = RiskController(artifact, policy_config=control_policy_config)
+    if getattr(args, "diagnostics_sequence", None) is not None:
+        return run_decision_sequence(
+            args,
+            artifact=artifact,
+            multiple_testing_gate=multiple_testing_gate,
+            sequential_gate=sequential_gate,
+            promotion_contract_metadata=promotion_contract_metadata,
+            control_policy_config=control_policy_config,
+            control_policy_source=control_policy_source,
+        )
+    controller = RiskController(
+        artifact,
+        policy_config=control_policy_config,
+        multiple_testing_gate=multiple_testing_gate,
+        sequential_gate=sequential_gate,
+    )
     pre_generation_assessment, pre_generation_policy, pre_generation_metadata = (
         resolve_pre_generation_assessment(args)
     )
@@ -990,6 +1261,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_target_layer": artifact.target_layer,
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
+            **multiple_testing_gate_metadata(
+                multiple_testing_gate,
+                source=getattr(args, "multiple_testing_gate", None),
+            ),
+            **sequential_gate_metadata(
+                sequential_gate,
+                source=getattr(args, "sequential_gate", None),
+            ),
             **promotion_contract_metadata,
             **runtime_profile_metadata(
                 runtime_profile,
@@ -1093,6 +1372,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             metadata={
                 "source": "examples/calibrated_control_demo.py",
                 "loop_version": "0.4",
+                **multiple_testing_gate_metadata(
+                    multiple_testing_gate,
+                    source=getattr(args, "multiple_testing_gate", None),
+                ),
+                **sequential_gate_metadata(
+                    sequential_gate,
+                    source=getattr(args, "sequential_gate", None),
+                ),
                 **promotion_contract_metadata,
                 **runtime_profile_metadata(
                     runtime_profile,
@@ -1139,8 +1426,15 @@ def _json_text(payload: Any, *, compact: bool) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="EigenTruth calibrated control-plane demo")
     parser.add_argument("--artifact", default=None, help="optional CalibrationArtifact JSON path")
+    parser.add_argument("--multiple-testing-gate", default=None,
+                        help="optional MultipleTestingConformalArtifact JSON path for accepted-answer gating")
+    parser.add_argument("--sequential-gate", default=None,
+                        help="optional SequentialConformalArtifact JSON path for sequence replay gating")
     parser.add_argument("--diagnostics", default=None,
                         help="diagnostics JSON object; defaults to values that cross artifact thresholds")
+    parser.add_argument("--diagnostics-sequence", default=None,
+                        help=("diagnostics JSON list for explicit sequence replay; when set, the demo "
+                              "returns sequence risk decisions instead of running the verifier loop"))
     parser.add_argument("--text", default=DEFAULT_TEXT, help="draft text to extract and verify claims from")
     parser.add_argument("--facts", default=None, help="optional exact-match facts JSON object")
     parser.add_argument("--evidence", default=None, help="optional groundedness evidence JSON list")
@@ -1160,6 +1454,9 @@ def main() -> None:
                         help="optional PreGenerationRiskPolicy JSON path for --pre-generation-profile auto")
     parser.add_argument("--pre-generation-metadata", default=None,
                         help="optional JSON object of caller risk flags for pre-generation routing")
+    parser.add_argument("--pre-generation-learned-risk", default=None,
+                        help=("optional learned pre-generation risk JSON object or JSON file path for "
+                              "--pre-generation-profile auto"))
     parser.add_argument("--staged-verification", dest="staged_verification", action="store_true",
                         default=None,
                         help="force staged verification even without a runtime profile")
@@ -1174,12 +1471,16 @@ def main() -> None:
                         help="optional ProductPromotionContract or release-candidate report JSON path")
     parser.add_argument("--promotion-contract-manifest", default=None,
                         help="optional artifact manifest for the promotion contract")
+    parser.add_argument("--promotion-contract-evidence-handoff-manifest", default=None,
+                        help="optional enriched evidence-handoff artifact manifest for the promotion contract")
     parser.add_argument("--promotion-contract-registry", default=None,
                         help="optional ArtifactRegistry JSON containing the promotion contract record")
     parser.add_argument("--promotion-contract-registry-key", default=None,
                         help="optional product_promotion_contract registry key")
     parser.add_argument("--verify-promotion-contract-manifest", action="store_true",
                         help="verify the promotion contract artifact manifest before recording metadata")
+    parser.add_argument("--verify-promotion-contract-evidence-handoff-manifest", action="store_true",
+                        help="verify the promotion contract evidence-handoff manifest before recording metadata")
     parser.add_argument("--verify-selfcheck-signal-fusion-manifest", action="store_true",
                         help="verify the selfcheck-signal-fusion workflow manifest from the promotion contract")
     parser.add_argument("--include-selfcheck-signal-fusion-record", action="store_true",

@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-plan-audit-v1/artifact-manifest.json",
+        "finding_count": 22,
+        "model": "smollm2-l80",
+        "requeue_suggestion_count": 8,
+        "source": "frontier-v4",
+        "status": "needs_requeue",
+        "task_count": 26,
+        "workflow": "world_model_rule_input_plan_audit"
+      },
+      "name": "truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit",
+      "path": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-plan-audit-v1/world-model-rule-input-plan-audit.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

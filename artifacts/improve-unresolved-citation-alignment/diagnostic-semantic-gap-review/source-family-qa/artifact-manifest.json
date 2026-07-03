@@ -1,0 +1,48 @@
+{
+  "artifacts": {
+    "source_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../alignment-reviewed-promotion-gate/approved-source-documents.json",
+      "sha256": "361adcc326f3b451b53c26498bb420cd2808be0a0badd8eedb5e4ec12bdeea53",
+      "size_bytes": 9490
+    },
+    "source_family_structured_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-corpus.json",
+      "sha256": "ae87775ebf41bd95cbf355e15271afa29e56de6303098bda86ec2a7f44980ea0",
+      "size_bytes": 8584
+    },
+    "source_family_structured_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-report.json",
+      "sha256": "ebb87115c68f1301c3bbd7600732f39c2b5e43c1ef26b61645fe23a0d7138d97",
+      "size_bytes": 1491
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_document_count": 7,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_type": "source_family_structured_qa_external_evidence",
+    "description_subject_matching": "entity_or_acronym",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "document_count": 7,
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "status": "ready",
+    "structured_fact_parsing": "worldbank_wikidata",
+    "workflow": "source_family_structured_qa_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

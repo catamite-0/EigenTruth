@@ -1,0 +1,1013 @@
+{
+  "lanes": {
+    "citation_evidence": {
+      "blocking_reason_counts": {
+        "child_gate": 3,
+        "query_sweep": 4,
+        "query_sweep_comparison": 4
+      },
+      "comparison_failed_count": 7,
+      "comparison_pass_count": 0,
+      "comparison_status_counts": {
+        "blocked": 7
+      },
+      "max_source_document_count": 2222,
+      "provenance_failed_count": 0,
+      "provenance_pass_count": 7,
+      "provenance_status_counts": {
+        "pass": 7
+      },
+      "query_sweep_best_observed_records_with_hits_max": 521,
+      "query_sweep_best_observed_records_with_hits_sum": 3126,
+      "query_sweep_best_observed_strategy_counts": {
+        "question_overlap_0p5": 6
+      },
+      "query_sweep_best_observed_total_hits_max": 1563,
+      "query_sweep_best_observed_total_hits_sum": 9378,
+      "query_sweep_best_strategy_counts": {
+        "citation_question_overlap_0p8_sf_planned_rerank": 1,
+        "question_answer_overlap_0p8": 1,
+        "question_answer_overlap_0p8_sf_planned_rerank": 1,
+        "question_overlap_0p65": 1
+      },
+      "query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
+      "query_sweep_failure_reason_counts": {
+        "blind_refuted_rate_below_min": 120,
+        "verified_false_alarm_above_max": 120
+      },
+      "query_sweep_no_hit_strategy_count": 0,
+      "query_sweep_no_passing_strategy_count": 7,
+      "query_sweep_recommended_next_action_counts": {
+        "improve_claim_intent_alignment_or_query_construction": 6,
+        "tighten_false_alarm_calibration": 6
+      },
+      "query_sweep_target_route_not_selected_strategy_count": 0,
+      "query_sweep_verified_false_alarm_above_max_strategy_count": 120,
+      "status": "blocked",
+      "status_counts": {
+        "blocked": 5
+      },
+      "workflow_count": 5,
+      "workflows": [
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 1,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [],
+          "query_sweep_best_observed_strategy": null,
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "question_overlap_0p65",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 0,
+          "query_sweep_failure_reason_counts": {},
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 0,
+          "source_document_count": 780,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        },
+        {
+          "adapter_request_count": 780,
+          "comparison_failed_count": 3,
+          "comparison_passed_count": 0,
+          "comparison_status": null,
+          "gate_passed": false,
+          "index": 2,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 3,
+          "provenance_status": null,
+          "query_sweep_best_observed_failure_reasons": [],
+          "query_sweep_best_observed_strategy": null,
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": null,
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 24,
+            "verified_false_alarm_above_max": 24
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 3,
+          "query_sweep_recommended_next_actions": [],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 24,
+          "source_document_count": 2222,
+          "status": "blocked",
+          "workflow": "citation_search_batch_evidence_rollup"
+        },
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 3,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [
+            "blind_refuted_rate_below_min",
+            "verified_false_alarm_above_max"
+          ],
+          "query_sweep_best_observed_strategy": "question_overlap_0p5",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "citation_question_overlap_0p8_sf_planned_rerank",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 32,
+            "verified_false_alarm_above_max": 32
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [
+            "improve_claim_intent_alignment_or_query_construction",
+            "tighten_false_alarm_calibration"
+          ],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
+          "source_document_count": 741,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        },
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 4,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [
+            "blind_refuted_rate_below_min",
+            "verified_false_alarm_above_max"
+          ],
+          "query_sweep_best_observed_strategy": "question_overlap_0p5",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "question_answer_overlap_0p8",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 32,
+            "verified_false_alarm_above_max": 32
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [
+            "improve_claim_intent_alignment_or_query_construction",
+            "tighten_false_alarm_calibration"
+          ],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
+          "source_document_count": 741,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        },
+        {
+          "adapter_request_count": 260,
+          "comparison_failed_count": 0,
+          "comparison_passed_count": 0,
+          "comparison_status": "blocked",
+          "gate_passed": false,
+          "index": 5,
+          "promotion_ready": false,
+          "provenance_failed_count": 0,
+          "provenance_passed_count": 0,
+          "provenance_status": "pass",
+          "query_sweep_best_observed_failure_reasons": [
+            "blind_refuted_rate_below_min",
+            "verified_false_alarm_above_max"
+          ],
+          "query_sweep_best_observed_strategy": "question_overlap_0p5",
+          "query_sweep_best_passing_blind_refuted_count": null,
+          "query_sweep_best_passing_strategy": null,
+          "query_sweep_best_strategy": "question_answer_overlap_0p8_sf_planned_rerank",
+          "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
+          "query_sweep_failure_reason_counts": {
+            "blind_refuted_rate_below_min": 32,
+            "verified_false_alarm_above_max": 32
+          },
+          "query_sweep_no_hit_strategy_count": 0,
+          "query_sweep_no_passing_strategy_count": 0,
+          "query_sweep_recommended_next_actions": [
+            "improve_claim_intent_alignment_or_query_construction",
+            "tighten_false_alarm_calibration"
+          ],
+          "query_sweep_target_route_not_selected_strategy_count": 0,
+          "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
+          "source_document_count": 740,
+          "status": "blocked",
+          "workflow": "source_family_citation_search_workflow"
+        }
+      ]
+    },
+    "frontier_queue_execution": {
+      "approved_binding_count": 1,
+      "approved_entry_count": 1,
+      "binding_not_reviewed_count": 0,
+      "blocked_entry_count": 0,
+      "blocked_seed_input_count": 0,
+      "bound_command_run_count": 1,
+      "bound_command_runs": [
+        {
+          "binding_not_reviewed_count": 0,
+          "command_count": 3,
+          "dry_run": false,
+          "dry_run_count": 0,
+          "entry_count": 1,
+          "executed_count": 3,
+          "executes_commands": true,
+          "failed_count": 0,
+          "index": 1,
+          "invalid_command_count": 0,
+          "materialized_output_count": 2,
+          "missing_output_count": 0,
+          "planned_output_count": 0,
+          "require_reviewed_bindings": true,
+          "skipped_count": 0,
+          "status": "succeeded",
+          "succeeded_count": 3,
+          "timed_out_count": 0,
+          "unchecked_output_count": 0,
+          "workflow": "frontier_research_queue_bound_command_run_report"
+        }
+      ],
+      "command_binding_review_count": 1,
+      "command_binding_reviews": [
+        {
+          "approved_binding_count": 1,
+          "approved_entry_count": 1,
+          "blocked_entry_count": 0,
+          "entry_count": 1,
+          "failure_counts": {},
+          "index": 1,
+          "missing_binding_count": 0,
+          "pending_review_count": 0,
+          "status": "ready_for_execution",
+          "workflow": "frontier_research_queue_command_binding_review"
+        }
+      ],
+      "command_count": 3,
+      "control_plane_smoke_status": "pass",
+      "dry_run_count": 0,
+      "dry_run_report_count": 0,
+      "executed_count": 3,
+      "executed_report_count": 1,
+      "failed_count": 0,
+      "frontier_command_binding_count": 0,
+      "frontier_command_bindings": [],
+      "frontier_queue_execution_smoke_count": 1,
+      "frontier_queue_execution_smoke_failed_count": 0,
+      "frontier_queue_execution_smoke_manifest_failed_count": 0,
+      "frontier_queue_execution_smoke_manifest_verified_count": 1,
+      "frontier_queue_execution_smoke_passed_count": 1,
+      "frontier_queue_execution_smoke_status_counts": {
+        "pass": 1
+      },
+      "frontier_queue_execution_smoke_unverified_count": 0,
+      "frontier_queue_execution_smokes": [
+        {
+          "artifact_manifest": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json",
+          "artifacts_are_verifier_evidence": false,
+          "binding_not_reviewed_count": 0,
+          "dry_run_count": 2,
+          "dry_run_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-dry-run.json",
+          "executes_child_commands": false,
+          "failure_reasons": [],
+          "index": 1,
+          "manifest_verified": true,
+          "passed": true,
+          "remaining_placeholder_count": 0,
+          "review_approved_entry_count": 1,
+          "review_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/command-binding-review/frontier-command-binding-review.json",
+          "staged_upstream_output_count": 1,
+          "status": "pass",
+          "unverified": false,
+          "workflow": "frontier_queue_execution_smoke"
+        }
+      ],
+      "input_binding_audit_count": 0,
+      "input_binding_audits": [],
+      "invalid_command_count": 0,
+      "materialized_output_count": 2,
+      "missing_binding_count": 0,
+      "missing_output_count": 0,
+      "pending_review_count": 0,
+      "planned_output_count": 0,
+      "ready_review_count": 1,
+      "ready_seed_input_audit_count": 0,
+      "ready_seed_input_count": 0,
+      "review_entry_count": 1,
+      "review_failure_counts": {},
+      "review_status_counts": {
+        "ready_for_execution": 1
+      },
+      "run_status_counts": {
+        "succeeded": 1
+      },
+      "seed_input_staging_ready": false,
+      "skipped_count": 0,
+      "status": "promote",
+      "succeeded_count": 3,
+      "succeeded_run_report_count": 1,
+      "timed_out_count": 0,
+      "unchecked_output_count": 0,
+      "unreviewed_execution_override_count": 0
+    },
+    "semantic_gap_review": {
+      "approved_source_document_count": 7,
+      "best_answer_entity_collision_count": 5,
+      "best_answer_value_supported_count": 4,
+      "best_candidate_fact_coverage_count": 16,
+      "best_covered_fact_retrieval_blind_refuted_count": 16,
+      "best_covered_fact_retrieval_blind_refuted_rate": 0.1797752808988764,
+      "best_covered_fact_retrieval_verified_false_alarm": 0.088,
+      "best_covered_fact_route_decision_accuracy": 1.0,
+      "best_covered_fact_route_false_refuted_rate": 1.0,
+      "best_mapping_target_count": 89,
+      "best_no_joined_fact_count": 41,
+      "best_records_with_joined_facts": 48,
+      "blocked_workflow_count": 0,
+      "covered_fact_mapping_audit_count": 1,
+      "covered_fact_mapping_audits": [
+        {
+          "answer_entity_collision_count": 5,
+          "answer_value_supported_count": 4,
+          "candidate_fact_coverage_count": 16,
+          "index": 1,
+          "joined_property_counts": {
+            "P106": 20,
+            "P112": 3,
+            "P131": 6,
+            "P17": 54,
+            "P170": 4,
+            "P27": 8,
+            "P279": 22,
+            "P31": 103,
+            "P527": 13,
+            "P793": 7,
+            "P856": 31,
+            "description": 51
+          },
+          "mapping_status_counts": {
+            "answer_entity_collision": 2,
+            "answer_value_supported": 4,
+            "candidate_fact_coverage": 16,
+            "joined_low_relevance": 26,
+            "no_joined_facts": 41
+          },
+          "no_joined_fact_count": 41,
+          "records_with_joined_facts": 48,
+          "status": "observed",
+          "target_count": 89,
+          "workflow": "blind_spot_covered_fact_mapping_audit"
+        }
+      ],
+      "covered_fact_mapping_status_counts": {
+        "observed": 1
+      },
+      "covered_fact_retrieval_qa_document_count": 41,
+      "covered_fact_retrieval_qa_question_count": 16,
+      "covered_fact_retrieval_qa_report_count": 1,
+      "covered_fact_retrieval_qa_reports": [
+        {
+          "by_property": {
+            "P106": 1,
+            "P112": 3,
+            "P170": 2,
+            "P279": 7,
+            "P31": 17,
+            "P793": 2,
+            "description": 9
+          },
+          "corpus_type": null,
+          "include_statuses": [
+            "candidate_fact_coverage"
+          ],
+          "included_status_counts": {
+            "candidate_fact_coverage": 41
+          },
+          "index": 1,
+          "mapping_record_count": 89,
+          "max_facts_per_record": 3,
+          "n_documents": 41,
+          "n_questions": 16,
+          "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-corpus.json",
+          "route_name": "covered_fact_retrieval_structured_qa",
+          "scope": "Diagnostic target-specific covered-fact QA bridge. Use for measuring route potential; do not promote as independent citation evidence.",
+          "status": "ready",
+          "workflow": "covered_fact_retrieval_qa_corpus_builder"
+        }
+      ],
+      "covered_fact_retrieval_query_sweep_count": 1,
+      "covered_fact_retrieval_query_sweep_passing_count": 1,
+      "covered_fact_retrieval_query_sweeps": [
+        {
+          "best_blind_refuted_count": 16,
+          "best_blind_refuted_rate": 0.1797752808988764,
+          "best_gate_pass": true,
+          "best_passing_blind_refuted_count": 16,
+          "best_passing_strategy": "question_overlap_0p8",
+          "best_strategy": "question_overlap_0p8",
+          "best_verified_false_alarm": 0.088,
+          "blind_spot_count": 89,
+          "index": 1,
+          "max_verified_false_alarm": 0.2,
+          "min_blind_refuted_rate": 0.0,
+          "query_fields": [
+            "question"
+          ],
+          "records_with_retrieval_hits": 16,
+          "retrieval_limit": 3,
+          "status": "complete",
+          "strategy_count": 3,
+          "target_route": "retrieval_structured_qa",
+          "target_route_selected_count": 16,
+          "workflow": "blind_spot_retrieval_query_sweep"
+        }
+      ],
+      "covered_fact_route_fallback_n_records": 0,
+      "covered_fact_route_identity_n_records": 22,
+      "covered_fact_route_n_records": 22,
+      "covered_fact_route_skipped_count": 0,
+      "covered_fact_route_status_counts": {
+        "promote": 1
+      },
+      "covered_fact_routes": [
+        {
+          "covered_fact_route_decision_accuracy": 1.0,
+          "covered_fact_route_false_refuted_rate": 1.0,
+          "covered_fact_route_false_supported_rate": 0.0,
+          "covered_fact_route_identity_n_records": 8,
+          "covered_fact_route_n_records": 8,
+          "covered_fact_route_true_supported_rate": 1.0,
+          "covered_fact_score_dump_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/covered-facts-scores.json",
+          "index": 1,
+          "mean_attempted_route_count": 1.0,
+          "property_count": 2,
+          "qa_corpus_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-source-family-qa/source-family-qa-corpus.json",
+          "retrieval_use_rate": 0.0,
+          "route": "structured_qa",
+          "signal": "truth_proj",
+          "source_document_count": 4,
+          "source_family_qa_document_count": 4,
+          "status": "promote",
+          "verified_records_jsonl_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/verified-records.jsonl",
+          "verifier_report_path": "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-verifier-report.json",
+          "workflow": "wikidata_structured_qa_route_workflow"
+        }
+      ],
+      "fact_review_document_count": 10,
+      "promoted_covered_fact_route_count": 2,
+      "promoted_workflow_count": 1,
+      "semantic_gap_candidate_count": 63,
+      "semantic_gap_fact_candidate_count": 23,
+      "source_family_qa_document_count": 11,
+      "standalone_covered_fact_route_count": 1,
+      "standalone_covered_fact_route_source_document_count": 4,
+      "standalone_promoted_covered_fact_route_count": 1,
+      "status": "promote",
+      "status_counts": {
+        "covered_fact_route_promote": 1
+      },
+      "workflow_count": 1,
+      "workflows": [
+        {
+          "approved_source_document_count": 7,
+          "covered_fact_route_decision_accuracy": 1.0,
+          "covered_fact_route_false_refuted_rate": 1.0,
+          "covered_fact_route_identity_n_records": 14,
+          "covered_fact_route_n_records": 14,
+          "covered_fact_route_status": "promote",
+          "fact_review_document_count": 10,
+          "index": 1,
+          "semantic_gap_candidate_count": 63,
+          "semantic_gap_fact_candidate_count": 23,
+          "source_family_qa_document_count": 7,
+          "status": "covered_fact_route_promote",
+          "workflow": "retrieval_semantic_gap_review_workflow"
+        }
+      ]
+    },
+    "source_family_acquisition": {
+      "audit_count": 1,
+      "audits": [
+        {
+          "acquisition_plan_count": 0,
+          "covered_target_source_family_counts": {
+            "news": 20,
+            "official": 52,
+            "official_statistics": 4,
+            "reference": 68,
+            "scholarly": 156
+          },
+          "index": 1,
+          "missing_target_source_family_counts": {},
+          "request_count": 260,
+          "request_missing_target_family_count": 0,
+          "request_with_results_count": 260,
+          "request_with_target_family_count": 260,
+          "status": "covered",
+          "workflow": "source_family_coverage_audit"
+        }
+      ],
+      "best_missing_target_family_count": 0,
+      "covered_audit_count": 1,
+      "covered_target_source_family_counts": {
+        "news": 20,
+        "official": 52,
+        "official_statistics": 4,
+        "reference": 68,
+        "scholarly": 156
+      },
+      "missing_target_source_family_counts": {},
+      "status": "covered"
+    },
+    "unresolved_queue": {
+      "adapter_family_counts": {
+        "counterfactual_probe_generator": 46,
+        "external_citation_search": 260,
+        "world_model_rule_authoring": 26
+      },
+      "adapter_request_count": 332,
+      "batch_count": 8,
+      "evidence_status_counts": {
+        "answer_entity_collision": 2,
+        "answer_value_supported": 4,
+        "generic_fact_only": 6,
+        "no_joined_facts": 41,
+        "subject_only_or_unsupported_property": 15,
+        "unmapped_low_relevance": 20
+      },
+      "label_usage": {
+        "labels_copied_to_queue": false,
+        "labels_used_for_queue_selection": false,
+        "requests_are_verifier_evidence": false
+      },
+      "request_type_counts": {
+        "counterfactual_probe": 46,
+        "external_citation": 260,
+        "world_model_or_calculator_rule": 26
+      },
+      "status": "ready_for_adapter_execution",
+      "target_count": 88,
+      "workflow": "unresolved_blind_spot_evidence_queue"
+    },
+    "world_model_rules": {
+      "audit_adjusted_remaining_rule_family_counts": {},
+      "audit_adjusted_remaining_task_count": 0,
+      "audit_adjusted_required_input_counts": {},
+      "blocked_count": 0,
+      "closed_rule_family_counts": {
+        "causal_or_procedural": 9,
+        "entity_disambiguation": 8,
+        "quantity_or_arithmetic": 6,
+        "temporal_consistency": 3
+      },
+      "combined_rule_input_count": 0,
+      "combined_unfilled_task_count": 0,
+      "input_fill_adapter_ready": false,
+      "input_fill_downstream_adapter_command": {},
+      "input_fill_result_rollup_status": null,
+      "input_fill_rollup_blocked_fill_report_count": 0,
+      "input_fill_rollup_duplicate_request_id_count": 0,
+      "input_fill_rule_family_counts": {},
+      "mechanism_handoff_bundle_status": "promote",
+      "mechanism_handoff_target_count": 9,
+      "mechanism_handoff_trace_count": 9,
+      "missing_input_counts": {
+        "claim_time": 5,
+        "mechanism": 9,
+        "mechanism_status": 9,
+        "numeric_value": 12,
+        "precondition": 9,
+        "reference_time": 12,
+        "retrieved_at": 5,
+        "source_citation": 14,
+        "source_time": 5,
+        "unit": 12
+      },
+      "pending_count": 43,
+      "promoted_count": 26,
+      "promoted_rule_family_counts": {
+        "causal_or_procedural": 9,
+        "entity_disambiguation": 8,
+        "quantity_or_arithmetic": 6,
+        "temporal_consistency": 3
+      },
+      "promoted_rule_request_ids": [
+        "rule:record-10:1",
+        "rule:record-133:1",
+        "rule:record-165:1",
+        "rule:record-274:1",
+        "rule:record-299:1",
+        "rule:record-27:1",
+        "rule:record-134:1",
+        "rule:record-212:1",
+        "rule:record-224:1",
+        "rule:record-199:1",
+        "rule:record-223:1",
+        "rule:record-485:1",
+        "rule:record-516:1",
+        "rule:record-498:1",
+        "rule:record-517:1",
+        "rule:record-498:2",
+        "rule:record-517:2",
+        "rule:record-190:1",
+        "rule:record-182:1",
+        "rule:record-239:1",
+        "rule:record-11:1",
+        "rule:record-16:1",
+        "rule:record-120:1",
+        "rule:record-326:1",
+        "rule:record-25:1",
+        "rule:record-175:1"
+      ],
+      "promotion_report_count": 6,
+      "promotion_reports": [
+        {
+          "blocked_count": 0,
+          "executed_count": 1,
+          "index": 1,
+          "pending_count": 0,
+          "promoted_count": 1,
+          "promoted_request_ids": [
+            "rule:record-10:1"
+          ],
+          "promoted_rule_family_counts": {
+            "causal_or_procedural": 1
+          },
+          "status": "promote",
+          "status_counts": {
+            "supported": 1
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 4,
+          "index": 2,
+          "pending_count": 0,
+          "promoted_count": 4,
+          "promoted_request_ids": [
+            "rule:record-133:1",
+            "rule:record-165:1",
+            "rule:record-274:1",
+            "rule:record-299:1"
+          ],
+          "promoted_rule_family_counts": {
+            "causal_or_procedural": 4
+          },
+          "status": "promote",
+          "status_counts": {
+            "supported": 4
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 4,
+          "index": 3,
+          "pending_count": 0,
+          "promoted_count": 4,
+          "promoted_request_ids": [
+            "rule:record-27:1",
+            "rule:record-134:1",
+            "rule:record-212:1",
+            "rule:record-224:1"
+          ],
+          "promoted_rule_family_counts": {
+            "causal_or_procedural": 4
+          },
+          "status": "promote",
+          "status_counts": {
+            "refuted": 2,
+            "supported": 2
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 8,
+          "index": 4,
+          "pending_count": 0,
+          "promoted_count": 8,
+          "promoted_request_ids": [
+            "rule:record-199:1",
+            "rule:record-223:1",
+            "rule:record-485:1",
+            "rule:record-516:1",
+            "rule:record-498:1",
+            "rule:record-517:1",
+            "rule:record-498:2",
+            "rule:record-517:2"
+          ],
+          "promoted_rule_family_counts": {
+            "entity_disambiguation": 8
+          },
+          "status": "promote",
+          "status_counts": {
+            "refuted": 6,
+            "supported": 2
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 6,
+          "index": 5,
+          "pending_count": 20,
+          "promoted_count": 6,
+          "promoted_request_ids": [
+            "rule:record-190:1",
+            "rule:record-182:1",
+            "rule:record-239:1",
+            "rule:record-11:1",
+            "rule:record-16:1",
+            "rule:record-120:1"
+          ],
+          "promoted_rule_family_counts": {
+            "quantity_or_arithmetic": 6
+          },
+          "status": "promote",
+          "status_counts": {
+            "needs_inputs": 20,
+            "refuted": 6
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        },
+        {
+          "blocked_count": 0,
+          "executed_count": 3,
+          "index": 6,
+          "pending_count": 23,
+          "promoted_count": 3,
+          "promoted_request_ids": [
+            "rule:record-326:1",
+            "rule:record-25:1",
+            "rule:record-175:1"
+          ],
+          "promoted_rule_family_counts": {
+            "temporal_consistency": 3
+          },
+          "status": "promote",
+          "status_counts": {
+            "needs_inputs": 23,
+            "supported": 3
+          },
+          "workflow": "world_model_rule_candidate_promotion_gate"
+        }
+      ],
+      "promotion_status_counts": {
+        "promote": 6
+      },
+      "remaining_missing_input_counts": {
+        "claim_time": 5,
+        "numeric_value": 12,
+        "reference_time": 12,
+        "retrieved_at": 5,
+        "source_citation": 14,
+        "source_time": 5,
+        "unit": 12
+      },
+      "remaining_rule_family_counts": {
+        "quantity_or_arithmetic": 6,
+        "temporal_consistency": 2
+      },
+      "remaining_task_count": 8,
+      "requeued_rule_family_counts": {
+        "entity_disambiguation": 8
+      },
+      "requeued_rule_input_execution_input_counts": {
+        "answer_entity": 8,
+        "expected_entity": 8,
+        "requested_role": 8,
+        "source_citation": 8,
+        "subject_entity": 8
+      },
+      "requeued_rule_input_missing_input_counts": {
+        "answer_entity": 8,
+        "requested_role": 8,
+        "subject_entity": 8
+      },
+      "requeued_rule_input_plan_status": "ready_for_input_collection",
+      "requeued_rule_input_task_count": 8,
+      "rule_family_counts": {
+        "causal_or_procedural": 9,
+        "quantity_or_arithmetic": 12,
+        "temporal_consistency": 5
+      },
+      "rule_input_audit_finding_count": 22,
+      "rule_input_audit_finding_counts": {
+        "numeric_rule_missing_candidate_claim_binding": 12,
+        "quantity_rule_for_entity_or_role_question": 6,
+        "quantity_rule_without_direct_numeric_intent": 2,
+        "temporal_rule_without_temporal_intent": 2
+      },
+      "rule_input_audit_recommended_action_counts": {
+        "collect_missing_inputs": 12,
+        "collect_missing_inputs_with_review": 6,
+        "requeue_rule_input_task": 8
+      },
+      "rule_input_audit_recommended_rule_family_counts": {
+        "entity_disambiguation": 8
+      },
+      "rule_input_audit_requeue_outstanding_count": 0,
+      "rule_input_audit_requeue_suggestion_count": 8,
+      "rule_input_audit_status": "needs_requeue",
+      "rule_input_audit_task_count": 26,
+      "rule_input_plan_status": "ready_for_input_collection",
+      "rule_stub_requeue_requeued_stub_count": 8,
+      "rule_stub_requeue_rule_family_counts": {
+        "entity_disambiguation": 8
+      },
+      "rule_stub_requeue_skipped_suggestion_count": 0,
+      "rule_stub_requeue_status": "ready_for_rule_authoring",
+      "status": "promote",
+      "task_count": 26
+    }
+  },
+  "metadata": {
+    "closure_action": "expand_scoped_covered_fact_alignment",
+    "model": "smollm2-l80",
+    "semantic_gap_scope": "covered_fact_alignment_expansion",
+    "source": "frontier-v4"
+  },
+  "next_actions": [
+    {
+      "action_id": "expand_scoped_covered_fact_alignment",
+      "lane": "semantic_gap_review",
+      "priority": 88,
+      "reason": "source acquisition is covered and scoped covered-fact route evidence promotes, but covered-fact route records do not yet cover the unresolved target queue; continue source-backed alignment review instead of broad citation tuning",
+      "semantic_gap_best_candidate_fact_coverage_count": 16,
+      "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": 16,
+      "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": 0.088,
+      "semantic_gap_best_records_with_joined_facts": 48,
+      "semantic_gap_coverage_gap_count": 66,
+      "semantic_gap_coverage_rate": 0.25,
+      "semantic_gap_covered_fact_retrieval_qa_document_count": 41,
+      "semantic_gap_covered_fact_retrieval_query_sweep_count": 1,
+      "semantic_gap_covered_fact_route_n_records": 22,
+      "semantic_gap_review_status": "promote",
+      "unresolved_target_count": 88
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/artifact-manifest.json",
+    "citation_workflows": [
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "artifacts/improve-unresolved-citation-alignment/command-3/workflow-report.json"
+    ],
+    "covered_fact_mapping_audits": [
+      "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json"
+    ],
+    "covered_fact_retrieval_qa_reports": [
+      "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-report.json"
+    ],
+    "covered_fact_retrieval_query_sweeps": [
+      "artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-structured-qa-query-sweep.json"
+    ],
+    "covered_fact_route_summaries": [
+      "artifacts/improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json"
+    ],
+    "frontier_bound_command_runs": [
+      "artifacts/improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json"
+    ],
+    "frontier_command_binding_reviews": [
+      "artifacts/improve-unresolved-citation-alignment/command-binding-review/frontier-command-binding-review.json"
+    ],
+    "frontier_command_bindings": [],
+    "frontier_queue_execution_smoke_manifests": [
+      "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json"
+    ],
+    "frontier_queue_execution_smokes": [
+      "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-smoke.json"
+    ],
+    "input_binding_audits": [],
+    "input_fill_result_rollup": null,
+    "mechanism_handoff_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
+    "requeued_rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
+    "rule_input_audit_report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-plan-audit-v1/world-model-rule-input-plan-audit.json",
+    "rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
+    "rule_promotion_reports": [
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report.json",
+      "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json"
+    ],
+    "rule_stub_requeue_report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
+    "semantic_gap_review_workflows": [
+      "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/retrieval-semantic-gap-review-workflow.json"
+    ],
+    "source_family_coverage_audits": [
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json"
+    ],
+    "summary_report": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+    "unresolved_queue": "artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json"
+  },
+  "schema_version": 1,
+  "scope": "Read-only closure summary for unresolved frontier blind-spot evidence lanes. Source discovery, rule-input rows, and adapter matches remain non-evidence until their downstream gates promote.",
+  "status": "needs_evidence",
+  "summary": {
+    "adapter_request_count": 332,
+    "blocked_lane_count": 1,
+    "citation_provenance_pass_count": 7,
+    "citation_query_sweep_best_strategy_counts": {
+      "citation_question_overlap_0p8_sf_planned_rerank": 1,
+      "question_answer_overlap_0p8": 1,
+      "question_answer_overlap_0p8_sf_planned_rerank": 1,
+      "question_overlap_0p65": 1
+    },
+    "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
+    "citation_query_sweep_failure_reason_counts": {
+      "blind_refuted_rate_below_min": 120,
+      "verified_false_alarm_above_max": 120
+    },
+    "citation_query_sweep_no_hit_strategy_count": 0,
+    "citation_query_sweep_recommended_next_action_counts": {
+      "improve_claim_intent_alignment_or_query_construction": 6,
+      "tighten_false_alarm_calibration": 6
+    },
+    "citation_query_sweep_target_route_not_selected_strategy_count": 0,
+    "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
+    "citation_workflow_count": 5,
+    "covered_or_promoted_lane_count": 4,
+    "frontier_bound_command_dry_run_count": 0,
+    "frontier_bound_command_executed_count": 3,
+    "frontier_bound_command_missing_output_count": 0,
+    "frontier_bound_command_run_count": 1,
+    "frontier_bound_command_succeeded_count": 3,
+    "frontier_command_binding_review_count": 1,
+    "frontier_queue_execution_smoke_count": 1,
+    "frontier_queue_execution_smoke_manifest_verified_count": 1,
+    "frontier_queue_execution_smoke_passed_count": 1,
+    "frontier_queue_execution_smoke_status": "pass",
+    "frontier_queue_execution_status": "promote",
+    "lane_statuses": {
+      "citation_evidence": "blocked",
+      "frontier_queue_execution": "promote",
+      "semantic_gap_review": "promote",
+      "source_family_acquisition": "covered",
+      "unresolved_queue": "ready_for_adapter_execution",
+      "world_model_rules": "promote"
+    },
+    "mechanism_handoff_trace_count": 9,
+    "missing_lane_count": 0,
+    "semantic_gap_review_approved_source_document_count": 7,
+    "semantic_gap_review_best_answer_entity_collision_count": 5,
+    "semantic_gap_review_best_answer_value_supported_count": 4,
+    "semantic_gap_review_best_candidate_fact_coverage_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.088,
+    "semantic_gap_review_best_no_joined_fact_count": 41,
+    "semantic_gap_review_best_records_with_joined_facts": 48,
+    "semantic_gap_review_coverage_gap_count": 66,
+    "semantic_gap_review_coverage_rate": 0.25,
+    "semantic_gap_review_covered_fact_mapping_audit_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
+    "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
+    "semantic_gap_review_covered_fact_route_fallback_n_records": 0,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 22,
+    "semantic_gap_review_covered_fact_route_n_records": 22,
+    "semantic_gap_review_promoted_covered_fact_route_count": 2,
+    "semantic_gap_review_promoted_workflow_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
+    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
+    "semantic_gap_review_workflow_count": 1,
+    "source_family_coverage_audit_count": 1,
+    "unresolved_target_count": 88,
+    "world_model_rule_audit_adjusted_remaining_task_count": 0,
+    "world_model_rule_audit_requeue_suggestion_count": 8,
+    "world_model_rule_combined_rule_input_count": 0,
+    "world_model_rule_combined_unfilled_task_count": 0,
+    "world_model_rule_input_fill_adapter_ready": false,
+    "world_model_rule_input_fill_rollup_status": "",
+    "world_model_rule_promoted_count": 26,
+    "world_model_rule_remaining_task_count": 8,
+    "world_model_rule_requeue_outstanding_count": 0,
+    "world_model_rule_task_count": 26
+  },
+  "workflow": "unresolved_frontier_evidence_summary"
+}

@@ -25,6 +25,16 @@ from eigentruth.verify import normalize_claim_text  # noqa: E402
 
 DEFAULT_SIGNAL = "truth_proj"
 DEFAULT_ALPHA = 0.10
+STATEMENT_PROVENANCE_METADATA_KEYS = (
+    "alignment_candidate_id",
+    "alignment_source_document_id",
+    "review_id",
+    "review_status",
+    "reviewed_at",
+    "reviewer",
+    "source_family",
+    "structured_evidence_slots",
+)
 
 
 def build_wikidata_covered_fact_score_dump(
@@ -688,6 +698,11 @@ def _statement_payload(
             "country": metadata.get("country"),
             "country_qid": metadata.get("country_qid"),
             "value_qid": metadata.get("value_qid"),
+            **{
+                key: metadata[key]
+                for key in STATEMENT_PROVENANCE_METADATA_KEYS
+                if key in metadata and metadata[key] is not None
+            },
             **{
                 key: value for key, value in metadata.items()
                 if key.startswith("false_answer_")

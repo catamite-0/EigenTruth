@@ -1,0 +1,314 @@
+{
+  "corpus_type": "alignment_structured_fact_review_corpus",
+  "description": "Review-gated structured QA rows derived from alignment-audit fact candidates. These rows are candidate fact-review inputs only; they are not verifier evidence or broad route promotion.",
+  "documents": [
+    {
+      "answer": "2020 single by Sam Smith",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_review_document_id": "alignment-review:1",
+        "confidence": 0.8888888888888888,
+        "evidence_source": "wikidata:Q99644917:description",
+        "evidence_span": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Diamonds",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Diamonds?",
+      "source": "wikidata:Q99644917:description",
+      "text": "What does the aligned evidence say is the description for Diamonds? 2020 single by Sam Smith"
+    },
+    {
+      "answer": "citizens and nationals of the United States of America",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-11:1",
+        "alignment_review_document_id": "alignment-review:2",
+        "confidence": 0.9473684210526315,
+        "evidence_source": "wikidata:Q846570:description",
+        "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Americans",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Americans?",
+      "source": "wikidata:Q846570:description",
+      "text": "What does the aligned evidence say is the description for Americans? citizens and nationals of the United States of America"
+    },
+    {
+      "answer": "American businessman, investor, and philanthropist (born 1955)",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_review_document_id": "alignment-review:3",
+        "confidence": 0.9230769230769231,
+        "evidence_source": "wikidata:Q5284:description",
+        "evidence_span": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Bill Gates",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for Bill Gates?",
+      "source": "wikidata:Q5284:description",
+      "text": "What does the aligned evidence say is the description for Bill Gates? American businessman, investor, and philanthropist (born 1955)"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_review_document_id": "alignment-review:4",
+        "confidence": 0.9523809523809523,
+        "evidence_source": "wikidata:Q1860:description",
+        "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "English",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for English?",
+      "source": "wikidata:Q1860:description",
+      "text": "What does the aligned evidence say is the description for English? West Germanic language"
+    },
+    {
+      "answer": "Poverty in Islam",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:1",
+        "alignment_review_document_id": "alignment-review:5",
+        "confidence": 0.9473684210526315,
+        "evidence_source": "wikidata:Q10294:P527:Q125727758",
+        "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "has part(s):P527",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)",
+        "subject": "poverty",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the has part(s) for poverty?",
+      "source": "wikidata:Q10294:P527:Q125727758",
+      "text": "What does the aligned evidence say is the has part(s) for poverty? Poverty in Islam"
+    },
+    {
+      "answer": "South Africa",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:2",
+        "alignment_review_document_id": "alignment-review:6",
+        "confidence": 0.9473684210526315,
+        "evidence_source": "wikidata:Q317521:P27:Q258",
+        "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "country of citizenship:P27",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship",
+        "subject": "Africa",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the country of citizenship for Africa?",
+      "source": "wikidata:Q317521:P27:Q258",
+      "text": "What does the aligned evidence say is the country of citizenship for Africa? South Africa"
+    },
+    {
+      "answer": "42,647,492",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-190:1",
+        "alignment_review_document_id": "alignment-review:7",
+        "confidence": 0.9285714285714286,
+        "evidence_source": "worldbank:SP.POP.TOTL:AFG:2024",
+        "evidence_span": "World Bank official statistics data for population country queries: Afghanistan had Population, total of 42,647,492 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Middle East, North Africa, Afghanistan & Pakistan.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "Population, total:SP.POP.TOTL",
+        "provider": "worldbank",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "official_statistics",
+        "statement_property": "SP.POP.TOTL",
+        "statement_property_label": "Population, total",
+        "subject": "Afghanistan",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the Population, total for Afghanistan?",
+      "source": "worldbank:SP.POP.TOTL:AFG:2024",
+      "text": "What does the aligned evidence say is the Population, total for Afghanistan? 42,647,492"
+    },
+    {
+      "answer": "100,616",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-190:2",
+        "alignment_review_document_id": "alignment-review:8",
+        "confidence": 0.9285714285714286,
+        "evidence_source": "worldbank:SP.POP.TOTL:VCT:2024",
+        "evidence_span": "World Bank official statistics data for population country queries: St. Vincent and the Grenadines had Population, total of 100,616 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Latin America & Caribbean.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "Population, total:SP.POP.TOTL",
+        "provider": "worldbank",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "official_statistics",
+        "statement_property": "SP.POP.TOTL",
+        "statement_property_label": "Population, total",
+        "subject": "world",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the Population, total for world?",
+      "source": "worldbank:SP.POP.TOTL:VCT:2024",
+      "text": "What does the aligned evidence say is the Population, total for world? 100,616"
+    },
+    {
+      "answer": "26,498,823",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-190:3",
+        "alignment_review_document_id": "alignment-review:9",
+        "confidence": 0.7857142857142857,
+        "evidence_source": "worldbank:SP.POP.TOTL:PRK:2024",
+        "evidence_span": "World Bank official statistics data for population country queries: Korea, Dem. People's Rep. had Population, total of 26,498,823 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: East Asia & Pacific.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "Population, total:SP.POP.TOTL",
+        "provider": "worldbank",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "official_statistics",
+        "statement_property": "SP.POP.TOTL",
+        "statement_property_label": "Population, total",
+        "subject": "world",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the Population, total for world?",
+      "source": "worldbank:SP.POP.TOTL:PRK:2024",
+      "text": "What does the aligned evidence say is the Population, total for world? 26,498,823"
+    },
+    {
+      "answer": "unusual apparent anomaly in the sky that is not readily identifiable",
+      "metadata": {
+        "alignment_candidate_id": "fact:record-212:2",
+        "alignment_review_document_id": "alignment-review:10",
+        "confidence": 0.9523809523809523,
+        "evidence_source": "wikidata:Q421:description",
+        "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+        "fact_status": "candidate_review_required",
+        "property_hint": "description",
+        "provider": "source_family_catalog",
+        "review_required": true,
+        "route_hints": [
+          "structured_qa",
+          "alignment_fact_review"
+        ],
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "unidentified flying object",
+        "usage": "alignment_fact_review_only"
+      },
+      "question": "What does the aligned evidence say is the description for unidentified flying object?",
+      "source": "wikidata:Q421:description",
+      "text": "What does the aligned evidence say is the description for unidentified flying object? unusual apparent anomaly in the sky that is not readily identifiable"
+    }
+  ],
+  "label_usage": {
+    "candidate_facts_are_verifier_evidence": false,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "request_ids_copied_to_document_metadata": false,
+    "target_ids_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "accepted_usage": "structured_fact_review_only",
+    "builder": "alignment_fact_review_corpus_builder",
+    "min_confidence": 0.0
+  },
+  "status": "ready_for_review",
+  "summary": {
+    "accepted_document_count": 10,
+    "by_property_hint": {
+      "Population, total:SP.POP.TOTL": 3,
+      "country of citizenship:P27": 1,
+      "description": 5,
+      "has part(s):P527": 1
+    },
+    "by_provider": {
+      "source_family_catalog": 7,
+      "worldbank": 3
+    },
+    "by_source_family": {
+      "official_statistics": 3,
+      "reference": 7
+    },
+    "input_candidate_count": 23,
+    "skipped": {
+      "answer_value_matches_model_answer": 0,
+      "duplicate_candidate": 8,
+      "generic_value": 0,
+      "invalid_row": 0,
+      "low_confidence": 0,
+      "missing_required_fields": 0,
+      "non_review_usage": 0,
+      "property_value_invalid": 0,
+      "subject_not_in_evidence_span": 5,
+      "value_equals_subject": 0,
+      "value_not_in_evidence_span": 0
+    },
+    "skipped_count": 13,
+    "unique_candidate_count": 23
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "artifacts": {
+    "alignment_records_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-audit-v1/alignment-records.jsonl",
+      "sha256": "3e343ffe17ee2e55fcc19110d3102459371dec799aac08befe495fd95b295d46",
+      "size_bytes": 397169
+    },
+    "candidate_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidate-entity-bindings.jsonl",
+      "sha256": "346fd8f740566c44489835e75abd7938a96640570704fcbfbd12053fe4c1f7e5",
+      "size_bytes": 13530
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-plan.json",
+      "sha256": "95ce156924bfc92d24be3640bb91b914865a02fd12de5f6a0baa2241facaf8b2",
+      "size_bytes": 52122
+    },
+    "entity_binding_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-requests.jsonl",
+      "sha256": "e838e05e60c8f3a8c48ed526f42d944d29651c23c2d7f85cbd0f0fa6fec369b1",
+      "size_bytes": 26683
+    },
+    "entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+      "sha256": "b8a3fe4720a41cecd8549c90dadda8673a1dcccf32e96167b69cbdb522a8b064",
+      "size_bytes": 19500
+    },
+    "skipped_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "skipped-entity-bindings.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 8,
+    "closure_action": "plan_entity_role_binding_candidates",
+    "ready_for_review_candidate_count": 2,
+    "request_count": 8,
+    "status": "ready_for_review",
+    "workflow": "world_model_rule_entity_binding_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

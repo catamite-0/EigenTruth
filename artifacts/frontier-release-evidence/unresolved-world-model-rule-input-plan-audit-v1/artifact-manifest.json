@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "audited_rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "audited-rule-input-tasks.jsonl",
+      "sha256": "bdbea2ae9fca24612429c566278daf8754d1128bb58bd6ba03e8a8064449827d",
+      "size_bytes": 24191
+    },
+    "rule_input_requeue_suggestions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "rule-input-requeue-suggestions.jsonl",
+      "sha256": "67a94702edd5913ff32cb6d79aa05c0170be2236880a665b703723a5db6fa29e",
+      "size_bytes": 5468
+    },
+    "rule_input_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-input-collection-plan-v1/rule-input-tasks.jsonl",
+      "sha256": "592f6fd97241924742801a1b2a508a445a2b84f33de2fe3aabf296a925052baa",
+      "size_bytes": 67987
+    },
+    "world_model_rule_input_plan_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-plan-audit.json",
+      "sha256": "40c076a77d1c0b49757e00015e4c74166714d6c63d88ea266520fb9a58cd9c20",
+      "size_bytes": 38339
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "finding_count": 22,
+    "model": "smollm2-l80",
+    "requeue_suggestion_count": 8,
+    "source": "frontier-v4",
+    "status": "needs_requeue",
+    "task_count": 26,
+    "workflow": "world_model_rule_input_plan_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

@@ -18,23 +18,73 @@ from eigentruth.registry import (
     load_and_verify_artifact_manifest,
 )
 
-_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS
 )
-_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS
 )
-_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
+
+_PROMOTED_GATE_STATUSES = frozenset({
+    "complete",
+    "ok",
+    "pass",
+    "passed",
+    "promote",
+    "ready",
+    "recommend",
+})
+
+_PROMOTION_CONTRACT_GATE_STATUS_KEYS = (
+    ("readiness", "readiness_status"),
+    ("route", "route_status"),
+    ("performance", "performance_status"),
+    ("required_route_baseline", "required_route_baseline_status"),
+    ("adapter_family", "adapter_family_status"),
+    ("selector_replay", "selector_replay_status"),
+    ("product_trace_replay", "product_trace_replay_workflow_status"),
+    ("product_runtime_drift", "product_runtime_drift_status"),
+    ("external_evidence", "external_evidence_baseline_comparison_status"),
+    ("mechanism_handoff", "mechanism_handoff_evidence_bundle_status"),
+    ("triple_extraction", "triple_extraction_fixture_matrix_status"),
+    ("counterfactual", "counterfactual_verification_status"),
+    ("pre_generation", "pre_generation_probe_comparison_status"),
+    ("claim_factuality", "claim_factuality_probe_comparison_status"),
+    ("selfcheck", "selfcheck_signal_fusion_workflow_status"),
+    ("world_model", "world_model_signal_workflow_status"),
+    ("context_sensitivity", "context_sensitivity_workflow_status"),
+    ("pathway_intervention", "pathway_intervention_workflow_status"),
+    ("feedback_policy", "feedback_policy_workflow_status"),
+    ("release_efficiency", "release_efficiency_status"),
+    ("frontier_release_evidence", "frontier_release_evidence_status"),
+    ("unresolved_frontier_evidence_summary", "unresolved_frontier_evidence_summary_status"),
+    ("uncertainty_escalation", "uncertainty_escalation_workflow_status"),
 )
-_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS
+
+_FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS = (
+    "citation_batch_provenance_present_count",
+    "citation_batch_provenance_passed_count",
+    "citation_batch_provenance_failed_count",
+    "citation_batch_provenance_status_counts",
+    "citation_batch_evidence_class_counts",
+    "citation_batch_query_sweep_present_count",
+    "citation_batch_query_sweep_no_passing_strategy_count",
+    "citation_batch_query_sweep_best_strategy_counts",
+    "citation_batch_query_sweep_best_passing_strategy_counts",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+    "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+    "citation_batch_comparison_present_count",
+    "citation_batch_comparison_passed_count",
+    "citation_batch_comparison_failed_count",
+    "citation_batch_comparison_status_counts",
 )
-_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS
-)
-_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
-    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+
+_PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = tuple(
+    (
+        group_name,
+        "frontier_release" if group_name == "frontier_release_evidence" else group_name,
+    )
+    for group_name in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS
 )
 
 
@@ -55,13 +105,18 @@ class ProductPromotionContract:
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
     selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
     world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
+    context_sensitivity_workflow: Mapping[str, Any] = field(default_factory=dict)
     pathway_intervention_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     external_evidence_baseline_comparison: Mapping[str, Any] = field(default_factory=dict)
     pre_generation_probe_comparison: Mapping[str, Any] = field(default_factory=dict)
+    claim_factuality_probe_comparison: Mapping[str, Any] = field(default_factory=dict)
     triple_extraction_fixture_matrix: Mapping[str, Any] = field(default_factory=dict)
     counterfactual_verification: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
+    frontier_release_evidence: Mapping[str, Any] = field(default_factory=dict)
+    unresolved_frontier_evidence_summary: Mapping[str, Any] = field(default_factory=dict)
+    fact_selfcheck_gate: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
 
@@ -94,6 +149,11 @@ class ProductPromotionContract:
         )
         object.__setattr__(
             self,
+            "context_sensitivity_workflow",
+            dict(self.context_sensitivity_workflow),
+        )
+        object.__setattr__(
+            self,
             "pathway_intervention_workflow",
             dict(self.pathway_intervention_workflow),
         )
@@ -114,6 +174,11 @@ class ProductPromotionContract:
         )
         object.__setattr__(
             self,
+            "claim_factuality_probe_comparison",
+            dict(self.claim_factuality_probe_comparison),
+        )
+        object.__setattr__(
+            self,
             "triple_extraction_fixture_matrix",
             dict(self.triple_extraction_fixture_matrix),
         )
@@ -123,6 +188,17 @@ class ProductPromotionContract:
             dict(self.counterfactual_verification),
         )
         object.__setattr__(self, "release_efficiency", dict(self.release_efficiency))
+        object.__setattr__(
+            self,
+            "frontier_release_evidence",
+            dict(self.frontier_release_evidence),
+        )
+        object.__setattr__(
+            self,
+            "unresolved_frontier_evidence_summary",
+            dict(self.unresolved_frontier_evidence_summary),
+        )
+        object.__setattr__(self, "fact_selfcheck_gate", dict(self.fact_selfcheck_gate))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
 
@@ -156,6 +232,9 @@ class ProductPromotionContract:
                 world_model_signal_workflow=_mapping(
                     payload.get("world_model_signal_workflow")
                 ),
+                context_sensitivity_workflow=_mapping(
+                    payload.get("context_sensitivity_workflow")
+                ),
                 pathway_intervention_workflow=_mapping(
                     payload.get("pathway_intervention_workflow")
                 ),
@@ -166,6 +245,9 @@ class ProductPromotionContract:
                 pre_generation_probe_comparison=_mapping(
                     payload.get("pre_generation_probe_comparison")
                 ),
+                claim_factuality_probe_comparison=_mapping(
+                    payload.get("claim_factuality_probe_comparison")
+                ),
                 triple_extraction_fixture_matrix=_mapping(
                     payload.get("triple_extraction_fixture_matrix")
                 ),
@@ -173,6 +255,13 @@ class ProductPromotionContract:
                     payload.get("counterfactual_verification")
                 ),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
+                frontier_release_evidence=_mapping(
+                    payload.get("frontier_release_evidence")
+                ),
+                unresolved_frontier_evidence_summary=_mapping(
+                    payload.get("unresolved_frontier_evidence_summary")
+                ),
+                fact_selfcheck_gate=_mapping(payload.get("fact_selfcheck_gate")),
                 metadata=_mapping(payload.get("metadata")),
             )
         return cls.from_release_candidate_report(payload, require_promoted=require_promoted)
@@ -217,6 +306,10 @@ class ProductPromotionContract:
             candidate.get("selfcheck_signal_fusion_workflow")
         )
         world_model_signal_workflow = _mapping(candidate.get("world_model_signal_workflow"))
+        context_sensitivity_workflow = _first_mapping(
+            candidate.get("context_sensitivity_workflow"),
+            comparison.get("context_sensitivity_workflow_gate"),
+        )
         pathway_intervention_workflow = _mapping(
             candidate.get("pathway_intervention_workflow")
         )
@@ -234,6 +327,14 @@ class ProductPromotionContract:
                 candidate.get("pre_generation_probe_comparison"),
                 comparison.get("pre_generation_probe_comparison_gate"),
             ),
+        )
+        claim_factuality_probe_comparison = (
+            _claim_factuality_probe_comparison_metadata(
+                _first_mapping(
+                    candidate.get("claim_factuality_probe_comparison"),
+                    comparison.get("claim_factuality_probe_comparison_gate"),
+                ),
+            )
         )
         triple_extraction_fixture_matrix = _triple_extraction_fixture_matrix_metadata(
             _first_mapping(
@@ -253,6 +354,29 @@ class ProductPromotionContract:
             _mapping(candidate.get("release_efficiency")),
             manifests=manifests,
         )
+        frontier_release_evidence = _frontier_release_evidence_metadata(
+            _first_mapping(
+                candidate.get("frontier_release_evidence"),
+                comparison.get("frontier_release_evidence_gate"),
+            ),
+            manifests=manifests,
+        )
+        unresolved_frontier_evidence_summary_report = _mapping(
+            comparison.get("unresolved_frontier_evidence_summary_gate")
+        )
+        unresolved_frontier_evidence_summary_report.update(
+            _drop_none_values(
+                _mapping(candidate.get("unresolved_frontier_evidence_summary"))
+            )
+        )
+        unresolved_frontier_evidence_summary = (
+            _unresolved_frontier_evidence_summary_metadata(
+                unresolved_frontier_evidence_summary_report,
+                manifests=manifests,
+            )
+        )
+        fact_selfcheck_gate = _mapping(candidate.get("fact_selfcheck_gate"))
+        runtime_cost = _mapping(candidate.get("runtime_cost"))
         product_trace_replay_metadata = _product_trace_replay_workflow_metadata(
             product_trace_replay_workflow,
             manifests=manifests,
@@ -332,6 +456,10 @@ class ProductPromotionContract:
                 world_model_signal_workflow,
                 manifests=manifests,
             ),
+            context_sensitivity_workflow=_context_sensitivity_workflow_metadata(
+                context_sensitivity_workflow,
+                manifests=manifests,
+            ),
             pathway_intervention_workflow=_pathway_intervention_workflow_metadata(
                 pathway_intervention_workflow,
                 manifests=manifests,
@@ -342,10 +470,43 @@ class ProductPromotionContract:
             ),
             external_evidence_baseline_comparison=external_evidence_baseline_comparison,
             pre_generation_probe_comparison=pre_generation_probe_comparison,
+            claim_factuality_probe_comparison=claim_factuality_probe_comparison,
             triple_extraction_fixture_matrix=triple_extraction_fixture_matrix,
             counterfactual_verification=counterfactual_verification,
             release_efficiency=release_efficiency,
+            frontier_release_evidence=frontier_release_evidence,
+            unresolved_frontier_evidence_summary=unresolved_frontier_evidence_summary,
+            fact_selfcheck_gate=fact_selfcheck_gate,
             metadata={
+                "release_candidate_status": status,
+                "readiness_status": decision.get("readiness_status"),
+                "route_status": decision.get("route_status"),
+                "performance_status": decision.get("performance_status"),
+                "adapter_family_status": decision.get("adapter_family_status"),
+                "required_route_baseline_status": decision.get(
+                    "required_route_baseline_status"
+                ),
+                "release_efficiency_status": decision.get("release_efficiency_status"),
+                "mechanism_handoff_evidence_bundle_status": decision.get(
+                    "mechanism_handoff_evidence_bundle_status"
+                ),
+                "frontier_release_evidence_status": decision.get(
+                    "frontier_release_evidence_status"
+                ),
+                "unresolved_frontier_evidence_summary_status": decision.get(
+                    "unresolved_frontier_evidence_summary_status"
+                ),
+                "recommended_unresolved_frontier_evidence_summary_report": (
+                    decision.get(
+                        "recommended_unresolved_frontier_evidence_summary_report"
+                    )
+                ),
+                "recommended_frontier_release_evidence_report": decision.get(
+                    "recommended_frontier_release_evidence_report"
+                ),
+                "uncertainty_escalation_workflow_status": decision.get(
+                    "uncertainty_escalation_workflow_status"
+                ),
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
                 "recommended_route_record": decision.get("recommended_route_record"),
                 "recommended_performance_baseline_record": decision.get(
@@ -484,6 +645,12 @@ class ProductPromotionContract:
                 "recommended_world_model_signal_workflow_report": decision.get(
                     "recommended_world_model_signal_workflow_report"
                 ),
+                "context_sensitivity_workflow_status": decision.get(
+                    "context_sensitivity_workflow_status"
+                ),
+                "recommended_context_sensitivity_workflow_report": decision.get(
+                    "recommended_context_sensitivity_workflow_report"
+                ),
                 "pathway_intervention_workflow_status": decision.get(
                     "pathway_intervention_workflow_status"
                 ),
@@ -552,6 +719,43 @@ class ProductPromotionContract:
                 ),
                 "world_model_signal_workflow_calibrated_conflict_signal_count": (
                     world_model_signal_workflow.get("calibrated_conflict_signal_count")
+                ),
+                "context_sensitivity_workflow_report": (
+                    context_sensitivity_workflow.get("report_path")
+                ),
+                "context_sensitivity_workflow_manifest": (
+                    context_sensitivity_workflow.get("manifest_path")
+                    or manifests.get("context_sensitivity_workflow_manifest")
+                ),
+                "context_sensitivity_workflow_source": (
+                    context_sensitivity_workflow.get("source")
+                ),
+                "context_sensitivity_workflow_registry": (
+                    context_sensitivity_workflow.get("registry")
+                ),
+                "context_sensitivity_workflow_record": (
+                    context_sensitivity_workflow.get("record_key")
+                ),
+                "context_sensitivity_workflow_paired_logprob_record_count": (
+                    context_sensitivity_workflow.get("paired_logprob_record_count")
+                ),
+                "context_sensitivity_workflow_enriched_record_count": (
+                    context_sensitivity_workflow.get("enriched_record_count")
+                ),
+                "context_sensitivity_workflow_enhanced_score_signal_count": (
+                    context_sensitivity_workflow.get("enhanced_score_signal_count")
+                ),
+                "context_sensitivity_workflow_max_flagged_rate": (
+                    context_sensitivity_workflow.get("max_flagged_rate")
+                ),
+                "context_sensitivity_workflow_mean_flagged_rate": (
+                    context_sensitivity_workflow.get("mean_flagged_rate")
+                ),
+                "context_sensitivity_workflow_max_context_sensitivity_ratio": (
+                    context_sensitivity_workflow.get("max_context_sensitivity_ratio")
+                ),
+                "context_sensitivity_workflow_manifest_verified": (
+                    context_sensitivity_workflow.get("manifest_verified")
                 ),
                 "pathway_intervention_workflow_report": (
                     pathway_intervention_workflow.get("report_path")
@@ -704,7 +908,22 @@ class ProductPromotionContract:
                 **_pre_generation_probe_comparison_flat_metadata(
                     pre_generation_probe_comparison
                 ),
+                "claim_factuality_probe_comparison_status": _first_present(
+                    decision.get("claim_factuality_probe_comparison_status"),
+                    claim_factuality_probe_comparison.get("status"),
+                    claim_factuality_probe_comparison.get("report_status"),
+                ),
+                "recommended_claim_factuality_probe_comparison_report": (
+                    decision.get("recommended_claim_factuality_probe_comparison_report")
+                ),
+                **_claim_factuality_probe_comparison_flat_metadata(
+                    claim_factuality_probe_comparison
+                ),
                 **_release_efficiency_flat_metadata(release_efficiency),
+                **_frontier_release_evidence_flat_metadata(frontier_release_evidence),
+                **_unresolved_frontier_evidence_summary_flat_metadata(
+                    unresolved_frontier_evidence_summary
+                ),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
                 "performance_evidence_bundle_release_ready": (
@@ -735,6 +954,26 @@ class ProductPromotionContract:
                     performance_evidence_recommendation.get("score_fusion_conformal_gate_passed"),
                     performance_evidence.get("score_fusion_conformal_gate_passed"),
                 ),
+                "performance_score_fusion_release_gate_status": _first_present(
+                    performance_evidence_recommendation.get("score_fusion_release_gate_status"),
+                    performance_evidence.get("score_fusion_release_gate_status"),
+                ),
+                "performance_score_fusion_release_gate_passed": _first_present(
+                    performance_evidence_recommendation.get("score_fusion_release_gate_passed"),
+                    performance_evidence.get("score_fusion_release_gate_passed"),
+                ),
+                "performance_score_fusion_high_confidence_accepted_false_rate": _first_present(
+                    performance_evidence_recommendation.get(
+                        "score_fusion_high_confidence_accepted_false_rate"
+                    ),
+                    performance_evidence.get("score_fusion_high_confidence_accepted_false_rate"),
+                ),
+                "performance_score_fusion_high_confidence_accepted_false_count": _first_present(
+                    performance_evidence_recommendation.get(
+                        "score_fusion_high_confidence_accepted_false_count"
+                    ),
+                    performance_evidence.get("score_fusion_high_confidence_accepted_false_count"),
+                ),
                 "performance_selected_fusion_status": _first_present(
                     performance_evidence_recommendation.get("selected_fusion_status"),
                     performance_evidence.get("selected_fusion_status"),
@@ -755,6 +994,26 @@ class ProductPromotionContract:
                     performance_evidence_recommendation.get("selected_fusion_auroc"),
                     performance_evidence.get("selected_fusion_auroc"),
                 ),
+                "performance_selected_fusion_release_gate_status": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_release_gate_status"),
+                    performance_evidence.get("selected_fusion_release_gate_status"),
+                ),
+                "performance_selected_fusion_release_gate_passed": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_release_gate_passed"),
+                    performance_evidence.get("selected_fusion_release_gate_passed"),
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_rate": _first_present(
+                    performance_evidence_recommendation.get(
+                        "selected_fusion_high_confidence_accepted_false_rate"
+                    ),
+                    performance_evidence.get("selected_fusion_high_confidence_accepted_false_rate"),
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_count": _first_present(
+                    performance_evidence_recommendation.get(
+                        "selected_fusion_high_confidence_accepted_false_count"
+                    ),
+                    performance_evidence.get("selected_fusion_high_confidence_accepted_false_count"),
+                ),
                 "performance_selected_fusion_false_alarm": (
                     performance_evidence.get("selected_fusion_false_alarm")
                 ),
@@ -767,6 +1026,10 @@ class ProductPromotionContract:
                 "performance_selected_fusion_artifact_path": _first_present(
                     performance_evidence_recommendation.get("selected_fusion_artifact_path"),
                     performance_evidence.get("selected_fusion_artifact_path"),
+                ),
+                "performance_selected_fusion_artifact_manifest": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_artifact_manifest"),
+                    performance_evidence.get("selected_fusion_artifact_manifest"),
                 ),
                 "performance_uncached_total_seconds": (
                     performance_evidence_cost.get("uncached_total_seconds")
@@ -879,23 +1142,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_baseline_path": product_runtime_drift_baseline.get("path"),
                 "product_runtime_drift_current_path": product_runtime_drift_current.get("path"),
                 "product_runtime_drift_gate_enabled": product_runtime_drift_summary.get("gate_enabled"),
-                "product_runtime_drift_promotion_evidence_required": config.get(
-                    "require_product_runtime_drift_promotion_evidence"
-                ),
-                "product_runtime_drift_pre_generation_evidence_required": config.get(
-                    "require_product_runtime_drift_pre_generation_evidence"
-                ),
-                "product_runtime_drift_counterfactual_evidence_required": config.get(
-                    "require_product_runtime_drift_counterfactual_evidence"
-                ),
-                "product_runtime_drift_triple_audit_evidence_required": config.get(
-                    "require_product_runtime_drift_triple_audit_evidence"
-                ),
-                "product_runtime_drift_covered_fact_property_evidence_required": config.get(
-                    "require_product_runtime_drift_covered_fact_property_evidence"
-                ),
-                "product_runtime_drift_action_gate_evidence_required": config.get(
-                    "require_product_runtime_drift_action_gate_evidence"
+                **_product_runtime_drift_required_metadata(
+                    config,
+                    product_runtime_drift_summary,
                 ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
@@ -909,6 +1158,25 @@ class ProductPromotionContract:
                 "runtime_profile_applied_defaults": config.get(
                     "runtime_profile_applied_defaults"
                 ),
+                "max_uncached_forward_seconds": config.get(
+                    "max_uncached_forward_seconds"
+                ),
+                "max_recommended_runtime_seconds": config.get(
+                    "max_recommended_runtime_seconds"
+                ),
+                "recommended_runtime_seconds": runtime_cost.get(
+                    "recommended_runtime_seconds"
+                ),
+                "recommended_runtime_cost_source": runtime_cost.get(
+                    "recommended_runtime_cost_source"
+                ),
+                "uncached_forward_cost_seconds": runtime_cost.get(
+                    "uncached_forward_cost_seconds"
+                ),
+                "uncached_forward_cost_source": runtime_cost.get(
+                    "uncached_forward_cost_source"
+                ),
+                "cache_only_total_seconds": runtime_cost.get("cache_only_total_seconds"),
                 "readiness_manifest": manifests.get("readiness_manifest"),
                 "route_manifest": manifests.get("route_manifest"),
                 "performance_manifest": manifests.get("performance_manifest"),
@@ -918,7 +1186,6 @@ class ProductPromotionContract:
                 "adapter_family_required_routes": adapter_family.get("required_routes"),
                 "adapter_family_promotion_status": adapter_family.get("promotion_status"),
                 "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
-                "required_route_baseline_status": decision.get("required_route_baseline_status"),
                 "required_route_baseline_records": (
                     required_route_baselines.get("records")
                     or decision.get("required_route_baseline_records")
@@ -982,6 +1249,7 @@ class ProductPromotionContract:
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
             "world_model_signal_workflow": dict(self.world_model_signal_workflow),
+            "context_sensitivity_workflow": dict(self.context_sensitivity_workflow),
             "pathway_intervention_workflow": dict(self.pathway_intervention_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "external_evidence_baseline_comparison": dict(
@@ -990,19 +1258,305 @@ class ProductPromotionContract:
             "pre_generation_probe_comparison": dict(
                 self.pre_generation_probe_comparison
             ),
+            "claim_factuality_probe_comparison": dict(
+                self.claim_factuality_probe_comparison
+            ),
             "triple_extraction_fixture_matrix": dict(
                 self.triple_extraction_fixture_matrix
             ),
             "counterfactual_verification": dict(self.counterfactual_verification),
             "release_efficiency": dict(self.release_efficiency),
+            "frontier_release_evidence": dict(self.frontier_release_evidence),
+            "unresolved_frontier_evidence_summary": dict(
+                self.unresolved_frontier_evidence_summary
+            ),
+            "fact_selfcheck_gate": dict(self.fact_selfcheck_gate),
             "metadata": dict(self.metadata),
+            "summary": self.to_summary_dict(),
         }
+
+    def to_summary_dict(self) -> dict[str, Any]:
+        """Return a compact, human-reviewable promotion handoff summary."""
+        return product_promotion_contract_summary(self)
 
     def save_json(self, path: str | Path) -> None:
         """Write the contract payload to JSON."""
         output = Path(path)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def product_promotion_contract_summary(
+    contract: ProductPromotionContract | Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return a compact summary of promoted release evidence in a contract.
+
+    The summary is intentionally derived from existing contract fields. It does
+    not promote missing evidence, relax gates, or change control defaults.
+    """
+    if not isinstance(contract, ProductPromotionContract):
+        contract = ProductPromotionContract.from_mapping(contract, require_promoted=False)
+    metadata = _mapping(contract.metadata)
+    gate_statuses = _promotion_contract_gate_statuses(contract)
+    available_gate_statuses = {
+        name: status
+        for name, status in gate_statuses.items()
+        if status is not None
+    }
+    blocking_gate_statuses = {
+        name: status
+        for name, status in available_gate_statuses.items()
+        if str(status).strip().lower() not in _PROMOTED_GATE_STATUSES
+    }
+    evidence_groups = _promotion_contract_evidence_group_summaries(metadata)
+    blocked_evidence_groups = {
+        name: group
+        for name, group in evidence_groups.items()
+        if group.get("blocked_metric_count", 0) not in (None, 0)
+    }
+    runtime = _promotion_contract_runtime_summary(contract, metadata)
+    verifier_route = _promotion_contract_verifier_route_summary(contract)
+    action_gates = _promotion_contract_action_gate_summary(contract, metadata)
+    status = (
+        "promote"
+        if contract.source_status == "promote"
+        and not blocking_gate_statuses
+        and not blocked_evidence_groups
+        else "blocked"
+    )
+    return {
+        "schema_version": 1,
+        "status": status,
+        "source_workflow": contract.source_workflow,
+        "source_status": contract.source_status,
+        "model_id": contract.model_id,
+        "runtime": runtime,
+        "verifier_route": verifier_route,
+        "gate_statuses": gate_statuses,
+        "available_gate_count": len(available_gate_statuses),
+        "promoted_gate_count": sum(
+            1
+            for status_value in available_gate_statuses.values()
+            if str(status_value).strip().lower() in _PROMOTED_GATE_STATUSES
+        ),
+        "blocking_gate_count": len(blocking_gate_statuses),
+        "blocking_gate_statuses": blocking_gate_statuses,
+        "evidence_groups": evidence_groups,
+        "blocked_evidence_group_count": len(blocked_evidence_groups),
+        "blocked_evidence_groups": list(blocked_evidence_groups),
+        "action_gates": action_gates,
+        "recommended_records": _drop_none_values({
+            "readiness": metadata.get("recommended_readiness_record"),
+            "route": metadata.get("recommended_route_record"),
+            "performance": metadata.get("recommended_performance_baseline_record"),
+            "product_runtime_drift": metadata.get("recommended_product_runtime_drift_report"),
+            "external_evidence": metadata.get(
+                "recommended_external_evidence_baseline_comparison_report"
+            ),
+            "counterfactual": metadata.get(
+                "recommended_counterfactual_verification_report"
+            ),
+            "triple_extraction": metadata.get(
+                "recommended_triple_extraction_fixture_matrix_report"
+            ),
+            "mechanism_handoff": metadata.get(
+                "recommended_mechanism_handoff_evidence_bundle_report"
+            ),
+            "frontier_release_evidence": metadata.get(
+                "recommended_frontier_release_evidence_report"
+            )
+            or contract.frontier_release_evidence.get("report_path"),
+            "unresolved_frontier_evidence_summary": metadata.get(
+                "recommended_unresolved_frontier_evidence_summary_report"
+            )
+            or contract.unresolved_frontier_evidence_summary.get("report_path"),
+        }),
+        "control_defaults": dict(contract.control_defaults),
+        "control_policy_configured": bool(contract.control_policy_config),
+        "runtime_budget_policy": contract.runtime_budget_policy.to_dict(),
+    }
+
+
+def _promotion_contract_gate_statuses(
+    contract: ProductPromotionContract,
+) -> dict[str, str | None]:
+    metadata = _mapping(contract.metadata)
+    statuses = {
+        "source": contract.source_status,
+    }
+    for name, key in _PROMOTION_CONTRACT_GATE_STATUS_KEYS:
+        statuses[name] = _optional_str(_first_present(
+            metadata.get(key),
+            metadata.get(key.replace("_status", "_promotion_status")),
+        ))
+    statuses["adapter_family"] = _optional_str(_first_present(
+        statuses.get("adapter_family"),
+        metadata.get("adapter_family_promotion_status"),
+    ))
+    statuses["external_evidence"] = _optional_str(_first_present(
+        statuses.get("external_evidence"),
+        contract.external_evidence_baseline_comparison.get("decision_status"),
+        contract.external_evidence_baseline_comparison.get("status"),
+    ))
+    statuses["triple_extraction"] = _optional_str(_first_present(
+        statuses.get("triple_extraction"),
+        contract.triple_extraction_fixture_matrix.get("status"),
+    ))
+    statuses["counterfactual"] = _optional_str(_first_present(
+        statuses.get("counterfactual"),
+        contract.counterfactual_verification.get("status"),
+    ))
+    statuses["pre_generation"] = _optional_str(_first_present(
+        statuses.get("pre_generation"),
+        contract.pre_generation_probe_comparison.get("status"),
+    ))
+    statuses["claim_factuality"] = _optional_str(_first_present(
+        statuses.get("claim_factuality"),
+        contract.claim_factuality_probe_comparison.get("status"),
+        contract.claim_factuality_probe_comparison.get("report_status"),
+    ))
+    statuses["product_trace_replay"] = _optional_str(_first_present(
+        statuses.get("product_trace_replay"),
+        contract.product_trace_replay_workflow.get("report_status"),
+    ))
+    statuses["release_efficiency"] = _optional_str(_first_present(
+        statuses.get("release_efficiency"),
+        contract.release_efficiency.get("status"),
+    ))
+    statuses["frontier_release_evidence"] = _optional_str(_first_present(
+        statuses.get("frontier_release_evidence"),
+        contract.frontier_release_evidence.get("status"),
+        contract.frontier_release_evidence.get("decision_status"),
+    ))
+    statuses["unresolved_frontier_evidence_summary"] = _optional_str(_first_present(
+        statuses.get("unresolved_frontier_evidence_summary"),
+        contract.unresolved_frontier_evidence_summary.get("status"),
+        contract.unresolved_frontier_evidence_summary.get("report_status"),
+    ))
+    return statuses
+
+
+def _promotion_contract_evidence_group_summaries(
+    metadata: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    groups: dict[str, dict[str, Any]] = {}
+    for name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        required = metadata.get(f"product_runtime_drift_{prefix}_evidence_required")
+        metric_count = metadata.get(f"product_runtime_drift_{prefix}_evidence_metric_count")
+        blocked_metric_count = metadata.get(
+            f"product_runtime_drift_{prefix}_evidence_blocked_metric_count"
+        )
+        if required is None and metric_count is None and blocked_metric_count is None:
+            continue
+        groups[name] = _drop_none_values({
+            "required": required,
+            "metric_count": metric_count,
+            "blocked_metric_count": blocked_metric_count,
+        })
+    return groups
+
+
+def _product_runtime_drift_required_metadata(
+    config: Mapping[str, Any],
+    summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        metadata[f"product_runtime_drift_{prefix}_evidence_required"] = _first_present(
+            config.get(f"require_product_runtime_drift_{prefix}_evidence"),
+            summary.get(f"{prefix}_evidence_required"),
+        )
+    return metadata
+
+
+def _promotion_contract_runtime_summary(
+    contract: ProductPromotionContract,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    runtime = _mapping(contract.runtime)
+    return _drop_none_values({
+        "layer": runtime.get("layer"),
+        "batch_size": runtime.get("batch_size"),
+        "hidden_state_capture": runtime.get("hidden_state_capture"),
+        "covariance_mode": runtime.get("covariance_mode"),
+        "covariance_low_rank": runtime.get("covariance_low_rank"),
+        "performance_cell": runtime.get("performance_cell"),
+        "max_workers": runtime.get("max_workers"),
+        "max_batch_tokens": runtime.get("max_batch_tokens"),
+        "inside_trigger_budget_policy": runtime.get("inside_trigger_budget_policy"),
+        "recommended_runtime_seconds": metadata.get("recommended_runtime_seconds"),
+        "recommended_runtime_cost_source": metadata.get(
+            "recommended_runtime_cost_source"
+        ),
+        "max_recommended_runtime_seconds": metadata.get("max_recommended_runtime_seconds"),
+        "uncached_forward_cost_seconds": metadata.get("uncached_forward_cost_seconds"),
+        "cache_only_total_seconds": metadata.get("cache_only_total_seconds"),
+    })
+
+
+def _promotion_contract_verifier_route_summary(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    route = _mapping(contract.verifier_route)
+    return _drop_none_values({
+        "route": route.get("route"),
+        "selected": route.get("selected"),
+        "decision_accuracy": route.get("decision_accuracy"),
+        "verified_detection": route.get("verified_detection"),
+        "verified_false_alarm": route.get("verified_false_alarm"),
+        "false_supported_rate": route.get("false_supported_rate"),
+        "false_refuted_rate": route.get("false_refuted_rate"),
+        "retrieval_use_rate": route.get("retrieval_use_rate"),
+        "mean_attempted_route_count": route.get("mean_attempted_route_count"),
+        "mean_duration_seconds": route.get("mean_duration_seconds"),
+        "p99_duration_seconds": route.get("p99_duration_seconds"),
+        "covered_fact_property_count": route.get("covered_fact_property_count"),
+        "covered_fact_properties": route.get("covered_fact_properties"),
+    })
+
+
+def _promotion_contract_action_gate_summary(
+    contract: ProductPromotionContract,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    workflow = _mapping(contract.product_trace_replay_workflow)
+    action_audit_gate = _mapping(workflow.get("action_audit_gate"))
+    action_execution_gate = _mapping(workflow.get("action_execution_gate"))
+    return _drop_none_values({
+        "action_audit_required": _first_present(
+            workflow.get("require_action_audit_gate"),
+            metadata.get("product_trace_action_audit_gate_required"),
+        ),
+        "action_audit_status": _first_present(
+            workflow.get("action_audit_gate_status"),
+            action_audit_gate.get("status"),
+            metadata.get("product_trace_action_audit_gate_status"),
+        ),
+        "action_audit_error_rate": _first_present(
+            workflow.get("action_audit_error_rate"),
+            action_audit_gate.get("error_rate"),
+            metadata.get("product_trace_action_audit_error_rate"),
+        ),
+        "action_execution_required": _first_present(
+            workflow.get("require_action_execution_gate"),
+            metadata.get("product_trace_action_execution_gate_required"),
+        ),
+        "action_execution_status": _first_present(
+            workflow.get("action_execution_gate_status"),
+            action_execution_gate.get("status"),
+            metadata.get("product_trace_action_execution_gate_status"),
+        ),
+        "action_execution_missing_result_rate": _first_present(
+            workflow.get("action_execution_missing_result_rate"),
+            action_execution_gate.get("missing_result_rate"),
+            metadata.get("product_trace_action_execution_missing_result_rate"),
+        ),
+        "action_execution_request_id_mismatch_rate": _first_present(
+            workflow.get("action_execution_request_id_mismatch_rate"),
+            action_execution_gate.get("request_id_mismatch_rate"),
+            metadata.get("product_trace_action_execution_request_id_mismatch_rate"),
+        ),
+    })
 
 
 @dataclass(frozen=True)
@@ -1023,60 +1577,15 @@ class LoadedProductPromotionContract:
 
 
 def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
-    metadata = {
-        "product_runtime_drift_promotion_evidence_metric_count": summary.get(
-            "promotion_evidence_metric_count"
-        ),
-        "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
-            "promotion_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_metric_count": summary.get(
-            "pre_generation_evidence_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_blocked_metric_count": summary.get(
-            "pre_generation_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_metric_count": summary.get(
-            "counterfactual_evidence_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_blocked_metric_count": summary.get(
-            "counterfactual_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
-            "triple_audit_evidence_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_blocked_metric_count": summary.get(
-            "triple_audit_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_metric_count": summary.get(
-            "covered_fact_property_evidence_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": summary.get(
-            "covered_fact_property_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_metric_count": summary.get(
-            "action_gate_evidence_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
-            "action_gate_evidence_blocked_metric_count"
-        ),
-    }
-    for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES:
-        for suffix in ("baseline", "current", "status"):
-            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
-    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+    metadata: dict[str, Any] = {}
+    for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        metadata[f"product_runtime_drift_{prefix}_evidence_metric_count"] = summary.get(
+            f"{prefix}_evidence_metric_count"
+        )
+        metadata[f"product_runtime_drift_{prefix}_evidence_blocked_metric_count"] = (
+            summary.get(f"{prefix}_evidence_blocked_metric_count")
+        )
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -1191,6 +1700,7 @@ class ProductRuntimeEvidenceBundle:
 
     loaded_contract: LoadedProductPromotionContract
     manifest_path: Path | None = None
+    evidence_handoff_manifest_path: Path | None = None
     registry_path: Path | None = None
     registry_key: str | None = None
     manifest_recursive: bool = True
@@ -1201,6 +1711,24 @@ class ProductRuntimeEvidenceBundle:
         repr=False,
     )
     _registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _evidence_handoff_manifest_payload: Mapping[str, Any] | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _evidence_handoff_manifest_verification: ArtifactManifestVerification | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _evidence_handoff_audit_payload: Mapping[str, Any] | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1229,6 +1757,20 @@ class ProductRuntimeEvidenceBundle:
         )
     )
     _world_model_signal_workflow_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _context_sensitivity_workflow_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _context_sensitivity_workflow_registry_record: RegistryRecord | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1265,6 +1807,20 @@ class ProductRuntimeEvidenceBundle:
         repr=False,
     )
     _pre_generation_probe_comparison_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _claim_factuality_probe_comparison_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _claim_factuality_probe_comparison_registry_record: RegistryRecord | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1346,6 +1902,144 @@ class ProductRuntimeEvidenceBundle:
             )
             object.__setattr__(self, "_registry_record", record)
         return self._registry_record
+
+    def verify_evidence_handoff_manifest(self) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional enriched handoff artifact manifest."""
+        if self.evidence_handoff_manifest_path is None:
+            return None
+        if self._evidence_handoff_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_evidence_handoff_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    self.evidence_handoff_manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._evidence_handoff_manifest_verification
+
+    def evidence_handoff_manifest_payload(self) -> Mapping[str, Any] | None:
+        """Return the parsed enriched handoff manifest payload, if available."""
+        if self.evidence_handoff_manifest_path is None:
+            return None
+        if self._evidence_handoff_manifest_payload is None:
+            payload = json.loads(
+                self.evidence_handoff_manifest_path.read_text(encoding="utf-8")
+            )
+            if not isinstance(payload, Mapping):
+                raise ValueError("promotion handoff manifest JSON must contain an object.")
+            object.__setattr__(self, "_evidence_handoff_manifest_payload", payload)
+        return self._evidence_handoff_manifest_payload
+
+    @property
+    def evidence_handoff_contract_path(self) -> Path | None:
+        """Return the enriched handoff contract path referenced by its manifest."""
+        return _artifact_manifest_entry_path(
+            self.evidence_handoff_manifest_path,
+            self.evidence_handoff_manifest_payload(),
+            "product_promotion_contract_evidence_handoff",
+        )
+
+    @property
+    def evidence_handoff_audit_path(self) -> Path | None:
+        """Return the enriched handoff audit path referenced by its manifest."""
+        return _artifact_manifest_entry_path(
+            self.evidence_handoff_manifest_path,
+            self.evidence_handoff_manifest_payload(),
+            "product_promotion_contract_evidence_handoff_audit",
+        )
+
+    def evidence_handoff_audit_payload(self) -> Mapping[str, Any] | None:
+        """Return the parsed enriched handoff audit payload, if available."""
+        audit_path = self.evidence_handoff_audit_path
+        if audit_path is None:
+            return None
+        if self._evidence_handoff_audit_payload is None:
+            payload = json.loads(audit_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, Mapping):
+                raise ValueError("promotion handoff audit JSON must contain an object.")
+            object.__setattr__(self, "_evidence_handoff_audit_payload", payload)
+        return self._evidence_handoff_audit_payload
+
+    def evidence_handoff_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready enriched handoff provenance metadata."""
+        manifest_payload = self.evidence_handoff_manifest_payload()
+        manifest_metadata = _mapping(
+            None if manifest_payload is None else manifest_payload.get("metadata")
+        )
+        manifest_summary = _mapping(
+            None if manifest_payload is None else manifest_payload.get("summary")
+        )
+        audit_payload = self.evidence_handoff_audit_payload()
+        audit_summary = _mapping(
+            None if audit_payload is None else audit_payload.get("summary")
+        )
+        group_statuses = _mapping(audit_summary.get("groups"))
+        manifest_verification = (
+            self.verify_evidence_handoff_manifest() if verify_manifest else None
+        )
+        return {
+            "promotion_contract_evidence_handoff_manifest": (
+                None
+                if self.evidence_handoff_manifest_path is None
+                else str(self.evidence_handoff_manifest_path)
+            ),
+            "promotion_contract_evidence_handoff_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "promotion_contract_evidence_handoff_manifest_summary": (
+                None if not manifest_summary else dict(manifest_summary)
+            ),
+            "promotion_contract_evidence_handoff_manifest_metadata": (
+                None if not manifest_metadata else dict(manifest_metadata)
+            ),
+            "promotion_contract_evidence_handoff_contract": (
+                None
+                if self.evidence_handoff_contract_path is None
+                else str(self.evidence_handoff_contract_path)
+            ),
+            "promotion_contract_evidence_handoff_audit": (
+                None
+                if self.evidence_handoff_audit_path is None
+                else str(self.evidence_handoff_audit_path)
+            ),
+            "promotion_contract_evidence_handoff_workflow": (
+                None if audit_payload is None else audit_payload.get("workflow")
+            ),
+            "promotion_contract_evidence_handoff_status": _first_present(
+                None if audit_payload is None else audit_payload.get("status"),
+                manifest_metadata.get("status"),
+            ),
+            "promotion_contract_evidence_handoff_before_missing_metric_count": (
+                manifest_metadata.get("before_missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_after_missing_metric_count": (
+                manifest_metadata.get("after_missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_resolved_missing_metric_count": (
+                manifest_metadata.get("resolved_missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_filled_groups": (
+                manifest_metadata.get("filled_groups")
+            ),
+            "promotion_contract_evidence_handoff_expected_metric_count": (
+                audit_summary.get("expected_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_present_metric_count": (
+                audit_summary.get("present_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_missing_metric_count": (
+                audit_summary.get("missing_metric_count")
+            ),
+            "promotion_contract_evidence_handoff_blocked_group_count": (
+                audit_summary.get("blocked_group_count")
+            ),
+            "promotion_contract_evidence_handoff_group_statuses": dict(group_statuses),
+        }
 
     def evidence_metadata(
         self,
@@ -1604,6 +2298,133 @@ class ProductRuntimeEvidenceBundle:
             ),
             "world_model_signal_workflow_calibrated_conflict_signal_count": (
                 workflow.get("calibrated_conflict_signal_count")
+            ),
+        }
+
+    @property
+    def context_sensitivity_workflow(self) -> Mapping[str, Any]:
+        """Return the context-sensitivity workflow contract, if present."""
+        return self.contract.context_sensitivity_workflow
+
+    @property
+    def context_sensitivity_workflow_report_path(self) -> Path | None:
+        """Return the context-sensitivity workflow report path."""
+        return _resolve_contract_metadata_path(
+            self.context_sensitivity_workflow.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def context_sensitivity_workflow_manifest_path(self) -> Path | None:
+        """Return the context-sensitivity workflow manifest path."""
+        return _resolve_contract_metadata_path(
+            self.context_sensitivity_workflow.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def context_sensitivity_workflow_registry_path(self) -> Path | None:
+        """Return the context-sensitivity workflow registry path."""
+        return _resolve_contract_metadata_path(
+            self.context_sensitivity_workflow.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_context_sensitivity_workflow_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional context-sensitivity workflow manifest."""
+        manifest_path = self.context_sensitivity_workflow_manifest_path
+        if manifest_path is None:
+            return None
+        if self._context_sensitivity_workflow_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_context_sensitivity_workflow_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._context_sensitivity_workflow_manifest_verification
+
+    def context_sensitivity_workflow_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional context-sensitivity workflow registry record."""
+        registry_path = self.context_sensitivity_workflow_registry_path
+        record_key = self.context_sensitivity_workflow.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._context_sensitivity_workflow_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_context_sensitivity_workflow_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._context_sensitivity_workflow_registry_record
+
+    def context_sensitivity_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready context-sensitivity provenance metadata."""
+        workflow = self.context_sensitivity_workflow
+        report_path = self.context_sensitivity_workflow_report_path
+        manifest_path = self.context_sensitivity_workflow_manifest_path
+        registry_path = self.context_sensitivity_workflow_registry_path
+        manifest_verification = (
+            self.verify_context_sensitivity_workflow_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = workflow.get("record_key")
+        registry_record = (
+            self.context_sensitivity_workflow_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "context_sensitivity_workflow_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "context_sensitivity_workflow_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "context_sensitivity_workflow_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "context_sensitivity_workflow_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "context_sensitivity_workflow_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "context_sensitivity_workflow_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "context_sensitivity_workflow_status": workflow.get("status"),
+            "context_sensitivity_workflow_paired_logprob_record_count": workflow.get(
+                "paired_logprob_record_count"
+            ),
+            "context_sensitivity_workflow_enriched_record_count": workflow.get(
+                "enriched_record_count"
+            ),
+            "context_sensitivity_workflow_enhanced_score_signal_count": workflow.get(
+                "enhanced_score_signal_count"
+            ),
+            "context_sensitivity_workflow_max_flagged_rate": workflow.get(
+                "max_flagged_rate"
+            ),
+            "context_sensitivity_workflow_mean_flagged_rate": workflow.get(
+                "mean_flagged_rate"
+            ),
+            "context_sensitivity_workflow_max_context_sensitivity_ratio": workflow.get(
+                "max_context_sensitivity_ratio"
+            ),
+            "context_sensitivity_workflow_manifest_verified": workflow.get(
+                "manifest_verified"
             ),
         }
 
@@ -1951,6 +2772,161 @@ class ProductRuntimeEvidenceBundle:
         }
 
     @property
+    def claim_factuality_probe_comparison(self) -> Mapping[str, Any]:
+        """Return the claim-factuality probe comparison contract, if present."""
+        return self.contract.claim_factuality_probe_comparison
+
+    @property
+    def claim_factuality_probe_comparison_report_path(self) -> Path | None:
+        """Return the claim-factuality probe comparison report path."""
+        return _resolve_contract_metadata_path(
+            self.claim_factuality_probe_comparison.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def claim_factuality_probe_comparison_manifest_path(self) -> Path | None:
+        """Return the claim-factuality probe comparison manifest path."""
+        return _resolve_contract_metadata_path(
+            self.claim_factuality_probe_comparison.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def claim_factuality_probe_comparison_registry_path(self) -> Path | None:
+        """Return the claim-factuality probe comparison registry path."""
+        return _resolve_contract_metadata_path(
+            self.claim_factuality_probe_comparison.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_claim_factuality_probe_comparison_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional claim-factuality probe comparison manifest."""
+        manifest_path = self.claim_factuality_probe_comparison_manifest_path
+        if manifest_path is None:
+            return None
+        if self._claim_factuality_probe_comparison_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_claim_factuality_probe_comparison_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._claim_factuality_probe_comparison_manifest_verification
+
+    def claim_factuality_probe_comparison_registry_record(
+        self,
+    ) -> RegistryRecord | None:
+        """Lazily resolve the optional claim-factuality probe comparison record."""
+        registry_path = self.claim_factuality_probe_comparison_registry_path
+        record_key = self.claim_factuality_probe_comparison.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._claim_factuality_probe_comparison_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_claim_factuality_probe_comparison_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._claim_factuality_probe_comparison_registry_record
+
+    def claim_factuality_probe_comparison_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready claim-factuality probe comparison provenance metadata."""
+        comparison = self.claim_factuality_probe_comparison
+        report_path = self.claim_factuality_probe_comparison_report_path
+        manifest_path = self.claim_factuality_probe_comparison_manifest_path
+        registry_path = self.claim_factuality_probe_comparison_registry_path
+        manifest_verification = (
+            self.verify_claim_factuality_probe_comparison_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = comparison.get("record_key")
+        registry_record = (
+            self.claim_factuality_probe_comparison_registry_record()
+            if include_registry_record
+            else None
+        )
+        best_run = _mapping(comparison.get("best_run"))
+        return {
+            "claim_factuality_probe_comparison_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "claim_factuality_probe_comparison_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "claim_factuality_probe_comparison_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "claim_factuality_probe_comparison_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "claim_factuality_probe_comparison_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "claim_factuality_probe_comparison_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "claim_factuality_probe_comparison_status": comparison.get("status"),
+            "claim_factuality_probe_comparison_report_status": comparison.get(
+                "report_status"
+            ),
+            "claim_factuality_probe_comparison_model_count": comparison.get(
+                "model_count"
+            ),
+            "claim_factuality_probe_comparison_run_count": comparison.get("run_count"),
+            "claim_factuality_probe_comparison_dataset_count": comparison.get(
+                "dataset_count"
+            ),
+            "claim_factuality_probe_comparison_datasets": comparison.get("datasets"),
+            "claim_factuality_probe_comparison_redline_passed": comparison.get(
+                "redline_passed"
+            ),
+            "claim_factuality_probe_comparison_redline_run_count": comparison.get(
+                "redline_run_count"
+            ),
+            "claim_factuality_probe_comparison_best_run": best_run.get("name"),
+            "claim_factuality_probe_comparison_best_model": best_run.get("model"),
+            "claim_factuality_probe_comparison_best_record_count": best_run.get(
+                "record_count"
+            ),
+            "claim_factuality_probe_comparison_best_layer": best_run.get(
+                "recommended_layer"
+            ),
+            "claim_factuality_probe_comparison_best_test_label_auroc": best_run.get(
+                "test_label_auroc"
+            ),
+            "claim_factuality_probe_comparison_best_test_selective_accuracy": (
+                best_run.get("test_selective_accuracy")
+            ),
+            "claim_factuality_probe_comparison_best_test_selective_coverage": (
+                best_run.get("test_selective_coverage")
+            ),
+            "claim_factuality_probe_comparison_best_conformal_threshold": best_run.get(
+                "conformal_threshold"
+            ),
+            "claim_factuality_probe_comparison_best_redline_signal": best_run.get(
+                "redline_best_signal"
+            ),
+            "claim_factuality_probe_comparison_best_redline_auroc": best_run.get(
+                "redline_best_auroc"
+            ),
+            "claim_factuality_probe_comparison_best_redline_margin": best_run.get(
+                "redline_margin"
+            ),
+        }
+
+    @property
     def triple_extraction_fixture_matrix(self) -> Mapping[str, Any]:
         """Return the triple-extraction fixture-matrix contract, if present."""
         return self.contract.triple_extraction_fixture_matrix
@@ -2189,16 +3165,21 @@ class ProductRuntimeEvidenceBundle:
         *,
         budget_enabled: bool,
         verify_manifest: bool = False,
+        verify_evidence_handoff_manifest: bool = False,
         include_registry_record: bool = True,
         verify_selfcheck_signal_fusion_manifest: bool = False,
         include_selfcheck_signal_fusion_record: bool = False,
         verify_world_model_signal_workflow_manifest: bool = False,
         include_world_model_signal_workflow_record: bool = False,
+        verify_context_sensitivity_workflow_manifest: bool = False,
+        include_context_sensitivity_workflow_record: bool = False,
         verify_pathway_intervention_workflow_manifest: bool = False,
         include_pathway_intervention_workflow_record: bool = False,
         include_external_evidence_baseline_comparison_record: bool = False,
         verify_pre_generation_probe_comparison_manifest: bool = False,
         include_pre_generation_probe_comparison_record: bool = False,
+        verify_claim_factuality_probe_comparison_manifest: bool = False,
+        include_claim_factuality_probe_comparison_record: bool = False,
         verify_triple_extraction_fixture_matrix_manifest: bool = False,
         include_triple_extraction_fixture_matrix_record: bool = False,
         verify_counterfactual_verification_manifest: bool = False,
@@ -2211,6 +3192,9 @@ class ProductRuntimeEvidenceBundle:
                 verify_manifest=verify_manifest,
                 include_registry_record=include_registry_record,
             ),
+            **self.evidence_handoff_metadata(
+                verify_manifest=verify_evidence_handoff_manifest,
+            ),
             **self.selfcheck_signal_fusion_evidence_metadata(
                 verify_manifest=verify_selfcheck_signal_fusion_manifest,
                 include_registry_record=include_selfcheck_signal_fusion_record,
@@ -2218,6 +3202,10 @@ class ProductRuntimeEvidenceBundle:
             **self.world_model_signal_evidence_metadata(
                 verify_manifest=verify_world_model_signal_workflow_manifest,
                 include_registry_record=include_world_model_signal_workflow_record,
+            ),
+            **self.context_sensitivity_evidence_metadata(
+                verify_manifest=verify_context_sensitivity_workflow_manifest,
+                include_registry_record=include_context_sensitivity_workflow_record,
             ),
             **self.pathway_intervention_evidence_metadata(
                 verify_manifest=verify_pathway_intervention_workflow_manifest,
@@ -2229,6 +3217,10 @@ class ProductRuntimeEvidenceBundle:
             **self.pre_generation_probe_comparison_evidence_metadata(
                 verify_manifest=verify_pre_generation_probe_comparison_manifest,
                 include_registry_record=include_pre_generation_probe_comparison_record,
+            ),
+            **self.claim_factuality_probe_comparison_evidence_metadata(
+                verify_manifest=verify_claim_factuality_probe_comparison_manifest,
+                include_registry_record=include_claim_factuality_probe_comparison_record,
             ),
             **self.triple_extraction_fixture_matrix_evidence_metadata(
                 verify_manifest=verify_triple_extraction_fixture_matrix_manifest,
@@ -2246,6 +3238,7 @@ def load_product_runtime_evidence_bundle(
     *,
     default_contract_paths: Iterable[str | Path] = (),
     manifest_path: str | Path | None = None,
+    evidence_handoff_manifest_path: str | Path | None = None,
     registry_path: str | Path | None = None,
     registry_key: str | None = None,
     require_promoted: bool = True,
@@ -2263,9 +3256,16 @@ def load_product_runtime_evidence_bundle(
         loaded_contract.path,
         manifest_path=manifest_path,
     )
+    resolved_evidence_handoff_manifest_path = (
+        _resolve_product_promotion_contract_evidence_handoff_manifest_path(
+            loaded_contract.path,
+            evidence_handoff_manifest_path=evidence_handoff_manifest_path,
+        )
+    )
     return ProductRuntimeEvidenceBundle(
         loaded_contract=loaded_contract,
         manifest_path=resolved_manifest_path,
+        evidence_handoff_manifest_path=resolved_evidence_handoff_manifest_path,
         registry_path=None if registry_path is None else Path(registry_path),
         registry_key=registry_key,
         manifest_recursive=manifest_recursive,
@@ -2291,6 +3291,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_model_id": contract.model_id,
         "promotion_contract_source_workflow": contract.source_workflow,
         "promotion_contract_source_status": contract.source_status,
+        "promotion_contract_promotion_summary": contract.to_summary_dict(),
         "promotion_contract_runtime": dict(contract.runtime),
         "promotion_contract_verifier_route": dict(contract.verifier_route),
         "promotion_contract_control_policy_config": dict(contract.control_policy_config),
@@ -2304,6 +3305,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_world_model_signal_workflow": dict(
             contract.world_model_signal_workflow
         ),
+        "promotion_contract_context_sensitivity_workflow": dict(
+            contract.context_sensitivity_workflow
+        ),
         "promotion_contract_pathway_intervention_workflow": dict(
             contract.pathway_intervention_workflow
         ),
@@ -2316,6 +3320,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_pre_generation_probe_comparison": dict(
             contract.pre_generation_probe_comparison
         ),
+        "promotion_contract_claim_factuality_probe_comparison": dict(
+            contract.claim_factuality_probe_comparison
+        ),
         "promotion_contract_triple_extraction_fixture_matrix": dict(
             contract.triple_extraction_fixture_matrix
         ),
@@ -2323,15 +3330,121 @@ def product_promotion_contract_metadata(
             contract.counterfactual_verification
         ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
+        "promotion_contract_frontier_release_evidence": dict(
+            contract.frontier_release_evidence
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary": dict(
+            contract.unresolved_frontier_evidence_summary
+        ),
+        "promotion_contract_fact_selfcheck_gate": dict(contract.fact_selfcheck_gate),
         "promotion_contract_metadata": dict(contract.metadata),
         **_promotion_contract_product_trace_replay_metadata(contract),
         **_promotion_contract_product_runtime_drift_metadata(contract),
+        **_promotion_contract_runtime_cost_metadata(contract),
         **_promotion_contract_external_evidence_baseline_comparison_metadata(contract),
         **_promotion_contract_pre_generation_probe_comparison_metadata(contract),
+        **_promotion_contract_claim_factuality_probe_comparison_metadata(contract),
+        **_promotion_contract_context_sensitivity_metadata(contract),
         **_promotion_contract_pathway_intervention_metadata(contract),
         **_promotion_contract_counterfactual_verification_metadata(contract),
+        **_promotion_contract_frontier_release_evidence_metadata(contract),
+        **_promotion_contract_unresolved_frontier_evidence_summary_metadata(contract),
+        **_promotion_contract_fact_selfcheck_gate_metadata(contract),
         **covered_fact_scope,
     }
+
+
+def _promotion_contract_fact_selfcheck_gate_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    gate = {
+        **{
+            key.removeprefix("fact_selfcheck_gate_"): value
+            for key, value in metadata.items()
+            if key.startswith("fact_selfcheck_gate_")
+        },
+        **_mapping(contract.fact_selfcheck_gate),
+    }
+    if not gate:
+        return {}
+    return _drop_none_values(
+        {
+            "promotion_contract_fact_selfcheck_gate_report": gate.get("report_path")
+            or gate.get("report"),
+            "promotion_contract_fact_selfcheck_gate_manifest": gate.get("manifest_path")
+            or gate.get("manifest"),
+            "promotion_contract_fact_selfcheck_gate_source": gate.get("source"),
+            "promotion_contract_fact_selfcheck_gate_manifest_verified": gate.get(
+                "manifest_verified"
+            ),
+            "promotion_contract_fact_selfcheck_gate_workflow": gate.get("workflow"),
+            "promotion_contract_fact_selfcheck_gate_status": gate.get("status"),
+            "promotion_contract_fact_selfcheck_gate_gate_status": gate.get(
+                "gate_status"
+            ),
+            "promotion_contract_fact_selfcheck_gate_enabled": gate.get(
+                "gate_enabled"
+            ),
+            "promotion_contract_fact_selfcheck_gate_passed": gate.get("gate_passed")
+            if "gate_passed" in gate
+            else gate.get("passed"),
+            "promotion_contract_fact_selfcheck_gate_run_count": gate.get("run_count"),
+            "promotion_contract_fact_selfcheck_gate_failed_run_count": gate.get(
+                "failed_run_count"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_executed_rate": gate.get(
+                "min_executed_rate"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_decided_rate": gate.get(
+                "min_decided_rate"
+            ),
+            "promotion_contract_fact_selfcheck_gate_max_not_applicable_rate": gate.get(
+                "max_not_applicable_rate"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_claim_triples_per_record": gate.get(
+                "min_claim_triples_per_record"
+            ),
+            "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record": gate.get(
+                "min_sample_triples_per_record"
+            ),
+            "promotion_contract_fact_selfcheck_gate_failed_runs": gate.get(
+                "failed_runs"
+            ),
+            "promotion_contract_fact_selfcheck_gate_blocking_reasons": gate.get(
+                "blocking_reasons"
+            ),
+        }
+    )
+
+
+def _promotion_contract_runtime_cost_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    return _drop_none_values({
+        "promotion_contract_max_uncached_forward_seconds": metadata.get(
+            "max_uncached_forward_seconds"
+        ),
+        "promotion_contract_max_recommended_runtime_seconds": metadata.get(
+            "max_recommended_runtime_seconds"
+        ),
+        "promotion_contract_recommended_runtime_seconds": metadata.get(
+            "recommended_runtime_seconds"
+        ),
+        "promotion_contract_recommended_runtime_cost_source": metadata.get(
+            "recommended_runtime_cost_source"
+        ),
+        "promotion_contract_uncached_forward_cost_seconds": metadata.get(
+            "uncached_forward_cost_seconds"
+        ),
+        "promotion_contract_uncached_forward_cost_source": metadata.get(
+            "uncached_forward_cost_source"
+        ),
+        "promotion_contract_cache_only_total_seconds": metadata.get(
+            "cache_only_total_seconds"
+        ),
+    })
 
 
 def _promotion_contract_product_trace_replay_metadata(
@@ -2523,41 +3636,20 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_baseline_path",
         "product_runtime_drift_current_path",
         "product_runtime_drift_gate_enabled",
-        "product_runtime_drift_promotion_evidence_required",
-        "product_runtime_drift_pre_generation_evidence_required",
-        "product_runtime_drift_counterfactual_evidence_required",
-        "product_runtime_drift_triple_audit_evidence_required",
-        "product_runtime_drift_covered_fact_property_evidence_required",
-        "product_runtime_drift_action_gate_evidence_required",
         "product_runtime_drift_compared_metric_count",
         "product_runtime_drift_blocked_metric_count",
-        "product_runtime_drift_promotion_evidence_metric_count",
-        "product_runtime_drift_promotion_evidence_blocked_metric_count",
-        "product_runtime_drift_pre_generation_evidence_metric_count",
-        "product_runtime_drift_pre_generation_evidence_blocked_metric_count",
-        "product_runtime_drift_counterfactual_evidence_metric_count",
-        "product_runtime_drift_counterfactual_evidence_blocked_metric_count",
-        "product_runtime_drift_triple_audit_evidence_metric_count",
-        "product_runtime_drift_triple_audit_evidence_blocked_metric_count",
-        "product_runtime_drift_covered_fact_property_evidence_metric_count",
-        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
-        "product_runtime_drift_action_gate_evidence_metric_count",
-        "product_runtime_drift_action_gate_evidence_blocked_metric_count",
+        *(
+            f"product_runtime_drift_{prefix}_evidence_{suffix}"
+            for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS
+            for suffix in ("required", "metric_count", "blocked_metric_count")
+        ),
     )
     flattened: dict[str, Any] = {
         f"promotion_contract_{key}": metadata.get(key)
         for key in scalar_fields
         if key in metadata
     }
-    evidence_prefixes = (
-        *_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
-        *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
-    )
-    for prefix in evidence_prefixes:
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             key = f"product_runtime_drift_{prefix}_{suffix}"
             if key in metadata:
@@ -2630,6 +3722,83 @@ def _promotion_contract_external_evidence_baseline_comparison_metadata(
                 metadata.get(
                     "external_evidence_baseline_comparison_text_redline_run_count"
                 ),
+            )
+        ),
+    })
+
+
+def _promotion_contract_context_sensitivity_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    workflow = _mapping(contract.context_sensitivity_workflow)
+    return _drop_none_values({
+        "promotion_contract_context_sensitivity_workflow_status": _first_present(
+            metadata.get("context_sensitivity_workflow_status"),
+            workflow.get("status"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_report": _first_present(
+            workflow.get("report_path"),
+            metadata.get("context_sensitivity_workflow_report"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_manifest": _first_present(
+            workflow.get("manifest_path"),
+            metadata.get("context_sensitivity_workflow_manifest"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_source": _first_present(
+            workflow.get("source"),
+            metadata.get("context_sensitivity_workflow_source"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_registry": _first_present(
+            workflow.get("registry"),
+            metadata.get("context_sensitivity_workflow_registry"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_record": _first_present(
+            workflow.get("record_key"),
+            metadata.get("context_sensitivity_workflow_record"),
+        ),
+        "promotion_contract_context_sensitivity_workflow_paired_logprob_record_count": (
+            _first_present(
+                workflow.get("paired_logprob_record_count"),
+                metadata.get("context_sensitivity_workflow_paired_logprob_record_count"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_enriched_record_count": (
+            _first_present(
+                workflow.get("enriched_record_count"),
+                metadata.get("context_sensitivity_workflow_enriched_record_count"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_enhanced_score_signal_count": (
+            _first_present(
+                workflow.get("enhanced_score_signal_count"),
+                metadata.get("context_sensitivity_workflow_enhanced_score_signal_count"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_max_flagged_rate": (
+            _first_present(
+                workflow.get("max_flagged_rate"),
+                metadata.get("context_sensitivity_workflow_max_flagged_rate"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_mean_flagged_rate": (
+            _first_present(
+                workflow.get("mean_flagged_rate"),
+                metadata.get("context_sensitivity_workflow_mean_flagged_rate"),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_max_context_sensitivity_ratio": (
+            _first_present(
+                workflow.get("max_context_sensitivity_ratio"),
+                metadata.get(
+                    "context_sensitivity_workflow_max_context_sensitivity_ratio"
+                ),
+            )
+        ),
+        "promotion_contract_context_sensitivity_workflow_manifest_verified": (
+            _first_present(
+                workflow.get("manifest_verified"),
+                metadata.get("context_sensitivity_workflow_manifest_verified"),
             )
         ),
     })
@@ -2714,6 +3883,140 @@ def _promotion_contract_pre_generation_probe_comparison_metadata(
             _first_present(
                 best_run.get("redline_best_auroc"),
                 metadata.get("pre_generation_probe_comparison_best_redline_auroc"),
+            )
+        ),
+    })
+
+
+def _promotion_contract_claim_factuality_probe_comparison_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    comparison = _mapping(contract.claim_factuality_probe_comparison)
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "promotion_contract_claim_factuality_probe_comparison_status": _first_present(
+            metadata.get("claim_factuality_probe_comparison_status"),
+            comparison.get("status"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_report_status": (
+            _first_present(
+                comparison.get("report_status"),
+                metadata.get("claim_factuality_probe_comparison_report_status"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_report": _first_present(
+            comparison.get("report_path"),
+            metadata.get("claim_factuality_probe_comparison_report"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_source": _first_present(
+            comparison.get("source"),
+            metadata.get("claim_factuality_probe_comparison_source"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_registry": _first_present(
+            comparison.get("registry"),
+            metadata.get("claim_factuality_probe_comparison_registry"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_record": _first_present(
+            comparison.get("record_key"),
+            metadata.get("claim_factuality_probe_comparison_record"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_model_count": (
+            _first_present(
+                comparison.get("model_count"),
+                metadata.get("claim_factuality_probe_comparison_model_count"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_run_count": _first_present(
+            comparison.get("run_count"),
+            metadata.get("claim_factuality_probe_comparison_run_count"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_dataset_count": (
+            _first_present(
+                comparison.get("dataset_count"),
+                metadata.get("claim_factuality_probe_comparison_dataset_count"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_datasets": _first_present(
+            comparison.get("datasets"),
+            metadata.get("claim_factuality_probe_comparison_datasets"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_passed": (
+            _first_present(
+                comparison.get("redline_passed"),
+                metadata.get("claim_factuality_probe_comparison_redline_passed"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_redline_run_count": (
+            _first_present(
+                comparison.get("redline_run_count"),
+                metadata.get("claim_factuality_probe_comparison_redline_run_count"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_run": _first_present(
+            best_run.get("name"),
+            metadata.get("claim_factuality_probe_comparison_best_run"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_model": _first_present(
+            best_run.get("model"),
+            metadata.get("claim_factuality_probe_comparison_best_model"),
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_record_count": (
+            _first_present(
+                best_run.get("record_count"),
+                metadata.get("claim_factuality_probe_comparison_best_record_count"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_layer": (
+            _first_present(
+                best_run.get("recommended_layer"),
+                metadata.get("claim_factuality_probe_comparison_best_layer"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_label_auroc": (
+            _first_present(
+                best_run.get("test_label_auroc"),
+                metadata.get("claim_factuality_probe_comparison_best_test_label_auroc"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy": (
+            _first_present(
+                best_run.get("test_selective_accuracy"),
+                metadata.get(
+                    "claim_factuality_probe_comparison_best_test_selective_accuracy"
+                ),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_coverage": (
+            _first_present(
+                best_run.get("test_selective_coverage"),
+                metadata.get(
+                    "claim_factuality_probe_comparison_best_test_selective_coverage"
+                ),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold": (
+            _first_present(
+                best_run.get("conformal_threshold"),
+                metadata.get("claim_factuality_probe_comparison_best_conformal_threshold"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin": (
+            _first_present(
+                best_run.get("redline_margin"),
+                metadata.get("claim_factuality_probe_comparison_best_redline_margin"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_signal": (
+            _first_present(
+                best_run.get("redline_best_signal"),
+                metadata.get("claim_factuality_probe_comparison_best_redline_signal"),
+            )
+        ),
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_auroc": (
+            _first_present(
+                best_run.get("redline_best_auroc"),
+                metadata.get("claim_factuality_probe_comparison_best_redline_auroc"),
             )
         ),
     })
@@ -3139,6 +4442,35 @@ def _world_model_signal_workflow_metadata(
     }
 
 
+def _context_sensitivity_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("context_sensitivity_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "workflow": workflow.get("workflow"),
+        "status": workflow.get("status"),
+        "paired_logprob_record_count": workflow.get("paired_logprob_record_count"),
+        "enriched_record_count": workflow.get("enriched_record_count"),
+        "enhanced_score_signal_count": workflow.get("enhanced_score_signal_count"),
+        "max_flagged_rate": workflow.get("max_flagged_rate"),
+        "mean_flagged_rate": workflow.get("mean_flagged_rate"),
+        "max_context_sensitivity_ratio": workflow.get("max_context_sensitivity_ratio"),
+        "manifest_verified": workflow.get("manifest_verified"),
+        "blocking_reasons": workflow.get("blocking_reasons"),
+    }
+
+
 def _pathway_intervention_workflow_metadata(
     workflow: Mapping[str, Any],
     *,
@@ -3364,6 +4696,107 @@ def _pre_generation_probe_comparison_flat_metadata(
     })
 
 
+def _claim_factuality_probe_comparison_metadata(
+    comparison: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not comparison:
+        return {}
+    best_run = _mapping(comparison.get("best_run"))
+    status = _first_present(
+        comparison.get("status"),
+        comparison.get("report_status"),
+    )
+    report_status = comparison.get("report_status")
+    if report_status is None and status == "ready":
+        report_status = status
+    return _drop_none_values({
+        "report_path": comparison.get("report_path"),
+        "manifest_path": comparison.get("manifest_path"),
+        "source": comparison.get("source"),
+        "registry": comparison.get("registry"),
+        "record_key": comparison.get("record_key"),
+        "workflow": comparison.get("workflow"),
+        "status": status,
+        "report_status": report_status,
+        "model_count": comparison.get("model_count"),
+        "run_count": comparison.get("run_count"),
+        "dataset_count": comparison.get("dataset_count"),
+        "datasets": comparison.get("datasets"),
+        "redline_passed": comparison.get("redline_passed"),
+        "redline_run_count": comparison.get("redline_run_count"),
+        "best_run": {
+            "name": best_run.get("name"),
+            "model": best_run.get("model"),
+            "record_count": best_run.get("record_count"),
+            "recommended_layer": best_run.get("recommended_layer"),
+            "test_label_auroc": best_run.get("test_label_auroc"),
+            "test_selective_accuracy": best_run.get("test_selective_accuracy"),
+            "test_selective_coverage": best_run.get("test_selective_coverage"),
+            "conformal_threshold": best_run.get("conformal_threshold"),
+            "redline_best_signal": best_run.get("redline_best_signal"),
+            "redline_best_auroc": best_run.get("redline_best_auroc"),
+            "redline_margin": best_run.get("redline_margin"),
+        },
+        "blocking_reasons": comparison.get("blocking_reasons"),
+    })
+
+
+def _claim_factuality_probe_comparison_flat_metadata(
+    comparison: Mapping[str, Any],
+) -> dict[str, Any]:
+    best_run = _mapping(comparison.get("best_run"))
+    return _drop_none_values({
+        "claim_factuality_probe_comparison_report": comparison.get("report_path"),
+        "claim_factuality_probe_comparison_manifest": comparison.get("manifest_path"),
+        "claim_factuality_probe_comparison_source": comparison.get("source"),
+        "claim_factuality_probe_comparison_registry": comparison.get("registry"),
+        "claim_factuality_probe_comparison_record": comparison.get("record_key"),
+        "claim_factuality_probe_comparison_status": comparison.get("status"),
+        "claim_factuality_probe_comparison_report_status": comparison.get("report_status"),
+        "claim_factuality_probe_comparison_model_count": comparison.get("model_count"),
+        "claim_factuality_probe_comparison_run_count": comparison.get("run_count"),
+        "claim_factuality_probe_comparison_dataset_count": comparison.get(
+            "dataset_count"
+        ),
+        "claim_factuality_probe_comparison_datasets": comparison.get("datasets"),
+        "claim_factuality_probe_comparison_redline_passed": (
+            comparison.get("redline_passed")
+        ),
+        "claim_factuality_probe_comparison_redline_run_count": (
+            comparison.get("redline_run_count")
+        ),
+        "claim_factuality_probe_comparison_best_run": best_run.get("name"),
+        "claim_factuality_probe_comparison_best_model": best_run.get("model"),
+        "claim_factuality_probe_comparison_best_record_count": best_run.get(
+            "record_count"
+        ),
+        "claim_factuality_probe_comparison_best_layer": best_run.get(
+            "recommended_layer"
+        ),
+        "claim_factuality_probe_comparison_best_test_label_auroc": best_run.get(
+            "test_label_auroc"
+        ),
+        "claim_factuality_probe_comparison_best_test_selective_accuracy": (
+            best_run.get("test_selective_accuracy")
+        ),
+        "claim_factuality_probe_comparison_best_test_selective_coverage": (
+            best_run.get("test_selective_coverage")
+        ),
+        "claim_factuality_probe_comparison_best_conformal_threshold": best_run.get(
+            "conformal_threshold"
+        ),
+        "claim_factuality_probe_comparison_best_redline_signal": (
+            best_run.get("redline_best_signal")
+        ),
+        "claim_factuality_probe_comparison_best_redline_auroc": (
+            best_run.get("redline_best_auroc")
+        ),
+        "claim_factuality_probe_comparison_best_redline_margin": best_run.get(
+            "redline_margin"
+        ),
+    })
+
+
 def _counterfactual_verification_metadata(
     audit: Mapping[str, Any],
     *,
@@ -3509,6 +4942,658 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
     })
 
 
+def _frontier_release_evidence_metadata(
+    report: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    gate = _mapping(report.get("gate"))
+    return _drop_none_values({
+        "report_path": report.get("report_path"),
+        "manifest_path": _first_present(
+            report.get("manifest_path"),
+            manifests.get("frontier_release_evidence_manifest"),
+        ),
+        "source": report.get("source"),
+        "registry": report.get("registry"),
+        "record_key": report.get("record_key"),
+        "workflow": report.get("workflow"),
+        "status": _first_present(
+            report.get("status"),
+            gate.get("status"),
+            report.get("report_status"),
+        ),
+        "report_status": report.get("report_status"),
+        "decision_status": report.get("decision_status"),
+        "verifier_track_status": report.get("verifier_track_status"),
+        "abstention_track_status": report.get("abstention_track_status"),
+        "multiple_testing_track_status": report.get("multiple_testing_track_status"),
+        "citation_batch_track_status": report.get("citation_batch_track_status"),
+        "frontier_rerun_rollup_track_status": report.get(
+            "frontier_rerun_rollup_track_status"
+        ),
+        "base_verifier_track_status": report.get("base_verifier_track_status"),
+        "base_abstention_track_status": report.get("base_abstention_track_status"),
+        "base_detectability_track_status": report.get("base_detectability_track_status"),
+        "base_multiple_testing_track_status": report.get(
+            "base_multiple_testing_track_status"
+        ),
+        "frontier_rerun_rollup_promoted_tracks": report.get(
+            "frontier_rerun_rollup_promoted_tracks"
+        ),
+        "frontier_rerun_rollup_report_count": report.get(
+            "frontier_rerun_rollup_report_count"
+        ),
+        "frontier_rerun_rollup_candidate_count": report.get(
+            "frontier_rerun_rollup_candidate_count"
+        ),
+        "frontier_rerun_rollup_missing_report_count": report.get(
+            "frontier_rerun_rollup_missing_report_count"
+        ),
+        "frontier_rerun_rollup_invalid_report_count": report.get(
+            "frontier_rerun_rollup_invalid_report_count"
+        ),
+        "frontier_rerun_rollup_blocked_candidate_count": report.get(
+            "frontier_rerun_rollup_blocked_candidate_count"
+        ),
+        "frontier_rerun_rollup_promotion_ready_count": report.get(
+            "frontier_rerun_rollup_promotion_ready_count"
+        ),
+        "citation_batch_rollup_count": report.get("citation_batch_rollup_count"),
+        "citation_batch_expected_batch_count": report.get(
+            "citation_batch_expected_batch_count"
+        ),
+        "citation_batch_observed_batch_count": report.get(
+            "citation_batch_observed_batch_count"
+        ),
+        "citation_batch_missing_expected_batch_count": report.get(
+            "citation_batch_missing_expected_batch_count"
+        ),
+        "citation_batch_duplicate_batch_count": report.get(
+            "citation_batch_duplicate_batch_count"
+        ),
+        "citation_batch_unexpected_batch_count": report.get(
+            "citation_batch_unexpected_batch_count"
+        ),
+        "citation_batch_adapter_gate_present_count": report.get(
+            "citation_batch_adapter_gate_present_count"
+        ),
+        "citation_batch_adapter_gate_passed_count": report.get(
+            "citation_batch_adapter_gate_passed_count"
+        ),
+        "citation_batch_adapter_gate_failed_count": report.get(
+            "citation_batch_adapter_gate_failed_count"
+        ),
+        "citation_batch_adapter_gate_status_counts": report.get(
+            "citation_batch_adapter_gate_status_counts"
+        ),
+        "run_names": report.get("run_names"),
+        "blocking_reasons": _first_present(
+            report.get("blocking_reasons"),
+            gate.get("blocking_reasons"),
+        ),
+    })
+
+
+def _frontier_release_evidence_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "frontier_release_evidence_report": report.get("report_path"),
+        "frontier_release_evidence_manifest": report.get("manifest_path"),
+        "frontier_release_evidence_source": report.get("source"),
+        "frontier_release_evidence_registry": report.get("registry"),
+        "frontier_release_evidence_record": report.get("record_key"),
+        "frontier_release_evidence_status": report.get("status"),
+        "frontier_release_evidence_workflow": report.get("workflow"),
+        "frontier_release_evidence_report_status": report.get("report_status"),
+        "frontier_release_evidence_decision_status": report.get("decision_status"),
+        "frontier_release_evidence_verifier_track_status": (
+            report.get("verifier_track_status")
+        ),
+        "frontier_release_evidence_abstention_track_status": (
+            report.get("abstention_track_status")
+        ),
+        "frontier_release_evidence_multiple_testing_track_status": (
+            report.get("multiple_testing_track_status")
+        ),
+        "frontier_release_evidence_citation_batch_track_status": (
+            report.get("citation_batch_track_status")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_track_status": (
+            report.get("frontier_rerun_rollup_track_status")
+        ),
+        "frontier_release_evidence_base_verifier_track_status": (
+            report.get("base_verifier_track_status")
+        ),
+        "frontier_release_evidence_base_abstention_track_status": (
+            report.get("base_abstention_track_status")
+        ),
+        "frontier_release_evidence_base_detectability_track_status": (
+            report.get("base_detectability_track_status")
+        ),
+        "frontier_release_evidence_base_multiple_testing_track_status": (
+            report.get("base_multiple_testing_track_status")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": (
+            report.get("frontier_rerun_rollup_promoted_tracks")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_report_count": (
+            report.get("frontier_rerun_rollup_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_candidate_count": (
+            report.get("frontier_rerun_rollup_candidate_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_missing_report_count": (
+            report.get("frontier_rerun_rollup_missing_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": (
+            report.get("frontier_rerun_rollup_invalid_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": (
+            report.get("frontier_rerun_rollup_blocked_candidate_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": (
+            report.get("frontier_rerun_rollup_promotion_ready_count")
+        ),
+        "frontier_release_evidence_citation_batch_rollup_count": (
+            report.get("citation_batch_rollup_count")
+        ),
+        "frontier_release_evidence_citation_batch_expected_batch_count": (
+            report.get("citation_batch_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_observed_batch_count": (
+            report.get("citation_batch_observed_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            report.get("citation_batch_missing_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            report.get("citation_batch_duplicate_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            report.get("citation_batch_unexpected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_present_count": (
+            report.get("citation_batch_adapter_gate_present_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_passed_count": (
+            report.get("citation_batch_adapter_gate_passed_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_failed_count": (
+            report.get("citation_batch_adapter_gate_failed_count")
+        ),
+        "frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
+            report.get("citation_batch_adapter_gate_status_counts")
+        ),
+        "frontier_release_evidence_run_names": report.get("run_names"),
+        "frontier_release_evidence_blocking_reasons": report.get("blocking_reasons"),
+    })
+
+
+def _unresolved_frontier_evidence_summary_metadata(
+    report: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    gate = _mapping(report.get("gate"))
+    return _drop_none_values({
+        "report_path": report.get("report_path"),
+        "manifest_path": _first_present(
+            report.get("manifest_path"),
+            manifests.get("unresolved_frontier_evidence_summary_manifest"),
+        ),
+        "source": report.get("source"),
+        "registry": report.get("registry"),
+        "record_key": report.get("record_key"),
+        "workflow": report.get("workflow"),
+        "status": _first_present(
+            report.get("status"),
+            gate.get("status"),
+            report.get("report_status"),
+        ),
+        "report_status": report.get("report_status"),
+        "closure_required": report.get("require_closure"),
+        "queue_execution_smoke_required": report.get("require_queue_execution_smoke"),
+        "next_action_count": report.get("next_action_count"),
+        "lane_statuses": report.get("lane_statuses"),
+        "queue_execution_smoke_status": report.get(
+            "frontier_queue_execution_smoke_status"
+        ),
+        "queue_execution_smoke_count": report.get(
+            "frontier_queue_execution_smoke_count"
+        ),
+        "queue_execution_smoke_manifest_verified_count": report.get(
+            "frontier_queue_execution_smoke_manifest_verified_count"
+        ),
+        "blocking_reasons": _first_present(
+            report.get("blocking_reasons"),
+            gate.get("blocking_reasons"),
+        ),
+    })
+
+
+def _unresolved_frontier_evidence_summary_flat_metadata(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "unresolved_frontier_evidence_summary_report": report.get("report_path"),
+        "unresolved_frontier_evidence_summary_manifest": report.get("manifest_path"),
+        "unresolved_frontier_evidence_summary_source": report.get("source"),
+        "unresolved_frontier_evidence_summary_registry": report.get("registry"),
+        "unresolved_frontier_evidence_summary_record": report.get("record_key"),
+        "unresolved_frontier_evidence_summary_status": report.get("status"),
+        "unresolved_frontier_evidence_summary_workflow": report.get("workflow"),
+        "unresolved_frontier_evidence_summary_report_status": (
+            report.get("report_status")
+        ),
+        "unresolved_frontier_evidence_summary_closure_required": (
+            report.get("closure_required")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            report.get("queue_execution_smoke_required")
+        ),
+        "unresolved_frontier_evidence_summary_next_action_count": (
+            report.get("next_action_count")
+        ),
+        "unresolved_frontier_evidence_summary_lane_statuses": (
+            report.get("lane_statuses")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            report.get("queue_execution_smoke_status")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            report.get("queue_execution_smoke_count")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            report.get("queue_execution_smoke_manifest_verified_count")
+        ),
+        "unresolved_frontier_evidence_summary_blocking_reasons": (
+            report.get("blocking_reasons")
+        ),
+    })
+
+
+def _promotion_contract_frontier_release_evidence_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    evidence = _mapping(contract.frontier_release_evidence)
+    return _drop_none_values({
+        "promotion_contract_frontier_release_evidence_status": _first_present(
+            metadata.get("frontier_release_evidence_status"),
+            evidence.get("status"),
+            evidence.get("decision_status"),
+        ),
+        "promotion_contract_frontier_release_evidence_report": _first_present(
+            evidence.get("report_path"),
+            metadata.get("frontier_release_evidence_report"),
+            metadata.get("recommended_frontier_release_evidence_report"),
+        ),
+        "promotion_contract_frontier_release_evidence_manifest": _first_present(
+            evidence.get("manifest_path"),
+            metadata.get("frontier_release_evidence_manifest"),
+        ),
+        "promotion_contract_frontier_release_evidence_source": _first_present(
+            evidence.get("source"),
+            metadata.get("frontier_release_evidence_source"),
+        ),
+        "promotion_contract_frontier_release_evidence_registry": _first_present(
+            evidence.get("registry"),
+            metadata.get("frontier_release_evidence_registry"),
+        ),
+        "promotion_contract_frontier_release_evidence_record": _first_present(
+            evidence.get("record_key"),
+            metadata.get("frontier_release_evidence_record"),
+            metadata.get("frontier_release_evidence_registry_key"),
+        ),
+        "promotion_contract_frontier_release_evidence_workflow": _first_present(
+            evidence.get("workflow"),
+            metadata.get("frontier_release_evidence_workflow"),
+        ),
+        "promotion_contract_frontier_release_evidence_report_status": _first_present(
+            evidence.get("report_status"),
+            metadata.get("frontier_release_evidence_report_status"),
+        ),
+        "promotion_contract_frontier_release_evidence_decision_status": _first_present(
+            evidence.get("decision_status"),
+            metadata.get("frontier_release_evidence_decision_status"),
+        ),
+        "promotion_contract_frontier_release_evidence_verifier_track_status": (
+            _first_present(
+                evidence.get("verifier_track_status"),
+                metadata.get("frontier_release_evidence_verifier_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_abstention_track_status": (
+            _first_present(
+                evidence.get("abstention_track_status"),
+                metadata.get("frontier_release_evidence_abstention_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_multiple_testing_track_status": (
+            _first_present(
+                evidence.get("multiple_testing_track_status"),
+                metadata.get("frontier_release_evidence_multiple_testing_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status": (
+            _first_present(
+                evidence.get("citation_batch_track_status"),
+                metadata.get("frontier_release_evidence_citation_batch_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_track_status"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_track_status"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_base_verifier_track_status": (
+            _first_present(
+                evidence.get("base_verifier_track_status"),
+                metadata.get("frontier_release_evidence_base_verifier_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status": (
+            _first_present(
+                evidence.get("base_abstention_track_status"),
+                metadata.get("frontier_release_evidence_base_abstention_track_status"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_base_detectability_track_status": (
+            _first_present(
+                evidence.get("base_detectability_track_status"),
+                metadata.get(
+                    "frontier_release_evidence_base_detectability_track_status"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_base_multiple_testing_track_status": (
+            _first_present(
+                evidence.get("base_multiple_testing_track_status"),
+                metadata.get(
+                    "frontier_release_evidence_base_multiple_testing_track_status"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_promoted_tracks"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_promoted_tracks"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_report_count"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_report_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_candidate_count": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_candidate_count"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_candidate_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_missing_report_count"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_missing_report_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_invalid_report_count"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_blocked_candidate_count"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": (
+            _first_present(
+                evidence.get("frontier_rerun_rollup_promotion_ready_count"),
+                metadata.get(
+                    "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_rollup_count": (
+            _first_present(
+                evidence.get("citation_batch_rollup_count"),
+                metadata.get("frontier_release_evidence_citation_batch_rollup_count"),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_expected_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_expected_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_observed_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_observed_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_missing_expected_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_missing_expected_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_duplicate_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_duplicate_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            _first_present(
+                evidence.get("citation_batch_unexpected_batch_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_unexpected_batch_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_present_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_present_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_passed_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_passed_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_failed_count"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_failed_count"
+                ),
+            )
+        ),
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts": (
+            _first_present(
+                evidence.get("citation_batch_adapter_gate_status_counts"),
+                metadata.get(
+                    "frontier_release_evidence_citation_batch_adapter_gate_status_counts"
+                ),
+            )
+        ),
+        **{
+            f"promotion_contract_frontier_release_evidence_{field_name}": (
+                _first_present(
+                    evidence.get(field_name),
+                    metadata.get(f"frontier_release_evidence_{field_name}"),
+                )
+            )
+            for field_name in _FRONTIER_RELEASE_CITATION_BATCH_EVIDENCE_FIELDS
+        },
+        "promotion_contract_frontier_release_evidence_run_names": _first_present(
+            evidence.get("run_names"),
+            metadata.get("frontier_release_evidence_run_names"),
+        ),
+        "promotion_contract_frontier_release_evidence_blocking_reasons": (
+            _first_present(
+                evidence.get("blocking_reasons"),
+                metadata.get("frontier_release_evidence_blocking_reasons"),
+            )
+        ),
+    })
+
+
+def _promotion_contract_unresolved_frontier_evidence_summary_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = _mapping(contract.metadata)
+    summary = _mapping(contract.unresolved_frontier_evidence_summary)
+    return _drop_none_values({
+        "promotion_contract_unresolved_frontier_evidence_summary_status": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_status"),
+                summary.get("status"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_report"),
+                metadata.get("recommended_unresolved_frontier_evidence_summary_report"),
+                summary.get("report_path"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_manifest"),
+                summary.get("manifest_path"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_source": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_source"),
+                summary.get("source"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_registry": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_registry"),
+                summary.get("registry"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_record": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_record"),
+                metadata.get("unresolved_frontier_evidence_summary_registry_key"),
+                summary.get("record_key"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_workflow": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_workflow"),
+                summary.get("workflow"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_report_status": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_report_status"),
+                summary.get("report_status"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_closure_required": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_closure_required"),
+                summary.get("closure_required"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_required"
+                ),
+                summary.get("queue_execution_smoke_required"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_next_action_count"),
+                summary.get("next_action_count"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_lane_statuses"),
+                summary.get("lane_statuses"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+                ),
+                summary.get("queue_execution_smoke_status"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_count"
+                ),
+                summary.get("queue_execution_smoke_count"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            _first_present(
+                metadata.get(
+                    "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+                ),
+                summary.get("queue_execution_smoke_manifest_verified_count"),
+            )
+        ),
+        "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons": (
+            _first_present(
+                metadata.get("unresolved_frontier_evidence_summary_blocking_reasons"),
+                summary.get("blocking_reasons"),
+            )
+        ),
+    })
+
+
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
@@ -3561,6 +5646,38 @@ def _resolve_product_promotion_contract_manifest_path(
     if sibling_manifest.exists():
         return sibling_manifest
     return None
+
+
+def _resolve_product_promotion_contract_evidence_handoff_manifest_path(
+    contract_path: Path | None,
+    *,
+    evidence_handoff_manifest_path: str | Path | None,
+) -> Path | None:
+    if evidence_handoff_manifest_path is not None:
+        return Path(evidence_handoff_manifest_path)
+    if contract_path is None:
+        return None
+    sibling_manifest = contract_path.parent / "evidence-handoff-artifact-manifest.json"
+    if sibling_manifest.exists():
+        return sibling_manifest
+    return None
+
+
+def _artifact_manifest_entry_path(
+    manifest_path: Path | None,
+    manifest_payload: Mapping[str, Any] | None,
+    artifact_key: str,
+) -> Path | None:
+    if manifest_path is None or manifest_payload is None:
+        return None
+    artifact = _mapping(_mapping(manifest_payload.get("artifacts")).get(artifact_key))
+    raw_path = artifact.get("path")
+    if raw_path is None:
+        return None
+    path = Path(str(raw_path))
+    if path.is_absolute():
+        return path
+    return manifest_path.parent / path
 
 
 def _resolve_contract_metadata_path(

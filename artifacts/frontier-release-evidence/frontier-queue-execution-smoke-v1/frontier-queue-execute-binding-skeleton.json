@@ -1,0 +1,277 @@
+{
+  "bindings": {
+    "execute_reviewed_frontier_queue_command_plan": {
+      "command_requirement_issue_count": 0,
+      "command_requirements": [
+        {
+          "command_index": 1,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--command-plan",
+            "--bindings",
+            "--json",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/bind_frontier_research_queue_command_plan.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 2,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--bound-command-plan",
+            "--json",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_frontier_research_queue_bound_command_plan.py",
+          "status": "ready"
+        }
+      ],
+      "command_template_values": [],
+      "input_reviews": [],
+      "placeholder_count": 11,
+      "placeholder_reviews": [
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-approved-command-bindings.json",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 1,
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json",
+            "source": "planned_output"
+          }
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 2,
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan-manifest.json",
+            "source": "derived_manifest_path"
+          }
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 3,
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json",
+            "source": "registry_output_path"
+          }
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 4,
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "execute-reviewed-frontier-queue-command-plan-command-1"
+          }
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 5,
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          }
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "benchmarks/run_frontier_research_queue_bound_command_plan.py",
+              "--bound-command-plan"
+            ]
+          },
+          "flag": "--bound-command-plan",
+          "placeholder_index": 1,
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "bound_command_plan",
+            "reason": "input_or_report_path",
+            "review_required": true
+          }
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 2,
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json",
+            "source": "planned_output"
+          }
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 3,
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest-manifest.json",
+            "source": "derived_manifest_path"
+          }
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 4,
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json",
+            "source": "registry_output_path"
+          }
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 5,
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "execute-reviewed-frontier-queue-command-plan-command-2"
+          }
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--execute"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 6,
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          }
+        }
+      ],
+      "required_inputs": [],
+      "review_status": "needs_review"
+    }
+  },
+  "inputs": {},
+  "review_summary": {
+    "entry_count": 1,
+    "placeholder_count": 11,
+    "required_input_count": 0,
+    "review_required_placeholder_count": 1,
+    "suggested_placeholder_count": 11
+  },
+  "schema_version": 1,
+  "source": {
+    "command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-command-plan.json",
+    "command_plan_status": "needs_inputs"
+  },
+  "status": "needs_review",
+  "workflow": "frontier_research_queue_command_bindings"
+}

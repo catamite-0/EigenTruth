@@ -1,0 +1,67 @@
+{
+  "checked": 11,
+  "failures": [],
+  "manifest_path": "artifacts/frontier-release-evidence/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 5,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 4,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-release-evidence/../frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 10,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/artifact-manifest.json",
+      "nested": [
+        {
+          "checked": 9,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 4,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/conformal-artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "checked": 9,
+          "failures": [],
+          "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 4,
+              "failures": [],
+              "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/conformal-artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            }
+          ],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    {
+      "checked": 6,
+      "failures": [],
+      "manifest_path": "artifacts/frontier-release-evidence/../truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

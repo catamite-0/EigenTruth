@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "fixture": "frontier_queue_execution_smoke",
+    "not_verifier_evidence": true
+  },
+  "paths": {
+    "approved_bindings": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-approved-command-bindings.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "bound_command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-bound-command-plan.json"
+  },
+  "status": "ready_for_execution",
+  "workflow": "frontier_research_queue_command_binding_review"
+}

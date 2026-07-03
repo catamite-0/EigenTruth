@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-corpus.json",
+      "sha256": "9cfeec6a90be635edfa6417ca8fb5c0eeca370761d8af37eb97c139c544679b9",
+      "size_bytes": 14999
+    },
+    "alignment_fact_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-records.jsonl",
+      "sha256": "c9eaec53f73671e1d3377001db66fac8013e5cdc3e92df1b604bd1021cfbebf7",
+      "size_bytes": 19067
+    },
+    "alignment_fact_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-report.json",
+      "sha256": "a0c00c0457fd54149ae09d1ddf1d860640cab9ff54148688f39dad7ded429adf",
+      "size_bytes": 1968
+    },
+    "structured_fact_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-audit-v1/structured-fact-candidates.jsonl",
+      "sha256": "b6b3b5666cab089f2e84bc48ecd59dbc5979f3afffc8b65fdfb850794f6c25ab",
+      "size_bytes": 21877
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "alignment_structured_fact_review_corpus",
+    "document_count": 11,
+    "input_candidate_count": 30,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "ready_for_review",
+    "unique_candidate_count": 30,
+    "workflow": "alignment_fact_review_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

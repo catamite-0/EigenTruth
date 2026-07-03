@@ -1,0 +1,55 @@
+{
+  "artifacts": {
+    "action_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "action-results.jsonl",
+      "sha256": "39f04f25b36d6cf4c1856f3ec284754b9120ae5e3ede406ace22b9f2ae8eeed7",
+      "size_bytes": 944
+    },
+    "product_traces": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-traces.jsonl",
+      "sha256": "7f1d87b02d01bf4955220f44a31a1bdf6be5f6f399d7456ce5f0b9a4a109d8d8",
+      "size_bytes": 20392
+    },
+    "promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "693881e4ec7ef742c02e27c12e26c0ee7ee71b9cabb5a078e560bcd4ae615a83",
+      "size_bytes": 5029
+    },
+    "world_model_rule_candidate_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-handoff.json",
+      "sha256": "640075ba344d9f56e9171bdaf3495665a50d46ad7b690250f34ed1ff7351327a",
+      "size_bytes": 2964
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "action_result_count": 1,
+    "blocked_candidate_count": 0,
+    "cell_id": "diamond",
+    "evidence": "source_backed_diamond_mechanism_promotion",
+    "source": "frontier_mechanism_handoff_rebuild",
+    "status": "promote",
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "trace_count": 1,
+    "workflow": "world_model_rule_candidate_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

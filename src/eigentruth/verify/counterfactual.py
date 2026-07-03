@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from eigentruth.json_utils import to_jsonable
+from eigentruth.verify.claims import claim_entity_candidates
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 
 
@@ -184,6 +185,7 @@ class CounterfactualVerificationReport:
         counterfactual_expected = tuple(
             result for result in results if result.counterfactual_matches_expected is not None
         )
+        by_entity_candidate = _by_entity_candidate(results)
         return {
             "record_count": record_count,
             "passed_count": passed_count,
@@ -214,6 +216,10 @@ class CounterfactualVerificationReport:
                 len(counterfactual_expected),
             ),
             "by_probe_type": _by_probe_type(results),
+            "by_entity_candidate": by_entity_candidate,
+            "entity_candidate_count": len(by_entity_candidate),
+            "entity_probe_count": sum(1 for result in results if _entity_replacement_source(result) is not None),
+            "counts_by_entity_source_kind": _counts_by_entity_source_kind(results),
         }
 
     def error_examples(self) -> tuple[dict[str, Any], ...]:
@@ -489,6 +495,30 @@ _AUXILIARY_RE = re.compile(
     r"\b(is|are|was|were|has|have|had|can|could|will|would|should|does|do|did)\b",
     re.IGNORECASE,
 )
+_ORG_HINT_RE = re.compile(
+    r"\b(?:corp|corporation|company|inc|llc|ltd|limited|group|systems|technologies|labs|laboratories)\b",
+    re.IGNORECASE,
+)
+_DEFAULT_ENTITY_COUNTERFACTUAL_REPLACEMENTS = {
+    "Paris": "Berlin",
+    "Berlin": "Paris",
+    "London": "Madrid",
+    "Madrid": "London",
+    "Tokyo": "Seoul",
+    "Seoul": "Tokyo",
+    "France": "Germany",
+    "Germany": "France",
+    "Ireland": "Iceland",
+    "Iceland": "Ireland",
+    "Japan": "South Korea",
+    "South Korea": "Japan",
+    "United States": "Canada",
+    "Canada": "United States",
+    "AlphaCorp": "BetaCorp",
+    "BetaCorp": "AlphaCorp",
+    "Beta Labs": "Gamma Labs",
+    "Gamma Labs": "Beta Labs",
+}
 
 
 def _candidate_variants(
@@ -506,6 +536,11 @@ def _candidate_variants(
         replacements = dict(entity_replacements)
         replacements.update(_metadata_replacements(metadata))
         variants.extend(_replacement_variants(claim.text, replacements, probe_type="entity_swap"))
+        variants.extend(_entity_candidate_variants(
+            claim.text,
+            metadata,
+            used_sources=tuple(replacements),
+        ))
     if "quantity" in enabled:
         quantity = _quantity_variant(claim.text)
         if quantity is not None:
@@ -588,6 +623,91 @@ def _replacement_variants(
             {"replacement_source": source, "replacement_target": target},
         ))
     return tuple(variants)
+
+
+def _entity_candidate_variants(
+    text: str,
+    metadata: Mapping[str, Any],
+    *,
+    used_sources: Sequence[str] = (),
+) -> tuple[tuple[str, str, Mapping[str, Any]], ...]:
+    variants = []
+    seen_sources = {str(source) for source in used_sources}
+    candidates = _entity_candidates_for_counterfactual(text, metadata)
+    for source in candidates:
+        if source in seen_sources or source not in text:
+            continue
+        target = _default_entity_counterfactual_target(source)
+        if target is None or target == source or target in text:
+            continue
+        seen_sources.add(source)
+        variants.append((
+            "entity_swap",
+            text.replace(source, target, 1),
+            {
+                "replacement_source": source,
+                "replacement_target": target,
+                "replacement_source_kind": "entity_candidate",
+            },
+        ))
+    return tuple(variants)
+
+
+def _entity_candidates_for_counterfactual(text: str, metadata: Mapping[str, Any]) -> tuple[str, ...]:
+    candidates = []
+    explicit_entity_key = False
+    for key in ("counterfactual_entity_candidates", "entity_candidates", "named_entities", "entities"):
+        if key in metadata:
+            explicit_entity_key = True
+        for item in _as_sequence(metadata.get(key)):
+            if isinstance(item, Mapping):
+                value = item.get("text", item.get("name", item.get("value")))
+            else:
+                value = item
+            if value is not None and str(value).strip():
+                candidates.append(str(value).strip())
+    if not candidates and not explicit_entity_key:
+        candidates.extend(claim_entity_candidates(text))
+    return tuple(dict.fromkeys(candidates))
+
+
+def _default_entity_counterfactual_target(source: str) -> str | None:
+    source = source.strip()
+    if not source:
+        return None
+    direct = _DEFAULT_ENTITY_COUNTERFACTUAL_REPLACEMENTS.get(source)
+    if direct is not None:
+        return direct
+    for known_source, target in _DEFAULT_ENTITY_COUNTERFACTUAL_REPLACEMENTS.items():
+        if source.casefold() == known_source.casefold():
+            return _match_case(source, target)
+    if _ORG_HINT_RE.search(source):
+        if "labs" in source.casefold() or "laboratories" in source.casefold():
+            return "Gamma Labs" if source != "Gamma Labs" else "Beta Labs"
+        return "BetaCorp" if source != "BetaCorp" else "AlphaCorp"
+    if len(source.split()) > 1:
+        return "Counterfactual Entity"
+    if any(char.isupper() for char in source):
+        return "CounterfactualEntity"
+    return None
+
+
+def _match_case(source: str, target: str) -> str:
+    if source.isupper():
+        return target.upper()
+    if source.islower():
+        return target.lower()
+    return target
+
+
+def _as_sequence(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, bytes, bytearray)):
+        return (value,)
+    if isinstance(value, Sequence):
+        return tuple(value)
+    return (value,)
 
 
 def _quantity_variant(text: str) -> tuple[str, str, Mapping[str, Any]] | None:
@@ -735,6 +855,102 @@ def _by_probe_type(results: Sequence[CounterfactualProbeResult]) -> dict[str, di
         }
         for name, items in groups.items()
     }
+
+
+def _by_entity_candidate(results: Sequence[CounterfactualProbeResult]) -> dict[str, dict[str, Any]]:
+    groups: dict[str, list[CounterfactualProbeResult]] = {}
+    for result in results:
+        source = _entity_replacement_source(result)
+        if source is None:
+            continue
+        groups.setdefault(source, []).append(result)
+    return {
+        source: {
+            "record_count": len(items),
+            "passed_count": sum(1 for item in items if item.passed),
+            "failed_count": sum(1 for item in items if not item.passed),
+            "pass_rate": _safe_div(sum(1 for item in items if item.passed), len(items)),
+            "expected_flip_count": sum(1 for item in items if item.probe.expected_flip),
+            "flip_success_count": sum(
+                1 for item in items if item.probe.expected_flip and item.status_changed
+            ),
+            "false_invariance_count": sum(
+                1 for item in items if item.probe.expected_flip and not item.status_changed
+            ),
+            "false_invariance_rate": _safe_div(
+                sum(1 for item in items if item.probe.expected_flip and not item.status_changed),
+                sum(1 for item in items if item.probe.expected_flip),
+            ),
+            "replacement_targets": tuple(
+                dict.fromkeys(
+                    target
+                    for item in items
+                    if (target := _entity_replacement_target(item)) is not None
+                )
+            ),
+            "source_kinds": _count_values(
+                kind
+                for item in items
+                if (kind := _entity_replacement_source_kind(item)) is not None
+            ),
+        }
+        for source, items in groups.items()
+    }
+
+
+def _counts_by_entity_source_kind(results: Sequence[CounterfactualProbeResult]) -> dict[str, int]:
+    return _count_values(
+        kind
+        for result in results
+        if (kind := _entity_replacement_source_kind(result)) is not None
+    )
+
+
+def _entity_replacement_source(result: CounterfactualProbeResult) -> str | None:
+    if result.probe.probe_type != "entity_swap":
+        return None
+    return _first_non_empty_string(
+        result.probe.counterfactual.metadata.get("replacement_source"),
+        result.probe.metadata.get("replacement_source"),
+    )
+
+
+def _entity_replacement_target(result: CounterfactualProbeResult) -> str | None:
+    if result.probe.probe_type != "entity_swap":
+        return None
+    return _first_non_empty_string(
+        result.probe.counterfactual.metadata.get("replacement_target"),
+        result.probe.metadata.get("replacement_target"),
+    )
+
+
+def _entity_replacement_source_kind(result: CounterfactualProbeResult) -> str | None:
+    if result.probe.probe_type != "entity_swap":
+        return None
+    return _first_non_empty_string(
+        result.probe.counterfactual.metadata.get("replacement_source_kind"),
+        result.probe.metadata.get("replacement_source_kind"),
+        "metadata_replacement" if _entity_replacement_source(result) is not None else None,
+    )
+
+
+def _first_non_empty_string(*values: Any) -> str | None:
+    for value in values:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return None
+
+
+def _count_values(values: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        text = str(value).strip()
+        if text:
+            counts[text] = counts.get(text, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _safe_div(numerator: int, denominator: int) -> float:

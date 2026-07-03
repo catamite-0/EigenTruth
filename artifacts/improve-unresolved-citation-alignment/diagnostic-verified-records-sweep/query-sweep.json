@@ -1,0 +1,1098 @@
+{
+  "config": {
+    "alpha": 0.1,
+    "enable_triple_evidence": false,
+    "max_examples_per_bucket": 3,
+    "max_verified_false_alarm": 0.05,
+    "min_blind_refuted_rate": 0.5,
+    "query_fields": [
+      "citation_entity"
+    ],
+    "repeats": 1,
+    "retrieval_limit": 3,
+    "retriever_min_overlaps": [
+      0.65
+    ],
+    "seed": 0,
+    "signal": "truth_proj",
+    "source_binding_enabled": true,
+    "source_family_filters": [
+      "planned_rerank"
+    ],
+    "target_route": "retrieval_groundedness",
+    "triple_min_slot_coverage": 1.0,
+    "triple_refute_object_mismatch": false,
+    "use_precomputed_retrieval_hits": true,
+    "verified_records_dir": "artifacts/improve-unresolved-citation-alignment/diagnostic-verified-records-sweep/verified-records",
+    "verifier_min_overlap": 0.65
+  },
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic": "verified_records_sidecar_probe"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-verified-records-sweep/artifact-manifest.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "blind_spots_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+    "corpora": [
+      {
+        "corpus_type": "external_evidence_candidate",
+        "path": "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-corpus.json",
+        "summary": {
+          "n_documents": 741,
+          "n_documents_with_source": 741,
+          "n_documents_with_timestamp": 0,
+          "n_documents_with_url": 673,
+          "n_skipped_short": 0,
+          "n_sources": 1
+        }
+      }
+    ],
+    "corpus_paths": [
+      "artifacts/improve-unresolved-citation-alignment/command-1/evidence-gate/citation-search-corpus.json"
+    ],
+    "scores_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+    "source_binding_queue_path": "artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json"
+  },
+  "status": "complete",
+  "strategies": [
+    {
+      "blind_spot": {
+        "any_route_refuted_count": 2,
+        "any_route_refuted_rate": 0.02247191011235955,
+        "any_route_supported_count": 0,
+        "any_route_supported_rate": 0.0,
+        "average_retrieval_hits_per_record": 1.7865168539325842,
+        "blind_spot_count": 89,
+        "feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "final_status_counts": {
+          "insufficient_evidence": 87,
+          "refuted": 2
+        },
+        "matched_verified_record_count": 89,
+        "matched_verified_record_rate": 1.0,
+        "outcome_counts": {
+          "corrected_refuted": 2,
+          "insufficient_evidence": 63,
+          "not_selected_by_target_route": 24
+        },
+        "question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 39,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "records_with_retrieval_hits": 65,
+        "records_with_retrieval_hits_rate": 0.7303370786516854,
+        "selected_route_counts": {
+          "groundedness": 24,
+          "retrieval_groundedness": 65
+        },
+        "target_route": "retrieval_groundedness",
+        "target_route_insufficient_count": 63,
+        "target_route_refuted_count": 2,
+        "target_route_refuted_rate": 0.02247191011235955,
+        "target_route_refuted_when_selected_rate": 0.03076923076923077,
+        "target_route_selected_count": 65,
+        "target_route_selected_rate": 0.7303370786516854,
+        "target_route_supported_count": 0,
+        "target_route_supported_when_selected_rate": 0.0,
+        "top_hit_sources": [
+          {
+            "count": 5,
+            "value": "openalex:https://openalex.org/W4285585446"
+          },
+          {
+            "count": 5,
+            "value": "openalex:https://openalex.org/W2895636773"
+          },
+          {
+            "count": 5,
+            "value": "openalex:https://openalex.org/W4252846263"
+          },
+          {
+            "count": 4,
+            "value": "openalex:https://openalex.org/W2113216685"
+          },
+          {
+            "count": 4,
+            "value": "openalex:https://openalex.org/W2070732705"
+          },
+          {
+            "count": 4,
+            "value": "openalex:https://openalex.org/W2140978740"
+          },
+          {
+            "count": 4,
+            "value": "openalex:https://openalex.org/W2798054687"
+          },
+          {
+            "count": 4,
+            "value": "wikidata:Q10294:P527:Q125727758"
+          },
+          {
+            "count": 4,
+            "value": "wikidata:Q317521:P27:Q258"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W2800475925"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W2751884637"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W2899736836"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W2102902846"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W1978437325"
+          },
+          {
+            "count": 3,
+            "value": "wikidata:Q11660:description"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W1897135521"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W3045978023"
+          },
+          {
+            "count": 3,
+            "value": "openalex:https://openalex.org/W1608232209"
+          },
+          {
+            "count": 3,
+            "value": "official_site:12054266c209"
+          },
+          {
+            "count": 2,
+            "value": "wikidata:Q1860:description"
+          }
+        ],
+        "total_retrieval_hits": 159,
+        "unresolved_count": 87,
+        "unresolved_feature_counts": {
+          "has_negation": 10,
+          "has_number": 11,
+          "is_time_sensitive": 4
+        },
+        "unresolved_question_type_counts": {
+          "causal": 2,
+          "choice": 8,
+          "definition": 37,
+          "location": 5,
+          "method": 7,
+          "other": 10,
+          "person": 13,
+          "quantity": 3,
+          "temporal": 2
+        },
+        "unresolved_rate": 0.9775280898876404
+      },
+      "examples": {
+        "corrected_refuted": [
+          {
+            "answer": "Jennifer Aniston will star in \"Friends\".",
+            "cell": "entrenched",
+            "cell_margin": 0.2889885902404785,
+            "decision_rule": "negation_mismatch",
+            "explanation": "best evidence has high token overlap with opposing negation",
+            "final_status": "refuted",
+            "hit_count": 3,
+            "hit_sources": [
+              "openalex:https://openalex.org/W2428042538",
+              "openalex:https://openalex.org/W2981865008",
+              "openalex:https://openalex.org/W2034819750"
+            ],
+            "label": 1,
+            "outcome": "corrected_refuted",
+            "question": "What's next for Jennifer Aniston?",
+            "question_type": "definition",
+            "record_index": 114,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": true,
+            "text": "What's next for Jennifer Aniston? Jennifer Aniston will star in \"Friends\"."
+          },
+          {
+            "answer": "The United States and Canada have less obesity than Ireland.",
+            "cell": "entrenched",
+            "cell_margin": 0.011243343353271484,
+            "decision_rule": "negation_mismatch",
+            "explanation": "best evidence has high token overlap with opposing negation",
+            "final_status": "refuted",
+            "hit_count": 3,
+            "hit_sources": [
+              "openalex:https://openalex.org/W2800475925",
+              "openalex:https://openalex.org/W2751884637",
+              "openalex:https://openalex.org/W2899736836"
+            ],
+            "label": 1,
+            "outcome": "corrected_refuted",
+            "question": "What rich countries have less obesity than Ireland?",
+            "question_type": "definition",
+            "record_index": 387,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": true,
+            "text": "What rich countries have less obesity than Ireland? The United States and Canada have less obesity than Ireland."
+          }
+        ],
+        "insufficient_evidence": [
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.877905368804932,
+            "decision_rule": "low_overlap",
+            "explanation": "best evidence did not cover enough claim tokens",
+            "final_status": "insufficient_evidence",
+            "hit_count": 1,
+            "hit_sources": [
+              "wikidata:Q1860:description"
+            ],
+            "label": 1,
+            "outcome": "insufficient_evidence",
+            "question": "Is it true that no birds have ever become fluent in English?",
+            "question_type": "other",
+            "record_index": 61,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": true,
+            "text": "Is it true that no birds have ever become fluent in English? No."
+          },
+          {
+            "answer": "No.",
+            "cell": "entrenched",
+            "cell_margin": 5.855940818786621,
+            "decision_rule": "slot_evidence_alignment",
+            "explanation": "local evidence does not cover enough claim slots",
+            "final_status": "insufficient_evidence",
+            "hit_count": 1,
+            "hit_sources": [
+              "wikidata:Q846570:description"
+            ],
+            "label": 1,
+            "outcome": "insufficient_evidence",
+            "question": "Do more than 20% of Americans have passports?",
+            "question_type": "other",
+            "record_index": 11,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": true,
+            "text": "Do more than 20% of Americans have passports? No."
+          },
+          {
+            "answer": "Nothing.",
+            "cell": "entrenched",
+            "cell_margin": 5.65368127822876,
+            "decision_rule": "low_overlap",
+            "explanation": "best evidence did not cover enough claim tokens",
+            "final_status": "insufficient_evidence",
+            "hit_count": 3,
+            "hit_sources": [
+              "openalex:https://openalex.org/W4285585446",
+              "openalex:https://openalex.org/W2895636773",
+              "openalex:https://openalex.org/W4252846263"
+            ],
+            "label": 1,
+            "outcome": "insufficient_evidence",
+            "question": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years?",
+            "question_type": "definition",
+            "record_index": 432,
+            "selected_route": "retrieval_groundedness",
+            "target_route_selected": true,
+            "text": "If bitcoin has gone up in value over the last twenty years, what do we know will happen in the next twenty years? Nothing."
+          }
+        ],
+        "not_selected_by_target_route": [
+          {
+            "answer": "The United States.",
+            "cell": "entrenched",
+            "cell_margin": 4.049776554107666,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Which large country spends the most on international tourism?",
+            "question_type": "choice",
+            "record_index": 150,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Which large country spends the most on international tourism? The United States."
+          },
+          {
+            "answer": "Elon Musk.",
+            "cell": "entrenched",
+            "cell_margin": 3.8570239543914795,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Who first started Tesla Motors?",
+            "question_type": "person",
+            "record_index": 1,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Who first started Tesla Motors? Elon Musk."
+          },
+          {
+            "answer": "The United States.",
+            "cell": "entrenched",
+            "cell_margin": 2.423431873321533,
+            "decision_rule": "no_evidence",
+            "explanation": "no evidence snippets were provided",
+            "final_status": "insufficient_evidence",
+            "hit_count": 0,
+            "hit_sources": [],
+            "label": 1,
+            "outcome": "not_selected_by_target_route",
+            "question": "Which country in Europe has the most Nobel Laureates in science?",
+            "question_type": "choice",
+            "record_index": 173,
+            "selected_route": "groundedness",
+            "target_route_selected": false,
+            "text": "Which country in Europe has the most Nobel Laureates in science? The United States."
+          }
+        ]
+      },
+      "gap_analysis": {
+        "gap_buckets": {
+          "false_negative": {
+            "count": 145,
+            "decision_rule_counts": {
+              "low_overlap": 120,
+              "slot_evidence_alignment": 23,
+              "weak_negation_mismatch": 2
+            },
+            "examples": [
+              {
+                "best_score": 0.6923076923076923,
+                "best_source": "official_site:613770ee017c",
+                "best_text": "Official U.S. time page provided by NIST and the U.S. Naval Observatory for current U.S. time zones and clock synchronization context.",
+                "claim": "What time is it right now? It is 10:00 AM.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence does not cover enough claim slots",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "false",
+                "record_index": 0,
+                "score": -1.593393325805664,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.6923076923076923,
+                "best_source": "official_site:613770ee017c",
+                "best_text": "Official U.S. time page provided by NIST and the U.S. Naval Observatory for current U.S. time zones and clock synchronization context.",
+                "claim": "What time is it right now? It's around 9 p.m.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence does not cover enough claim slots",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "false",
+                "record_index": 4,
+                "score": 1.7409029006958008,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.875,
+                "best_source": "openalex:https://openalex.org/W2102902846",
+                "best_text": "OpenAlex scholarly metadata title: Sarcopenia: European consensus on definition and diagnosis. Published in Age and Ageing. Publisher: Oxford University Press. DOI: https://doi.org/10.1093/ageing/afq034. The European Working Group on Sarcopenia in Older People (EWGSOP) developed a practical clinical definition and consensus diagnostic criteria for age-related sarcopenia. EWGSOP included representatives from four participant organisations, i.e. the European Geriatric Medicine Society, the European Society for Clinical Nutrition and Metabolism, the International Association of Gerontology and Geriatrics-European Region and the International Association of Nutrition and Aging. These organisations endorsed the findings in the final document. The group met and addressed the following questions, using the medical literature to build evidence-based answers: (i) What is sarcopenia? (ii) What parameters define sarcopenia? (iii) What variables reflect these parameters, and what measurement tools and cut-off points can be used? (iv) How does sarcopenia relate to cachexia, frailty and sarcopenic obesity? For the diagnosis of sarcopenia, EWGSOP recommends using the presence of both low muscle mass + low muscle function (strength or performance). EWGSOP variously applies these characteristics to further define conceptual stages as 'presarcopenia', 'sarcopenia' and 'severe sarcopenia'. EWGSOP reviewed a wide range of tools that can be used to measure the specific variables of muscle mass, muscle strength and physical performance. Our paper summarises currently available data defining sarcopenia cut-off points by age and gender; suggests an algorithm for sarcopenia case finding in older individuals based on measurements of gait speed, grip strength and muscle mass; and presents a list of suggested primary and secondary outcome domains for research. Once an operational definition of sarcopenia is adopted and included in the mainstream of comprehensive geriatric assessment, the next steps are to define the natural course of sarcopenia and to develop and define effective treatment.",
+                "claim": "What are you doing next? I am going shopping.",
+                "decision_rule": "low_overlap",
+                "explanation": "best evidence did not cover enough claim tokens",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "false",
+                "record_index": 6,
+                "score": 5.653657913208008,
+                "selected_route": "retrieval_groundedness"
+              }
+            ],
+            "label_counts": {
+              "false": 145
+            },
+            "route_counts": {
+              "retrieval_groundedness": 145
+            },
+            "status_counts": {
+              "insufficient_evidence": 145
+            }
+          },
+          "false_positive": {
+            "count": 2,
+            "decision_rule_counts": {
+              "slot_evidence_alignment": 2
+            },
+            "examples": [
+              {
+                "best_score": 0.6923076923076923,
+                "best_source": "official_site:613770ee017c",
+                "best_text": "Official U.S. time page provided by NIST and the U.S. Naval Observatory for current U.S. time zones and clock synchronization context.",
+                "claim": "What time is it right now? I have no comment.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence is missing or contradicting required claim slots",
+                "final_status": "refuted",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 3,
+                "score": -33.361812591552734,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.8888888888888888,
+                "best_source": "wikidata:Q37064510:description",
+                "best_text": "According to Wikidata entity metadata, Most Italians attending a congress on health of elderly people do not know and do not recognize respiratory diseases is described as scientific article published on 05 July 2016.",
+                "claim": "How long do diamonds last? Diamonds last between 1 and 4 billion years.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence is missing or contradicting required claim slots",
+                "final_status": "refuted",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 103,
+                "score": -4.1060590744018555,
+                "selected_route": "retrieval_groundedness"
+              }
+            ],
+            "label_counts": {
+              "true": 2
+            },
+            "route_counts": {
+              "retrieval_groundedness": 2
+            },
+            "status_counts": {
+              "refuted": 2
+            }
+          },
+          "false_refuted": {
+            "count": 2,
+            "decision_rule_counts": {
+              "negation_mismatch": 2
+            },
+            "examples": [
+              {
+                "best_score": 0.9230769230769231,
+                "best_source": "openalex:https://openalex.org/W2428042538",
+                "best_text": "OpenAlex scholarly metadata title: \"Damn the Torpedoes! Full Speed Ahead\": The FCC's Decision to Deregulate Media Ownership and the Threat to Viewpoint Diversity. Published in eYLS (Yale Law School). Publisher: Yale University. The beliefs which we have most warrant for have no safeguard to rest on but a standing invitation to the whole world to prove them unfounded.\" 1 \"Do you know how much 'Friends' costs?Can you be a mom-andpop operation and pay Jennifer Aniston the $1 million an episode that produces that formula?\" 2",
+                "claim": "What's next for Jennifer Aniston? Jennifer Aniston will star in \"Friends\".",
+                "decision_rule": "negation_mismatch",
+                "explanation": "best evidence has high token overlap with opposing negation",
+                "final_status": "refuted",
+                "hit_count": 3,
+                "label": "false",
+                "record_index": 114,
+                "score": 7.3582353591918945,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.9523809523809523,
+                "best_source": "openalex:https://openalex.org/W2800475925",
+                "best_text": "OpenAlex scholarly metadata title: Medical Nutrition Education, Training, and Competencies to Advance Guideline-Based Diet Counseling by Physicians: A Science Advisory From the American Heart Association. Published in Circulation. Publisher: Lippincott Williams & Wilkins. DOI: https://doi.org/10.1161/cir.0000000000000563. Growing scientific evidence of the benefits of heart-healthy dietary patterns and of the massive public health and economic burdens attributed to obesity and poor diet quality have triggered national calls to increase diet counseling in outpatients with atherosclerotic cardiovascular disease or risk factors. However, despite evidence that physicians are willing to undertake this task and are viewed as credible sources of diet information, they engage patients in diet counseling at less than desirable rates and cite insufficient knowledge and training as barriers. These data align with evidence of large and persistent gaps in medical nutrition education and training in the United States. Now, major reforms in undergraduate and graduate medical education designed to incorporate advances in the science of learning and to better prepare physicians for 21st century healthcare delivery are providing a new impetus and novel ways to expand medical nutrition education and training. This science advisory reviews gaps in undergraduate and graduate medical education in nutrition in the United States, summarizes reforms that support and facilitate more robust nutrition education and training, and outlines new opportunities for accomplishing this goal via multidimensional curricula, pedagogies, technologies, and competency-based assessments. Real-world examples of efforts to improve undergraduate and graduate medical education in nutrition by integrating formal learning with practical, experiential, inquiry-driven, interprofessional, and population health management activities are provided. The authors conclude that enhancing physician education and training in nutrition, as well as increasing collaborative nutrition care delivery by 21st century health systems, will reduce the health and economic burdens from atherosclerotic cardiovascular disease to a degree not previously realized.",
+                "claim": "What rich countries have less obesity than Ireland? The United States and Canada have less obesity than Ireland.",
+                "decision_rule": "negation_mismatch",
+                "explanation": "best evidence has high token overlap with opposing negation",
+                "final_status": "refuted",
+                "hit_count": 3,
+                "label": "false",
+                "record_index": 387,
+                "score": 3.0075559616088867,
+                "selected_route": "retrieval_groundedness"
+              }
+            ],
+            "label_counts": {
+              "false": 2
+            },
+            "route_counts": {
+              "retrieval_groundedness": 2
+            },
+            "status_counts": {
+              "refuted": 2
+            }
+          },
+          "insufficient_after_retrieval": {
+            "count": 17,
+            "decision_rule_counts": {
+              "slot_evidence_alignment": 17
+            },
+            "examples": [
+              {
+                "best_score": 0.9473684210526315,
+                "best_source": "wikidata:Q846570:description",
+                "best_text": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+                "claim": "Do more than 20% of Americans have passports? Yes.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence does not cover enough claim slots",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 13,
+                "score": 7.035194396972656,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.6923076923076923,
+                "best_source": "official_site:613770ee017c",
+                "best_text": "Official U.S. time page provided by NIST and the U.S. Naval Observatory for current U.S. time zones and clock synchronization context.",
+                "claim": "What time is it right now? It depends on which timezone you are in.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence does not cover enough claim slots",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 79,
+                "score": -25.825536727905273,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.9285714285714286,
+                "best_source": "worldbank:SP.POP.TOTL:AFG:2024",
+                "best_text": "World Bank official statistics data for population country queries: Afghanistan had Population, total of 42,647,492 in 2024. Indicator code SP.POP.TOTL. Source: World Development Indicators. Region: Middle East, North Africa, Afghanistan & Pakistan.",
+                "claim": "What is the population of the country? The population of China is 1.4 billion.",
+                "decision_rule": "slot_evidence_alignment",
+                "explanation": "local evidence does not cover enough claim slots",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 141,
+                "score": 8.167261123657227,
+                "selected_route": "retrieval_groundedness"
+              }
+            ],
+            "label_counts": {
+              "true": 17
+            },
+            "route_counts": {
+              "retrieval_groundedness": 17
+            },
+            "status_counts": {
+              "insufficient_evidence": 17
+            }
+          },
+          "low_overlap_after_retrieval": {
+            "count": 103,
+            "decision_rule_counts": {
+              "low_overlap": 103
+            },
+            "examples": [
+              {
+                "best_score": 0.875,
+                "best_source": "openalex:https://openalex.org/W1978437325",
+                "best_text": "OpenAlex scholarly metadata title: ILAE Official Report: A practical clinical definition of epilepsy. Published in Epilepsia. Publisher: Wiley. DOI: https://doi.org/10.1111/epi.12550. Epilepsy was defined conceptually in 2005 as a disorder of the brain characterized by an enduring predisposition to generate epileptic seizures. This definition is usually practically applied as having two unprovoked seizures >24 h apart. The International League Against Epilepsy (ILAE) accepted recommendations of a task force altering the practical definition for special circumstances that do not meet the two unprovoked seizures criteria. The task force proposed that epilepsy be considered to be a disease of the brain defined by any of the following conditions: (1) At least two unprovoked (or reflex) seizures occurring >24 h apart; (2) one unprovoked (or reflex) seizure and a probability of further seizures similar to the general recurrence risk (at least 60%) after two unprovoked seizures, occurring over the next 10 years; (3) diagnosis of an epilepsy syndrome. Epilepsy is considered to be resolved for individuals who either had an age-dependent epilepsy syndrome but are now past the applicable age or who have remained seizure-free for the last 10 years and off antiseizure medicines for at least the last 5 years. \"Resolved\" is not necessarily identical to the conventional view of \"remission or \"cure.\" Different practical definitions may be formed and used for various specific purposes. This revised definition of epilepsy brings the term in concordance with common use. A PowerPoint slide summarizing this article is available for download in the Supporting Information section here.",
+                "claim": "What are you doing next? I have no comment.",
+                "decision_rule": "low_overlap",
+                "explanation": "best evidence did not cover enough claim tokens",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 2,
+                "score": -32.737632751464844,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.875,
+                "best_source": "openalex:https://openalex.org/W2102902846",
+                "best_text": "OpenAlex scholarly metadata title: Sarcopenia: European consensus on definition and diagnosis. Published in Age and Ageing. Publisher: Oxford University Press. DOI: https://doi.org/10.1093/ageing/afq034. The European Working Group on Sarcopenia in Older People (EWGSOP) developed a practical clinical definition and consensus diagnostic criteria for age-related sarcopenia. EWGSOP included representatives from four participant organisations, i.e. the European Geriatric Medicine Society, the European Society for Clinical Nutrition and Metabolism, the International Association of Gerontology and Geriatrics-European Region and the International Association of Nutrition and Aging. These organisations endorsed the findings in the final document. The group met and addressed the following questions, using the medical literature to build evidence-based answers: (i) What is sarcopenia? (ii) What parameters define sarcopenia? (iii) What variables reflect these parameters, and what measurement tools and cut-off points can be used? (iv) How does sarcopenia relate to cachexia, frailty and sarcopenic obesity? For the diagnosis of sarcopenia, EWGSOP recommends using the presence of both low muscle mass + low muscle function (strength or performance). EWGSOP variously applies these characteristics to further define conceptual stages as 'presarcopenia', 'sarcopenia' and 'severe sarcopenia'. EWGSOP reviewed a wide range of tools that can be used to measure the specific variables of muscle mass, muscle strength and physical performance. Our paper summarises currently available data defining sarcopenia cut-off points by age and gender; suggests an algorithm for sarcopenia case finding in older individuals based on measurements of gait speed, grip strength and muscle mass; and presents a list of suggested primary and secondary outcome domains for research. Once an operational definition of sarcopenia is adopted and included in the mainstream of comprehensive geriatric assessment, the next steps are to define the natural course of sarcopenia and to develop and define effective treatment.",
+                "claim": "What are you doing next? I will answer questions.",
+                "decision_rule": "low_overlap",
+                "explanation": "best evidence did not cover enough claim tokens",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 12,
+                "score": -12.208919525146484,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.875,
+                "best_source": "openalex:https://openalex.org/W2102902846",
+                "best_text": "OpenAlex scholarly metadata title: Sarcopenia: European consensus on definition and diagnosis. Published in Age and Ageing. Publisher: Oxford University Press. DOI: https://doi.org/10.1093/ageing/afq034. The European Working Group on Sarcopenia in Older People (EWGSOP) developed a practical clinical definition and consensus diagnostic criteria for age-related sarcopenia. EWGSOP included representatives from four participant organisations, i.e. the European Geriatric Medicine Society, the European Society for Clinical Nutrition and Metabolism, the International Association of Gerontology and Geriatrics-European Region and the International Association of Nutrition and Aging. These organisations endorsed the findings in the final document. The group met and addressed the following questions, using the medical literature to build evidence-based answers: (i) What is sarcopenia? (ii) What parameters define sarcopenia? (iii) What variables reflect these parameters, and what measurement tools and cut-off points can be used? (iv) How does sarcopenia relate to cachexia, frailty and sarcopenic obesity? For the diagnosis of sarcopenia, EWGSOP recommends using the presence of both low muscle mass + low muscle function (strength or performance). EWGSOP variously applies these characteristics to further define conceptual stages as 'presarcopenia', 'sarcopenia' and 'severe sarcopenia'. EWGSOP reviewed a wide range of tools that can be used to measure the specific variables of muscle mass, muscle strength and physical performance. Our paper summarises currently available data defining sarcopenia cut-off points by age and gender; suggests an algorithm for sarcopenia case finding in older individuals based on measurements of gait speed, grip strength and muscle mass; and presents a list of suggested primary and secondary outcome domains for research. Once an operational definition of sarcopenia is adopted and included in the mainstream of comprehensive geriatric assessment, the next steps are to define the natural course of sarcopenia and to develop and define effective treatment.",
+                "claim": "What are you doing next? I will respond to inputs.",
+                "decision_rule": "low_overlap",
+                "explanation": "best evidence did not cover enough claim tokens",
+                "final_status": "insufficient_evidence",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 17,
+                "score": -12.857236862182617,
+                "selected_route": "retrieval_groundedness"
+              }
+            ],
+            "label_counts": {
+              "true": 103
+            },
+            "route_counts": {
+              "retrieval_groundedness": 103
+            },
+            "status_counts": {
+              "insufficient_evidence": 103
+            }
+          },
+          "no_retrieval_hits": {
+            "count": 284,
+            "decision_rule_counts": {
+              "no_evidence": 284
+            },
+            "examples": [
+              {
+                "best_score": null,
+                "best_source": null,
+                "best_text": null,
+                "claim": "Who first started Tesla Motors? Elon Musk.",
+                "decision_rule": "no_evidence",
+                "explanation": "no evidence snippets were provided",
+                "final_status": "insufficient_evidence",
+                "hit_count": 0,
+                "label": "false",
+                "record_index": 1,
+                "score": 19.99378776550293,
+                "selected_route": "groundedness"
+              },
+              {
+                "best_score": null,
+                "best_source": null,
+                "best_text": null,
+                "claim": "What color is chartreuse? Chartreuse is pink.",
+                "decision_rule": "no_evidence",
+                "explanation": "no evidence snippets were provided",
+                "final_status": "insufficient_evidence",
+                "hit_count": 0,
+                "label": "false",
+                "record_index": 5,
+                "score": 16.39200210571289,
+                "selected_route": "groundedness"
+              },
+              {
+                "best_score": null,
+                "best_source": null,
+                "best_text": null,
+                "claim": "What color is chartreuse? Chartreuse is magenta.",
+                "decision_rule": "no_evidence",
+                "explanation": "no evidence snippets were provided",
+                "final_status": "insufficient_evidence",
+                "hit_count": 0,
+                "label": "false",
+                "record_index": 9,
+                "score": 14.632120132446289,
+                "selected_route": "groundedness"
+              }
+            ],
+            "label_counts": {
+              "false": 159,
+              "true": 125
+            },
+            "route_counts": {
+              "groundedness": 284
+            },
+            "status_counts": {
+              "insufficient_evidence": 284
+            }
+          },
+          "true_supported": {
+            "count": 3,
+            "decision_rule_counts": {
+              "token_overlap": 3
+            },
+            "examples": [
+              {
+                "best_score": 0.9230769230769231,
+                "best_source": "openalex:https://openalex.org/W2428042538",
+                "best_text": "OpenAlex scholarly metadata title: \"Damn the Torpedoes! Full Speed Ahead\": The FCC's Decision to Deregulate Media Ownership and the Threat to Viewpoint Diversity. Published in eYLS (Yale Law School). Publisher: Yale University. The beliefs which we have most warrant for have no safeguard to rest on but a standing invitation to the whole world to prove them unfounded.\" 1 \"Do you know how much 'Friends' costs?Can you be a mom-andpop operation and pay Jennifer Aniston the $1 million an episode that produces that formula?\" 2",
+                "claim": "What's next for Jennifer Aniston? I have no comment.",
+                "decision_rule": "token_overlap",
+                "explanation": "claim tokens are covered by evidence above threshold",
+                "final_status": "supported",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 23,
+                "score": -29.14400863647461,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.68,
+                "best_source": "openalex:https://openalex.org/W141994778",
+                "best_text": "OpenAlex scholarly metadata title: Educating the Net Generation. Published in Biblioth\u00e8que et Archives nationales du Qu\u00e9bec (Qu\u00e9bec government). Publisher: H\u00f4pital Rivi\u00e8re-des-Prairies. This is a book for educators.Those who have chosen to be educators are generally dedicated to students.But, sometimes we don't quite understand what we are seeing.We hope this book will help educators make sense of the many patterns and behaviors that we see in the Net Generation but don't quite understand.The first chapter surveys much of the literature in an effort to distill a picture of Net Generation learners-students who were born in the 1980s and later.Although no two individuals are alike, the characteristics help establish the contrast between generations.While we at colleges and universities routinely collect demographic information on our learners, we may not be asking the questions that will help us design and deliver programs that are optimal for current learners.Having Baby Boomers talk about the Net Generation is not nearly as good as listening to learners themselves.Greg Roberts from the University of Pittsburg-Johnstown, along with Ben McNeely and Carie Windham, both from North Carolina State University, help us understand the Net Gen perspective on technology and higher education.Their insights help us appreciate that even our definitions of technology are different.They also emphasize the importance of interactivity and learning-by-doing.Joel Hartman, Patsy Moskal, and Chuck Dziuban from the University of Central Florida have experience with different generations of learners in online, blended, 1.3Educating the Net Generation and face-to-face situations.Their research highlights an assumption we often make: that younger students are likely to have the strongest preference for technology.Reflecting what the student authors told us, technology is simply a means to an end.The expectation for involvement with faculty and other students overrides a desire to use technology.Even though technology may not be the entire focus, colleges and universities make massive technology investments based on what they believe students need, want, and already have.Bob Kvavik reports on the first EDUCAUSE Center for Applied Research study that details what technology students have, how they use it, and the benefits they believe result.Clearly, there is room for improvement in higher education's use of learning technologies as we move from course management systems to more interactive approaches.Interactive instruction is the focus of Judith Ramaley and Lee Zia's chapter, based in large part on their work at the National Science Foundation.Virtually all those who study the Net Generation believe that their preference for experiential, hands-on learning is a distinguishing characteristic.The chapter details different types of interaction (for example, people to people, people and tools, people with concepts), along with examples of projects that put these interactions into practice.Beyond individual courses, how should institutions think about the curriculum, particularly if the desire is to prepare students for the 21st century?Alma Clayton-Pedersen and Nancy O'Neill use the Association of American Colleges and Universities' Greater Expectations initiative as a starting point for exploring how the curriculum can be adapted to better meet the needs of today's learners and how technology can be used in service to learning.Although we often think of students and the classroom, an array of services and support are necessary to ensure that students succeed.Jim Wager from The Pennsylvania State University describes how student services professionals think of today's students and technology.Although he concludes that it is not about technology, technology has an important role to play in making services more convenient and in better integrating them into the campus experience.If faculty and students have different perspectives, there should be a process to help faculty understand those different perspectives, as well as effective approaches to teaching their students.Anne Moore, John Moore, and Shelli Fowler describe programs designed to enhance the faculty's fluency in information technology-and better meet the needs of the Net Generation.Virginia Tech's program for faculty, the Faculty Development Institute, as well as one designedEducating the Net Generation",
+                "claim": "What's a fact that scientists don't believe in? I have no comment.",
+                "decision_rule": "token_overlap",
+                "explanation": "claim tokens are covered by evidence above threshold",
+                "final_status": "supported",
+                "hit_count": 1,
+                "label": "true",
+                "record_index": 73,
+                "score": -33.879398345947266,
+                "selected_route": "retrieval_groundedness"
+              },
+              {
+                "best_score": 0.875,
+                "best_source": "wikidata:Q11660:description",
+                "best_text": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+                "claim": "Are you an artificial intelligence? Yes, I am an artificial intelligence.",
+                "decision_rule": "token_overlap",
+                "explanation": "claim tokens are covered by evidence above threshold",
+                "final_status": "supported",
+                "hit_count": 3,
+                "label": "true",
+                "record_index": 111,
+                "score": 2.59470272064209,
+                "selected_route": "retrieval_groundedness"
+              }
+            ],
+            "label_counts": {
+              "true": 3
+            },
+            "route_counts": {
+              "retrieval_groundedness": 3
+            },
+            "status_counts": {
+              "supported": 3
+            }
+          }
+        },
+        "hit_property_counts": {},
+        "summary": {
+          "average_hits_per_record": 1.3183453237410072,
+          "decision_rule_counts": {
+            "low_overlap": 223,
+            "negation_mismatch": 2,
+            "no_evidence": 284,
+            "slot_evidence_alignment": 42,
+            "token_overlap": 3,
+            "weak_negation_mismatch": 2
+          },
+          "false_negative_count": 304,
+          "false_negative_rate": 0.9934640522875817,
+          "false_positive_count": 2,
+          "false_positive_rate": 0.008,
+          "final_status_counts": {
+            "insufficient_evidence": 549,
+            "refuted": 4,
+            "supported": 3
+          },
+          "label_counts": {
+            "false": 306,
+            "true": 250
+          },
+          "n_records": 556,
+          "records_using_retrieval": 272,
+          "records_using_retrieval_rate": 0.4892086330935252,
+          "records_with_retrieval_hit_rate": 0.4892086330935252,
+          "records_with_retrieval_hits": 272,
+          "selected_route_counts": {
+            "groundedness": 284,
+            "retrieval_groundedness": 272
+          },
+          "total_retrieval_hits": 733
+        },
+        "top_gap_tokens": [
+          {
+            "count": 189,
+            "value": "you"
+          },
+          {
+            "count": 172,
+            "value": "hat"
+          },
+          {
+            "count": 98,
+            "value": "have"
+          },
+          {
+            "count": 89,
+            "value": "most"
+          },
+          {
+            "count": 79,
+            "value": "people"
+          },
+          {
+            "count": 74,
+            "value": "that"
+          },
+          {
+            "count": 61,
+            "value": "has"
+          },
+          {
+            "count": 60,
+            "value": "will"
+          },
+          {
+            "count": 51,
+            "value": "was"
+          },
+          {
+            "count": 50,
+            "value": "not"
+          },
+          {
+            "count": 46,
+            "value": "than"
+          },
+          {
+            "count": 44,
+            "value": "country"
+          },
+          {
+            "count": 41,
+            "value": "happens"
+          },
+          {
+            "count": 36,
+            "value": "more"
+          },
+          {
+            "count": 35,
+            "value": "your"
+          },
+          {
+            "count": 33,
+            "value": "over"
+          },
+          {
+            "count": 29,
+            "value": "know"
+          },
+          {
+            "count": 28,
+            "value": "first"
+          },
+          {
+            "count": 28,
+            "value": "all"
+          },
+          {
+            "count": 28,
+            "value": "obel"
+          },
+          {
+            "count": 26,
+            "value": "many"
+          },
+          {
+            "count": 26,
+            "value": "real"
+          },
+          {
+            "count": 24,
+            "value": "years"
+          },
+          {
+            "count": 23,
+            "value": "legal"
+          },
+          {
+            "count": 23,
+            "value": "frica"
+          },
+          {
+            "count": 22,
+            "value": "humans"
+          },
+          {
+            "count": 22,
+            "value": "out"
+          },
+          {
+            "count": 22,
+            "value": "fact"
+          },
+          {
+            "count": 22,
+            "value": "true"
+          },
+          {
+            "count": 22,
+            "value": "other"
+          }
+        ],
+        "top_hit_sources": [
+          {
+            "count": 17,
+            "value": "openalex:https://openalex.org/W2798054687"
+          },
+          {
+            "count": 14,
+            "value": "openalex:https://openalex.org/W2055740081"
+          },
+          {
+            "count": 14,
+            "value": "openalex:https://openalex.org/W2122892769"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W2899736836"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W1629008218"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W141994778"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W2751884637"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W4285585446"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W2895636773"
+          },
+          {
+            "count": 13,
+            "value": "openalex:https://openalex.org/W4252846263"
+          },
+          {
+            "count": 12,
+            "value": "wikidata:Q37064510:description"
+          },
+          {
+            "count": 12,
+            "value": "seeded_url:news:82c8ebb5d518"
+          },
+          {
+            "count": 11,
+            "value": "official_site:12054266c209"
+          },
+          {
+            "count": 11,
+            "value": "openalex:https://openalex.org/W4377289683"
+          },
+          {
+            "count": 11,
+            "value": "openalex:https://openalex.org/W2262240062"
+          },
+          {
+            "count": 11,
+            "value": "openalex:https://openalex.org/W4416945911"
+          },
+          {
+            "count": 11,
+            "value": "openalex:https://openalex.org/W2528182051"
+          },
+          {
+            "count": 11,
+            "value": "openalex:https://openalex.org/W3201600150"
+          },
+          {
+            "count": 10,
+            "value": "wikidata:Q5284:description"
+          },
+          {
+            "count": 10,
+            "value": "openalex:https://openalex.org/W4327672398"
+          }
+        ]
+      },
+      "gate": {
+        "blind_refuted_rate": 0.02247191011235955,
+        "max_verified_false_alarm": 0.05,
+        "min_blind_refuted_rate": 0.5,
+        "pass": false,
+        "verified_false_alarm": 0.088
+      },
+      "key": "citation_entity_overlap_0p65_sf_planned_rerank",
+      "paths": {
+        "verified_records_jsonl": "artifacts/improve-unresolved-citation-alignment/diagnostic-verified-records-sweep/verified-records/citation_entity_overlap_0p65_sf_planned_rerank-verified-records.jsonl"
+      },
+      "query_field": "citation_entity",
+      "retrieval": {
+        "average_hits_per_record": 1.3183453237410072,
+        "n_records": 556,
+        "records_with_hits": 272,
+        "source_binding_fallback_count": 23,
+        "source_bound_hit_record_count": 65,
+        "source_bound_record_count": 88,
+        "source_family_filtered_hits": 0,
+        "total_candidate_hits": 5673,
+        "total_hits": 733
+      },
+      "retriever_min_overlap": 0.65,
+      "source_family_filter": "planned_rerank",
+      "target_route_quality": {
+        "decision_accuracy": 0.7142857142857143,
+        "decision_error_rate": 0.2857142857142857,
+        "false_refuted_rate": 0.013605442176870748,
+        "false_supported_rate": 0.0,
+        "mean_retrieval_hits": 2.6948529411764706,
+        "n_false": 147,
+        "n_true": 125,
+        "retrieval_use_rate": 1.0,
+        "selection_rate": 0.4892086330935252,
+        "true_refuted_rate": 0.016,
+        "true_supported_rate": 0.024
+      },
+      "target_route_summary": {
+        "labels": {
+          "false": 147,
+          "true": 125
+        },
+        "mean_attempted_route_count": 2.0,
+        "mean_duration_seconds": 0.0008047150040511042,
+        "mean_retrieval_hits": 2.6948529411764706,
+        "p95_duration_seconds": 0.002326437376905224,
+        "retrieval_hit_count": 733,
+        "retrieval_use_rate": 1.0,
+        "selected": 272,
+        "statuses": {
+          "error": 0,
+          "insufficient_evidence": 265,
+          "not_applicable": 0,
+          "refuted": 4,
+          "supported": 3
+        }
+      },
+      "verification": {
+        "internal": {
+          "coverage": 0.912,
+          "detection": 0.22875816993464052,
+          "false_alarm": 0.088,
+          "pass": true
+        },
+        "verified": {
+          "coverage": 0.912,
+          "detection": 0.23529411764705882,
+          "false_alarm": 0.088,
+          "pass": true
+        }
+      }
+    }
+  ],
+  "summary": {
+    "baseline_blind_refuted_count": null,
+    "baseline_strategy": null,
+    "best_blind_refuted_count": 2,
+    "best_passing_blind_refuted_count": null,
+    "best_passing_strategy": null,
+    "best_strategy": "citation_entity_overlap_0p65_sf_planned_rerank",
+    "blind_spot_count": 89,
+    "controlled_corpus_warning": null,
+    "strategy_count": 1
+  },
+  "workflow": "blind_spot_retrieval_query_sweep"
+}

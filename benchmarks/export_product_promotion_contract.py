@@ -16,9 +16,20 @@ if str(REPO_ROOT) not in sys.path:
 
 from eigentruth.control import ProductPromotionContract  # noqa: E402
 from eigentruth.control.runtime_drift_keys import (  # noqa: E402
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS as _PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS,
+)
+from eigentruth.control.runtime_drift_keys import (  # noqa: E402
     PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS as _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES,
 )
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+
+_PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS = tuple(
+    (
+        group_name,
+        "frontier_release" if group_name == "frontier_release_evidence" else group_name,
+    )
+    for group_name in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS
+)
 
 
 def export_product_promotion_contract(
@@ -50,6 +61,7 @@ def export_product_promotion_contract(
         contract,
         release_efficiency_report_path=release_efficiency_report,
     )
+    summary = contract.to_summary_dict()
     payload = contract.to_dict()
     control_policy_config = dict(contract.control_policy_config)
     control_defaults = dict(contract.control_defaults)
@@ -66,6 +78,8 @@ def export_product_promotion_contract(
     counterfactual_verification = dict(contract.counterfactual_verification)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
+    promotion_summary_metadata = _promotion_summary_flat_metadata(summary)
+    runtime_cost_metadata = _runtime_cost_flat_metadata(contract.metadata)
     product_runtime_drift_metadata = _product_runtime_drift_flat_metadata(contract.metadata)
     product_trace_replay_workflow_metadata = _product_trace_replay_workflow_flat_metadata(
         trace_replay_workflow,
@@ -113,6 +127,7 @@ def export_product_promotion_contract(
                 "runner": "export_product_promotion_contract",
                 "source": str(source),
                 "compact_json": compact_json,
+                **runtime_cost_metadata,
                 **covered_fact_property_metadata,
                 **product_runtime_drift_metadata,
                 **product_trace_replay_workflow_metadata,
@@ -121,6 +136,7 @@ def export_product_promotion_contract(
                 **counterfactual_verification_metadata,
                 **release_efficiency_metadata,
                 **triple_extraction_fixture_matrix_metadata,
+                **promotion_summary_metadata,
                 **export_metadata,
             },
         )
@@ -138,6 +154,7 @@ def export_product_promotion_contract(
                 "artifact_manifest": None if manifest_path is None else str(manifest_path),
                 "source_workflow": contract.source_workflow,
                 "source_status": contract.source_status,
+                **promotion_summary_metadata,
                 "model_id": contract.model_id,
                 "control_policy_config": control_policy_config,
                 "control_defaults": control_defaults,
@@ -145,6 +162,7 @@ def export_product_promotion_contract(
                     "max_verifier_route_attempts"
                 ),
                 "recommended_route": contract.metadata.get("recommended_route"),
+                **runtime_cost_metadata,
                 **covered_fact_property_metadata,
                 "recommended_selector_replay_candidate": contract.metadata.get(
                     "recommended_selector_replay_candidate"
@@ -197,6 +215,18 @@ def export_product_promotion_contract(
                 "performance_score_fusion_conformal_gate_passed": contract.metadata.get(
                     "performance_score_fusion_conformal_gate_passed"
                 ),
+                "performance_score_fusion_release_gate_status": contract.metadata.get(
+                    "performance_score_fusion_release_gate_status"
+                ),
+                "performance_score_fusion_release_gate_passed": contract.metadata.get(
+                    "performance_score_fusion_release_gate_passed"
+                ),
+                "performance_score_fusion_high_confidence_accepted_false_rate": contract.metadata.get(
+                    "performance_score_fusion_high_confidence_accepted_false_rate"
+                ),
+                "performance_score_fusion_high_confidence_accepted_false_count": contract.metadata.get(
+                    "performance_score_fusion_high_confidence_accepted_false_count"
+                ),
                 "performance_selected_fusion_status": contract.metadata.get(
                     "performance_selected_fusion_status"
                 ),
@@ -212,6 +242,18 @@ def export_product_promotion_contract(
                 "performance_selected_fusion_auroc": contract.metadata.get(
                     "performance_selected_fusion_auroc"
                 ),
+                "performance_selected_fusion_release_gate_status": contract.metadata.get(
+                    "performance_selected_fusion_release_gate_status"
+                ),
+                "performance_selected_fusion_release_gate_passed": contract.metadata.get(
+                    "performance_selected_fusion_release_gate_passed"
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_rate": contract.metadata.get(
+                    "performance_selected_fusion_high_confidence_accepted_false_rate"
+                ),
+                "performance_selected_fusion_high_confidence_accepted_false_count": contract.metadata.get(
+                    "performance_selected_fusion_high_confidence_accepted_false_count"
+                ),
                 "performance_selected_fusion_false_alarm": contract.metadata.get(
                     "performance_selected_fusion_false_alarm"
                 ),
@@ -223,6 +265,9 @@ def export_product_promotion_contract(
                 ),
                 "performance_selected_fusion_artifact_path": contract.metadata.get(
                     "performance_selected_fusion_artifact_path"
+                ),
+                "performance_selected_fusion_artifact_manifest": contract.metadata.get(
+                    "performance_selected_fusion_artifact_manifest"
                 ),
                 "product_trace_replay_workflow_report": trace_replay_workflow.get("report_path"),
                 "product_trace_replay_workflow_manifest": trace_replay_workflow.get(
@@ -458,6 +503,7 @@ def export_product_promotion_contract(
             "triple_extraction_fixture_matrix": triple_extraction_fixture_matrix,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
+            "summary": summary,
         },
         "artifact_manifest_summary": None if manifest is None else manifest.get("summary"),
     }
@@ -549,6 +595,54 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
         "release_efficiency_trace_record_cache_hit_profile_count": report.get(
             "trace_record_cache_hit_profile_count"
         ),
+    })
+
+
+def _promotion_summary_flat_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
+    runtime = _mapping(summary.get("runtime"))
+    verifier_route = _mapping(summary.get("verifier_route"))
+    return _drop_none_values({
+        "promotion_summary_status": summary.get("status"),
+        "promotion_summary_source_status": summary.get("source_status"),
+        "promotion_summary_model_id": summary.get("model_id"),
+        "promotion_summary_available_gate_count": summary.get("available_gate_count"),
+        "promotion_summary_promoted_gate_count": summary.get("promoted_gate_count"),
+        "promotion_summary_blocking_gate_count": summary.get("blocking_gate_count"),
+        "promotion_summary_blocked_evidence_group_count": summary.get(
+            "blocked_evidence_group_count"
+        ),
+        "promotion_summary_route": verifier_route.get("route"),
+        "promotion_summary_route_selected": verifier_route.get("selected"),
+        "promotion_summary_route_decision_accuracy": verifier_route.get(
+            "decision_accuracy"
+        ),
+        "promotion_summary_route_false_supported_rate": verifier_route.get(
+            "false_supported_rate"
+        ),
+        "promotion_summary_runtime_layer": runtime.get("layer"),
+        "promotion_summary_runtime_batch_size": runtime.get("batch_size"),
+        "promotion_summary_recommended_runtime_seconds": runtime.get(
+            "recommended_runtime_seconds"
+        ),
+        "promotion_summary_recommended_runtime_cost_source": runtime.get(
+            "recommended_runtime_cost_source"
+        ),
+    })
+
+
+def _runtime_cost_flat_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values({
+        "max_uncached_forward_seconds": metadata.get("max_uncached_forward_seconds"),
+        "max_recommended_runtime_seconds": metadata.get(
+            "max_recommended_runtime_seconds"
+        ),
+        "recommended_runtime_seconds": metadata.get("recommended_runtime_seconds"),
+        "recommended_runtime_cost_source": metadata.get(
+            "recommended_runtime_cost_source"
+        ),
+        "uncached_forward_cost_seconds": metadata.get("uncached_forward_cost_seconds"),
+        "uncached_forward_cost_source": metadata.get("uncached_forward_cost_source"),
+        "cache_only_total_seconds": metadata.get("cache_only_total_seconds"),
     })
 
 
@@ -902,61 +996,11 @@ def _product_runtime_drift_flat_metadata(metadata: Mapping[str, Any]) -> dict[st
         "product_runtime_drift_gate_enabled": metadata.get(
             "product_runtime_drift_gate_enabled"
         ),
-        "product_runtime_drift_promotion_evidence_required": metadata.get(
-            "product_runtime_drift_promotion_evidence_required"
-        ),
-        "product_runtime_drift_promotion_evidence_metric_count": metadata.get(
-            "product_runtime_drift_promotion_evidence_metric_count"
-        ),
-        "product_runtime_drift_promotion_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_promotion_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_required": metadata.get(
-            "product_runtime_drift_pre_generation_evidence_required"
-        ),
-        "product_runtime_drift_pre_generation_evidence_metric_count": metadata.get(
-            "product_runtime_drift_pre_generation_evidence_metric_count"
-        ),
-        "product_runtime_drift_pre_generation_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_pre_generation_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_required": metadata.get(
-            "product_runtime_drift_counterfactual_evidence_required"
-        ),
-        "product_runtime_drift_counterfactual_evidence_metric_count": metadata.get(
-            "product_runtime_drift_counterfactual_evidence_metric_count"
-        ),
-        "product_runtime_drift_counterfactual_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_counterfactual_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_required": metadata.get(
-            "product_runtime_drift_triple_audit_evidence_required"
-        ),
-        "product_runtime_drift_triple_audit_evidence_metric_count": metadata.get(
-            "product_runtime_drift_triple_audit_evidence_metric_count"
-        ),
-        "product_runtime_drift_triple_audit_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_triple_audit_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_required": metadata.get(
-            "product_runtime_drift_covered_fact_property_evidence_required"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_metric_count": metadata.get(
-            "product_runtime_drift_covered_fact_property_evidence_metric_count"
-        ),
-        "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_required": metadata.get(
-            "product_runtime_drift_action_gate_evidence_required"
-        ),
-        "product_runtime_drift_action_gate_evidence_metric_count": metadata.get(
-            "product_runtime_drift_action_gate_evidence_metric_count"
-        ),
-        "product_runtime_drift_action_gate_evidence_blocked_metric_count": metadata.get(
-            "product_runtime_drift_action_gate_evidence_blocked_metric_count"
-        ),
     }
+    for _group_name, prefix in _PRODUCT_RUNTIME_DRIFT_GROUP_SUMMARY_KEYS:
+        for suffix in ("required", "metric_count", "blocked_metric_count"):
+            key = f"product_runtime_drift_{prefix}_evidence_{suffix}"
+            fields[key] = metadata.get(key)
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             key = f"product_runtime_drift_{prefix}_{suffix}"

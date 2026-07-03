@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "frontier_research_queue_bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-research-bound-command-plan-approved.json",
+      "sha256": "d6a931f356df3e629ece419017653a512d56f8e20ba524437fa03685e67f284d",
+      "size_bytes": 13358
+    },
+    "frontier_research_queue_bound_command_run_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "reviewed-bound-command-run-report.json",
+      "sha256": "c6d65987ee8d4a78f60e820a7f033834689875832cf78c49147e168c03dc963d",
+      "size_bytes": 23936
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "binding_not_reviewed_count": 0,
+    "command_count": 3,
+    "dry_run": false,
+    "dry_run_count": 0,
+    "entry_count": 1,
+    "executed_count": 3,
+    "execution_mode": "sequential",
+    "failed_count": 0,
+    "invalid_command_count": 0,
+    "materialized_output_count": 2,
+    "missing_output_count": 0,
+    "require_reviewed_bindings": true,
+    "runner": "run_frontier_research_queue_bound_command_plan",
+    "status": "succeeded",
+    "workers": 1,
+    "workflow": "frontier_research_queue_bound_command_run_report"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

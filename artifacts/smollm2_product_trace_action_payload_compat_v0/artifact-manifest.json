@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "action-payload-compat.json",
+      "sha256": "a7bd02fe65042e6984d310d1277edb51cba18e6f3363bf5a01e123716eae71ac",
+      "size_bytes": 1036
+    },
+    "traces": {
+      "exists": true,
+      "file_count": 12,
+      "kind": "directory",
+      "path": "traces",
+      "sha256": "5c85fd5b624d187b2a53462c6bdf87c0b19c5a54aee76be39512a909882b0027",
+      "size_bytes": 472425
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "input_trace_count": 12,
+    "modified_trace_count": 1,
+    "repaired_action_count": 1,
+    "source": "frontier_action_gate_rebuild",
+    "status": "ready",
+    "workflow": "product_trace_action_payload_compat"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 1,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,219 @@
+{
+  "corpus_type": "alignment_review_approved_source_documents",
+  "description": "Approved alignment fact-review source documents. These are inputs for source-family structured QA corpus construction, not a broad route promotion by themselves.",
+  "documents": [
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-10:2",
+        "alignment_source_document_id": "alignment-approved:1",
+        "confidence": 0.8888888888888888,
+        "evidence_span": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
+        "provider": "wikidata",
+        "review_id": "review:1ba4cfb5d67b238c",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q99644917:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Diamonds",
+        "value": "2020 single by Sam Smith"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q99644917:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, Diamonds is described as 2020 single by Sam Smith.",
+      "title": "Reviewed alignment fact: Diamonds description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-11:1",
+        "alignment_source_document_id": "alignment-approved:2",
+        "confidence": 0.9473684210526315,
+        "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+        "provider": "wikidata",
+        "review_id": "review:3a9e1e7b876872e5",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Americans",
+        "value": "citizens and nationals of the United States of America"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q846570:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+      "title": "Reviewed alignment fact: Americans description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-27:1",
+        "alignment_source_document_id": "alignment-approved:3",
+        "confidence": 0.9230769230769231,
+        "evidence_span": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
+        "provider": "wikidata",
+        "review_id": "review:e2978fac6c984da2",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q5284:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "Bill Gates",
+        "value": "American businessman, investor, and philanthropist (born 1955)"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q5284:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
+      "title": "Reviewed alignment fact: Bill Gates description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-61:1",
+        "alignment_source_document_id": "alignment-approved:4",
+        "confidence": 0.9523809523809523,
+        "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "provider": "wikidata",
+        "review_id": "review:d69f124712266987",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "English",
+        "value": "West Germanic language"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q1860:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
+      "title": "Reviewed alignment fact: English description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:1",
+        "alignment_source_document_id": "alignment-approved:5",
+        "confidence": 0.9473684210526315,
+        "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+        "provider": "wikidata",
+        "review_id": "review:98e52dac70c9ba47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q10294:P527:Q125727758",
+        "source_family": "reference",
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)",
+        "subject": "poverty",
+        "value": "Poverty in Islam"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q10294:P527:Q125727758",
+      "source_family": "reference",
+      "text": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "title": "Reviewed alignment fact: poverty has part(s)"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-133:2",
+        "alignment_source_document_id": "alignment-approved:6",
+        "confidence": 0.9473684210526315,
+        "evidence_span": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+        "provider": "wikidata",
+        "review_id": "review:c14d2eda98989026",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q317521:P27:Q258",
+        "source_family": "reference",
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship",
+        "subject": "Africa",
+        "value": "South Africa"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q317521:P27:Q258",
+      "source_family": "reference",
+      "text": "According to Wikidata structured data, Elon Musk has country of citizenship South Africa.",
+      "title": "Reviewed alignment fact: Africa country of citizenship"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:record-212:2",
+        "alignment_source_document_id": "alignment-approved:7",
+        "confidence": 0.9523809523809523,
+        "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+        "provider": "wikidata",
+        "review_id": "review:0e7791b35159e135",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-02T00:00:00Z",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q421:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "subject": "unidentified flying object",
+        "value": "unusual apparent anomaly in the sky that is not readily identifiable"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q421:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+      "title": "Reviewed alignment fact: unidentified flying object description"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "request_ids_copied_to_document_metadata": false,
+    "target_ids_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "builder": "alignment_fact_review_promotion_gate",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready",
+  "summary": {
+    "approved_source_document_count": 7,
+    "by_property": {
+      "P27": 1,
+      "P527": 1,
+      "description": 5
+    },
+    "by_provider": {
+      "wikidata": 7
+    },
+    "by_source_family": {
+      "reference": 7
+    },
+    "needs_more_evidence_count": 3,
+    "pending_review_count": 0,
+    "rejected_count": 0,
+    "review_decision_count": 10,
+    "review_document_count": 10,
+    "skip_counts": {
+      "approved": 7,
+      "duplicate_review_decision": 0,
+      "invalid_review_decision": 0,
+      "missing_candidate_id": 0,
+      "missing_reviewer": 0,
+      "needs_more_evidence": 3,
+      "pending_review": 0,
+      "rejected": 0,
+      "reserved_review_metadata": 0,
+      "unknown_candidate_id": 0,
+      "unsupported_evidence_source": 0
+    }
+  }
+}

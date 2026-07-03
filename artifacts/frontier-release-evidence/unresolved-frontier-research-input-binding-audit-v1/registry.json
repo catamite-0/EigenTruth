@@ -1,0 +1,35 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/artifact-manifest.json",
+        "blocked_binding_count": 25,
+        "missing_sidecar_count": 0,
+        "ready_binding_count": 0,
+        "status": "blocked",
+        "workflow": "frontier_research_queue_input_binding_audit"
+      },
+      "name": "unresolved-frontier-research-input-binding-audit",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/frontier-input-binding-audit.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/artifact-manifest.json",
+        "blocked_binding_count": 0,
+        "closure_action": "fill_and_promote_remaining_world_model_rules",
+        "missing_sidecar_count": 0,
+        "ready_binding_count": 0,
+        "source_backed_rows": "0",
+        "status": "empty",
+        "workflow": "frontier_research_queue_input_binding_audit"
+      },
+      "name": "unresolved-frontier-research-input-binding-audit",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/frontier-input-binding-audit.json",
+      "version": "0.2"
+    }
+  ],
+  "schema_version": 1
+}

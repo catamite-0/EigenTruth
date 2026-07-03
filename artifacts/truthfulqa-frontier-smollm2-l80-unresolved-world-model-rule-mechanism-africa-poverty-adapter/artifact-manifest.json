@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "c4273f6fac6b4c7e963873aa0fb3a1c4e2a89d1b6da4e563a353043a8bfcfea0",
+      "size_bytes": 2213
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-binding-fill/rule-inputs.jsonl",
+      "sha256": "021505dadec041c32b585e574d3f264d40822237163e378cc5b6891f8d6863d3",
+      "size_bytes": 5584
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "1694ff51f32f951c90d6af2fd38bfdea372cbe431755cd299edfff0b408013ee",
+      "size_bytes": 9088
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-stubs.jsonl",
+      "sha256": "1020e60a59d6e6f397e03bce7776fde97b09af7b384c89e6be7c2ff4c9d23b3e",
+      "size_bytes": 2116
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "cell_id": "africa_poverty",
+    "evidence": "source_backed_worldbank_africa_poverty_mechanism",
+    "executed_count": 4,
+    "input_request_count": 0,
+    "needs_input_count": 0,
+    "source": "frontier_mechanism_handoff_rebuild",
+    "status": "observed",
+    "stub_count": 4,
+    "suite": "truthfulqa_frontier_smollm2_l80",
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

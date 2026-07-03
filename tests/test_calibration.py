@@ -11,16 +11,31 @@ from eigentruth.calibration import (
     CalibrationArtifact,
     CalibrationScore,
     ConformalCalibrator,
+    EvidenceAcquisitionAnytimeRiskMonitorReport,
+    EvidenceAcquisitionAnytimeRiskMonitorState,
+    EvidenceAcquisitionCalibrationRecord,
+    EvidenceAcquisitionCalibrationReport,
+    EvidenceAcquisitionConformalCalibrator,
+    EvidenceAcquisitionRiskMonitorReport,
     GeometryScoreFusionArtifact,
     GeometryScoreFusionCalibrator,
+    MultipleTestingConformalArtifact,
+    MultipleTestingConformalCalibrator,
     RankScoreFusionArtifact,
     RankScoreFusionCalibrator,
+    SequentialConformalArtifact,
+    SequentialConformalCalibrator,
     SteeringPolicyConfig,
+    audit_evidence_acquisition_anytime_risk,
+    audit_evidence_acquisition_risk,
+    evidence_acquisition_record_from_trace,
+    evidence_acquisition_records_from_trace_feedback,
 )
 from eigentruth.eval import (
     AdaptiveScoreTransform,
     combine_geometry_uncertainty_scores,
     geometry_calibrated_anomaly_scores,
+    global_local_uncertainty_scores,
 )
 
 
@@ -155,6 +170,636 @@ def test_conformal_calibrator_rejects_invalid_inputs():
         AdaptiveConformalCalibrator(alpha=0.0)
 
 
+def test_evidence_acquisition_conformal_calibrator_reports_post_policy_gain(tmp_path):
+    records = (
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.1, post_score=0.1, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.2, post_score=0.2, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.3, post_score=0.3, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.4, post_score=0.4, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.5, post_score=0.5, correct=True, action="answer"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.15, post_score=0.9, correct=False, action="acquire"),
+        EvidenceAcquisitionCalibrationRecord(pre_score=0.25, post_score=1.1, correct=False, action="acquire"),
+    )
+    calibrator = EvidenceAcquisitionConformalCalibrator(alpha=0.4, score_name="policy_score")
+    result = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        records=records,
+        calibration_dataset_metadata={"fixture": "post-acquisition"},
+        created_at="2026-06-30T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    report = result.report
+    artifact = result.artifact
+    assert report.naive_pre_threshold == pytest.approx(0.4)
+    assert report.post_threshold == pytest.approx(0.4)
+    assert report.n_acquired == 2
+    assert report.acquisition_rate == pytest.approx(2 / 7)
+    assert report.naive_pre_report is not None
+    assert report.naive_pre_report.empirical_selective_accuracy == pytest.approx(4 / 6)
+    assert report.post_acquisition_report.empirical_selective_accuracy == pytest.approx(1.0)
+    assert report.selective_accuracy_delta == pytest.approx(1.0 - (4 / 6))
+    assert report.metadata["post_acquisition_calibration"] is True
+    assert report.metadata["calibration_scope"] == "post_acquisition_policy"
+
+    score = artifact.get_score("policy_score")
+    assert score.threshold == pytest.approx(report.post_threshold)
+    assert score.conformal_alpha == pytest.approx(0.4)
+    assert score.direction == "higher"
+    assert artifact.calibration_dataset_metadata["fixture"] == "post-acquisition"
+    assert artifact.calibration_dataset_metadata["post_acquisition_calibration"]["n_acquired"] == 2
+
+    report_path = tmp_path / "evidence-acquisition-report.json"
+    artifact_path = tmp_path / "evidence-acquisition-artifact.json"
+    report.save_json(report_path)
+    artifact.save_json(artifact_path)
+
+    loaded_report = EvidenceAcquisitionCalibrationReport.from_dict(json.loads(report_path.read_text()))
+    loaded_artifact = CalibrationArtifact.load_json(artifact_path)
+    assert loaded_report.to_dict() == report.to_dict()
+    assert loaded_artifact == artifact
+
+
+def test_evidence_acquisition_conformal_calibrator_supports_lower_direction():
+    records = (
+        {"pre_score": 0.8, "post_score": 0.8, "correct": 1, "action": "answer"},
+        {"pre_score": 0.7, "post_score": 0.7, "correct": 1, "action": "answer"},
+        {"pre_score": 0.6, "post_score": 0.6, "correct": 1, "action": "answer"},
+        {"pre_score": 0.5, "post_score": 0.5, "correct": 1, "action": "answer"},
+        {"pre_score": 0.4, "post_score": 0.4, "correct": 1, "action": "answer"},
+        {"pre_score": 0.65, "post_score": 0.1, "correct": 0, "action": "acquire"},
+    )
+    calibrator = EvidenceAcquisitionConformalCalibrator(
+        alpha=0.4,
+        score_name="support_policy_score",
+        direction="lower",
+    )
+    result = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        records=records,
+        created_at="2026-06-30T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    assert result.report.post_threshold == pytest.approx(0.5)
+    assert result.report.post_acquisition_report.empirical_selective_accuracy == pytest.approx(1.0)
+    assert result.artifact.get_score("support_policy_score").direction == "lower"
+    assert result.artifact.get_score("support_policy_score").threshold == pytest.approx(0.5)
+
+
+def test_evidence_acquisition_risk_monitor_passes_stable_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1 if index != 11 else 0.2,
+            correct=index != 11,
+            action="answer",
+        )
+        for index in range(20)
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.25,
+        monitor_alpha=0.1,
+        score_name="policy_score",
+        checkpoints=(20,),
+        metadata={"suite": "unit"},
+    )
+    roundtrip = EvidenceAcquisitionRiskMonitorReport.from_dict(report.to_dict())
+
+    assert report.passed is True
+    assert report.first_failed_checkpoint is None
+    assert report.blocking_reasons == ()
+    assert report.checks[0].accepted_count == 20
+    assert report.checks[0].accepted_errors == 1
+    assert report.checks[0].accepted_error_upper_bound < 0.25
+    assert report.metadata["suite"] == "unit"
+    assert roundtrip.to_dict() == report.to_dict()
+
+
+def test_evidence_acquisition_risk_monitor_blocks_drifted_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=index >= 4,
+            action="acquire" if index < 4 else "answer",
+        )
+        for index in range(10)
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.25,
+        monitor_alpha=0.1,
+        checkpoints=(10,),
+    )
+
+    assert report.passed is False
+    assert report.first_failed_checkpoint == 10
+    assert "accepted_error_upper_bound" in report.blocking_reasons[0]
+    assert report.checks[0].accepted_errors == 4
+    assert report.checks[0].n_acquired == 4
+
+
+def test_evidence_acquisition_risk_monitor_respects_lower_direction_and_validates_inputs():
+    records = (
+        {"post_score": 0.9, "correct": 1, "action": "answer"},
+        {"post_score": 0.8, "correct": 1, "action": "answer"},
+        {"post_score": 0.7, "correct": 1, "action": "answer"},
+        {"post_score": 0.1, "correct": 0, "action": "abstain"},
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.5,
+        monitor_alpha=0.2,
+        direction="lower",
+        checkpoints=(4,),
+    )
+
+    assert report.passed is True
+    assert report.checks[0].accepted_count == 3
+    assert report.checks[0].accepted_errors == 0
+    assert report.checks[0].n_abstained == 1
+    with pytest.raises(ValueError, match="checkpoints"):
+        audit_evidence_acquisition_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            checkpoints=(5,),
+        )
+    with pytest.raises(ValueError, match="direction"):
+        audit_evidence_acquisition_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            direction="sideways",
+        )
+    with pytest.raises(ValueError, match="schedule"):
+        EvidenceAcquisitionRiskMonitorReport.from_dict(
+            {
+                **report.to_dict(),
+                "schedule": "surprise",
+            }
+        )
+
+
+def test_evidence_acquisition_risk_monitor_dict_is_strict_json_ready_for_infinite_threshold():
+    records = (
+        {"post_score": 0.1, "correct": 1, "action": "answer"},
+        {"post_score": 0.2, "correct": 1, "action": "answer"},
+    )
+
+    report = audit_evidence_acquisition_risk(
+        records,
+        threshold=math.inf,
+        target_error_rate=0.5,
+        monitor_alpha=0.2,
+        checkpoints=(2,),
+    )
+    payload = report.to_dict()
+    raw = json.dumps(payload, allow_nan=False)
+    restored = EvidenceAcquisitionRiskMonitorReport.from_dict(json.loads(raw))
+
+    assert payload["threshold"] == "inf"
+    assert payload["checks"][0]["threshold"] == "inf"
+    assert restored.threshold == math.inf
+
+
+def test_evidence_acquisition_anytime_risk_monitor_passes_stable_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=True,
+            action="answer",
+        )
+        for _ in range(20)
+    )
+
+    report = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.25,
+        monitor_alpha=0.1,
+        score_name="policy_score",
+        bet_fractions=(0.8,),
+        metadata={"suite": "unit"},
+    )
+    roundtrip = EvidenceAcquisitionAnytimeRiskMonitorReport.from_dict(report.to_dict())
+
+    assert report.passed is True
+    assert report.first_alarm_record_index is None
+    assert report.accepted_count == 20
+    assert report.accepted_errors == 0
+    assert report.e_value < 1.0
+    assert report.metadata["suite"] == "unit"
+    assert roundtrip.to_dict() == report.to_dict()
+
+
+def test_evidence_acquisition_anytime_risk_monitor_blocks_drifted_feedback_stream():
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=False,
+            action="answer",
+        )
+        for _ in range(6)
+    )
+
+    report = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.1,
+        monitor_alpha=0.2,
+        bet_fractions=(0.8,),
+    )
+
+    assert report.passed is False
+    assert report.accepted_count == 6
+    assert report.accepted_errors == 6
+    assert report.first_alarm_record_index is not None
+    assert report.first_alarm_accepted_index == report.first_alarm_record_index
+    assert report.e_value >= report.alarm_threshold
+    assert "mixture_e_value" in report.blocking_reasons[0]
+    assert any(step.alarmed for step in report.steps)
+
+
+def test_evidence_acquisition_anytime_risk_monitor_state_roundtrips_and_matches_batch(tmp_path):
+    records = tuple(
+        EvidenceAcquisitionCalibrationRecord(
+            post_score=0.1,
+            correct=index >= 4,
+            action="answer",
+            record_id=f"r{index}",
+        )
+        for index in range(8)
+    )
+    batch = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.1,
+        monitor_alpha=0.2,
+        score_name="policy_score",
+        bet_fractions=(0.8,),
+    )
+
+    state = EvidenceAcquisitionAnytimeRiskMonitorState(
+        score_name="policy_score",
+        threshold=0.5,
+        target_error_rate=0.1,
+        monitor_alpha=0.2,
+        direction="higher",
+        bet_fractions=(0.8,),
+    )
+    steps = []
+    for record in records[:3]:
+        state, step = state.update(record)
+        steps.append(step)
+    path = tmp_path / "anytime-risk-state.json"
+    state.save_json(path)
+    loaded = EvidenceAcquisitionAnytimeRiskMonitorState.load_json(path)
+    assert loaded.to_dict() == state.to_dict()
+
+    state = loaded
+    for record in records[3:]:
+        state, step = state.update(record)
+        steps.append(step)
+    report = state.to_report(steps)
+
+    assert report.accepted_count == batch.accepted_count
+    assert report.accepted_errors == batch.accepted_errors
+    assert report.component_e_values == pytest.approx(batch.component_e_values)
+    assert report.first_alarm_record_index == batch.first_alarm_record_index
+    assert report.first_alarm_accepted_index == batch.first_alarm_accepted_index
+    assert [step.to_dict() for step in report.steps] == [step.to_dict() for step in batch.steps]
+
+
+def test_evidence_acquisition_anytime_risk_monitor_respects_lower_direction_and_validates_inputs():
+    records = (
+        {"post_score": 0.9, "correct": 1, "action": "answer"},
+        {"post_score": 0.8, "correct": 1, "action": "answer"},
+        {"post_score": 0.1, "correct": 0, "action": "abstain"},
+    )
+
+    report = audit_evidence_acquisition_anytime_risk(
+        records,
+        threshold=0.5,
+        target_error_rate=0.5,
+        monitor_alpha=0.2,
+        direction="lower",
+        bet_fractions=(0.5,),
+    )
+    raw = json.dumps(report.to_dict(), allow_nan=False)
+    restored = EvidenceAcquisitionAnytimeRiskMonitorReport.from_dict(json.loads(raw))
+
+    assert report.passed is True
+    assert report.accepted_count == 2
+    assert report.accepted_errors == 0
+    assert report.steps[-1].accepted is False
+    assert restored.to_dict() == report.to_dict()
+    with pytest.raises(ValueError, match="bet_fractions"):
+        audit_evidence_acquisition_anytime_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            bet_fractions=(0.0,),
+        )
+    with pytest.raises(ValueError, match="direction"):
+        audit_evidence_acquisition_anytime_risk(
+            records,
+            threshold=0.5,
+            target_error_rate=0.5,
+            direction="sideways",
+        )
+
+
+def test_evidence_acquisition_conformal_calibrator_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="alpha"):
+        EvidenceAcquisitionConformalCalibrator(alpha=1.0)
+    with pytest.raises(ValueError, match="direction"):
+        EvidenceAcquisitionConformalCalibrator(direction="sideways")
+    with pytest.raises(ValueError, match="non-empty"):
+        EvidenceAcquisitionConformalCalibrator(score_name="")
+
+    calibrator = EvidenceAcquisitionConformalCalibrator(alpha=0.4)
+    with pytest.raises(ValueError, match="non-empty"):
+        calibrator.report(())
+    with pytest.raises(ValueError, match="correct"):
+        calibrator.report(({"post_score": 0.1, "correct": 0},))
+    with pytest.raises(ValueError, match="action"):
+        EvidenceAcquisitionCalibrationRecord(post_score=0.1, correct=True, action="retrieve")
+    with pytest.raises(ValueError, match="finite"):
+        EvidenceAcquisitionCalibrationRecord(post_score=math.inf, correct=True)
+
+
+def test_evidence_acquisition_record_from_trace_uses_post_policy_score():
+    trace = {
+        "request_id": "req-trace",
+        "diagnostics": {"policy_score": 0.2},
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "diagnostics": {"policy_score": 0.85},
+        },
+        "actions": [{"action": "retrieve"}],
+        "metadata": {
+            "correct": True,
+            "evidence_acquisition": {
+                "pre_score": 0.2,
+                "decision": {
+                    "action": "acquire",
+                    "metadata": {"post_acquisition_calibration_required": True},
+                },
+            },
+        },
+        "events": [
+            {
+                "event_type": "initial_risk_decision",
+                "payload": {"diagnostics": {"policy_score": 0.2}},
+            },
+            {
+                "event_type": "final_risk_decision",
+                "payload": {"diagnostics": {"policy_score": 0.85}},
+            },
+        ],
+    }
+
+    record = evidence_acquisition_record_from_trace(trace, score_name="policy_score")
+
+    assert record.record_id == "req-trace"
+    assert record.pre_score == pytest.approx(0.2)
+    assert record.post_score == pytest.approx(0.85)
+    assert record.correct is True
+    assert record.action == "acquire"
+    assert record.acquired is True
+    assert record.metadata["post_score_source"] == "risk_decision.diagnostics.policy_score"
+    assert record.metadata["pre_score_source"] == "metadata.evidence_acquisition.pre_score"
+    assert record.metadata["label_source"] == "metadata.correct"
+
+
+def test_evidence_acquisition_records_from_trace_feedback_join_and_calibrate():
+    traces = (
+        {
+            "request_id": "req-good",
+            "diagnostics": {"policy_score": 0.2},
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "diagnostics": {"policy_score": 0.15},
+            },
+            "metadata": {"evidence_acquisition": {"decision": {"action": "answer"}}},
+        },
+        {
+            "request_id": "req-acquired-bad",
+            "diagnostics": {"policy_score": 0.1},
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "diagnostics": {"policy_score": 0.9},
+            },
+            "metadata": {"evidence_acquisition": {"decision": {"action": "acquire"}}},
+        },
+        {
+            "request_id": "req-blocked-good",
+            "diagnostics": {"policy_score": 0.3},
+            "risk_decision": {
+                "action": "abstain",
+                "risk_level": "high",
+                "diagnostics": {"policy_score": 0.8},
+            },
+            "metadata": {"evidence_acquisition": {"decision": {"action": "abstain"}}},
+        },
+    )
+    feedback = (
+        {"request_id": "req-good", "outcome": "correct", "feedback_source": "eval"},
+        {"request_id": "req-acquired-bad", "outcome": "incorrect", "feedback_source": "eval"},
+        {"request_id": "req-blocked-good", "outcome": "unnecessary_block", "feedback_source": "eval"},
+    )
+
+    records = evidence_acquisition_records_from_trace_feedback(
+        traces,
+        feedback,
+        score_name="policy_score",
+    )
+    result = EvidenceAcquisitionConformalCalibrator(alpha=0.5, score_name="policy_score").calibrate(
+        model_id="trace-model",
+        target_layer=-1,
+        records=records,
+        created_at="2026-06-30T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    assert [record.correct for record in records] == [True, False, True]
+    assert [record.action for record in records] == ["answer", "acquire", "abstain"]
+    assert records[1].metadata["feedback_outcome"] == "incorrect"
+    assert result.report.n_acquired == 1
+    assert result.report.n_abstained == 1
+    assert result.report.naive_pre_report is not None
+    assert result.artifact.get_score("policy_score").threshold == pytest.approx(result.report.post_threshold)
+
+
+def test_evidence_acquisition_trace_feedback_join_fails_closed_on_ambiguous_request():
+    traces = (
+        {
+            "request_id": "duplicate",
+            "risk_decision": {"diagnostics": {"policy_score": 0.1}},
+            "metadata": {"correct": True},
+        },
+        {
+            "request_id": "duplicate",
+            "risk_decision": {"diagnostics": {"policy_score": 0.2}},
+            "metadata": {"correct": True},
+        },
+    )
+    feedback = ({"request_id": "duplicate", "outcome": "correct"},)
+
+    with pytest.raises(ValueError, match="ambiguous_request_id"):
+        evidence_acquisition_records_from_trace_feedback(
+            traces,
+            feedback,
+            score_name="policy_score",
+        )
+
+
+def test_multiple_testing_conformal_artifact_roundtrip_and_runtime_decision(tmp_path):
+    calibrator = MultipleTestingConformalCalibrator(alpha=0.3, method="by")
+    artifact = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        calibration_scores={
+            "support_score": list(range(100, 120)),
+            "maha_last": list(range(20)),
+        },
+        directions={"support_score": "lower", "maha_last": "higher"},
+        calibration_dataset_metadata={"name": "truthfulqa-mini"},
+        created_at="2026-06-29T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    report = artifact.decide(
+        {"support_score": 0.0, "maha_last": 5.0},
+        metadata={"request_id": "req-1", "model_id": "spoofed"},
+    )
+    path = tmp_path / "multiple-testing-calibration.json"
+    artifact.save_json(path)
+    loaded = MultipleTestingConformalArtifact.load_json(path)
+    loaded_report = loaded.decide(
+        {"support_score": 0.0, "maha_last": 5.0},
+        metadata={"request_id": "req-1", "model_id": "spoofed"},
+    )
+
+    assert loaded == artifact
+    assert artifact.signal_names() == ("support_score", "maha_last")
+    assert report.rejected is True
+    assert report.rejected_signal_names == ("support_score",)
+    assert report.metadata["request_id"] == "req-1"
+    assert report.metadata["model_id"] == "tiny-model"
+    assert report.metadata["runtime_metadata"]["model_id"] == "spoofed"
+    assert loaded_report.to_dict() == report.to_dict()
+
+
+def test_multiple_testing_conformal_calibrator_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="alpha"):
+        MultipleTestingConformalCalibrator(alpha=1.0)
+    with pytest.raises(ValueError, match="method"):
+        MultipleTestingConformalCalibrator(method="sidak")
+
+    calibrator = MultipleTestingConformalCalibrator(alpha=0.3)
+    with pytest.raises(ValueError, match="at least one"):
+        calibrator.calibrate(model_id="m", target_layer=0, calibration_scores={})
+    with pytest.raises(ValueError, match="unknown"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            calibration_scores={"maha": [1.0, 2.0]},
+            directions={"other": "higher"},
+        )
+    with pytest.raises(ValueError, match="direction"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            calibration_scores={"maha": [1.0, 2.0]},
+            directions={"maha": "sideways"},
+        )
+    with pytest.raises(ValueError, match="bool"):
+        calibrator.calibrate(model_id="m", target_layer=0, calibration_scores={"maha": [True, False]})
+    with pytest.raises(ValueError, match="finite"):
+        calibrator.calibrate(model_id="m", target_layer=0, calibration_scores={"maha": [1.0, math.inf]})
+
+
+def test_sequential_conformal_artifact_roundtrip_and_runtime_sequence(tmp_path):
+    calibrator = SequentialConformalCalibrator(alpha=0.5, schedule="linear")
+    artifact = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        signal_name="support_score",
+        calibration_scores=[10.0, 11.0, 12.0, 13.0],
+        direction="lower",
+        calibration_dataset_metadata={"name": "truthfulqa-mini"},
+        created_at="2026-06-29T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    report = artifact.decide_sequence(
+        [9.0, 12.0],
+        metadata={"session_id": "s1", "signal_name": "spoofed"},
+    )
+    path = tmp_path / "sequential-calibration.json"
+    artifact.save_json(path)
+    loaded = SequentialConformalArtifact.load_json(path)
+    loaded_report = loaded.decide_sequence(
+        [9.0, 12.0],
+        metadata={"session_id": "s1", "signal_name": "spoofed"},
+    )
+
+    assert loaded == artifact
+    assert artifact.calibration_count == 4
+    assert artifact.direction == "lower"
+    assert artifact.schedule == "linear"
+    assert report.rejected_steps == (1,)
+    assert report.steps[0].score == pytest.approx(9.0)
+    assert report.metadata["session_id"] == "s1"
+    assert report.metadata["signal_name"] == "support_score"
+    assert report.metadata["runtime_metadata"]["signal_name"] == "spoofed"
+    assert loaded_report.to_dict() == report.to_dict()
+
+
+def test_sequential_conformal_calibrator_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="alpha"):
+        SequentialConformalCalibrator(alpha=1.0)
+    with pytest.raises(ValueError, match="schedule"):
+        SequentialConformalCalibrator(schedule="sidak")
+
+    calibrator = SequentialConformalCalibrator(alpha=0.3)
+    with pytest.raises(ValueError, match="direction"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            signal_name="score",
+            calibration_scores=[1.0, 2.0],
+            direction="sideways",
+        )
+    with pytest.raises(ValueError, match="bool"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            signal_name="score",
+            calibration_scores=[True, False],
+        )
+    with pytest.raises(ValueError, match="finite"):
+        calibrator.calibrate(
+            model_id="m",
+            target_layer=0,
+            signal_name="score",
+            calibration_scores=[1.0, math.inf],
+        )
+
+
 def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):
     labels = [0, 0, 0, 0, 1]
     scores = {
@@ -240,6 +885,38 @@ def test_geometry_calibrated_anomaly_scores_uses_directional_rank_groups():
 
     assert fused[1] > fused[0]
     assert fused.tolist() == pytest.approx([0.1875, 1.0])
+
+
+def test_global_local_uncertainty_scores_gate_geometry_and_token_uncertainty():
+    calibration_scores = {
+        "hidden_geometry_entropy": [0.0, 1.0, 2.0, 3.0],
+        "first_token_confidence": [10.0, 9.0, 8.0, 7.0],
+    }
+    scores = {
+        "hidden_geometry_entropy": [0.0, 3.5],
+        "first_token_confidence": [10.0, 0.0],
+    }
+
+    fused = global_local_uncertainty_scores(
+        calibration_scores=calibration_scores,
+        scores=scores,
+        global_signals=("hidden_geometry_entropy",),
+        local_signals=("first_token_confidence",),
+        directions={
+            "hidden_geometry_entropy": "higher",
+            "first_token_confidence": "lower",
+        },
+    )
+
+    assert fused.tolist() == pytest.approx([0.0625, 1.0])
+
+    with pytest.raises(ValueError, match="must not overlap"):
+        global_local_uncertainty_scores(
+            calibration_scores=calibration_scores,
+            scores=scores,
+            global_signals=("hidden_geometry_entropy",),
+            local_signals=("hidden_geometry_entropy",),
+        )
 
 
 def test_geometry_score_fusion_artifact_roundtrip_and_flags(tmp_path):

@@ -1,0 +1,57 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-corpus.json",
+      "sha256": "2d7b1b274b6f18f9d5974c3eb5ae4fb35f5a52ffc5afb30b7b7416e3ce01b891",
+      "size_bytes": 14004
+    },
+    "alignment_fact_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-records.jsonl",
+      "sha256": "464b8250ee54ebe80b1d6d3ca31080a6fcf716df8e0174c82933264a53c9f9b3",
+      "size_bytes": 14145
+    },
+    "alignment_fact_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-report.json",
+      "sha256": "7198ac7de3837758b6388dd30ebd0bd1d8140ed55f38566577cc1cb3b635a961",
+      "size_bytes": 2233
+    },
+    "structured_fact_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-semantic-gap-handoff.json",
+      "sha256": "bb8bbd670a55845ea489c89c65c5ebb2e3d9401857e832369987094da1f5e2f8",
+      "size_bytes": 1044021
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_type": "alignment_structured_fact_review_corpus",
+    "description_subject_matching": "entity_or_acronym",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "document_count": 10,
+    "input_candidate_count": 23,
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "status": "ready_for_review",
+    "structured_fact_parsing": "worldbank_wikidata",
+    "unique_candidate_count": 23,
+    "workflow": "alignment_fact_review_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

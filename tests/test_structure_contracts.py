@@ -14,16 +14,47 @@ from eigentruth.control import (
     RiskDecision,
     RiskLevel,
     SQLiteActionExecutionLedger,
+    TraceProvenanceEdge,
+    TraceProvenanceGraph,
+    TraceProvenanceIssue,
+    TraceProvenanceNode,
+    TraceProvenanceReport,
+    TrajectoryAuditIssue,
+    TrajectoryAuditReport,
+    TrajectoryHallucinationType,
+    audit_product_trace_trajectory,
+    audit_trace_provenance,
 )
 from eigentruth.control.runtime_drift_keys import (
     PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS,
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS,
     PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS,
+    PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS,
+    PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_KEYS,
 )
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, ClaimDependency, VerificationResult, VerificationStatus
@@ -49,10 +80,29 @@ def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
     grouped = (
         PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_KEYS
         + PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS
     )
 
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_KEYS == grouped
@@ -62,9 +112,70 @@ def test_runtime_drift_evidence_keys_are_grouped_without_duplicates():
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["pre_generation"] == (
         PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
     )
+    assert PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS == (
+        PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_RISK_EVIDENCE_KEYS
+        + PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_PROBE_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["claim_factuality"] == (
+        PRODUCT_RUNTIME_DRIFT_CLAIM_FACTUALITY_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["claim_risk_localization"] == (
+        PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["evidence_alignment"] == (
+        PRODUCT_RUNTIME_DRIFT_EVIDENCE_ALIGNMENT_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["fact_selfcheck_gate"] == (
+        PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_KEYS
+    )
     assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["action_gate"] == (
         PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
     )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["world_model_action_gate"] == (
+        PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["world_model_rollout"] == (
+        PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["action_receipts"] == (
+        PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["receipt_claim_support"] == (
+        PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["trajectory_audit"] == (
+        PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["provenance"] == (
+        PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["citation_integrity"] == (
+        PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["evidence_quality"] == (
+        PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["metacognition"] == (
+        PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["evidence_handoff"] == (
+        PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["world_model"] == (
+        PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["context_sensitivity"] == (
+        PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["counterfactual_robustness"] == (
+        PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS["frontier_release_evidence"] == (
+        PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
+    )
+    assert PRODUCT_RUNTIME_DRIFT_EVIDENCE_GROUPS[
+        "unresolved_frontier_evidence_summary"
+    ] == (PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS)
 
 
 def test_calibration_artifact_score_lookup():
@@ -200,6 +311,45 @@ def test_action_result_json_roundtrip():
     assert loaded.action is ControlAction.ABSTAIN
     assert loaded.status is ActionExecutionStatus.DRY_RUN
     assert loaded.output["message"] == "not enough evidence"
+
+
+def test_trajectory_audit_public_api_roundtrip():
+    issue = TrajectoryAuditIssue(
+        code="accepted_refuted_claim",
+        hallucination_type=TrajectoryHallucinationType.FACTUAL,
+        severity="error",
+        message="accepted a refuted claim",
+        claim_ids=("c1",),
+    )
+    report = TrajectoryAuditReport(trace_id="trace-1", issues=(issue,))
+    loaded = TrajectoryAuditReport.from_dict(report.to_dict())
+
+    assert loaded.summary()["counts_by_type"]["factual"] == 1
+    assert callable(audit_product_trace_trajectory)
+
+
+def test_trace_provenance_public_api_roundtrip():
+    node = TraceProvenanceNode("claim:c1", "claim", label="Paris is the capital.")
+    edge = TraceProvenanceEdge("evidence:e1", "claim:c1", "supports")
+    issue = TraceProvenanceIssue(
+        code="supported_claim_without_evidence",
+        severity="warning",
+        message="missing provenance",
+        node_id="claim:c1",
+        claim_ids=("c1",),
+    )
+    graph = TraceProvenanceGraph(trace_id="trace-1", nodes=(node,), edges=(edge,))
+    report = TraceProvenanceReport(
+        trace_id="trace-1",
+        graph=graph,
+        issues=(issue,),
+        metadata={"claim_count": 1, "supported_claim_count": 1},
+    )
+    loaded = TraceProvenanceReport.from_dict(report.to_dict())
+
+    assert loaded.summary()["counts_by_code"]["supported_claim_without_evidence"] == 1
+    assert loaded.graph.nodes[0].node_type == "claim"
+    assert callable(audit_trace_provenance)
 
 
 def test_json_action_execution_ledger_roundtrip(tmp_path):

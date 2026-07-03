@@ -1,0 +1,77 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-citation-reviewed-entity-binding-adapter-v1/world-model-rule-authoring-adapter.json",
+      "sha256": "c4854cf34a82275c555f0060f22f9970b5fdcc2dd0c02f9c6493841a5bd50768",
+      "size_bytes": 2360
+    },
+    "blocked_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blocked-rule-candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "pending_rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "pending-rule-inputs.jsonl",
+      "sha256": "47a0466767186d752d981c9230e52196d0799840eec9f1bcee28dd5ed49c44d5",
+      "size_bytes": 828
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promoted-rule-candidates.jsonl",
+      "sha256": "d4ee7f47c8493df7adf0ba269b4586fb288ea2886eb94b9b4c6d1832a8c8471d",
+      "size_bytes": 4416
+    },
+    "rule_candidate_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-candidate-promotion-gate.json",
+      "sha256": "4e6f5c2b708d0f69ef39d68ada3b0179e40a5f650c7e0efe5f1f8aed88f47268",
+      "size_bytes": 10178
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-citation-reviewed-entity-binding-fill-v1/rule-inputs.jsonl",
+      "sha256": "a0b7ed3ad0331e2840bc5202c94b538674ffb1a9d8f402875acc50df47463fdd",
+      "size_bytes": 5583
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-citation-reviewed-entity-binding-adapter-v1/world-model-rule-results.jsonl",
+      "sha256": "5ec9db8d4d9049ee09630249d625ba3018369afa05296aaec3aadc45035c52be",
+      "size_bytes": 15607
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_report_gate": "pass",
+    "blocked_count": 0,
+    "closure_action": "promote_citation_reviewed_entity_role_rule_candidates",
+    "pending_count": 4,
+    "promoted_count": 4,
+    "status": "promote",
+    "workflow": "world_model_rule_candidate_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

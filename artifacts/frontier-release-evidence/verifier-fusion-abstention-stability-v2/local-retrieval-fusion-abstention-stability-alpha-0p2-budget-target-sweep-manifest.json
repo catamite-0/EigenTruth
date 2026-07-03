@@ -1,0 +1,127 @@
+{
+  "artifacts": {
+    "abstention_stability_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep.json",
+      "sha256": "61de50f370cedbe247a10cc2801189230245432577fa30cb16076daf85ee36d5",
+      "size_bytes": 4198506
+    },
+    "input_score_records.qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.records.jsonl",
+      "sha256": "d1d3c6cac023776a766515dd803bff3fa314945d4f5d4a005d8ac145b5babe01",
+      "size_bytes": 831588
+    },
+    "input_score_records.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.records.jsonl",
+      "sha256": "c51cfe7d03a3929b649ad5870663b40acb3157c0b1f1d7c2e521a9f32d67af4e",
+      "size_bytes": 831355
+    },
+    "input_scores.qwen05-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.json",
+      "sha256": "e06e0f0744ecf962bd7e500a4ab7776f11d81be0507f9ccb30cb4792357103a9",
+      "size_bytes": 4414
+    },
+    "input_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.json",
+      "sha256": "963cbeb91c3e4cfd706ef5021fca4807420bf131aae8c34054db624e5b1b2e38",
+      "size_bytes": 4564
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.2,
+    "best_by": "conditional_correctness_lower_bound",
+    "fusion": {
+      "geometry_uncertainty": {
+        "fusion_methods": [
+          "interaction",
+          "product",
+          "weighted_mean",
+          "noisy_or"
+        ],
+        "geometry_method": "mean_rank",
+        "geometry_signals": [
+          "truth_proj",
+          "subspace_resid",
+          "eigenscore"
+        ],
+        "uncertainty_method": "mean_rank",
+        "uncertainty_signals": [
+          "verifier_refuted",
+          "verifier_refute_confidence",
+          "verifier_not_supported"
+        ]
+      },
+      "rank": {
+        "methods": [
+          "max_rank",
+          "mean_rank",
+          "noisy_or_rank"
+        ],
+        "signals": [
+          "truth_proj",
+          "subspace_resid",
+          "eigenscore",
+          "verifier_refuted",
+          "verifier_refute_confidence",
+          "verifier_not_supported",
+          "verifier_uncertainty"
+        ]
+      }
+    },
+    "runner": "eval_abstention_stability",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "status": "complete",
+    "threshold_policy": {
+      "abstention_budget_target_rate": null,
+      "abstention_budget_target_rates": [
+        0.43,
+        0.45,
+        0.46,
+        0.47,
+        0.48,
+        0.49,
+        0.5,
+        0.51,
+        0.52,
+        0.54
+      ],
+      "budget_reference": "seed_calibration_split_unlabeled_scores",
+      "enforce_abstention_budget": true,
+      "mode": "conformal_with_abstention_budget",
+      "prefer_release_gate_passing": true
+    }
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

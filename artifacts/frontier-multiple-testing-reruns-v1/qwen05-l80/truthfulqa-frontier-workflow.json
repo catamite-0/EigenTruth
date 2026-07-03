@@ -1,0 +1,292 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  },
+  "cells": [
+    {
+      "artifact_manifest": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/artifact-manifest.json",
+      "best": {
+        "auroc": 0.7644575163398692,
+        "detection": 0.24183006535947713,
+        "false_alarm": 0.096,
+        "layer": -10,
+        "score_name": "truth_proj"
+      },
+      "detectability_taxonomy": {
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "eigenscore",
+        "entrenched_false_count": 0,
+        "entrenched_false_rate": 0.0,
+        "n_false": 306,
+        "n_total": 556,
+        "path": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/detectability-taxonomy-report.json",
+        "status": "complete"
+      },
+      "model": {
+        "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "name": "qwen05"
+      },
+      "multiple_testing": {
+        "alpha": 0.1,
+        "calibration": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/multiple-testing-calibration.json",
+        "detection": 0.07826797385620918,
+        "enabled": true,
+        "false_alarm": 0.03760000000000001,
+        "method": "by",
+        "pass": true,
+        "report": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/multiple-testing-report.json",
+        "signals": [
+          "truth_proj",
+          "maha_last",
+          "subspace_resid",
+          "resid_update_norm",
+          "eigenscore"
+        ]
+      },
+      "name": "qwen05-l80",
+      "scale": {
+        "layer": -12,
+        "limit": 80,
+        "manifold_questions": 80,
+        "name": "l80",
+        "resolved_layer": -12,
+        "resolved_sweep_layers": [
+          -16,
+          -14,
+          -12,
+          -10,
+          -8
+        ],
+        "sweep_layers": [
+          -16,
+          -14,
+          -12,
+          -10,
+          -8
+        ],
+        "sweep_layers_source": null
+      },
+      "score_dump": {
+        "all_signal_names": [
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "maha_last",
+          "nll_answer",
+          "resid_update_norm",
+          "subspace_resid",
+          "truth_proj"
+        ],
+        "n_false": 306,
+        "n_total": 556,
+        "n_true": 250,
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/scores.manifest.json",
+        "records_sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+        "reused": true,
+        "score_names": [
+          "maha_last",
+          "truth_proj",
+          "subspace_resid",
+          "resid_update_norm",
+          "disp_euclid",
+          "disp_hse",
+          "eigenscore",
+          "nll_answer"
+        ],
+        "sha256": "68767b83a06d66c2932e64935b1603fac835f9ddad6663c8856f187771a27439",
+        "source_format": "eigentruth.score_dump.jsonl",
+        "sweep_layers": [
+          "-16",
+          "-14",
+          "-12",
+          "-10",
+          "-8"
+        ]
+      },
+      "status": "complete",
+      "workflow_report": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/calibrated-observability-workflow.json"
+    }
+  ],
+  "config": {
+    "alphas": [
+      0.05,
+      0.1,
+      0.2
+    ],
+    "artifact_alpha": 0.1,
+    "attention_pathway": false,
+    "attn_implementation": null,
+    "auto_batch_size": true,
+    "batch_size": 4,
+    "best_alpha": 0.1,
+    "best_by": "auroc",
+    "cache_dir": "artifacts/cache/truthfulqa-frontier-qwen-smollm2",
+    "cache_only": true,
+    "conformal_repeats": 20,
+    "conformal_signal": "truth_proj",
+    "covariance_low_rank": 16,
+    "covariance_mode": "full",
+    "detectability_confidence_direction": "lower",
+    "detectability_confidence_signal": "nll_answer",
+    "detectability_consistency_direction": "lower",
+    "detectability_consistency_signal": "eigenscore",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "ensemble_methods": [
+      "max_rank",
+      "mean_rank"
+    ],
+    "ensemble_repeats": 20,
+    "eval_reps_cache_shard_size": 16,
+    "eval_reps_shard_read_cache_size": 2,
+    "hidden_state_capture": "hooks",
+    "length_bucketed_batches": true,
+    "max_batch_tokens": 0,
+    "max_length": 96,
+    "models": [
+      {
+        "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "name": "qwen05"
+      }
+    ],
+    "multiple_testing_alpha": 0.1,
+    "multiple_testing_method": "by",
+    "multiple_testing_signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "offline": false,
+    "progress_every": 20,
+    "refresh_caches": false,
+    "refresh_scores": false,
+    "scales": [
+      {
+        "layer": -12,
+        "limit": 80,
+        "manifold_questions": 80,
+        "name": "l80",
+        "sweep_layers": [
+          -16,
+          -14,
+          -12,
+          -10,
+          -8
+        ]
+      }
+    ],
+    "scores_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/scores.manifest.json",
+    "seed": 0,
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "sweep_band_expand_radius": 0,
+    "sweep_band_run_template": "{cell}",
+    "sweep_band_scales": [],
+    "sweep_band_strategy": null,
+    "sweep_band_target_layer": null,
+    "sweep_layers_from_band_report": null,
+    "warmup_checkpoint_every": 50
+  },
+  "detectability_taxonomy": {
+    "report_count": 1,
+    "reports": [
+      {
+        "cell": "qwen05-l80",
+        "confidence_direction": "lower",
+        "confidence_signal": "nll_answer",
+        "consistency_direction": "lower",
+        "consistency_signal": "eigenscore",
+        "entrenched_false_count": 0,
+        "entrenched_false_rate": 0.0,
+        "n_false": 306,
+        "n_total": 556,
+        "path": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/detectability-taxonomy-report.json",
+        "status": "complete"
+      }
+    ]
+  },
+  "ensemble": {
+    "best_alpha": 0.1,
+    "methods": [
+      "max_rank",
+      "mean_rank"
+    ],
+    "path": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/score-ensemble-report.json",
+    "runs": [
+      {
+        "best_ensemble_at_alpha": {
+          "auroc": 0.6401565359477124,
+          "detection": 0.2537581699346405,
+          "false_alarm": 0.1016,
+          "name": "mean_rank"
+        },
+        "best_single_at_alpha": {
+          "auroc": 0.7613333333333333,
+          "detection": 0.28202614379084967,
+          "false_alarm": 0.09559999999999999,
+          "name": "truth_proj"
+        },
+        "name": "qwen05-l80"
+      }
+    ],
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ]
+  },
+  "execution": {
+    "dry_run": false,
+    "wall_clock_seconds": 13.597677396028303
+  },
+  "multiple_testing_gate": {
+    "all_pass": true,
+    "alpha": 0.1,
+    "cell_count": 1,
+    "cells": [
+      {
+        "calibration": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/multiple-testing-calibration.json",
+        "cell": "qwen05-l80",
+        "detection": 0.07826797385620918,
+        "false_alarm": 0.03760000000000001,
+        "pass": true,
+        "report": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/multiple-testing-report.json"
+      }
+    ],
+    "enabled": true,
+    "fail_count": 0,
+    "method": "by",
+    "pass_count": 1,
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "unknown_count": 0
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/artifact-manifest.json",
+    "score_ensemble_report": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/score-ensemble-report.json",
+    "workflow_report": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/truthfulqa-frontier-workflow.json"
+  },
+  "schema_version": 1,
+  "status": "complete",
+  "workflow": "truthfulqa_frontier_workflow"
+}

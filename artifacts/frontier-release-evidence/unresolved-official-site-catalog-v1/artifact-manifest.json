@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-worldbank-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "1f450329f961fcb036a34cde6a68bdb4139f6c35aa0aa1820b6d3c703be3a495",
+      "size_bytes": 63899
+    },
+    "official_site_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-site-catalog-report.json",
+      "sha256": "9bb721224e54557a9c9c2f6370d9d5c5f9bc75c8bc597bc88bbb937268112990",
+      "size_bytes": 2776
+    },
+    "official_url_seeds": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-site-url-seeds.jsonl",
+      "sha256": "c416eb5ed4976affc11d38e16481a8961639b8065235bd1cdeaef2875cb80067",
+      "size_bytes": 7550
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-site-catalog.jsonl",
+      "sha256": "ff73267c1ee28106845c8659ccfd74cdb9cd74e9fac43bff6f91b750cc372903",
+      "size_bytes": 24368
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 2,
+    "matched_seed_count": 16,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_document_count": 16,
+    "status": "ready",
+    "task_count": 8,
+    "workflow": "official_site_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "artifacts": {
+    "coverage_audit_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-coverage-audit.json",
+      "sha256": "c48c062f69898b4d8121e3138f2869adc8e3f6013d85a95be276ffded6361b90",
+      "size_bytes": 23079
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-acquisition-plan.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "source_family_adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+      "sha256": "f83c544b451f92379da099902c64953c95a696ca68b9265266cffdb97cc61adf",
+      "size_bytes": 2896685
+    },
+    "source_family_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+      "sha256": "ab3fb8d4b5a8adf0d637a4bd6b17ec6ccc3cf641b5fad9a3048154cdb49e12ae",
+      "size_bytes": 346447
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_plan_count": 0,
+    "model": "smollm2-l80",
+    "request_count": 260,
+    "source": "frontier-v4",
+    "status": "covered",
+    "workflow": "source_family_coverage_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

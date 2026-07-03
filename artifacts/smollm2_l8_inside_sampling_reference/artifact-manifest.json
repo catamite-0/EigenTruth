@@ -1,0 +1,102 @@
+{
+  "artifacts": {
+    "caches.eval_reps_cache": {
+      "exists": true,
+      "file_count": 10,
+      "kind": "directory",
+      "path": "eval-reps-cache",
+      "sha256": "589aa07c03ee556ead1bab787055744d8973418b1f0f4fec2022af20b1bd4bd1",
+      "size_bytes": 4107781
+    },
+    "caches.inside_diagnostics_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-diagnostics-cache.json",
+      "sha256": "a12068305e2bb3aff162e60acbdba2cfa55dabec7d8172cbaeac4ef3aabbcc15",
+      "size_bytes": 30931
+    },
+    "caches.layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer-stats.pt",
+      "sha256": "fb295f05ecb2df2f2e6b57f683c34fe35f48a4508ac4f80164de26b3c3602623",
+      "size_bytes": 1352069
+    },
+    "caches.statement_encoding_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../cache/smollm2_l8_read_cache_worker_sweep/workers_2/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+      "sha256": "209479b67df991194f0ae42dcad5d27ca85f749c0c32dfbf54068c7703e4ece2",
+      "size_bytes": 13551
+    },
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-commands.json",
+      "sha256": "f0d9f58e74f4ccfd867a247472bb654a4eaa1c4d508736e2ea8bbf1b8b003717",
+      "size_bytes": 1472
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-comparison.json",
+      "sha256": "9c0b8ec0e95e1b483b2b86b16b54377ac07e04b86aaf92d55bebbfac7cfd196b",
+      "size_bytes": 2156
+    },
+    "profiles.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-fixed.json",
+      "sha256": "65f601529de964ca7bd6d4b013c6639ac0f48754e348289bbe5695ca7c83ac37",
+      "size_bytes": 2254
+    },
+    "results.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-fixed.json",
+      "sha256": "be76ada0f78b552ccbe87b026becdbb11e4a11ea6ff95003931723b09b9cbb28",
+      "size_bytes": 36521
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 8,
+    "inside_min_samples": 2,
+    "inside_sample_step": 1,
+    "inside_samples": 3,
+    "inside_stability_delta": 0.05,
+    "inside_trigger_signal": null,
+    "inside_trigger_threshold": null,
+    "inside_trigger_top_fraction": null,
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "refresh_shared_caches": false,
+    "run_names": [
+      "fixed"
+    ],
+    "runner": "run_inside_sampling_profile",
+    "shared_caches": {
+      "eval_reps_cache": "artifacts/smollm2_l8_inside_sampling_reference/eval-reps-cache",
+      "inside_diagnostics_cache": "artifacts/smollm2_l8_inside_sampling_reference/inside-diagnostics-cache.json",
+      "layer_stats_cache": "artifacts/smollm2_l8_inside_sampling_reference/layer-stats.pt",
+      "statement_encoding_cache": "artifacts/cache/smollm2_l8_read_cache_worker_sweep/workers_2/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json"
+    }
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 1,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

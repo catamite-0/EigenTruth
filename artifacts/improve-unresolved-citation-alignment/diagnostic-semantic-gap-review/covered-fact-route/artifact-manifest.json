@@ -1,0 +1,75 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "0405d30a04fcd455943f7a2aa60ef1500e77bc71ea4462d4589b6e36b39e5ec1",
+      "size_bytes": 22159
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../source-family-qa/source-family-qa-corpus.json",
+      "sha256": "ae87775ebf41bd95cbf355e15271afa29e56de6303098bda86ec2a7f44980ea0",
+      "size_bytes": 8584
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-route-summary.json",
+      "sha256": "c802eaca4281deea9debf10259df2fa381337e6e58e13b6d92f5b2e100f4022f",
+      "size_bytes": 10664
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "3eae13ba1abb6eb07080a5e976bcbadf23d08a7f0360a7c8facd09b7b54c6cf0",
+      "size_bytes": 60726
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-verifier-report.json",
+      "sha256": "55f1bfa0e8cdcd0ccf1682a0aa9de4e83d78ef7b0444b96aab014921d933d3c8",
+      "size_bytes": 17885
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "fact_group_count": 3,
+    "n_false": 7,
+    "n_records": 14,
+    "n_true": 7,
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "promotes_covered_facts_route": true,
+    "provider_count": 1,
+    "route": "structured_qa",
+    "score_name": "semantic-gap-reviewed-covered-facts",
+    "signal": "truth_proj",
+    "source_family_count": 1,
+    "status": "promote",
+    "structured_fact_parsing": "worldbank_wikidata",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "workflow": "source_family_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

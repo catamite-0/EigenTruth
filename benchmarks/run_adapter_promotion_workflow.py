@@ -15,7 +15,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.compare_registry_baseline import compare_registry_baseline  # noqa: E402
-from benchmarks.compare_verifier_routes import build_route_comparison_report  # noqa: E402
+from benchmarks.compare_verifier_routes import (  # noqa: E402
+    _parse_cache_key_mode_requirement,
+    build_route_comparison_report,
+)
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
@@ -42,6 +45,7 @@ class AdapterPromotionWorkflowConfig:
     max_mean_attempted_route_count: float | None = None
     max_retrieval_use_rate: float | None = None
     min_cache_hit_rate: float | None = None
+    required_cache_key_modes: Mapping[str, str] | None = None
     min_staged_skip_rate: float | None = None
     max_staged_verified_false_alarm: float | None = None
     min_staged_verified_detection: float | None = None
@@ -70,6 +74,13 @@ class AdapterPromotionWorkflowConfig:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         object.__setattr__(self, "notes", tuple(str(note) for note in self.notes))
         object.__setattr__(self, "gate_routes", tuple(str(route) for route in self.gate_routes))
+        required_modes = None
+        if self.required_cache_key_modes is not None:
+            required_modes = {
+                str(name).strip(): str(mode).strip().lower()
+                for name, mode in self.required_cache_key_modes.items()
+            }
+        object.__setattr__(self, "required_cache_key_modes", required_modes)
         object.__setattr__(
             self,
             "candidate_profiles",
@@ -98,6 +109,7 @@ def run_adapter_promotion_workflow(config: AdapterPromotionWorkflowConfig) -> di
         max_mean_attempted_route_count=config.max_mean_attempted_route_count,
         max_retrieval_use_rate=config.max_retrieval_use_rate,
         min_cache_hit_rate=config.min_cache_hit_rate,
+        required_cache_key_modes=config.required_cache_key_modes,
         min_staged_skip_rate=config.min_staged_skip_rate,
         max_staged_verified_false_alarm=config.max_staged_verified_false_alarm,
         min_staged_verified_detection=config.min_staged_verified_detection,
@@ -183,6 +195,8 @@ def _write_artifact_manifest(
             "registry_baseline_passed": decision.get("registry_baseline_passed"),
             "quality_gate_passed": quality_gate.get("passed"),
             "quality_gate_checked_routes": quality_gate.get("checked_routes"),
+            "required_cache_key_modes": config.required_cache_key_modes,
+            "cache_key_modes": (route_comparison.get("cache_summary") or {}).get("cache_key_modes"),
             "recommended_selected": recommended_metrics.get("selected"),
             "recommended_decision_accuracy": recommended_metrics.get("decision_accuracy"),
             "recommended_false_supported_rate": recommended_metrics.get("false_supported_rate"),
@@ -313,6 +327,10 @@ def _config_from_args(args: argparse.Namespace) -> AdapterPromotionWorkflowConfi
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        required_cache_key_modes=dict(
+            _parse_cache_key_mode_requirement(value)
+            for value in args.require_cache_key_mode
+        ),
         min_staged_skip_rate=args.min_staged_skip_rate,
         max_staged_verified_false_alarm=args.max_staged_verified_false_alarm,
         min_staged_verified_detection=args.min_staged_verified_detection,
@@ -385,6 +403,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None)
     parser.add_argument("--min-cache-hit-rate", type=float, default=None)
+    parser.add_argument("--require-cache-key-mode", action="append", default=[],
+                        help="fail route gate unless a verifier cache uses mode, formatted as verifier=mode")
     parser.add_argument("--min-staged-skip-rate", type=float, default=None)
     parser.add_argument("--max-staged-verified-false-alarm", type=float, default=None)
     parser.add_argument("--min-staged-verified-detection", type=float, default=None)

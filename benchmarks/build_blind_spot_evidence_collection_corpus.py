@@ -41,6 +41,12 @@ NON_PROPERTY_HINTS = {
     "retrieved_at_required",
 }
 COUNTERFACTUAL_ROUTE_PREFIX = "counterfactual_"
+ALIGNMENT_ROUTES = {
+    "claim_evidence_alignment",
+    "source_document_fact_extraction",
+    "query_refinement",
+    "negative_control_alignment_audit",
+}
 
 
 def build_blind_spot_evidence_collection_corpus(
@@ -75,6 +81,7 @@ def build_blind_spot_evidence_collection_corpus(
     citation_requests: list[dict[str, Any]] = []
     counterfactual_requests: list[dict[str, Any]] = []
     rule_requests: list[dict[str, Any]] = []
+    alignment_requests: list[dict[str, Any]] = []
     source_discovery_documents: list[dict[str, Any]] = []
 
     for ordinal, target in enumerate(targets, start=1):
@@ -93,10 +100,12 @@ def build_blind_spot_evidence_collection_corpus(
         )
         counterfactuals = _counterfactual_requests(target, target_id=target_id)
         rules = _rule_requests(target, target_id=target_id)
+        alignment = _alignment_requests(target, target_id=target_id)
         wikidata_requests.extend(wikidata)
         citation_requests.extend(citations)
         counterfactual_requests.extend(counterfactuals)
         rule_requests.extend(rules)
+        alignment_requests.extend(alignment)
         source_discovery_documents.extend(_source_discovery_documents(wikidata, citations))
 
     summary = _summary(
@@ -105,6 +114,7 @@ def build_blind_spot_evidence_collection_corpus(
         citation_requests=citation_requests,
         counterfactual_requests=counterfactual_requests,
         rule_requests=rule_requests,
+        alignment_requests=alignment_requests,
         source_discovery_documents=source_discovery_documents,
     )
     return {
@@ -136,6 +146,7 @@ def build_blind_spot_evidence_collection_corpus(
             "external_citation": citation_requests,
             "counterfactual_probe": counterfactual_requests,
             "world_model_or_calculator_rule": rule_requests,
+            "alignment_audit": alignment_requests,
         },
         "source_discovery_documents": source_discovery_documents,
         "metadata": dict(metadata or {}),
@@ -189,6 +200,7 @@ def run(
                 "total_request_count": payload["summary"]["total_request_count"],
                 "wikidata_request_count": payload["summary"]["request_counts"]["wikidata_entity_property"],
                 "citation_request_count": payload["summary"]["request_counts"]["external_citation"],
+                "alignment_request_count": payload["summary"]["request_counts"]["alignment_audit"],
             },
         )
         _write_json(manifest_path, manifest, compact=compact_json)
@@ -205,6 +217,7 @@ def run(
                 "total_request_count": payload["summary"]["total_request_count"],
                 "wikidata_request_count": payload["summary"]["request_counts"]["wikidata_entity_property"],
                 "citation_request_count": payload["summary"]["request_counts"]["external_citation"],
+                "alignment_request_count": payload["summary"]["request_counts"]["alignment_audit"],
                 "artifact_manifest": None if artifact_manifest_path is None else str(artifact_manifest_path),
                 **dict(metadata or {}),
             },
@@ -238,7 +251,7 @@ def _select_targets(
 
 
 def _target_snapshot(target: Mapping[str, Any], *, target_id: str, ordinal: int) -> dict[str, Any]:
-    return {
+    snapshot = {
         "target_id": target_id,
         "ordinal": int(ordinal),
         "record_index": _optional_int(target.get("record_index")),
@@ -251,6 +264,9 @@ def _target_snapshot(target: Mapping[str, Any], *, target_id: str, ordinal: int)
         "wikidata_property_hints": tuple(str(item) for item in _sequence(target.get("wikidata_property_hints"))),
         "query_seeds": tuple(str(item) for item in _sequence(target.get("query_seeds"))),
     }
+    if isinstance(target.get("query_sweep_gap_guidance"), Mapping):
+        snapshot["query_sweep_gap_guidance"] = dict(target["query_sweep_gap_guidance"])
+    return snapshot
 
 
 def _wikidata_requests(
@@ -369,6 +385,45 @@ def _rule_requests(target: Mapping[str, Any], *, target_id: str) -> tuple[dict[s
     } for idx, family in enumerate(families, start=1))
 
 
+def _alignment_requests(target: Mapping[str, Any], *, target_id: str) -> tuple[dict[str, Any], ...]:
+    routes = set(str(route) for route in _sequence(target.get("recommended_routes")))
+    alignment_routes = tuple(route for route in ALIGNMENT_ROUTES if route in routes)
+    guidance = target.get("query_sweep_gap_guidance")
+    guidance_actions = (
+        tuple(
+            str(item)
+            for item in _sequence(guidance.get("recommended_alignment_actions"))
+            if str(item) in ALIGNMENT_ROUTES
+        )
+        if isinstance(guidance, Mapping)
+        else ()
+    )
+    actions = tuple(dict.fromkeys((*guidance_actions, *alignment_routes)))
+    if not actions:
+        return ()
+    return ({
+        "request_id": f"align:{target_id}:1",
+        "target_id": target_id,
+        "request_type": "claim_evidence_alignment",
+        "priority": str(target.get("priority", "")),
+        "question_type": str(target.get("question_type", "")),
+        "alignment_actions": actions,
+        "dominant_gap_bucket": None if not isinstance(guidance, Mapping) else guidance.get("dominant_gap_bucket"),
+        "query_sweep_best_strategy": None if not isinstance(guidance, Mapping) else guidance.get("best_strategy"),
+        "top_hit_sources": (
+            () if not isinstance(guidance, Mapping)
+            else tuple(str(item) for item in _sequence(guidance.get("top_hit_sources")))
+        ),
+        "question": str(target.get("question", "")),
+        "model_answer": str(target.get("answer", "")),
+        "entity_candidates": tuple(str(item) for item in _sequence(target.get("entity_candidates"))),
+        "wikidata_property_hints": tuple(str(item) for item in _sequence(target.get("wikidata_property_hints"))),
+        "query_seeds": tuple(str(item) for item in _sequence(target.get("query_seeds"))),
+        "alignment_instruction": _alignment_instruction(target, actions=actions),
+        "usage": "alignment_audit_only",
+    },)
+
+
 def _source_discovery_documents(
     wikidata_requests: Sequence[Mapping[str, Any]],
     citation_requests: Sequence[Mapping[str, Any]],
@@ -413,6 +468,7 @@ def _summary(
     citation_requests: Sequence[Mapping[str, Any]],
     counterfactual_requests: Sequence[Mapping[str, Any]],
     rule_requests: Sequence[Mapping[str, Any]],
+    alignment_requests: Sequence[Mapping[str, Any]],
     source_discovery_documents: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     priority_counts = Counter(str(item.get("priority")) for item in target_snapshots)
@@ -427,6 +483,7 @@ def _summary(
         "external_citation": len(citation_requests),
         "counterfactual_probe": len(counterfactual_requests),
         "world_model_or_calculator_rule": len(rule_requests),
+        "alignment_audit": len(alignment_requests),
     }
     return {
         "target_count": len(target_snapshots),
@@ -447,6 +504,9 @@ def _summary(
         }),
         "targets_with_rule_requests": len({
             str(item.get("target_id")) for item in rule_requests
+        }),
+        "targets_with_alignment_requests": len({
+            str(item.get("target_id")) for item in alignment_requests
         }),
     }
 
@@ -535,6 +595,17 @@ def _rule_seed(target: Mapping[str, Any], *, family: str) -> str:
     if family == "causal_or_procedural_consistency":
         return f"Check causal/procedural steps against an external source: {question} model answer: {answer}"
     return f"Check the answer against a deterministic world-model rule: {question} model answer: {answer}"
+
+
+def _alignment_instruction(target: Mapping[str, Any], *, actions: Sequence[str]) -> str:
+    question = str(target.get("question", ""))
+    answer = str(target.get("answer", ""))
+    action_text = ", ".join(actions)
+    return (
+        "Audit claim-evidence alignment before route promotion: extract the subject, "
+        "property, proposed value, contradictory value when present, and exact evidence spans "
+        f"for actions [{action_text}]. Question: {question} Model answer: {answer}"
+    )
 
 
 def _target_id(target: Mapping[str, Any], ordinal: int) -> str:

@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-openalex-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "261c8508c1f4065e38b40c2f77dcc46453e32ec3c3250b2274e55f5db4cc4b5d",
+      "size_bytes": 6844
+    },
+    "seeded_url_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "seeded-news-catalog-report.json",
+      "sha256": "2b5293af91f94269499e9d98920eee70d0b58e94c9141433a99a36177da2a938",
+      "size_bytes": 1403
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "seeded-news-catalog.jsonl",
+      "sha256": "f0413b581ec8e75abfd908f04d398cddfb33292043c836226c4c9cad5ebd83bc",
+      "size_bytes": 10663
+    },
+    "url_seeds": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "seeded-news-url-seeds.jsonl",
+      "sha256": "2a55fc150a9ece6b08873e7b151bf2924e836b49065ab46ccf4bbd143af4e9de",
+      "size_bytes": 3692
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 0,
+    "matched_seed_count": 8,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_document_count": 8,
+    "status": "ready",
+    "task_count": 4,
+    "workflow": "seeded_url_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

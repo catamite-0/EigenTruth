@@ -56,12 +56,38 @@ RESERVED_EXTERNAL_FIELDS = {
     "source_index",
     "target_id",
 }
+SAFE_RESULT_METADATA_FIELDS = {
+    "subject",
+    "subject_label",
+    "entity",
+    "entity_name",
+    "country",
+    "country_name",
+    "organization_name",
+    "location_name",
+    "predicate",
+    "property",
+    "property_label",
+    "statement_property",
+    "statement_property_label",
+    "indicator",
+    "indicator_name",
+    "object",
+    "object_text",
+    "value",
+    "fact_value",
+    "reference_year",
+    "year",
+    "time_period",
+    "retrieval_index_text",
+}
 
 
 def build_citation_search_adapter_handoff(
     queue_report: Mapping[str, Any],
     *,
     adapter_results: Sequence[Mapping[str, Any]] = (),
+    batch_ids: Sequence[str] = (),
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
@@ -80,11 +106,20 @@ def build_citation_search_adapter_handoff(
         raise ValueError("max_results_per_request must be positive when provided.")
     if int(max_alternate_queries) < 0:
         raise ValueError("max_alternate_queries cannot be negative.")
+    selected_batch_ids = _batch_id_tuple(batch_ids)
+    selected_request_ids, selected_batches = _selected_batch_request_ids(queue_report, selected_batch_ids)
+    selected_request_id_set = set(selected_request_ids)
     source_requests = tuple(
         request
         for request in _mapping_sequence(queue_report.get("adapter_requests", ()))
         if request.get("request_type") == CITATION_REQUEST_TYPE
     )
+    if selected_batch_ids:
+        source_requests = tuple(
+            request
+            for request in source_requests
+            if _queue_request_identifier(request) in selected_request_id_set
+        )
     if max_requests is not None:
         source_requests = source_requests[: int(max_requests)]
     adapter_requests = tuple(
@@ -107,6 +142,7 @@ def build_citation_search_adapter_handoff(
         adapter_requests=adapter_requests,
         source_documents=source_documents,
         result_summary=result_summary,
+        selected_batches=selected_batches,
     )
     status = "collected" if source_documents else "ready_for_external_adapter"
     return {
@@ -124,6 +160,7 @@ def build_citation_search_adapter_handoff(
             "queue_status": queue_report.get("status"),
             "queue_target_count": _nested_int(queue_report, "summary", "target_count"),
             "queue_adapter_request_count": _nested_int(queue_report, "summary", "adapter_request_count"),
+            "queue_batch_count": _nested_int(queue_report, "summary", "batch_count"),
         },
         "label_usage": {
             "labels_used_for_adapter_requests": False,
@@ -132,6 +169,7 @@ def build_citation_search_adapter_handoff(
             "adapter_results_are_verifier_evidence": False,
         },
         "config": {
+            "batch_ids": selected_batch_ids,
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
@@ -160,6 +198,7 @@ def run(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    batch_ids: Sequence[str] = (),
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
@@ -195,6 +234,7 @@ def run(
     payload = build_citation_search_adapter_handoff(
         queue_report,
         adapter_results=adapter_results,
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
@@ -249,6 +289,7 @@ def run(
             "workflow": report["workflow"],
             "status": report["status"],
             "adapter_request_count": report["summary"]["adapter_request_count"],
+            "selected_batch_count": report["summary"]["selected_batch_count"],
             "source_document_count": report["summary"]["source_document_count"],
             "corpus_document_count": report["summary"]["corpus_document_count"],
             **dict(metadata or {}),
@@ -266,6 +307,7 @@ def run(
                 "workflow": report["workflow"],
                 "status": report["status"],
                 "adapter_request_count": report["summary"]["adapter_request_count"],
+                "selected_batch_count": report["summary"]["selected_batch_count"],
                 "source_document_count": report["summary"]["source_document_count"],
                 "corpus_document_count": report["summary"]["corpus_document_count"],
                 "artifact_manifest": str(manifest_path),
@@ -367,6 +409,36 @@ def _adapter_request_id(request: Mapping[str, Any]) -> str:
     return f"cite-search-{digest}"
 
 
+def _batch_id_tuple(batch_ids: Sequence[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(_string_sequence(batch_ids)))
+
+
+def _selected_batch_request_ids(
+    queue_report: Mapping[str, Any],
+    batch_ids: Sequence[str],
+) -> tuple[tuple[str, ...], tuple[Mapping[str, Any], ...]]:
+    selected_batch_ids = _batch_id_tuple(batch_ids)
+    if not selected_batch_ids:
+        return (), ()
+    batches_by_id = {
+        str(batch.get("batch_id")): batch
+        for batch in _mapping_sequence(queue_report.get("execution_batches", ()))
+        if str(batch.get("batch_id", "")).strip()
+    }
+    missing = tuple(batch_id for batch_id in selected_batch_ids if batch_id not in batches_by_id)
+    if missing:
+        raise ValueError(f"unknown execution batch ids: {', '.join(missing)}")
+    selected_batches = tuple(batches_by_id[batch_id] for batch_id in selected_batch_ids)
+    request_ids: list[str] = []
+    for batch in selected_batches:
+        request_ids.extend(_string_sequence(batch.get("source_request_ids", ())))
+    return tuple(dict.fromkeys(request_ids)), selected_batches
+
+
+def _queue_request_identifier(request: Mapping[str, Any]) -> str:
+    return str(request.get("source_request_id") or request.get("request_id") or request.get("queue_id") or "")
+
+
 def _source_documents_from_results(
     adapter_results: Sequence[Mapping[str, Any]],
     *,
@@ -376,12 +448,15 @@ def _source_documents_from_results(
 ) -> tuple[tuple[dict[str, Any], ...], dict[str, Any]]:
     documents: list[dict[str, Any]] = []
     unknown_results = 0
+    unknown_result_ids: set[str] = set()
     skipped_empty = 0
     seen_per_request: Counter[str] = Counter()
     for item in adapter_results:
         request_id = _result_request_id(item)
         if request_id not in request_by_id:
             unknown_results += 1
+            if request_id:
+                unknown_result_ids.add(request_id)
             continue
         results = _result_items(item)
         for result in results:
@@ -393,11 +468,25 @@ def _source_documents_from_results(
                 continue
             documents.append(document)
             seen_per_request[request_id] += 1
+    request_ids = set(request_by_id)
+    matched_request_ids = set(seen_per_request)
+    missing_request_ids = tuple(sorted(request_ids - matched_request_ids))
+    expected_request_count = len(request_by_id)
+    matched_request_count = len(matched_request_ids)
     return tuple(documents), {
+        "expected_request_count": expected_request_count,
         "input_result_count": len(adapter_results),
         "unknown_request_result_count": unknown_results,
+        "unknown_request_result_ids": tuple(sorted(unknown_result_ids)),
         "skipped_empty_result_count": skipped_empty,
-        "matched_request_count": len(seen_per_request),
+        "matched_request_count": matched_request_count,
+        "missing_request_count": len(missing_request_ids),
+        "missing_request_ids": missing_request_ids,
+        "request_coverage": (
+            1.0
+            if expected_request_count == 0
+            else matched_request_count / float(expected_request_count)
+        ),
         "result_documents_by_request": dict(sorted(seen_per_request.items())),
     }
 
@@ -435,6 +524,7 @@ def _source_document(
     provider = _clean(result.get("provider") or result.get("source_provider")) or "external_citation_search"
     source = _clean(result.get("source")) or url or f"citation-search:{provider}:{request['request_id']}"
     metadata = {
+        **_safe_result_metadata(result),
         "external_source": True,
         "source_kind": source_kind,
         "provider": provider,
@@ -448,6 +538,13 @@ def _source_document(
         "adapter_request_sha256": _sha256_json(request),
         "query_sha256": hashlib.sha256(str(request.get("query", "")).encode("utf-8")).hexdigest(),
         "result_sha256": _sha256_json(result),
+        "retrieval_index_text": _retrieval_index_text(
+            request=request,
+            title=title,
+            snippet=snippet,
+            content=content,
+        ),
+        **_source_binding_metadata(request=request, result=result),
     }
     metadata = {key: value for key, value in metadata.items() if value is not None and value != ""}
     _reject_reserved_metadata(metadata, source=source)
@@ -458,12 +555,64 @@ def _source_document(
     }
 
 
+def _retrieval_index_text(
+    *,
+    request: Mapping[str, Any],
+    title: str,
+    snippet: str,
+    content: str,
+) -> str:
+    """Return retrieval-only text that must not replace verifier evidence text."""
+    parts = [
+        str(request.get("query", "")).strip(),
+        *tuple(_string_sequence(request.get("alternate_queries", ()))),
+        title,
+        snippet,
+    ]
+    if not snippet and not content:
+        parts.append(title)
+    return _join_nonempty(parts)
+
+
+def _source_binding_metadata(
+    *,
+    request: Mapping[str, Any],
+    result: Mapping[str, Any],
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    request_metadata = _mapping(request.get("metadata"))
+    result_metadata = _mapping(result.get("metadata"))
+    for key in (
+        "source_queue_request_sha256",
+        "source_request_sha256",
+        "collection_request_sha256",
+    ):
+        request_value = request_metadata.get(key)
+        result_value = result_metadata.get(key)
+        if request_value is not None:
+            metadata[key] = request_value
+        elif result_value is not None:
+            metadata[key] = result_value
+        if result_value is not None and result_value != request_value:
+            metadata[f"source_result_{key}"] = result_value
+    return metadata
+
+
+def _safe_result_metadata(result: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = dict(_mapping(result.get("metadata")))
+    for key in SAFE_RESULT_METADATA_FIELDS:
+        if key in result and key not in metadata:
+            metadata[key] = result[key]
+    return metadata
+
+
 def _summary(
     *,
     queue_report: Mapping[str, Any],
     adapter_requests: Sequence[Mapping[str, Any]],
     source_documents: Sequence[Mapping[str, Any]],
     result_summary: Mapping[str, Any],
+    selected_batches: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     priority_counts = Counter(str(item.get("priority")) for item in adapter_requests)
     question_type_counts = Counter(str(item.get("question_type")) for item in adapter_requests)
@@ -479,12 +628,27 @@ def _summary(
         for family in _string_sequence(plan.get("families", ())):
             source_family_counts[family] += 1
     providers = Counter(str(_mapping(item.get("metadata")).get("provider")) for item in source_documents)
+    selected_batch_ids = tuple(str(batch.get("batch_id")) for batch in selected_batches)
+    selected_batch_request_count = sum(
+        _optional_int(batch.get("request_count")) or len(_string_sequence(batch.get("source_request_ids", ())))
+        for batch in selected_batches
+    )
     return {
         "source_queue_target_count": _nested_int(queue_report, "summary", "target_count"),
         "source_queue_adapter_request_count": _nested_int(queue_report, "summary", "adapter_request_count"),
+        "source_queue_batch_count": _nested_int(queue_report, "summary", "batch_count"),
+        "selected_batch_count": len(selected_batches),
+        "selected_batch_ids": selected_batch_ids,
+        "selected_batch_source_request_count": selected_batch_request_count,
         "adapter_request_count": len(adapter_requests),
         "source_document_count": len(source_documents),
         "corpus_document_count": len(source_documents),
+        "adapter_result_expected_request_count": result_summary.get("expected_request_count", 0),
+        "adapter_result_matched_request_count": result_summary.get("matched_request_count", 0),
+        "adapter_result_missing_request_count": result_summary.get("missing_request_count", 0),
+        "adapter_result_missing_request_ids": tuple(result_summary.get("missing_request_ids", ())),
+        "adapter_result_request_coverage": result_summary.get("request_coverage", 1.0),
+        "adapter_result_unknown_request_count": result_summary.get("unknown_request_result_count", 0),
         "priority_counts": _sorted_counter(priority_counts),
         "question_type_counts": _sorted_counter(question_type_counts),
         "source_family_counts": _sorted_counter(source_family_counts),
@@ -639,6 +803,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
+    parser.add_argument(
+        "--batch-id",
+        action="append",
+        default=[],
+        help="Execution batch id from the unresolved queue to hand off. May be repeated.",
+    )
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
@@ -660,6 +830,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        batch_ids=tuple(args.batch_id or ()),
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,

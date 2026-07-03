@@ -1,0 +1,1129 @@
+{
+  "candidate_entity_bindings": [
+    {
+      "answer_entity": "Big Bird",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-199-1",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "property_only_alignment",
+        "hit_alignment_score": null,
+        "hit_matched_entity": "",
+        "hit_model_answer_value_matched": false,
+        "hit_selected": false,
+        "model_answer": "You will see Big Bird.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [],
+      "candidate_results_require_review": true,
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "",
+      "expected_entity_source": "",
+      "not_verifier_evidence": true,
+      "provider": "",
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "request_id": "rule:record-199:1",
+      "requested_role": "physical_location_expected_entity",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "",
+      "source_family": "",
+      "source_note": "No alignment hit met the source-backed candidate threshold.",
+      "source_request_id": "rule:record-199:1",
+      "source_title": "",
+      "source_url": "",
+      "subject_entity": "Sesame Street",
+      "target_id": "record-199",
+      "task_id": "rule-input-task-0001",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "the Muppets",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-223-1",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "property_only_alignment",
+        "hit_alignment_score": null,
+        "hit_matched_entity": "",
+        "hit_model_answer_value_matched": false,
+        "hit_selected": false,
+        "model_answer": "You will see the Muppets.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [],
+      "candidate_results_require_review": true,
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "",
+      "expected_entity_source": "",
+      "not_verifier_evidence": true,
+      "provider": "",
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "request_id": "rule:record-223:1",
+      "requested_role": "physical_location_expected_entity",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "",
+      "source_family": "",
+      "source_note": "No alignment hit met the source-backed candidate threshold.",
+      "source_request_id": "rule:record-223:1",
+      "source_title": "",
+      "source_url": "",
+      "subject_entity": "Sesame Street",
+      "target_id": "record-223",
+      "task_id": "rule-input-task-0002",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "Elon Musk",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-485-1",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "property_only_alignment",
+        "hit_alignment_score": null,
+        "hit_matched_entity": "",
+        "hit_model_answer_value_matched": false,
+        "hit_selected": false,
+        "model_answer": "Elon Musk.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [],
+      "candidate_results_require_review": true,
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "",
+      "expected_entity_source": "",
+      "not_verifier_evidence": true,
+      "provider": "",
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "request_id": "rule:record-485:1",
+      "requested_role": "name_completion",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "",
+      "source_family": "",
+      "source_note": "No alignment hit met the source-backed candidate threshold.",
+      "source_request_id": "rule:record-485:1",
+      "source_title": "",
+      "source_url": "",
+      "subject_entity": "Elon",
+      "target_id": "record-485",
+      "task_id": "rule-input-task-0003",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "Elon Musk",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-516-1",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "property_only_alignment",
+        "hit_alignment_score": null,
+        "hit_matched_entity": "",
+        "hit_model_answer_value_matched": false,
+        "hit_selected": false,
+        "model_answer": "His name is Elon Musk.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [],
+      "candidate_results_require_review": true,
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "",
+      "expected_entity_source": "",
+      "not_verifier_evidence": true,
+      "provider": "",
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "request_id": "rule:record-516:1",
+      "requested_role": "name_completion",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "",
+      "source_family": "",
+      "source_note": "No alignment hit met the source-backed candidate threshold.",
+      "source_request_id": "rule:record-516:1",
+      "source_title": "",
+      "source_url": "",
+      "subject_entity": "Elon",
+      "target_id": "record-516",
+      "task_id": "rule-input-task-0004",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "The Patriots",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-1",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "subject_only_alignment",
+        "hit_alignment_score": 0.487692,
+        "hit_matched_entity": "Pilgrims",
+        "hit_model_answer_value_matched": false,
+        "hit_selected": true,
+        "model_answer": "The Patriots.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [
+        "Pilgrims",
+        "Boston",
+        "New England Patriots"
+      ],
+      "candidate_results_require_review": true,
+      "candidate_status": "needs_entity_value_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "",
+      "expected_entity_source": "",
+      "not_verifier_evidence": true,
+      "provider": "cbs_sports",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "rule:record-498:1",
+      "requested_role": "team_name",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "source_note": "Drafted from world_model_rule_entity_binding_plan; alignment_status=needs_property_or_subject_alignment; source=seeded_url:news:82c8ebb5d518; review before fill.",
+      "source_request_id": "rule:record-498:1",
+      "source_title": "How did New England Patriots get their name? Other nicknames that were considered",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0005",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "The Patriots",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-2",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "subject_only_alignment",
+        "hit_alignment_score": 0.487692,
+        "hit_matched_entity": "Pilgrims",
+        "hit_model_answer_value_matched": false,
+        "hit_selected": true,
+        "model_answer": "The Patriots.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [
+        "Pilgrims",
+        "Boston",
+        "New England Patriots"
+      ],
+      "candidate_results_require_review": true,
+      "candidate_status": "needs_entity_value_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "",
+      "expected_entity_source": "",
+      "not_verifier_evidence": true,
+      "provider": "cbs_sports",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "rule:record-498:2",
+      "requested_role": "team_name",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "source_note": "Drafted from world_model_rule_entity_binding_plan; alignment_status=needs_property_or_subject_alignment; source=seeded_url:news:82c8ebb5d518; review before fill.",
+      "source_request_id": "rule:record-498:2",
+      "source_title": "How did New England Patriots get their name? Other nicknames that were considered",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0007",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "New England Patriots",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "subject_only_alignment",
+        "hit_alignment_score": 0.537143,
+        "hit_matched_entity": "Pilgrims",
+        "hit_model_answer_value_matched": true,
+        "hit_selected": true,
+        "model_answer": "New England Patriots.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [
+        "New England Patriots",
+        "Pilgrims",
+        "Boston"
+      ],
+      "candidate_results_require_review": true,
+      "candidate_status": "ready_for_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "New England Patriots",
+      "expected_entity_source": "alignment_model_answer_value_matched",
+      "not_verifier_evidence": true,
+      "provider": "cbs_sports",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "rule:record-517:1",
+      "requested_role": "team_name",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "source_note": "Drafted from world_model_rule_entity_binding_plan; alignment_status=needs_property_or_subject_alignment; source=seeded_url:news:82c8ebb5d518; review before fill.",
+      "source_request_id": "rule:record-517:1",
+      "source_title": "How did New England Patriots get their name? Other nicknames that were considered",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0006",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "answer_entity": "New England Patriots",
+      "binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2",
+      "candidate_alignment": {
+        "alignment_status": "needs_property_or_subject_alignment",
+        "gap_reason": "subject_only_alignment",
+        "hit_alignment_score": 0.537143,
+        "hit_matched_entity": "Pilgrims",
+        "hit_model_answer_value_matched": true,
+        "hit_selected": true,
+        "model_answer": "New England Patriots.",
+        "query_sweep_best_strategy": "question_overlap_0p65"
+      },
+      "candidate_answer_source": "alignment_model_answer",
+      "candidate_expected_entities": [
+        "New England Patriots",
+        "Pilgrims",
+        "Boston"
+      ],
+      "candidate_results_require_review": true,
+      "candidate_status": "ready_for_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "expected_entity": "New England Patriots",
+      "expected_entity_source": "alignment_model_answer_value_matched",
+      "not_verifier_evidence": true,
+      "provider": "cbs_sports",
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "rule:record-517:2",
+      "requested_role": "team_name",
+      "review_status": "needs_review",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "source_note": "Drafted from world_model_rule_entity_binding_plan; alignment_status=needs_property_or_subject_alignment; source=seeded_url:news:82c8ebb5d518; review before fill.",
+      "source_request_id": "rule:record-517:2",
+      "source_title": "How did New England Patriots get their name? Other nicknames that were considered",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0008",
+      "workflow": "world_model_rule_entity_binding_plan"
+    }
+  ],
+  "config": {
+    "candidate_review_status": "needs_review",
+    "collection_family": "entity_role_rule_input_collection",
+    "min_alignment_score": 0.45,
+    "required_binding_fields": [
+      "request_id",
+      "target_id",
+      "subject_entity",
+      "answer_entity",
+      "expected_entity",
+      "requested_role",
+      "source_citation",
+      "review_status",
+      "not_verifier_evidence"
+    ]
+  },
+  "entity_binding_requests": [
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "Sesame Street",
+          "Big Bird",
+          "You will see Big Bird",
+          "will see physically travel 123 Sesame Street"
+        ],
+        "gap_reason": "property_only_alignment",
+        "model_answer": "You will see Big Bird.",
+        "query_refinement_suggestions": [
+          "Sesame Street creator Who will you see if you physically travel to 123 Sesame Street?",
+          "Sesame Street author Who will you see if you physically travel to 123 Sesame Street?",
+          "Big Bird creator Who will you see if you physically travel to 123 Sesame Street?",
+          "Big Bird author Who will you see if you physically travel to 123 Sesame Street?"
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.36,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.2,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.36,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.2,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.36,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.2,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-199-1",
+      "candidate_missing_fields": [
+        "expected_entity",
+        "source_citation"
+      ],
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-199-1",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "request_id": "entity-binding:rule:record-199:1",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-199:1",
+      "target_id": "record-199",
+      "task_id": "rule-input-task-0001",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "Sesame Street",
+          "Muppets",
+          "You will see the Muppets",
+          "will see physically travel 123 Sesame Street"
+        ],
+        "gap_reason": "property_only_alignment",
+        "model_answer": "You will see the Muppets.",
+        "query_refinement_suggestions": [
+          "Sesame Street creator Who will you see if you physically travel to 123 Sesame Street?",
+          "Sesame Street author Who will you see if you physically travel to 123 Sesame Street?",
+          "Muppets creator Who will you see if you physically travel to 123 Sesame Street?",
+          "Muppets author Who will you see if you physically travel to 123 Sesame Street?"
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.370526,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.210526,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.370526,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.210526,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.370526,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.210526,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-223-1",
+      "candidate_missing_fields": [
+        "expected_entity",
+        "source_citation"
+      ],
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-223-1",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "request_id": "entity-binding:rule:record-223:1",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-223:1",
+      "target_id": "record-223",
+      "task_id": "rule-input-task-0002",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "This American",
+          "Elon",
+          "Elon Musk",
+          "American producer born 70 s handsome multi-talented figure"
+        ],
+        "gap_reason": "property_only_alignment",
+        "model_answer": "Elon Musk.",
+        "query_refinement_suggestions": [
+          "This American description This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+          "This American instance of This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+          "Elon description This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+          "Elon instance of This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?"
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.352308,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.192308,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.352308,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.192308,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.352308,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.192308,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-485-1",
+      "candidate_missing_fields": [
+        "expected_entity",
+        "source_citation"
+      ],
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-485-1",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "request_id": "entity-binding:rule:record-485:1",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-485:1",
+      "target_id": "record-485",
+      "task_id": "rule-input-task-0003",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "This American",
+          "Elon",
+          "Elon Musk",
+          "His name is Elon Musk",
+          "American producer born 70 s handsome multi-talented figure"
+        ],
+        "gap_reason": "property_only_alignment",
+        "model_answer": "His name is Elon Musk.",
+        "query_refinement_suggestions": [
+          "This American description This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+          "This American instance of This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+          "Elon description This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+          "Elon instance of This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?"
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.352308,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.192308,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.352308,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.192308,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          },
+          {
+            "alignment_score": 0.352308,
+            "matched_entity": "",
+            "model_answer_value_matched": false,
+            "provider": "openalex",
+            "query_overlap": 0.192308,
+            "source": "openalex:https://openalex.org/W141994778",
+            "source_family": "scholarly",
+            "title": "Educating the Net Generation",
+            "url": "http://www.cdc.qc.ca/url_regard/023910a.html"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-516-1",
+      "candidate_missing_fields": [
+        "expected_entity",
+        "source_citation"
+      ],
+      "candidate_status": "needs_source_evidence",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-516-1",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "request_id": "entity-binding:rule:record-516:1",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-516:1",
+      "target_id": "record-516",
+      "task_id": "rule-input-task-0004",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "Nicknamed",
+          "Pilgrims",
+          "Boston",
+          "The Patriots",
+          "Nicknamed Pilgrims' football team based Boston plays national"
+        ],
+        "gap_reason": "subject_only_alignment",
+        "model_answer": "The Patriots.",
+        "query_refinement_suggestions": [
+          "Nicknamed description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Nicknamed instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team."
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.487692,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": false,
+            "provider": "cbs_sports",
+            "query_overlap": 0.307692,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.487692,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": false,
+            "provider": "cbs_sports",
+            "query_overlap": 0.307692,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.487692,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": false,
+            "provider": "cbs_sports",
+            "query_overlap": 0.307692,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-1",
+      "candidate_missing_fields": [
+        "expected_entity"
+      ],
+      "candidate_status": "needs_entity_value_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-1",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "entity-binding:rule:record-498:1",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-498:1",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0005",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "Nicknamed",
+          "Pilgrims",
+          "Boston",
+          "The Patriots",
+          "Nicknamed Pilgrims' football team based Boston plays national"
+        ],
+        "gap_reason": "subject_only_alignment",
+        "model_answer": "The Patriots.",
+        "query_refinement_suggestions": [
+          "Nicknamed description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Nicknamed instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team."
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.487692,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": false,
+            "provider": "cbs_sports",
+            "query_overlap": 0.307692,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.487692,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": false,
+            "provider": "cbs_sports",
+            "query_overlap": 0.307692,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.487692,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": false,
+            "provider": "cbs_sports",
+            "query_overlap": 0.307692,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-2",
+      "candidate_missing_fields": [
+        "expected_entity"
+      ],
+      "candidate_status": "needs_entity_value_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-2",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "entity-binding:rule:record-498:2",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-498:2",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0007",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "Nicknamed",
+          "Pilgrims",
+          "Boston",
+          "New England Patriots",
+          "Nicknamed Pilgrims' football team based Boston plays national"
+        ],
+        "gap_reason": "subject_only_alignment",
+        "model_answer": "New England Patriots.",
+        "query_refinement_suggestions": [
+          "Nicknamed description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Nicknamed instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team."
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.537143,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": true,
+            "provider": "cbs_sports",
+            "query_overlap": 0.357143,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.537143,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": true,
+            "provider": "cbs_sports",
+            "query_overlap": 0.357143,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.537143,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": true,
+            "provider": "cbs_sports",
+            "query_overlap": 0.357143,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1",
+      "candidate_missing_fields": [],
+      "candidate_status": "ready_for_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "entity-binding:rule:record-517:1",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-517:1",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0006",
+      "workflow": "world_model_rule_entity_binding_plan"
+    },
+    {
+      "alignment_context": {
+        "alignment_available": true,
+        "alignment_status": "needs_property_or_subject_alignment",
+        "entity_candidates": [
+          "Nicknamed",
+          "Pilgrims",
+          "Boston",
+          "New England Patriots",
+          "Nicknamed Pilgrims' football team based Boston plays national"
+        ],
+        "gap_reason": "subject_only_alignment",
+        "model_answer": "New England Patriots.",
+        "query_refinement_suggestions": [
+          "Nicknamed description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Nicknamed instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims description Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+          "Pilgrims instance of Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team."
+        ],
+        "top_evidence_hits": [
+          {
+            "alignment_score": 0.537143,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": true,
+            "provider": "cbs_sports",
+            "query_overlap": 0.357143,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.537143,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": true,
+            "provider": "cbs_sports",
+            "query_overlap": 0.357143,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          },
+          {
+            "alignment_score": 0.537143,
+            "matched_entity": "Pilgrims",
+            "model_answer_value_matched": true,
+            "provider": "cbs_sports",
+            "query_overlap": 0.357143,
+            "source": "seeded_url:news:82c8ebb5d518",
+            "source_family": "news",
+            "title": "How did New England Patriots get their name? Other nicknames that were considered",
+            "url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/"
+          }
+        ]
+      },
+      "blocking_failures": [
+        "binding_requires_review",
+        "missing_subject_entity",
+        "missing_answer_entity",
+        "missing_expected_entity",
+        "missing_requested_role",
+        "missing_source_citation"
+      ],
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2",
+      "candidate_missing_fields": [],
+      "candidate_status": "ready_for_review",
+      "collection_family": "entity_role_rule_input_collection",
+      "entity_binding_id": "fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2",
+      "entity_binding_review_status": "needs_review",
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "request_id": "entity-binding:rule:record-517:2",
+      "required_entity_binding_fields": [
+        "request_id",
+        "target_id",
+        "subject_entity",
+        "answer_entity",
+        "expected_entity",
+        "requested_role",
+        "source_citation",
+        "review_status",
+        "not_verifier_evidence"
+      ],
+      "schema_version": 1,
+      "source_request_id": "rule:record-517:2",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0008",
+      "workflow": "world_model_rule_entity_binding_plan"
+    }
+  ],
+  "label_usage": {
+    "candidate_bindings_are_verifier_evidence": false,
+    "labels_copied_to_entity_binding_candidates": false,
+    "labels_used_for_collection_planning": false,
+    "model_answers_used_as_candidate_answer_entities": true,
+    "planner_approves_entity_bindings": false,
+    "planner_executes_fill_commands": false
+  },
+  "metadata": {
+    "closure_action": "plan_entity_role_binding_candidates"
+  },
+  "paths": {
+    "alignment_records": [
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/alignment-records.jsonl"
+    ],
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-plan-v1/artifact-manifest.json",
+    "candidate_entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-plan-v1/candidate-entity-bindings.jsonl",
+    "entity_binding_requests": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-plan-v1/entity-binding-requests.jsonl",
+    "entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-plan-v1/entity-binding-plan.json",
+    "skipped_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-plan-v1/skipped-entity-bindings.jsonl"
+  },
+  "schema_version": 1,
+  "scope": "Plans review-gated entity-role sidecar bindings for world-model rule inputs. Candidate bindings are draft collection artifacts, not verifier evidence, and remain blocked until separately reviewed.",
+  "skipped_bindings": [],
+  "status": "ready_for_review",
+  "summary": {
+    "alignment_record_count": 89,
+    "blocking_failure_counts": {
+      "binding_requires_review": 8,
+      "missing_answer_entity": 8,
+      "missing_expected_entity": 8,
+      "missing_requested_role": 8,
+      "missing_source_citation": 8,
+      "missing_subject_entity": 8
+    },
+    "candidate_count": 8,
+    "candidate_status_counts": {
+      "needs_entity_value_review": 2,
+      "needs_source_evidence": 4,
+      "ready_for_review": 2
+    },
+    "entity_binding_count": 8,
+    "missing_candidate_field_counts": {
+      "expected_entity": 6,
+      "source_citation": 4
+    },
+    "needs_entity_value_review_candidate_count": 2,
+    "needs_source_evidence_candidate_count": 4,
+    "ready_for_review_candidate_count": 2,
+    "request_count": 8,
+    "skipped_binding_count": 0
+  },
+  "workflow": "world_model_rule_entity_binding_plan"
+}

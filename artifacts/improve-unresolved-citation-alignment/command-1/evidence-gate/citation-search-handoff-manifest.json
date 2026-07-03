@@ -1,0 +1,71 @@
+{
+  "artifacts": {
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../source-family-citation-search-results.jsonl",
+      "sha256": "0b9d7a0b9d3c09c3e4b9e90fd7587153038d24664fe8985c68e9dc43155cf8a6",
+      "size_bytes": 3420586
+    },
+    "citation_search_adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-adapter-requests.jsonl",
+      "sha256": "6dfd87dfa8f828dd0c53b578097c034721e2685ce2434a9bb303a481480f69a3",
+      "size_bytes": 349356
+    },
+    "citation_search_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-corpus.json",
+      "sha256": "7b6e7d3202a14a0fda997cf9fa462a5fb819260d0125000a0252c6660b28d974",
+      "size_bytes": 4105369
+    },
+    "citation_search_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-handoff.json",
+      "sha256": "e51da20fa6a98da045015fd5e92603b2c5cb7e60bff240803bc7e6dd9323e795",
+      "size_bytes": 8611536
+    },
+    "citation_search_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-search-source-docs.jsonl",
+      "sha256": "be8b70d4345b7f36bdccf7e2aca7a79f84ec9a74a01fb74f8858612fff7882fd",
+      "size_bytes": 3456244
+    },
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 260,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "corpus_document_count": 741,
+    "diagnostic_query_mode": "question_and_query",
+    "selected_batch_count": 0,
+    "source_document_count": 741,
+    "source_workflow": "source_family_citation_search_workflow",
+    "status": "collected",
+    "workflow": "citation_search_adapter_handoff"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

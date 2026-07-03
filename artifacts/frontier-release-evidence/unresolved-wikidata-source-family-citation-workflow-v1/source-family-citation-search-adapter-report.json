@@ -1,0 +1,40 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "diversify_source_families": true,
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.05
+  },
+  "input_path": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_workflow": "source_family_citation_search_workflow"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "source_family_catalog": 322
+    },
+    "catalog_source_family_counts": {
+      "reference": 322
+    },
+    "request_count": 260,
+    "request_error_count": 0,
+    "request_with_results_count": 244,
+    "result_count": 720,
+    "result_provider_counts": {
+      "source_family_catalog": 720
+    },
+    "result_source_family_counts": {
+      "reference": 720
+    },
+    "source_document_count": 322
+  },
+  "workflow": "source_family_citation_search_adapter"
+}

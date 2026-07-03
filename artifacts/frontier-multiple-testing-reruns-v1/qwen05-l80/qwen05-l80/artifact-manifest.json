@@ -1,0 +1,128 @@
+{
+  "artifacts": {
+    "best_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "e53a159a05d20e74811aa8d48915613da634328766b08212e50b50b89932971b",
+      "size_bytes": 890
+    },
+    "conformal_artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-artifact-manifest.json",
+      "sha256": "7dfeeabe78d625357c6aa5a0665693ac8505bf117ec105b9d44621364123be7c",
+      "size_bytes": 2743
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "94c42e956d395221dff09cd3a2b37210f3c2cf3b9d7ca70b47edaaea9cd591e4",
+      "size_bytes": 44047
+    },
+    "eval_reps_cache": {
+      "exists": true,
+      "file_count": 36,
+      "kind": "directory",
+      "path": "../../../cache/truthfulqa-frontier-qwen-smollm2/qwen05-l80/eval-reps-cache",
+      "sha256": "220af5f01d2d48f6733d6ccb82cb98ea2b5c8eea880b371b9223a3160a25e916",
+      "size_bytes": 245554621
+    },
+    "layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../cache/truthfulqa-frontier-qwen-smollm2/qwen05-l80/layer-stats.pt",
+      "sha256": "6ac06b70cc8438dbd4a9135f9da56fe85bb768296dda7c8f01e0d58d11118734",
+      "size_bytes": 16231336
+    },
+    "multiple_testing_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "multiple-testing-calibration.json",
+      "sha256": "2e9594509e6f333901ea9f207d051606a176e3c38617efbc92011c8092897240",
+      "size_bytes": 36657
+    },
+    "multiple_testing_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "multiple-testing-report.json",
+      "sha256": "7ed7a3937d9a4348dadf341364e1398e9278fa208cb38752a93bb70aa5c08163",
+      "size_bytes": 13921
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/scores.manifest.json",
+      "sha256": "68767b83a06d66c2932e64935b1603fac835f9ddad6663c8856f187771a27439",
+      "size_bytes": 3236
+    },
+    "score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/scores.manifest.records.jsonl",
+      "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+      "size_bytes": 861209
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "35824df0bcbfcaa1341039f1749f380770f0baa231bbc48a643f57b80b9068d5",
+      "size_bytes": 12354
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "calibrated-observability-workflow.json",
+      "sha256": "b7786f8f35b4da3514a3cbb57cb58a3f54b5d6cadb721cf13e6d0c8f9be8ec96",
+      "size_bytes": 12300
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_alpha": 0.1,
+    "best_by": "auroc",
+    "cache_only": true,
+    "conformal_verdict": "ACCEPT",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "layer": -12,
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "multiple_testing_alpha": 0.1,
+    "multiple_testing_enabled": true,
+    "multiple_testing_method": "by",
+    "multiple_testing_pass": true,
+    "multiple_testing_signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "offline": false,
+    "runner": "run_calibrated_observability_workflow",
+    "runtime_preset": "custom",
+    "score_dump_reused": true,
+    "status": "complete",
+    "sweep_layers_source": null
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 1,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "artifacts": {
+    "counterfactual_verification": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/counterfactual-verification-report.json",
+      "sha256": "12575ba6b7dee3a784be19b0cafcebdde5394811f5355b89730e143f42d9908e",
+      "size_bytes": 1616996
+    },
+    "covered_fact_property_metrics": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json",
+      "sha256": "26f795994b36ee5bc422c2acf5fff23129afa9cc6fc493b2d6712725cc2caaf0",
+      "size_bytes": 14878
+    },
+    "frontier_release_evidence": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v4.json",
+      "sha256": "200a97ab867e7ffef50093ac22869bb8546f9710f84b9e58e354576c582de1c7",
+      "size_bytes": 24772
+    },
+    "pre_generation_probe_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json",
+      "sha256": "eb47f845d63e4891befca11a26a0e7dc0e94cdec68bfb37ab6d884f1fd41a716",
+      "size_bytes": 4612
+    },
+    "product_promotion_contract_evidence_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-promotion-contract-evidence-handoff.json",
+      "sha256": "a39da193205948c037f34d3cc11124983b9a6ce98a13074fe056c80dca0693ae",
+      "size_bytes": 94999
+    },
+    "product_promotion_contract_evidence_handoff_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-promotion-contract-evidence-audit.json",
+      "sha256": "8bd2278e2f40058436540d11b5e1e50b17df974d8970f81e17acaaaa8d5c0f08",
+      "size_bytes": 39010
+    },
+    "product_trace_replay_workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json",
+      "sha256": "89647cc4442711e6a789bb3fa68170b6a2165abfa53e96c0f78a024febf3d1e0",
+      "size_bytes": 28126
+    },
+    "runtime_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/product-runtime-baseline.json",
+      "sha256": "848367c720aa28dbcea117dff3d3a794016cb7a63f07df71a1ab7e2c1dda7b2e",
+      "size_bytes": 98993
+    },
+    "source_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+      "sha256": "ad30d6ff8660386c9c45bfa2a73986ae1fef221e029027ad361d9b36ba8635ea",
+      "size_bytes": 73924
+    },
+    "triple_audit_enrichment": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json",
+      "sha256": "368a05d61cdadc1fabcf131b5cac9167656813b21738ad2ecdc1d6d26b3c28a2",
+      "size_bytes": 75759
+    },
+    "triple_extraction_fixture_matrix": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json",
+      "sha256": "ccf96d6cd88be370a8909f72579dfbee9bad56f73ad62ebeaee5e1dbdc88af46",
+      "size_bytes": 6695
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "after_missing_metric_count": 0,
+    "before_missing_metric_count": 36,
+    "evidence_scope": "frontier_abstention_rollup_v3_action_receipts_handoff",
+    "filled_groups": [
+      "promotion",
+      "pre_generation",
+      "counterfactual",
+      "action_gate",
+      "action_receipts",
+      "receipt_claim_support",
+      "frontier_release_evidence",
+      "triple_audit",
+      "covered_fact_property"
+    ],
+    "release": "smollm2-v1.9",
+    "required_groups": [
+      "promotion",
+      "pre_generation",
+      "counterfactual",
+      "triple_audit",
+      "covered_fact_property",
+      "action_gate",
+      "action_receipts",
+      "receipt_claim_support",
+      "frontier_release_evidence"
+    ],
+    "resolved_missing_metric_count": 36,
+    "runner": "export_product_promotion_contract_evidence_handoff",
+    "source_contract": "artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json",
+    "source_record": "benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13",
+    "status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 0,
+    "file_count": 11,
+    "missing_count": 0
+  }
+}

@@ -18,6 +18,7 @@ from eigentruth.verify.citations import (
 from eigentruth.verify.claims import (
     ClaimExtractor,
     SentenceClaimExtractor,
+    claim_entity_candidates,
     claim_features,
     enrich_claims_with_triples,
     extract_calculation,
@@ -40,11 +41,35 @@ from eigentruth.verify.counterfactual import (
     audit_counterfactual_verification,
     generate_counterfactual_probes,
 )
-from eigentruth.verify.groundedness import EvidenceDocument, EvidenceQualityPolicy, GroundednessVerifier
+from eigentruth.verify.evidence_alignment import (
+    EvidenceAlignmentEvidence,
+    EvidenceAlignmentPolicy,
+    EvidenceAlignmentRecord,
+    EvidenceAlignmentReport,
+    EvidenceAlignmentVerifier,
+    audit_evidence_alignment,
+)
+from eigentruth.verify.groundedness import (
+    EvidenceDocument,
+    EvidenceQualityAssessment,
+    EvidenceQualityPolicy,
+    EvidenceQualitySummary,
+    GroundednessVerifier,
+    assess_evidence_quality,
+    summarize_evidence_quality,
+)
 from eigentruth.verify.localization import (
     ClaimRiskLocalizationReport,
     ClaimRiskSpan,
     localize_claim_risk_spans,
+)
+from eigentruth.verify.perturbation import (
+    PerturbationConsistencyPolicy,
+    PerturbationConsistencyRecord,
+    PerturbationConsistencyReport,
+    PerturbationConsistencyVerifier,
+    PerturbationVariant,
+    audit_perturbation_consistency,
 )
 from eigentruth.verify.planning import (
     ClaimVerificationPlan,
@@ -71,7 +96,12 @@ from eigentruth.verify.search_planning import (
     plan_source_families,
     sanitize_search_query,
 )
-from eigentruth.verify.selfcheck import SelfConsistencyVerifier
+from eigentruth.verify.selfcheck import (
+    FactSelfConsistencyReport,
+    FactSelfConsistencyTripleReport,
+    FactSelfConsistencyVerifier,
+    SelfConsistencyVerifier,
+)
 from eigentruth.verify.triples import (
     ClaimTriple,
     ClaimTripleExtractor,
@@ -111,12 +141,27 @@ __all__ = [
     "CounterfactualProbeGenerator",
     "CounterfactualVerificationAuditor",
     "CounterfactualVerificationReport",
+    "EvidenceAlignmentEvidence",
+    "EvidenceAlignmentPolicy",
+    "EvidenceAlignmentRecord",
+    "EvidenceAlignmentReport",
+    "EvidenceAlignmentVerifier",
     "EvidenceDocument",
+    "EvidenceQualityAssessment",
     "EvidenceQualityPolicy",
+    "EvidenceQualitySummary",
+    "FactSelfConsistencyReport",
+    "FactSelfConsistencyTripleReport",
+    "FactSelfConsistencyVerifier",
     "GroundednessVerifier",
     "InMemoryVerifier",
     "JsonTraceCache",
     "LookupTripleExtractor",
+    "PerturbationConsistencyPolicy",
+    "PerturbationConsistencyRecord",
+    "PerturbationConsistencyReport",
+    "PerturbationConsistencyVerifier",
+    "PerturbationVariant",
     "RegexTripleExtractor",
     "RegexTriplePattern",
     "RuleBasedTripleExtractor",
@@ -141,8 +186,12 @@ __all__ = [
     "SourceFamilyPlan",
     "apply_claim_coherence",
     "audit_counterfactual_verification",
+    "audit_evidence_alignment",
+    "audit_perturbation_consistency",
+    "assess_evidence_quality",
     "generate_counterfactual_probes",
     "audit_claim_triples",
+    "claim_entity_candidates",
     "claim_features",
     "clean_search_query",
     "default_routed_verifier",
@@ -164,5 +213,6 @@ __all__ = [
     "plan_source_families",
     "sanitize_search_query",
     "stable_cache_key",
+    "summarize_evidence_quality",
     "verifier_cache_key",
 ]

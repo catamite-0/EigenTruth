@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-source-family-collection-tasks.jsonl",
+      "sha256": "abc83692f6ddc6ed09fd7e81f0706f388066dc93460a0af7f37b5dfd5075f534",
+      "size_bytes": 3864
+    },
+    "seeded_url_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-source-catalog-report.json",
+      "sha256": "8dd4370d73b1cf06b40a858f389275e296a057b090d7067840d0894dd29576a9",
+      "size_bytes": 1470
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-source-catalog.jsonl",
+      "sha256": "fbca475d85af77158ee097604b39eeeb4b5c781637c35ee8bad9ffff959b398b",
+      "size_bytes": 1312
+    },
+    "url_seeds": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "official-url-seeds.jsonl",
+      "sha256": "79f21bfc49b9b6235dca23ef59853d27e847b459d40f12750f26f75f0872e536",
+      "size_bytes": 740
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 0,
+    "matched_seed_count": 2,
+    "source_document_count": 1,
+    "stage": "external_entity_binding_official_url_seed",
+    "status": "ready",
+    "task_count": 4,
+    "workflow": "seeded_url_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

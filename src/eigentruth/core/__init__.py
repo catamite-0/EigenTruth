@@ -2,6 +2,15 @@
 
 from __future__ import annotations
 
+from eigentruth.core.factuality_probe import (
+    CLAIM_FACTUALITY_POOLING_MODES,
+    CLAIM_FACTUALITY_PROBE_SCHEMA_VERSION,
+    ClaimFactualityProbeArtifact,
+    ClaimFactualityScore,
+    claim_factuality_diagnostics,
+    load_claim_factuality_probe,
+    pool_claim_hidden_states,
+)
 from eigentruth.core.inside import (
     cluster_assignment_entropy,
     embedding_semantic_entropy,
@@ -53,8 +62,12 @@ __all__ = [
     "RepresentationSubspace",
     "TruthManifold",
     "TruthSubspace",
+    "CLAIM_FACTUALITY_POOLING_MODES",
+    "CLAIM_FACTUALITY_PROBE_SCHEMA_VERSION",
     "ATTENTION_SOFT_TARGET_PROBE_SCHEMA_VERSION",
     "AttentionSoftTargetProbeArtifact",
+    "ClaimFactualityProbeArtifact",
+    "ClaimFactualityScore",
     "AttentionPathwayMetrics",
     "PromptAnswerPathwayMetrics",
     "ResidualContributionProfile",
@@ -65,7 +78,10 @@ __all__ = [
     "prompt_answer_pathway_metrics",
     "residual_contribution_profile",
     "trajectory_convergence_metrics",
+    "claim_factuality_diagnostics",
     "load_attention_soft_target_probe",
+    "load_claim_factuality_probe",
+    "pool_claim_hidden_states",
     "soft_error_rate_targets",
     "COVARIANCE_MODES",
     "CovarianceSpectrum",

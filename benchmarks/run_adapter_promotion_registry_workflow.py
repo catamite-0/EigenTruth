@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.run_adapter_promotion_workflow import (  # noqa: E402
     AdapterPromotionWorkflowConfig,
+    _parse_cache_key_mode_requirement,
     _parse_named_float,
     _parse_named_path,
     run_adapter_promotion_workflow,
@@ -109,6 +110,7 @@ def run_adapter_promotion_registry_workflow(
             "version": config.version,
             "allow_non_promote": config.allow_non_promote,
             "allow_promotion_failures": config.allow_promotion_failures,
+            "required_cache_key_modes": config.promotion.required_cache_key_modes,
         },
         "adapter_promotion": promotion_report,
         "promotion": manifest_promotion,
@@ -158,6 +160,7 @@ def _promotion_metadata(
         else {}
     )
     quality_gate = dict(route_comparison.get("quality_gate") or {})
+    cache_summary = dict(route_comparison.get("cache_summary") or {})
     staged = dict(route_comparison.get("staged_verification") or {})
     metadata = {
         "workflow": "run_adapter_promotion_registry_workflow",
@@ -170,6 +173,8 @@ def _promotion_metadata(
         "registry_baseline_passed": decision.get("registry_baseline_passed"),
         "quality_gate_passed": quality_gate.get("passed"),
         "quality_gate_checked_routes": quality_gate.get("checked_routes"),
+        "required_cache_key_modes": config.promotion.required_cache_key_modes,
+        "cache_key_modes": cache_summary.get("cache_key_modes"),
         "recommended_selected": recommended_metrics.get("selected"),
         "recommended_decision_accuracy": recommended_metrics.get("decision_accuracy"),
         "recommended_false_supported_rate": recommended_metrics.get("false_supported_rate"),
@@ -237,6 +242,10 @@ def _config_from_args(args: argparse.Namespace) -> AdapterPromotionRegistryWorkf
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        required_cache_key_modes=dict(
+            _parse_cache_key_mode_requirement(value)
+            for value in args.require_cache_key_mode
+        ),
         min_staged_skip_rate=args.min_staged_skip_rate,
         max_staged_verified_false_alarm=args.max_staged_verified_false_alarm,
         min_staged_verified_detection=args.min_staged_verified_detection,
@@ -333,6 +342,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None)
     parser.add_argument("--min-cache-hit-rate", type=float, default=None)
+    parser.add_argument("--require-cache-key-mode", action="append", default=[],
+                        help="fail route gate unless a verifier cache uses mode, formatted as verifier=mode")
     parser.add_argument("--min-staged-skip-rate", type=float, default=None)
     parser.add_argument("--max-staged-verified-false-alarm", type=float, default=None)
     parser.add_argument("--min-staged-verified-detection", type=float, default=None)

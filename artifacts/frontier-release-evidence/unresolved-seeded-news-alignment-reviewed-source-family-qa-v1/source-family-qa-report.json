@@ -1,0 +1,40 @@
+{
+  "config": {
+    "skip_qid_values": true
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/artifact-manifest.json",
+    "qa_corpus": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/source-family-qa-corpus.json",
+    "report": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/source-family-qa-report.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "source_paths": [
+      "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/approved-source-documents.json"
+    ]
+  },
+  "status": "ready",
+  "summary": {
+    "by_provider": {
+      "wikidata": 11
+    },
+    "by_source_family": {
+      "reference": 11
+    },
+    "n_candidate_documents": 11,
+    "n_documents": 11,
+    "n_source_documents": 11,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  },
+  "workflow": "source_family_structured_qa_corpus_builder"
+}

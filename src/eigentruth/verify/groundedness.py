@@ -31,6 +31,64 @@ _NEGATION_TOKENS = {
     "错误",
     "不正确",
 }
+_CONTENT_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "by",
+    "can",
+    "could",
+    "did",
+    "do",
+    "does",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "he",
+    "her",
+    "his",
+    "how",
+    "i",
+    "in",
+    "is",
+    "it",
+    "its",
+    "more",
+    "most",
+    "of",
+    "on",
+    "or",
+    "she",
+    "that",
+    "the",
+    "their",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "were",
+    "what",
+    "when",
+    "where",
+    "which",
+    "who",
+    "why",
+    "will",
+    "with",
+    "you",
+    "your",
+}
+_MIN_NEGATION_CONTENT_ANCHORS = 2
+_MIN_STRONG_NEGATION_CONTENT_ANCHORS = 3
+_MIN_NEGATION_CONTENT_OVERLAP = 0.60
 
 
 @dataclass(frozen=True)
@@ -160,9 +218,105 @@ class EvidenceQualityAssessment:
         }
 
 
+@dataclass(frozen=True)
+class EvidenceQualitySummary:
+    """Aggregate quality assessment for a set of evidence snippets."""
+
+    document_count: int
+    applied_count: int
+    passed_count: int
+    failed_count: int
+    reason_counts: Mapping[str, int] = field(default_factory=dict)
+    assessments: Sequence[EvidenceQualityAssessment] = ()
+
+    def __post_init__(self) -> None:
+        document_count = _coerce_non_negative_int(self.document_count, name="document_count")
+        applied_count = _coerce_non_negative_int(self.applied_count, name="applied_count")
+        passed_count = _coerce_non_negative_int(self.passed_count, name="passed_count")
+        failed_count = _coerce_non_negative_int(self.failed_count, name="failed_count")
+        if passed_count + failed_count != applied_count:
+            raise ValueError("passed_count plus failed_count must equal applied_count.")
+        if applied_count > document_count:
+            raise ValueError("applied_count cannot exceed document_count.")
+        reason_counts = {
+            str(reason): _coerce_non_negative_int(count, name=f"reason_counts[{reason!r}]")
+            for reason, count in self.reason_counts.items()
+        }
+        object.__setattr__(self, "document_count", document_count)
+        object.__setattr__(self, "applied_count", applied_count)
+        object.__setattr__(self, "passed_count", passed_count)
+        object.__setattr__(self, "failed_count", failed_count)
+        object.__setattr__(self, "reason_counts", reason_counts)
+        object.__setattr__(self, "assessments", tuple(self.assessments))
+
+    @classmethod
+    def from_assessments(
+        cls,
+        assessments: Sequence[EvidenceQualityAssessment],
+        *,
+        document_count: int | None = None,
+    ) -> "EvidenceQualitySummary":
+        """Build a summary from per-document assessments."""
+        assessments = tuple(assessments)
+        applied = tuple(item for item in assessments if item.applied)
+        reason_counts: dict[str, int] = {}
+        for item in applied:
+            for reason in item.reasons:
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        return cls(
+            document_count=len(assessments) if document_count is None else document_count,
+            applied_count=len(applied),
+            passed_count=sum(1 for item in applied if item.passed),
+            failed_count=sum(1 for item in applied if not item.passed),
+            reason_counts=reason_counts,
+            assessments=assessments,
+        )
+
+    @property
+    def status(self) -> str:
+        """Return a compact status for release and trace summaries."""
+        if self.document_count == 0:
+            return "empty"
+        if self.applied_count == 0:
+            return "not_applied"
+        if self.failed_count:
+            return "fail"
+        return "pass"
+
+    @property
+    def pass_rate(self) -> float:
+        """Return the pass rate across policy-applied evidence snippets."""
+        if self.applied_count == 0:
+            return 1.0
+        return self.passed_count / self.applied_count
+
+    @property
+    def failure_rate(self) -> float:
+        """Return the failure rate across policy-applied evidence snippets."""
+        if self.applied_count == 0:
+            return 0.0
+        return self.failed_count / self.applied_count
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "status": self.status,
+            "document_count": self.document_count,
+            "applied_count": self.applied_count,
+            "passed_count": self.passed_count,
+            "failed_count": self.failed_count,
+            "pass_rate": self.pass_rate,
+            "failure_rate": self.failure_rate,
+            "reason_counts": dict(self.reason_counts),
+            "assessments": tuple(item.to_dict() for item in self.assessments),
+        }
+
+
 class _DocumentMatch(NamedTuple):
     document: EvidenceDocument
     overlap: float
+    content_overlap: float
+    content_overlap_count: int
     exact: bool
     negation_mismatch: bool
 
@@ -170,8 +324,52 @@ class _DocumentMatch(NamedTuple):
 class _IndexedEvidenceDocument(NamedTuple):
     document: EvidenceDocument
     tokens: tuple[str, ...]
+    content_tokens: tuple[str, ...]
     key: str
     negated: bool
+
+
+def assess_evidence_quality(
+    document: EvidenceDocument | Mapping[str, Any] | str,
+    *,
+    policy: EvidenceQualityPolicy | Mapping[str, Any] | None,
+    claim: Claim | None = None,
+    features: Mapping[str, Any] | None = None,
+) -> EvidenceQualityAssessment:
+    """Assess one evidence snippet against a freshness/provenance policy."""
+    feature_flags = _quality_features(claim=claim, features=features)
+    return _assess_evidence_quality(
+        _coerce_evidence(document),
+        features=feature_flags,
+        policy=_coerce_evidence_quality_policy(policy),
+    )
+
+
+def summarize_evidence_quality(
+    evidence: (
+        EvidenceDocument
+        | Mapping[str, Any]
+        | str
+        | Sequence[EvidenceDocument | Mapping[str, Any] | str]
+    ),
+    *,
+    policy: EvidenceQualityPolicy | Mapping[str, Any] | None,
+    claim: Claim | None = None,
+    features: Mapping[str, Any] | None = None,
+) -> EvidenceQualitySummary:
+    """Assess a batch of evidence snippets and return aggregate quality metrics."""
+    documents = tuple(_coerce_evidence(item) for item in _evidence_sequence(evidence))
+    feature_flags = _quality_features(claim=claim, features=features)
+    quality_policy = _coerce_evidence_quality_policy(policy)
+    assessments = tuple(
+        _assess_evidence_quality(
+            document,
+            features=feature_flags,
+            policy=quality_policy,
+        )
+        for document in documents
+    )
+    return EvidenceQualitySummary.from_assessments(assessments, document_count=len(documents))
 
 
 @dataclass(frozen=True)
@@ -252,6 +450,8 @@ class GroundednessVerifier:
             "claim_key": claim_key,
             "claim_features": features,
             "best_overlap": best.overlap,
+            "best_content_overlap": best.content_overlap,
+            "best_content_overlap_count": best.content_overlap_count,
             "best_source": best.document.source,
             "min_overlap": self.min_overlap,
         }
@@ -263,6 +463,14 @@ class GroundednessVerifier:
         if quality.applied:
             metadata["evidence_quality"] = quality.to_dict()
         if best.negation_mismatch and best.overlap >= self.min_overlap:
+            if not _has_negation_content_anchor(best):
+                return VerificationResult(
+                    status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    confidence=max(0.2, 0.5 * best.overlap),
+                    evidence=evidence,
+                    explanation="best evidence has opposing negation but weak content-token alignment",
+                    metadata={**metadata, "decision_rule": "weak_negation_mismatch"},
+                )
             if not quality.passed:
                 return _quality_failure_result(evidence=evidence, metadata=metadata, quality=quality)
             return VerificationResult(
@@ -319,6 +527,18 @@ def _claim_features(claim: Claim) -> dict[str, bool]:
     return normalized_feature_flags(raw_features)
 
 
+def _quality_features(
+    *,
+    claim: Claim | None,
+    features: Mapping[str, Any] | None,
+) -> dict[str, bool]:
+    if features is not None:
+        return normalized_feature_flags(features)
+    if claim is None:
+        return {}
+    return _claim_features(claim)
+
+
 def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> EvidenceDocument:
     if isinstance(value, EvidenceDocument):
         return value
@@ -342,6 +562,7 @@ def _index_document(document: EvidenceDocument) -> _IndexedEvidenceDocument:
     return _IndexedEvidenceDocument(
         document=document,
         tokens=tokens,
+        content_tokens=_content_tokens(tokens),
         key=normalize_claim_text(document.text),
         negated=_has_negation(tokens),
     )
@@ -390,13 +611,25 @@ def _best_document_match(
         return None
     claim_key = normalize_claim_text(claim_text)
     claim_negated = _has_negation(claim_tokens)
+    claim_content_tokens = _content_tokens(claim_tokens)
     matches = []
     for indexed in documents:
         exact = claim_key in indexed.key
         overlap = _token_overlap(claim_tokens, indexed.tokens)
+        content_overlap_count = _content_overlap_count(claim_content_tokens, indexed.content_tokens)
+        content_overlap = _content_overlap(claim_content_tokens, indexed.content_tokens)
         negation_mismatch = claim_negated != indexed.negated
-        matches.append(_DocumentMatch(indexed.document, overlap, exact, negation_mismatch))
-    return max(matches, key=lambda match: (match.exact, match.overlap))
+        matches.append(
+            _DocumentMatch(
+                indexed.document,
+                overlap,
+                content_overlap,
+                content_overlap_count,
+                exact,
+                negation_mismatch,
+            )
+        )
+    return max(matches, key=lambda match: (match.exact, match.overlap, match.content_overlap_count))
 
 
 def _assess_evidence_quality(
@@ -560,6 +793,36 @@ def _token_overlap(claim_tokens: Sequence[str], evidence_tokens: Sequence[str]) 
     return covered / len(claim_tokens)
 
 
+def _content_tokens(tokens: Sequence[str]) -> tuple[str, ...]:
+    return tuple(
+        token
+        for token in tokens
+        if len(token) >= 3 and token not in _CONTENT_STOPWORDS and token not in _NEGATION_TOKENS
+    )
+
+
+def _content_overlap_count(claim_tokens: Sequence[str], evidence_tokens: Sequence[str]) -> int:
+    if not claim_tokens or not evidence_tokens:
+        return 0
+    return len(set(claim_tokens).intersection(evidence_tokens))
+
+
+def _content_overlap(claim_tokens: Sequence[str], evidence_tokens: Sequence[str]) -> float:
+    claim_set = set(claim_tokens)
+    if not claim_set:
+        return 0.0
+    return _content_overlap_count(tuple(claim_set), evidence_tokens) / len(claim_set)
+
+
+def _has_negation_content_anchor(match: _DocumentMatch) -> bool:
+    if match.content_overlap_count >= _MIN_STRONG_NEGATION_CONTENT_ANCHORS:
+        return True
+    return (
+        match.content_overlap_count >= _MIN_NEGATION_CONTENT_ANCHORS
+        and match.content_overlap >= _MIN_NEGATION_CONTENT_OVERLAP
+    )
+
+
 def _has_negation(tokens: Sequence[str]) -> bool:
     token_set = set(tokens)
     return any(token in token_set for token in _NEGATION_TOKENS)
@@ -580,6 +843,16 @@ def _as_sequence(value: Any) -> Sequence[EvidenceDocument | Mapping[str, Any] | 
     if isinstance(value, Sequence):
         return value
     raise ValueError("context evidence must be a string or sequence.")
+
+
+def _evidence_sequence(
+    value: EvidenceDocument | Mapping[str, Any] | str | Sequence[EvidenceDocument | Mapping[str, Any] | str],
+) -> Sequence[EvidenceDocument | Mapping[str, Any] | str]:
+    if isinstance(value, (EvidenceDocument, str, Mapping)):
+        return (value,)
+    if isinstance(value, Sequence):
+        return value
+    raise ValueError("evidence must be a snippet or sequence of snippets.")
 
 
 def _as_mapping(value: Any, *, name: str) -> Mapping[str, Sequence[str] | str]:

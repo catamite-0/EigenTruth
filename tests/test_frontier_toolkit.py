@@ -36,6 +36,8 @@ from eigentruth.adapters import (
     WorldModelPrediction,
     WorldModelReference,
     WorldModelRule,
+    bind_triple_slot_retrieval_hits,
+    plan_triple_slot_retrieval,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
@@ -51,6 +53,7 @@ from eigentruth.control import (
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
     InMemoryActionExecutionLedger,
+    LearnedPreGenerationRiskEstimate,
     ParticipationGateConfig,
     PlanAwareCorrectionPolicy,
     PolicyGuardedActionExecutor,
@@ -69,7 +72,7 @@ from eigentruth.control import (
     select_pre_generation_profile,
     select_runtime_profile,
 )
-from eigentruth.core import TruthSubspace
+from eigentruth.core import AttentionSoftTargetProbeArtifact, TruthSubspace
 from eigentruth.eval.conformal import (
     conformal_abstention_comparison_report,
     conformal_abstention_report,
@@ -88,12 +91,20 @@ from eigentruth.verify import (
     CounterfactualProbe,
     CounterfactualProbeGenerator,
     CounterfactualVerificationAuditor,
+    EvidenceAlignmentEvidence,
+    EvidenceAlignmentPolicy,
+    EvidenceAlignmentVerifier,
     EvidenceDocument,
     EvidenceQualityPolicy,
+    EvidenceQualitySummary,
+    FactSelfConsistencyVerifier,
     GroundednessVerifier,
     InMemoryVerifier,
     JsonTraceCache,
     LookupTripleExtractor,
+    PerturbationConsistencyPolicy,
+    PerturbationConsistencyVerifier,
+    PerturbationVariant,
     RegexTripleExtractor,
     RegexTriplePattern,
     RoutedVerifier,
@@ -109,6 +120,8 @@ from eigentruth.verify import (
     apply_claim_coherence,
     audit_claim_triples,
     audit_counterfactual_verification,
+    audit_evidence_alignment,
+    audit_perturbation_consistency,
     default_routed_verifier,
     default_verifier_routes,
     extract_calculation,
@@ -123,6 +136,7 @@ from eigentruth.verify import (
     plan_citation_search_query,
     plan_source_families,
     sanitize_search_query,
+    summarize_evidence_quality,
 )
 
 
@@ -524,6 +538,86 @@ def test_soft_pre_generation_risk_config_roundtrip_and_validation():
         SoftPreGenerationRiskConfig(feature_weights={"has_question": float("nan")})
 
 
+def test_learned_pre_generation_risk_records_without_changing_default_route():
+    learned = LearnedPreGenerationRiskEstimate(
+        score=2.0,
+        probability=0.88,
+        risk_level="high",
+        source="unit_probe",
+        layer_idx=3,
+        attention_summary={"max_index": 1, "max_weight": 0.7},
+    )
+
+    assessment = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk=learned,
+    )
+
+    assert assessment.selected_profile == "latency"
+    assert assessment.risk_level == "low"
+    assert assessment.learned_risk["source"] == "unit_probe"
+    assert assessment.learned_risk["risk_level"] == "high"
+    assert assessment.to_dict()["learned_risk"]["attention_summary"]["max_index"] == 1
+
+
+def test_learned_pre_generation_risk_can_route_when_configured():
+    policy = PreGenerationRiskPolicy.from_mapping({
+        "route_on_learned_risk": "yes",
+        "soft_risk_config": None,
+    })
+
+    high = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk={"score": 2.0, "probability": 0.88, "risk_level": "high"},
+        risk_policy=policy,
+    )
+    medium = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk={"score": 0.0, "probability": 0.50, "risk_level": "medium"},
+        risk_policy=policy.to_dict(),
+    )
+
+    assert policy.to_dict()["route_on_learned_risk"] is True
+    assert high.selected_profile == "audit"
+    assert high.risk_level == "high"
+    assert high.reason == "learned pre-generation risk estimate exceeded high threshold"
+    assert medium.selected_profile == "balanced"
+    assert medium.risk_level == "medium"
+    assert medium.reason == "learned pre-generation risk estimate exceeded medium threshold"
+    with pytest.raises(ValueError, match="route_on_learned_risk"):
+        PreGenerationRiskPolicy.from_mapping({"route_on_learned_risk": "maybe"})
+
+
+def test_learned_pre_generation_risk_can_score_attention_probe_artifact():
+    artifact = AttentionSoftTargetProbeArtifact(
+        query=torch.tensor([5.0, 0.0]),
+        classifier_weight=torch.tensor([4.0, 0.0]),
+        bias=-0.5,
+        layer_idx=2,
+    )
+    hidden = torch.tensor([[[1.0, 0.0], [0.0, 0.0]]])
+
+    learned = LearnedPreGenerationRiskEstimate.from_probe(
+        artifact,
+        hidden,
+        high_threshold=0.80,
+        metadata={"artifact": "unit"},
+    )
+    assessment = select_pre_generation_profile(
+        "Explain calibration intuitively.",
+        learned_risk=learned,
+        risk_policy=PreGenerationRiskPolicy(route_on_learned_risk=True, soft_risk_config=None),
+    )
+
+    assert learned.layer_idx == 2
+    assert learned.probability > 0.80
+    assert learned.risk_level == "high"
+    assert learned.attention_summary["token_count"] == 2
+    assert learned.attention_summary["max_index"] == 0
+    assert assessment.selected_profile == "audit"
+    assert assessment.learned_risk["metadata"] == {"artifact": "unit"}
+
+
 def test_risk_controller_accepts_and_routes_threshold_exceedance():
     artifact = CalibrationArtifact(
         model_id="tiny",
@@ -619,6 +713,23 @@ def test_default_correction_policy_plans_action_payloads():
     assert abstain.action is ControlAction.ABSTAIN
     assert abstain.payload["blocked_claims"][0]["status"] == "refuted"
     assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
+
+
+def test_default_correction_policy_retrieves_unverified_claims_when_diagnostics_trigger():
+    policy = DefaultCorrectionPolicy()
+    claims = extract_claims("Paris is in France. Berlin is in Germany.")
+    decision = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.6,
+        reason="calibrated diagnostic threshold exceeded",
+    )
+
+    retrieve = policy.plan(decision, claims=claims, verification_results=())[0]
+
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert [target["claim_id"] for target in retrieve.payload["retrieval_targets"]] == ["c1", "c2"]
+    assert retrieve.payload["claim_status_counts"]["not_applicable"] == 2
 
 
 def test_plan_aware_correction_policy_injects_retrieval_queries():
@@ -854,6 +965,89 @@ def test_rule_based_claim_triples_extract_stated_predicate_for_confusion_claim()
     assert triple.object == "Paris"
 
 
+def test_rule_based_claim_triples_extract_question_answer_facts():
+    capital = extract_claim_triples(Claim("What is the capital of France? Berlin."))[0]
+    language = extract_claim_triples(Claim("What is an official language of Belgium? German."))[0]
+    currency = extract_claim_triples(Claim("What currency does Japan use? The currency of Japan is Japanese yen."))[0]
+    ribs = extract_claim_triples(Claim("How many ribs do humans have? Humans have 12 ribs."))[0]
+    founder = extract_claim_triples(Claim("Who first started Tesla Motors? Elon Musk."))[0]
+
+    assert capital.subject == "France"
+    assert capital.predicate == "capital_of"
+    assert capital.object == "Berlin"
+    assert language.subject == "Belgium"
+    assert language.predicate == "official_language_of"
+    assert language.object == "German"
+    assert currency.subject == "Japan"
+    assert currency.predicate == "currency_of"
+    assert currency.object == "Japanese yen"
+    assert ribs.subject == "Humans"
+    assert ribs.predicate == "have"
+    assert ribs.object == "12 ribs"
+    assert founder.subject == "Tesla Motors"
+    assert founder.predicate == "founder"
+    assert founder.object == "Elon Musk"
+    assert founder.metadata["subject_aliases"] == ("Tesla",)
+
+
+def test_rule_based_claim_triples_do_not_parse_across_question_boundary():
+    assert extract_claim_triples(Claim("Do more than 20% of Americans have passports? No.")) == ()
+
+
+def test_triple_evidence_refutes_founder_mismatch_with_subject_alias():
+    claim = Claim("Who first started Tesla Motors? Elon Musk.")
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument(
+                "According to Wikidata structured data, Tesla has founder Martin Eberhard.",
+                source="wikidata:Q478214:P112:Q1903673",
+            ),
+        ),
+        refute_object_mismatch=True,
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "triple_object_mismatch"
+    mismatch = result.metadata["object_mismatches"][0]
+    assert mismatch["claim_object"] == "Elon Musk"
+    assert mismatch["evidence_object"] == "Martin Eberhard"
+
+
+def test_triple_evidence_does_not_refute_partial_founder_overlap():
+    claim = Claim("Who first started Tesla Motors? Eberhard and Tarpenning.")
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument(
+                "According to Wikidata structured data, Tesla has founder Martin Eberhard.",
+                source="wikidata:Q478214:P112:Q1903673",
+            ),
+        ),
+        refute_object_mismatch=True,
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "triple_slot_coverage"
+    assert result.metadata["object_mismatches"] == ()
+
+
+def test_triple_evidence_does_not_refute_generic_has_object_mismatch():
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+    verifier = TripleEvidenceVerifier(
+        evidence=(EvidenceDocument("AlphaCorp has 8 offices in Europe.", source="annual-report"),),
+        refute_object_mismatch=True,
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "triple_slot_coverage"
+    assert result.metadata["object_mismatches"] == ()
+
+
 def test_triple_evidence_audit_can_combine_slots_across_documents():
     claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
     verifier = TripleEvidenceVerifier(
@@ -917,6 +1111,24 @@ def test_triple_evidence_audit_rejects_unlinked_cross_document_slots():
     assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
     assert audit["metadata"]["evidence_link_passed"] is False
     assert audit["metadata"]["evidence_link_rule"] == "unlinked_multi_document_evidence"
+
+
+def test_triple_evidence_verifier_can_refute_object_mismatch_when_enabled():
+    claim = extract_claims("Berlin is the capital of France.")[0]
+    evidence = (EvidenceDocument("The capital of France is Paris.", source="atlas"),)
+
+    default_result = TripleEvidenceVerifier(evidence=evidence).verify(claim)
+    refuting_result = TripleEvidenceVerifier(
+        evidence=evidence,
+        refute_object_mismatch=True,
+    ).verify(claim)
+
+    assert default_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert refuting_result.status is VerificationStatus.REFUTED
+    assert refuting_result.metadata["decision_rule"] == "triple_object_mismatch"
+    assert refuting_result.metadata["object_mismatches"][0]["claim_object"] == "Berlin"
+    assert refuting_result.metadata["object_mismatches"][0]["evidence_object"] == "Paris"
+    assert refuting_result.evidence == ("atlas: The capital of France is Paris.",)
 
 
 def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
@@ -1065,6 +1277,75 @@ def test_counterfactual_probe_generator_builds_metadata_numeric_temporal_and_neg
     assert any(probe.counterfactual.text == "3 plus 2 is 4." for probe in probes)
     assert any(probe.counterfactual.text == "The API is not stable." for probe in probes)
     assert all(probe.expected_counterfactual_status is VerificationStatus.REFUTED for probe in probes)
+
+
+def test_counterfactual_probe_generator_uses_extracted_entity_candidates():
+    claims = extract_claims("AlphaCorp acquired Beta Labs in Paris.")
+
+    probes = generate_counterfactual_probes(
+        claims,
+        max_probes_per_claim=3,
+        probe_types=("entity_swap",),
+    )
+    texts = {probe.counterfactual.text for probe in probes}
+
+    assert "BetaCorp acquired Beta Labs in Paris." in texts
+    assert "AlphaCorp acquired Gamma Labs in Paris." in texts
+    assert "AlphaCorp acquired Beta Labs in Berlin." in texts
+    assert all(probe.probe_type == "entity_swap" for probe in probes)
+    assert all(
+        probe.counterfactual.metadata["replacement_source_kind"] == "entity_candidate"
+        for probe in probes
+    )
+
+
+def test_counterfactual_verification_report_summarizes_entity_candidates():
+    verifier = InMemoryVerifier({
+        normalize_claim_text("AlphaCorp acquired Beta Labs in Paris."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("BetaCorp acquired Beta Labs in Paris."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("AlphaCorp acquired Gamma Labs in Paris."): VerificationStatus.REFUTED,
+        normalize_claim_text("2 plus 2 is 4."): VerificationStatus.SUPPORTED,
+        normalize_claim_text("3 plus 2 is 4."): VerificationStatus.REFUTED,
+    })
+    claims = (
+        Claim(
+            "AlphaCorp acquired Beta Labs in Paris.",
+            metadata={"entity_candidates": ("AlphaCorp", "Beta Labs")},
+        ),
+    )
+    entity_probes = generate_counterfactual_probes(
+        claims,
+        max_probes_per_claim=2,
+        probe_types=("entity_swap",),
+    )
+    quantity_probe = CounterfactualProbe(
+        original={"text": "2 plus 2 is 4."},
+        counterfactual={
+            "text": "3 plus 2 is 4.",
+            "metadata": {
+                "replacement_source": "2",
+                "replacement_target": "3",
+                "replacement_source_kind": "numeric_literal",
+            },
+        },
+        probe_type="quantity",
+    )
+
+    report = CounterfactualVerificationAuditor(verifier).audit((*entity_probes, quantity_probe))
+    summary = report.summary()
+
+    assert summary["record_count"] == 3
+    assert summary["entity_candidate_count"] == 2
+    assert summary["entity_probe_count"] == 2
+    assert summary["counts_by_entity_source_kind"] == {"entity_candidate": 2}
+    assert "2" not in summary["by_entity_candidate"]
+    assert summary["by_entity_candidate"]["AlphaCorp"]["false_invariance_count"] == 1
+    assert summary["by_entity_candidate"]["AlphaCorp"]["false_invariance_rate"] == pytest.approx(1.0)
+    assert summary["by_entity_candidate"]["AlphaCorp"]["replacement_targets"] == ("BetaCorp",)
+    assert summary["by_entity_candidate"]["AlphaCorp"]["source_kinds"] == {"entity_candidate": 1}
+    assert summary["by_entity_candidate"]["Beta Labs"]["pass_rate"] == pytest.approx(1.0)
+    assert summary["by_entity_candidate"]["Beta Labs"]["replacement_targets"] == ("Gamma Labs",)
+    json.dumps(report.to_dict())
 
 
 def test_structured_fact_verifier_handles_fact_paraphrases_and_object_lists():
@@ -1383,6 +1664,33 @@ def test_groundedness_verifier_supports_refutes_and_reports_evidence():
     assert results[2].metadata["decision_rule"] == "configured_refutation"
 
 
+def test_groundedness_verifier_requires_content_anchor_for_negation_mismatch():
+    verifier = GroundednessVerifier(
+        evidence=(
+            EvidenceDocument(
+                (
+                    "A paper is not more useful in a physical universe, or a model is "
+                    "more useful in a theory."
+                ),
+                source="paper",
+            ),
+            EvidenceDocument("The moon is not made of cheese; lunar samples are rock.", source="nasa"),
+        ),
+        min_overlap=0.60,
+    )
+
+    weak = verifier.verify(Claim("A pen or a sword is more useful in a physical fight."))
+    anchored = verifier.verify(Claim("The moon is made of cheese."))
+
+    assert weak.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert weak.metadata["decision_rule"] == "weak_negation_mismatch"
+    assert weak.metadata["best_overlap"] >= 0.60
+    assert weak.metadata["best_content_overlap_count"] < 3
+    assert anchored.status is VerificationStatus.REFUTED
+    assert anchored.metadata["decision_rule"] == "negation_mismatch"
+    assert anchored.metadata["best_content_overlap_count"] >= 3
+
+
 def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
     verifier = GroundednessVerifier(
         evidence=({"text": "Paris is the capital of France.", "source": "atlas"},),
@@ -1552,6 +1860,228 @@ def test_self_consistency_sample_budget_status_reports_fixed_threshold_outcome()
     assert status["refute_rate_lower_bound"] == pytest.approx(0.40)
 
 
+def test_fact_self_consistency_verifier_supports_claim_triples_across_samples():
+    verifier = FactSelfConsistencyVerifier(
+        samples=(
+            {"text": "Paris is the capital of France.", "source": "sample-1"},
+            {"text": "France's capital is Paris.", "source": "sample-2"},
+            {"text": "The capital of France is Paris.", "source": "sample-3"},
+        ),
+        support_threshold=0.60,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["verifier"] == "fact_self_consistency"
+    assert result.metadata["decision_rule"] == "fact_support_rate"
+    assert result.metadata["triple_count"] == 1
+    assert result.metadata["supported_triple_count"] == 1
+    assert result.metadata["fact_selfcheck"]["triple_reports"][0]["support_rate"] == pytest.approx(1.0)
+    assert result.metadata["fact_selfcheck"]["triple_reports"][0]["decisions"][0]["reason"] == "exact_triple_match"
+    assert result.evidence[0].startswith("sample-1:")
+
+
+def test_fact_self_consistency_verifier_refutes_conflicting_fact_triples():
+    verifier = FactSelfConsistencyVerifier(
+        samples=(
+            "Lyon is the capital of France.",
+            "The capital of France is Lyon.",
+            "France's capital is Lyon.",
+        ),
+        refute_threshold=0.50,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "fact_refute_rate"
+    triple_report = result.metadata["fact_selfcheck"]["triple_reports"][0]
+    assert triple_report["refute_count"] == 3
+    assert triple_report["refute_rate"] == pytest.approx(1.0)
+    assert triple_report["decisions"][0]["reason"] == "subject_predicate_object_conflict"
+    assert "Lyon" in result.evidence[0]
+
+
+def test_fact_self_consistency_verifier_early_stops_when_fact_threshold_is_fixed():
+    verifier = FactSelfConsistencyVerifier(
+        samples=(
+            "Lyon is the capital of France.",
+            "The capital of France is Lyon.",
+            "France has several large cities.",
+            "Paris is the capital of France.",
+            "The capital of France is Paris.",
+        ),
+        min_samples=2,
+        refute_threshold=0.40,
+        support_threshold=0.80,
+        early_stop=True,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "fact_refute_rate"
+    assert result.metadata["early_stop"] is True
+    assert result.metadata["early_stop_reason"] == "fact_refute_threshold_guaranteed"
+    assert result.metadata["sample_count"] == 5
+    assert result.metadata["processed_sample_count"] == 2
+    assert result.metadata["skipped_sample_count"] == 3
+    triple_report = result.metadata["fact_selfcheck"]["triple_reports"][0]
+    assert triple_report["sample_count"] == 5
+    assert triple_report["processed_sample_count"] == 2
+    assert triple_report["skipped_sample_count"] == 3
+    assert triple_report["refute_rate"] == pytest.approx(0.40)
+    assert triple_report["processed_refute_rate"] == pytest.approx(1.0)
+    assert triple_report["skipped_rate"] == pytest.approx(0.60)
+    assert len(triple_report["decisions"]) == 2
+
+
+def test_fact_self_consistency_sample_budget_status_respects_refute_priority():
+    claim = extract_claims("Paris is the capital of France.")[0]
+    samples = (
+        "Paris is the capital of France.",
+        "The capital of France is Paris.",
+    )
+    verifier = FactSelfConsistencyVerifier(
+        min_samples=2,
+        support_threshold=0.40,
+        refute_threshold=0.40,
+    )
+
+    still_open = verifier.sample_budget_status(claim, samples, total_samples=5)
+
+    assert still_open["can_stop"] is False
+    assert still_open["reason"] is None
+    assert still_open["remaining_samples"] == 3
+
+    conservative_verifier = FactSelfConsistencyVerifier(
+        min_samples=2,
+        support_threshold=0.40,
+        refute_threshold=0.80,
+    )
+    fixed = conservative_verifier.sample_budget_status(claim, samples, total_samples=5)
+
+    assert fixed["can_stop"] is True
+    assert fixed["reason"] == "fact_support_threshold_guaranteed"
+    assert fixed["triple_reports"][0]["support_rate"] == pytest.approx(0.40)
+
+
+def test_fact_self_consistency_verifier_uses_context_and_metadata_triples():
+    triple = {"subject": "AlphaCorp", "predicate": "has", "object": "12 offices"}
+    claim = Claim(
+        "AlphaCorp office count is recorded in the local ledger.",
+        claim_id="claim-1",
+        metadata={"claim_triples": [triple]},
+    )
+    verifier = FactSelfConsistencyVerifier(samples=(), min_samples=1, support_threshold=1.0)
+
+    missing = verifier.verify(claim)
+    result = verifier.verify(
+        claim,
+        context={
+            "fact_selfcheck_samples": [
+                {
+                    "text": "opaque local sample",
+                    "source": "ledger-sample",
+                    "claim_triples": [triple],
+                }
+            ]
+        },
+    )
+
+    assert missing.status is VerificationStatus.NOT_APPLICABLE
+    assert missing.metadata["decision_rule"] == "too_few_samples"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["sample_count"] == 1
+    assert result.metadata["sample_triple_count"] == 1
+    assert result.metadata["fact_selfcheck"]["triple_reports"][0]["triple"]["subject"] == "AlphaCorp"
+
+
+def test_fact_self_consistency_verifier_is_not_applicable_without_claim_triples():
+    verifier = FactSelfConsistencyVerifier(
+        samples=("opaque sample text", "another opaque sample"),
+        min_samples=2,
+    )
+    claim = Claim("opaque claim text", claim_id="opaque")
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.NOT_APPLICABLE
+    assert result.confidence == pytest.approx(1.0)
+    assert result.metadata["decision_rule"] == "no_claim_triples"
+    assert result.metadata["triple_count"] == 0
+
+
+def test_perturbation_consistency_audit_flags_high_confidence_conflicts():
+    claim = Claim("Paris is the capital of France.", claim_id="capital")
+    report = audit_perturbation_consistency(
+        claim,
+        (
+            PerturbationVariant(
+                "Paris is the capital of France.",
+                variant_id="plain",
+                perturbation_type="paraphrase",
+                confidence=0.92,
+            ),
+            PerturbationVariant(
+                "Lyon is the capital of France.",
+                variant_id="perturbed",
+                perturbation_type="format_change",
+                confidence=0.93,
+            ),
+        ),
+        policy=PerturbationConsistencyPolicy(
+            min_variants=2,
+            high_confidence_threshold=0.80,
+            max_conflict_rate=0.0,
+        ),
+    )
+
+    summary = report.summary()
+    assert report.status == "blocked"
+    assert report.passed is False
+    assert summary["anchor_triple_count"] == 1
+    assert summary["conflict_count"] == 1
+    assert summary["conflict_rate"] == pytest.approx(0.5)
+    assert summary["high_confidence_variant_count"] == 2
+    assert summary["high_confidence_conflict_rate"] == pytest.approx(0.5)
+    assert report.records[1].status is VerificationStatus.REFUTED
+    assert report.records[1].reason == "subject_predicate_object_conflict"
+    assert report.to_dict()["workflow"] == "perturbation_consistency_audit"
+
+
+def test_perturbation_consistency_verifier_uses_context_variants():
+    claim = Claim("The capital of France is Paris.", claim_id="capital")
+    verifier = PerturbationConsistencyVerifier(
+        variants=(),
+        policy={"min_variants": 2, "max_missing_rate": 0.0},
+    )
+
+    missing = verifier.verify(claim)
+    result = verifier.verify(
+        claim,
+        context={
+            "choke_variants": [
+                {"text": "Paris is the capital of France.", "confidence": 0.9, "source": "sample-1"},
+                {"text": "France's capital is Paris.", "confidence": 0.88, "source": "sample-2"},
+            ]
+        },
+    )
+
+    assert missing.status is VerificationStatus.NOT_APPLICABLE
+    assert missing.metadata["decision_rule"] == "too_few_expected_consistent_variants"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["verifier"] == "perturbation_consistency"
+    perturbation = result.metadata["perturbation_consistency"]
+    assert perturbation["summary"]["variant_count"] == 2
+    assert perturbation["summary"]["conflict_rate"] == pytest.approx(0.0)
+    assert perturbation["summary"]["missing_rate"] == pytest.approx(0.0)
+
+
 def test_cached_verifier_reuses_identical_claim_context_results():
     class CountingVerifier:
         def __init__(self):
@@ -1579,6 +2109,86 @@ def test_cached_verifier_reuses_identical_claim_context_results():
     assert base.calls == 2
     assert verifier.stats.to_dict()["hits"] == 1
     assert verifier.stats.to_dict()["misses"] == 2
+
+
+def test_cached_verifier_semantic_key_reuses_normalized_claim_variants():
+    class CountingVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, claim, context=None):
+            self.calls += 1
+            return VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={"claim": claim.text, "calls": self.calls},
+            )
+
+    base = CountingVerifier()
+    verifier = CachedVerifier(base, cache_key_mode="semantic")
+    context = {"evidence_set": "unit"}
+    first = verifier.verify(
+        Claim(
+            "Paris is the capital of France.",
+            claim_id="c1",
+            span=(0, 31),
+            metadata={"source_index": 1, "features": {"has_number": False}},
+        ),
+        context=context,
+    )
+    second = verifier.verify(
+        Claim(
+            "  PARIS   is the capital of France!  ",
+            claim_id="c9",
+            span=(100, 137),
+            metadata={"source_index": 9, "features": {"has_number": False}},
+        ),
+        context=context,
+    )
+
+    assert first is second
+    assert base.calls == 1
+    assert verifier.stats.hits == 1
+    assert verifier.stats.misses == 1
+
+
+def test_cached_verifier_semantic_key_preserves_relevant_metadata():
+    class CountingVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, claim, context=None):
+            self.calls += 1
+            return VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={"calls": self.calls},
+            )
+
+    base = CountingVerifier()
+    verifier = CachedVerifier(base, cache_key_mode="semantic")
+    first = verifier.verify(
+        Claim(
+            "The calculation is correct.",
+            metadata={"calculation": {"expression": "2 + 2", "expected": 4}, "source_index": 1},
+        )
+    )
+    changed = verifier.verify(
+        Claim(
+            "The calculation is correct!",
+            metadata={"calculation": {"expression": "2 + 2", "expected": 5}, "source_index": 2},
+        )
+    )
+
+    assert changed is not first
+    assert base.calls == 2
+    assert verifier.stats.hits == 0
+    assert verifier.stats.misses == 2
+
+
+def test_cached_verifier_rejects_invalid_cache_key_mode():
+    with pytest.raises(ValueError, match="cache_key_mode"):
+        CachedVerifier(InMemoryVerifier({}), cache_key_mode="loose")
 
 
 def test_json_trace_cache_roundtrip(tmp_path):
@@ -1653,6 +2263,46 @@ def test_in_memory_retriever_preserves_mapping_metadata_fields():
     assert hits[0].metadata["question"] == "What shipping option is order R1 approved for?"
     assert hits[0].metadata["answer"] == "Order R1 is approved for expedited shipping."
     assert hits[0].metadata["retriever"] == "InMemoryRetriever"
+
+
+def test_triple_slot_retrieval_plan_omits_generated_object_and_binds_hits():
+    claim = Claim("What is the capital of France? Berlin.", claim_id="c1")
+    plan = plan_triple_slot_retrieval(claim)
+
+    assert plan.triple_count == 1
+    assert plan.query_count >= 1
+    assert plan.queries[0].query == "capital of France"
+    assert "Berlin" not in " ".join(query.query for query in plan.queries)
+    assert plan.queries[0].metadata["omitted_object"] == "Berlin"
+
+    retriever = InMemoryRetriever((
+        {"text": "The capital of France is Paris.", "source": "external:atlas"},
+    ), min_overlap=0.8)
+    hits = retriever.retrieve(plan.queries[0], limit=1)
+    binding = bind_triple_slot_retrieval_hits(
+        claim,
+        hits,
+        plan=plan,
+        refute_object_mismatch=True,
+    )
+    payload = binding.to_dict()
+
+    assert hits[0].text == "The capital of France is Paris."
+    assert payload["verification_result"]["status"] == "refuted"
+    assert payload["verification_result"]["metadata"]["decision_rule"] == "triple_object_mismatch"
+    assert payload["plan"]["queries"][0]["metadata"]["query_type"] == "triple_slot"
+    json.dumps(payload)
+
+
+def test_triple_slot_retrieval_plan_uses_subject_aliases_without_object():
+    claim = Claim("Who first started Tesla Motors? Elon Musk.", claim_id="tesla")
+    plan = plan_triple_slot_retrieval(claim)
+    queries = [query.query for query in plan.queries]
+
+    assert "Tesla Motors founder" in queries
+    assert "Tesla founder" in queries
+    assert all("Elon Musk" not in query for query in queries)
+    assert plan.triples[0].metadata["subject_aliases"] == ("Tesla",)
 
 
 def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():
@@ -1874,6 +2524,7 @@ def test_question_answer_verifier_checks_structured_question_answers():
             question="What is the capital of France?",
             answer="Paris",
             source="qa:facts",
+            question_aliases=("Which city is France's capital?",),
         )
     ])
 
@@ -1888,6 +2539,10 @@ def test_question_answer_verifier_checks_structured_question_answers():
         Claim("Madrid"),
         context={"statement": {"question": "What is the capital of Spain?", "answer": "Madrid"}},
     )
+    alias_refuted = verifier.verify(
+        Claim("Marseille"),
+        context={"statement": {"question": "Which city is France's capital?", "answer": "Marseille"}},
+    )
 
     assert supported.status is VerificationStatus.SUPPORTED
     assert supported.metadata["decision_rule"] == "answer_match"
@@ -1896,6 +2551,9 @@ def test_question_answer_verifier_checks_structured_question_answers():
     assert "Paris" in refuted.evidence[0]
     assert unknown.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert unknown.metadata["decision_rule"] == "question_not_found"
+    assert alias_refuted.status is VerificationStatus.REFUTED
+    assert alias_refuted.metadata["matched_question_alias"] == "Which city is France's capital?"
+    assert alias_refuted.metadata["canonical_question"] == "What is the capital of France?"
 
 
 def test_calculator_verifier_supports_and_refutes_arithmetic_claims():
@@ -2598,6 +3256,315 @@ def test_citation_verifier_reports_unresolved_references_fail_closed():
     assert result.explanation == "one or more citation references were not found in trusted catalog"
 
 
+def test_evidence_alignment_verifier_supports_cited_evidence_slots():
+    claim = Claim(
+        "AlphaCorp reported 42 stores in 2025 [annual-report].",
+        claim_id="alpha",
+        metadata={"citation": {"citation_id": "annual-report"}, "features": {"has_citation": True}},
+    )
+    evidence = EvidenceAlignmentEvidence(
+        "AlphaCorp reported 42 stores in 2025 across its retail segment.",
+        source="annual-report",
+        citation_id="annual-report",
+        score=0.9,
+    )
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(evidence,),
+        policy=EvidenceAlignmentPolicy(require_cited_evidence=True),
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    summary = report["summary"]
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert summary["passed"] is True
+    assert summary["citation_reference_coverage_rate"] == pytest.approx(1.0)
+    assert summary["number_recall_mean"] == pytest.approx(1.0)
+    assert report["records"][0]["cited_evidence_count"] == 1
+    json.dumps(result.metadata)
+
+
+def test_evidence_alignment_verifier_fail_closes_weak_keyword_only_support():
+    claim = Claim("If you dream of doing something and make a wish, you will succeed.", claim_id="wish")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Educational programs help students dream and succeed through planning, "
+                    "feedback, and classroom support."
+                ),
+                "source": "openalex:generic-education-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert record["status"] == "insufficient_evidence"
+    assert "weak_keyword_only_support" in record["issue_codes"]
+    assert record["metadata"]["best_keyword_overlap"] < record["metadata"]["min_support_keyword_overlap"]
+
+
+def test_evidence_alignment_verifier_supports_strong_keyword_only_evidence():
+    claim = Claim("Ecosystem management uses monitoring and research to adapt practices.", claim_id="eco")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Ecosystem management uses monitoring and research to make practices "
+                    "adaptable over time."
+                ),
+                "source": "openalex:ecosystem-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert record["status"] == "aligned"
+    assert "weak_keyword_only_support" not in record["issue_codes"]
+
+
+def test_evidence_alignment_verifier_refutes_numeric_slot_mismatch():
+    claim = Claim(
+        "AlphaCorp reported 42 stores in 2025 [annual-report].",
+        claim_id="alpha",
+        metadata={"citation": {"citation_id": "annual-report"}},
+    )
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "AlphaCorp reported 41 stores in 2025 across its retail segment.",
+                "source": "annual-report",
+                "citation_id": "annual-report",
+            },
+        ),
+        policy={"require_cited_evidence": True},
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    record = report["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert record["status"] == "misaligned"
+    assert "missing_claim_number" in record["issue_codes"]
+    assert record["missing_numbers"] == ("42",)
+    assert report["summary"]["misalignment_rate"] == pytest.approx(1.0)
+
+
+def test_evidence_alignment_verifier_uses_structured_evidence_metadata_slots():
+    claim = Claim("Afghanistan had Population, total of 330 million in 2024.", claim_id="afg")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "World Bank official statistics data for population country queries.",
+                "source": "worldbank:SP.POP.TOTL:AFG:2024",
+                "metadata": {
+                    "country_name": "Afghanistan",
+                    "indicator_name": "Population, total",
+                    "reference_year": "2024",
+                    "value": 42647492,
+                    "source_family": "official_statistics",
+                },
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "missing_claim_entity" not in record["issue_codes"]
+    assert "42647492" in record["evidence_numbers"]
+    assert "afghanistan" in record["evidence_entities"]
+    assert record["metadata"]["structured_evidence_slots"][0]["slot_values"] == (
+        "Afghanistan",
+        "Population, total",
+        "42647492",
+        "2024",
+    )
+
+
+def test_evidence_alignment_verifier_does_not_refute_unbound_entity_numeric_slot():
+    claim = Claim("What is the population of the country? The population of the country is 330 million.")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "World Bank official statistics data for population country queries: "
+                    "Afghanistan had Population, total of 42,647,492 in 2024."
+                ),
+                "source": "worldbank:SP.POP.TOTL:AFG:2024",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "unbound_evidence_entity" in record["issue_codes"]
+    assert "afghanistan" in record["metadata"]["unbound_evidence_entities"]
+
+
+def test_evidence_alignment_verifier_refutes_bound_entity_numeric_slot():
+    claim = Claim("Afghanistan had Population, total of 330 million in 2024.")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "World Bank official statistics data for population country queries: "
+                    "Afghanistan had Population, total of 42,647,492 in 2024."
+                ),
+                "source": "worldbank:SP.POP.TOTL:AFG:2024",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "unbound_evidence_entity" not in record["issue_codes"]
+
+
+def test_evidence_alignment_verifier_does_not_refute_unrelated_numeric_long_text_with_negation():
+    claim = Claim("How many ribs do humans have? Humans have 24 ribs.", claim_id="ribs")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Ecosystem management does not focus primarily on short-term deliverables. "
+                    "Many humans are ecosystem components, and the report lists goals (1), "
+                    "models (2), complexity (3), and accountability (4)."
+                ),
+                "source": "openalex:unrelated-ecosystem-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "low_refute_keyword_overlap" in record["issue_codes"]
+    assert "negation_mismatch" not in record["issue_codes"]
+    assert record["metadata"]["best_evidence_negated_for_alignment"] is False
+
+
+def test_evidence_alignment_verifier_does_not_refute_numeric_evidence_with_missing_entity():
+    claim = Claim("Diamonds last between 1 and 4 billion years.", claim_id="diamonds")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": (
+                    "Sea level rise over the last 43 years includes observations from 1969 to 2011. "
+                    "The study does not discuss gemstones but reports projections by 2050."
+                ),
+                "source": "openalex:sea-level-paper",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "missing_claim_entity" in record["issue_codes"]
+    assert "negation_mismatch" not in record["issue_codes"]
+
+
+def test_evidence_alignment_verifier_refutes_local_negation_mismatch():
+    claim = Claim("BetaLab had no offices in Paris.", claim_id="beta")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "BetaLab had offices in Paris.",
+                "source": "registry",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    record = result.metadata["evidence_alignment"]["records"][0]
+
+    assert result.status is VerificationStatus.REFUTED
+    assert "negation_mismatch" in record["issue_codes"]
+    assert record["metadata"]["claim_negated_for_alignment"] is True
+    assert record["metadata"]["best_evidence_negated_for_alignment"] is False
+
+
+def test_evidence_alignment_verifier_does_not_refute_unrelated_numeric_evidence():
+    claim = Claim("AlphaCorp reported 42 stores in 2025.", claim_id="alpha")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "Unrelated health study table reports 41 participants in 2025.",
+                "source": "external:unrelated",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    record = report["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "low_keyword_overlap" in record["issue_codes"]
+    assert "low_refute_keyword_overlap" in record["issue_codes"]
+
+
+def test_evidence_alignment_verifier_does_not_refute_number_omission_without_alternate_number():
+    claim = Claim("AlphaCorp reported 42 stores in 2025.", claim_id="alpha")
+    verifier = EvidenceAlignmentVerifier(
+        evidence=(
+            {
+                "text": "AlphaCorp reported stores across its retail segment in 2025.",
+                "source": "annual-report",
+            },
+        ),
+    )
+
+    result = verifier.verify(claim)
+    report = result.metadata["evidence_alignment"]
+    record = report["records"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert "missing_claim_number" in record["issue_codes"]
+    assert "no_alternate_evidence_number" in record["issue_codes"]
+    assert record["metadata"]["alternate_numbers"] == ()
+
+
+def test_audit_evidence_alignment_uses_context_retrieval_hits():
+    claim = Claim("BetaLab had no offices in Paris.", claim_id="beta")
+
+    report = audit_evidence_alignment(
+        claim,
+        context={
+            "retrieval_hits": [
+                {"text": "BetaLab had offices in Paris.", "source": "registry", "score": 0.8},
+            ],
+        },
+    )
+
+    summary = report.summary()
+    assert summary["passed"] is False
+    assert summary["misaligned_count"] == 1
+    assert "negation_mismatch" in report.records[0].issue_codes
+
+
 def test_default_verifier_routes_can_fail_closed_on_citation_catalog_mismatch():
     verifier = default_routed_verifier(
         evidence=("Citation checking is a reliability method.",),
@@ -2810,6 +3777,29 @@ def test_rule_based_world_model_adapter_fails_closed_when_no_rule_matches():
 
     with pytest.raises(ValueError, match="at least one rule"):
         RuleBasedWorldModelAdapter(())
+
+
+def test_world_model_adapters_reject_bool_and_non_finite_confidence_config():
+    base_adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+
+    with pytest.raises(ValueError, match="confidence"):
+        WorldModelPrediction(state={}, confidence=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="confidence"):
+        WorldModelPrediction(state={}, confidence=math.nan)
+    with pytest.raises(ValueError, match="world model rule confidence"):
+        WorldModelRule(name="bad", confidence=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="world model rule confidence"):
+        WorldModelRule.from_mapping({"name": "bad", "confidence": True})
+    with pytest.raises(ValueError, match="min_prediction_confidence"):
+        StateTransitionVerifier(
+            world_model=base_adapter,
+            min_prediction_confidence=True,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="min_agreement"):
+        EnsembleWorldModelAdapter(
+            (base_adapter,),
+            min_agreement=True,  # type: ignore[arg-type]
+        )
 
 
 def test_ensemble_world_model_adapter_confirms_consensus_predictions():
@@ -3626,18 +4616,32 @@ def test_control_policy_config_from_dict_parses_boolean_strings():
         "participation_gate_supported_override": "yes",
         "participation_gate_supported_override_min_confidence": 0.9,
     })
+    direct = ControlPolicyConfig(
+        refuted_action="rewrite",
+        unsupported_action="clarify",
+        verification_error_action="retrieve",
+        compound_risk_action="abstain",
+        refuted_risk_level="high",
+        unsupported_risk_level="medium",
+        verification_error_risk_level="unknown",
+        compound_risk_level="high",
+    )
 
     assert disabled.compound_verification_escalates is False
     assert enabled.compound_verification_escalates is True
     assert verification_aware.participation_gate_supported_override is True
     assert verification_aware.to_dict()["participation_gate_supported_override"] is True
     assert verification_aware.participation_gate_supported_override_min_confidence == pytest.approx(0.9)
+    assert direct.to_dict()["refuted_action"] == "rewrite"
+    assert direct.to_dict()["verification_error_risk_level"] == "unknown"
     with pytest.raises(ValueError, match="compound_verification_escalates"):
         ControlPolicyConfig.from_dict({"compound_verification_escalates": "maybe"})
     with pytest.raises(ValueError, match="participation_gate_supported_override"):
         ControlPolicyConfig.from_dict({"participation_gate_supported_override": "maybe"})
     with pytest.raises(ValueError, match="participation_gate_applies_to_actions"):
         ControlPolicyConfig.from_dict({"participation_gate_applies_to_actions": "unknown"})
+    with pytest.raises(ValueError, match="refuted_action"):
+        ControlPolicyConfig(refuted_action="unknown")
 
 
 def test_risk_controller_routes_non_finite_diagnostics_to_unknown():
@@ -3708,6 +4712,7 @@ def test_risk_controller_routes_bool_diagnostics_to_unknown():
 
 def test_claim_extraction_adds_rule_based_metadata():
     claim = extract_claims("As of 2026, revenue is not 10 dollars [1].")[0]
+    entity_claim = extract_claims("AlphaCorp acquired Beta Labs in Paris.")[0]
 
     features = claim.metadata["features"]
 
@@ -3716,6 +4721,10 @@ def test_claim_extraction_adds_rule_based_metadata():
     assert features["has_negation"] is True
     assert features["is_time_sensitive"] is True
     assert features["has_calculation"] is False
+    assert features["has_named_entity_hint"] is False
+    assert entity_claim.metadata["features"]["has_named_entity_hint"] is True
+    assert "AlphaCorp" in entity_claim.metadata["entity_candidates"]
+    assert "Beta Labs" in entity_claim.metadata["entity_candidates"]
 
 
 def test_claim_extraction_adds_structured_calculation_metadata():
@@ -3847,3 +4856,94 @@ def test_evidence_quality_policy_from_dict_strict_bool_parser():
         EvidenceQualityPolicy.from_dict({"max_age_days": True})
     with pytest.raises(ValueError, match="max_age_days"):
         EvidenceQualityPolicy(max_age_days=1.5)
+
+
+def test_evidence_quality_summary_counts_freshness_and_provenance_failures():
+    summary = summarize_evidence_quality(
+        (
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "official.gov/company-registry",
+                "metadata": {"published_at": "2026-06-20"},
+            },
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "blog.example/archive",
+                "metadata": {"published_at": "2025-01-01"},
+            },
+        ),
+        policy=EvidenceQualityPolicy(
+            max_age_days=30,
+            reference_time="2026-06-25",
+            require_source=True,
+            trusted_sources=("official.gov",),
+            require_trusted_source=True,
+        ),
+        features={"is_time_sensitive": True},
+    )
+
+    assert isinstance(summary, EvidenceQualitySummary)
+    assert summary.status == "fail"
+    assert summary.document_count == 2
+    assert summary.applied_count == 2
+    assert summary.passed_count == 1
+    assert summary.failed_count == 1
+    assert summary.pass_rate == pytest.approx(0.5)
+    assert summary.failure_rate == pytest.approx(0.5)
+    assert summary.reason_counts["stale_evidence"] == 1
+    assert summary.reason_counts["untrusted_source"] == 1
+    json.dumps(summary.to_dict(), allow_nan=False)
+
+
+def test_retrieval_action_executor_records_optional_evidence_quality_summary():
+    executor = RetrievalActionExecutor(
+        InMemoryRetriever(
+            (
+                {
+                    "text": "As of 2026, AlphaCorp has 10 offices.",
+                    "source": "official.gov/company-registry",
+                    "metadata": {"published_at": "2026-06-20"},
+                },
+                {
+                    "text": "As of 2026, AlphaCorp has 10 offices.",
+                    "source": "blog.example/archive",
+                    "metadata": {"published_at": "2025-01-01"},
+                },
+            ),
+            min_overlap=0.2,
+        ),
+        evidence_quality_policy={
+            "max_age_days": 30,
+            "reference_time": "2026-06-25",
+            "require_source": True,
+            "trusted_sources": ("official.gov",),
+            "require_trusted_source": True,
+        },
+    )
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="quality-audit",
+        payload={
+            "limit": 2,
+            "retrieval_targets": (
+                {
+                    "text": "As of 2026, AlphaCorp has 10 offices.",
+                    "claim_id": "c1",
+                    "metadata": {"features": {"is_time_sensitive": True}},
+                },
+            ),
+        },
+    )
+
+    result = executor.execute(request)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.output["evidence_quality"]["status"] == "fail"
+    assert result.output["evidence_quality"]["document_count"] == 2
+    assert result.output["evidence_quality"]["failed_count"] == 1
+    assert result.output["evidence_quality"]["reason_counts"]["stale_evidence"] == 1
+    by_query = result.output["hits_by_query"][0]["evidence_quality"]
+    assert by_query["failed_count"] == 1
+    assert by_query["assessments"][0]["passed"] is True
+    assert by_query["assessments"][1]["passed"] is False
+    json.dumps(result.to_dict(), allow_nan=False)

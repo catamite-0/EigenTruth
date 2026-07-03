@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from eigentruth.adapters import StructuredFactVerifier  # noqa: E402
+from eigentruth.adapters import QuestionAnswerVerifier, StructuredFactVerifier  # noqa: E402
 from eigentruth.json_utils import to_jsonable  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 from eigentruth.verify import (  # noqa: E402
@@ -42,6 +42,51 @@ def load_claims_for_counterfactual_generation(path: str | Path) -> tuple[Claim, 
     return tuple(_claim_from_record(record, index=index) for index, record in enumerate(records))
 
 
+def load_counterfactual_probes_from_verified_records(
+    path: str | Path,
+    *,
+    max_pairs: int | None = None,
+) -> tuple[CounterfactualProbe, ...]:
+    """Build QA counterfactual probes from supported/refuted verified records."""
+    if max_pairs is not None and int(max_pairs) < 1:
+        raise ValueError("max_pairs must be positive when set.")
+    records = _load_json_records(Path(path))
+    by_question: dict[str, dict[str, list[dict[str, Any]]]] = {}
+    for index, row in enumerate(records):
+        item = _probe_claim_from_verified_record(row, index=index)
+        if item is None:
+            continue
+        bucket = by_question.setdefault(item["question_key"], {"supported": [], "refuted": []})
+        bucket[item["status"]].append(item)
+
+    probes: list[CounterfactualProbe] = []
+    for question_key, bucket in by_question.items():
+        if not bucket["supported"] or not bucket["refuted"]:
+            continue
+        original = bucket["supported"][0]
+        for counterfactual in bucket["refuted"]:
+            probe_index = len(probes)
+            probes.append(CounterfactualProbe(
+                original=original["claim"],
+                counterfactual=counterfactual["claim"],
+                probe_id=f"verified_records:{probe_index}",
+                probe_type="structured_qa_answer_mismatch",
+                expected_original_status=VerificationStatus.SUPPORTED,
+                expected_counterfactual_status=VerificationStatus.REFUTED,
+                expected_flip=True,
+                metadata={
+                    "source": "verified_records",
+                    "source_verified_records_path": str(path),
+                    "question_key": question_key,
+                    "original_record_index": original["record_index"],
+                    "counterfactual_record_index": counterfactual["record_index"],
+                },
+            ))
+            if max_pairs is not None and len(probes) >= int(max_pairs):
+                return tuple(probes)
+    return tuple(probes)
+
+
 def build_counterfactual_verifier(
     verifier_name: str,
     probes: Sequence[CounterfactualProbe],
@@ -65,13 +110,22 @@ def build_counterfactual_verifier(
         if not isinstance(payload, Mapping):
             raise ValueError("fact corpus must contain a JSON object.")
         return StructuredFactVerifier.from_corpus(payload)
-    raise ValueError("verifier must be one of: in_memory, structured_fact.")
+    if name in {"structured_qa", "qa", "question_answer"}:
+        if fact_corpus_path is None:
+            raise ValueError("structured_qa verifier requires --fact-corpus.")
+        payload = json.loads(Path(fact_corpus_path).read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            raise ValueError("QA corpus must contain a JSON object.")
+        return QuestionAnswerVerifier.from_corpus(payload)
+    raise ValueError("verifier must be one of: in_memory, structured_fact, structured_qa.")
 
 
 def run_counterfactual_verification_eval(
     records_path: str | Path | None = None,
     *,
     claims_path: str | Path | None = None,
+    verified_records_path: str | Path | None = None,
+    max_verified_record_pairs: int | None = None,
     max_generated_probes_per_claim: int = 3,
     generated_probe_types: Sequence[str] = ("metadata", "entity_swap", "quantity", "year", "negation"),
     verifier_name: str = "in_memory",
@@ -84,11 +138,14 @@ def run_counterfactual_verification_eval(
     registry_path: str | Path | None = None,
     register_name: str | None = None,
     register_version: str = "0.1",
+    compact_json: bool = False,
 ) -> dict[str, Any]:
     """Run counterfactual verifier audit and return a JSON-ready payload."""
     probes = _load_or_generate_probes(
         records_path=records_path,
         claims_path=claims_path,
+        verified_records_path=verified_records_path,
+        max_verified_record_pairs=max_verified_record_pairs,
         max_generated_probes_per_claim=max_generated_probes_per_claim,
         generated_probe_types=generated_probe_types,
     )
@@ -106,7 +163,11 @@ def run_counterfactual_verification_eval(
         metadata={
             "records_path": None if records_path is None else str(records_path),
             "claims_path": None if claims_path is None else str(claims_path),
+            "verified_records_path": None if verified_records_path is None else str(verified_records_path),
             "generated_probe_count": sum(1 for probe in probes if probe.metadata.get("source") == "generated"),
+            "verified_record_probe_count": sum(
+                1 for probe in probes if probe.metadata.get("source") == "verified_records"
+            ),
             "verifier": verifier_name,
             "fact_corpus_path": None if fact_corpus_path is None else str(fact_corpus_path),
             "in_memory_facts_path": None if in_memory_facts_path is None else str(in_memory_facts_path),
@@ -116,7 +177,11 @@ def run_counterfactual_verification_eval(
         "workflow": "counterfactual_verification_eval",
         "records_path": None if records_path is None else str(records_path),
         "claims_path": None if claims_path is None else str(claims_path),
+        "verified_records_path": None if verified_records_path is None else str(verified_records_path),
         "generated_probe_count": sum(1 for probe in probes if probe.metadata.get("source") == "generated"),
+        "verified_record_probe_count": sum(
+            1 for probe in probes if probe.metadata.get("source") == "verified_records"
+        ),
         "verifier": verifier_name,
         "fact_corpus_path": None if fact_corpus_path is None else str(fact_corpus_path),
         "in_memory_facts_path": None if in_memory_facts_path is None else str(in_memory_facts_path),
@@ -138,7 +203,7 @@ def run_counterfactual_verification_eval(
             raise ValueError("artifact_manifest_path requires output_path.")
         manifest_path = Path(artifact_manifest_path)
         payload["paths"]["artifact_manifest"] = str(manifest_path)
-        _write_json(Path(output_path), payload, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
         artifacts = {
             "counterfactual_verification_report": output_path,
         }
@@ -146,24 +211,36 @@ def run_counterfactual_verification_eval(
             artifacts["records"] = Path(records_path)
         if claims_path is not None:
             artifacts["claims"] = Path(claims_path)
+        if verified_records_path is not None:
+            artifacts["verified_records"] = Path(verified_records_path)
         if fact_corpus_path is not None:
             artifacts["fact_corpus"] = Path(fact_corpus_path)
         if in_memory_facts_path is not None:
             artifacts["in_memory_facts"] = Path(in_memory_facts_path)
+        manifest_metadata = {
+            "workflow": "counterfactual_verification_eval",
+            "verifier": verifier_name,
+            "record_count": report["summary"]["record_count"],
+            "pass_rate": report["summary"]["pass_rate"],
+            "false_invariance_rate": report["summary"]["false_invariance_rate"],
+        }
         manifest = build_artifact_manifest(
             artifacts,
             root=manifest_path.parent,
-            metadata={
-                "workflow": "counterfactual_verification_eval",
-                "verifier": verifier_name,
-                "record_count": report["summary"]["record_count"],
-                "pass_rate": report["summary"]["pass_rate"],
-                "false_invariance_rate": report["summary"]["false_invariance_rate"],
-            },
+            metadata=manifest_metadata,
         )
+        payload["artifact_manifest_summary"] = manifest["summary"]
+        _write_json(Path(output_path), payload, compact=compact_json)
+        manifest = build_artifact_manifest(
+            artifacts,
+            root=manifest_path.parent,
+            metadata=manifest_metadata,
+        )
+        payload["artifact_manifest_summary"] = manifest["summary"]
         _write_json(manifest_path, manifest, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
     elif output_path is not None:
-        _write_json(Path(output_path), payload, compact=False)
+        _write_json(Path(output_path), payload, compact=compact_json)
     if registry_path is not None:
         registry = ArtifactRegistry.load_json(registry_path)
         registry.record_report(
@@ -212,12 +289,19 @@ def _load_or_generate_probes(
     *,
     records_path: str | Path | None,
     claims_path: str | Path | None,
+    verified_records_path: str | Path | None,
+    max_verified_record_pairs: int | None,
     max_generated_probes_per_claim: int,
     generated_probe_types: Sequence[str],
 ) -> tuple[CounterfactualProbe, ...]:
     probes: list[CounterfactualProbe] = []
     if records_path is not None:
         probes.extend(load_counterfactual_probes(records_path))
+    if verified_records_path is not None:
+        probes.extend(load_counterfactual_probes_from_verified_records(
+            verified_records_path,
+            max_pairs=max_verified_record_pairs,
+        ))
     if claims_path is not None:
         claims = load_claims_for_counterfactual_generation(claims_path)
         probes.extend(generate_counterfactual_probes(
@@ -226,8 +310,60 @@ def _load_or_generate_probes(
             probe_types=generated_probe_types,
         ))
     if not probes:
-        raise ValueError("counterfactual eval requires --records, --claims, or both.")
+        raise ValueError("counterfactual eval requires --records, --verified-records, --claims, or a combination.")
     return tuple(probes)
+
+
+def _probe_claim_from_verified_record(
+    row: Mapping[str, Any],
+    *,
+    index: int,
+) -> dict[str, Any] | None:
+    record = _mapping(row.get("record"))
+    final = _mapping(record.get("final", record.get("qa")))
+    status = str(final.get("status", "")).strip().casefold().replace("-", "_")
+    if status not in {"supported", "refuted"}:
+        return None
+    statement = _mapping(_nested(record, "metadata", "statement"))
+    claim = _mapping(record.get("claim"))
+    claim_metadata = dict(_mapping(claim.get("metadata")))
+    question = _optional_text(
+        statement.get("question")
+        or claim_metadata.get("question")
+        or _nested(claim_metadata, "statement", "question")
+    )
+    answer = _optional_text(
+        statement.get("answer")
+        or claim_metadata.get("answer")
+        or _nested(claim_metadata, "statement", "answer")
+    )
+    if question is None or answer is None:
+        return None
+    text = _optional_text(statement.get("text") or claim.get("text")) or f"{question} {answer}"
+    row_index = row.get("record_index", index)
+    question_key = normalize_claim_text(question)
+    return {
+        "status": status,
+        "question_key": question_key,
+        "record_index": row_index,
+        "claim": Claim(
+            text=text,
+            claim_id=str(claim.get("claim_id") or claim.get("id") or f"verified_record_{row_index}"),
+            metadata={
+                **claim_metadata,
+                "question": question,
+                "answer": answer,
+                "statement": {
+                    **statement,
+                    "question": question,
+                    "answer": answer,
+                    "text": text,
+                },
+                "verified_record_index": row_index,
+                "verified_record_status": status,
+            },
+        ),
+    }
 
 
 def _claim_from_record(record: Mapping[str, Any], *, index: int) -> Claim:
@@ -249,6 +385,26 @@ def _claim_from_record(record: Mapping[str, Any], *, index: int) -> Claim:
         span=span,
         metadata=dict(metadata),
     )
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _nested(mapping: Mapping[str, Any], *path: str) -> Any:
+    current: Any = mapping
+    for key in path:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _load_in_memory_facts(path: str | Path | None) -> dict[str, VerificationStatus]:
@@ -309,12 +465,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Evaluate verifier robustness on counterfactual probes")
     parser.add_argument("--records", default=None, help="JSON/JSONL counterfactual probe records")
     parser.add_argument("--claims", default=None, help="JSON/JSONL claims to generate counterfactual probes from")
+    parser.add_argument(
+        "--verified-records",
+        default=None,
+        help="JSONL verifier records; supported/refuted rows with the same question become probes",
+    )
+    parser.add_argument("--max-verified-record-pairs", type=int, default=None)
     parser.add_argument("--generate-probes", action="store_true",
                         help="generate counterfactual probes from --claims; retained for explicit CLI readability")
     parser.add_argument("--max-generated-probes-per-claim", type=int, default=3)
     parser.add_argument("--generated-probe-types", default="metadata,entity_swap,quantity,year,negation",
                         help="comma-separated generated probe types")
-    parser.add_argument("--verifier", default="in_memory", help="in_memory or structured_fact")
+    parser.add_argument("--verifier", default="in_memory", help="in_memory, structured_fact, or structured_qa")
     parser.add_argument("--fact-corpus", default=None, help="structured fact corpus JSON path")
     parser.add_argument("--in-memory-facts", default=None, help="optional exact-match facts JSON path")
     parser.add_argument("--default-status", default=VerificationStatus.INSUFFICIENT_EVIDENCE.value)
@@ -330,6 +492,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     payload = run_counterfactual_verification_eval(
         args.records,
         claims_path=args.claims,
+        verified_records_path=args.verified_records,
+        max_verified_record_pairs=args.max_verified_record_pairs,
         max_generated_probes_per_claim=args.max_generated_probes_per_claim,
         generated_probe_types=tuple(
             item.strip()
@@ -346,8 +510,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         registry_path=args.registry,
         register_name=args.register_name,
         register_version=args.register_version,
+        compact_json=bool(args.compact_json),
     )
-    _write_json(Path(args.json), payload, compact=bool(args.compact_json))
     summary = payload["report"]["summary"]
     print(
         "counterfactual_verification_eval_ok "

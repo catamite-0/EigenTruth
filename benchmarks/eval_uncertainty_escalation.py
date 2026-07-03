@@ -19,7 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from eigentruth.eval import uncertainty_escalation_report  # noqa: E402
+from eigentruth.eval import (  # noqa: E402
+    uncertainty_escalation_policy_sweep,
+    uncertainty_escalation_report,
+)
 
 
 def load_loop_result_records(path: Path) -> tuple[Mapping[str, Any], ...]:
@@ -64,11 +67,52 @@ def main(argv: list[str] | None = None) -> int:
         default="label",
         help="wrapper field used for labels when rows do not already use 'label'",
     )
+    parser.add_argument(
+        "--sweep-min-confidence",
+        default=None,
+        help="comma-separated min-confidence thresholds for policy what-if sweep",
+    )
+    parser.add_argument(
+        "--sweep-max-final-false-accept-rate",
+        type=float,
+        default=None,
+        help="optional sweep gate on final false-accept rate",
+    )
+    parser.add_argument(
+        "--sweep-min-final-selective-accuracy",
+        type=float,
+        default=None,
+        help="optional sweep gate on final selective accuracy",
+    )
+    parser.add_argument(
+        "--sweep-max-trigger-rate",
+        type=float,
+        default=None,
+        help="optional sweep gate on verifier trigger rate",
+    )
+    parser.add_argument(
+        "--sweep-min-trigger-rate",
+        type=float,
+        default=None,
+        help="optional sweep gate on verifier trigger rate",
+    )
     args = parser.parse_args(argv)
 
     records = load_loop_result_records(args.results)
     normalized = tuple(_normalize_label_key(record, args.label_key) for record in records)
     report = uncertainty_escalation_report(normalized)
+    if args.sweep_min_confidence is not None:
+        report["policy_sweep"] = uncertainty_escalation_policy_sweep(
+            normalized,
+            min_confidence_values=_parse_float_list(
+                args.sweep_min_confidence,
+                name="--sweep-min-confidence",
+            ),
+            max_final_false_accept_rate=args.sweep_max_final_false_accept_rate,
+            min_final_selective_accuracy=args.sweep_min_final_selective_accuracy,
+            max_trigger_rate=args.sweep_max_trigger_rate,
+            min_trigger_rate=args.sweep_min_trigger_rate,
+        )
 
     if args.json is not None:
         args.json.parent.mkdir(parents=True, exist_ok=True)
@@ -87,6 +131,16 @@ def _normalize_label_key(record: Mapping[str, Any], label_key: str) -> Mapping[s
     normalized = dict(record)
     normalized["label"] = record[label_key]
     return normalized
+
+
+def _parse_float_list(value: str, *, name: str) -> tuple[float, ...]:
+    items = tuple(item.strip() for item in str(value).split(",") if item.strip())
+    if not items:
+        raise ValueError(f"{name} must contain at least one value.")
+    try:
+        return tuple(float(item) for item in items)
+    except ValueError as exc:
+        raise ValueError(f"{name} must contain comma-separated floats.") from exc
 
 
 if __name__ == "__main__":

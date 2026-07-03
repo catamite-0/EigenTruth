@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "baseline": "adaptive_selfcheck",
+  "runs": {
+    "adaptive_selfcheck": {
+      "name": "adaptive_selfcheck",
+      "result_path": "artifacts/smollm2_l8_inside_trigger_budget_sweep_derived/top_0p4/result-adaptive_selfcheck.json",
+      "profile_path": "artifacts/smollm2_l8_inside_trigger_budget_sweep_derived/top_0p4/profile-adaptive_selfcheck.json",
+      "adaptive": true,
+      "selfcheck_early_stop": true,
+      "mode": "triggered",
+      "trigger_signal": "truth_proj",
+      "trigger_threshold": null,
+      "trigger_top_fraction": 0.4,
+      "sampled": 34,
+      "not_sampled": 34,
+      "triggered": 34,
+      "skipped_by_trigger": 34,
+      "total_generated_samples": 96,
+      "mean_samples_per_record": 1.411764705882353,
+      "mean_samples_per_sampled_record": 2.823529411764706,
+      "stopped_early": 6,
+      "stop_reason_counts": {
+        "selfcheck_thresholds_unreachable": 6
+      },
+      "total_seconds": 122.527663,
+      "inside_generation_seconds": 88.24526,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0
+    }
+  },
+  "leaderboard": [
+    {
+      "name": "adaptive_selfcheck",
+      "result_path": "artifacts/smollm2_l8_inside_trigger_budget_sweep_derived/top_0p4/result-adaptive_selfcheck.json",
+      "profile_path": "artifacts/smollm2_l8_inside_trigger_budget_sweep_derived/top_0p4/profile-adaptive_selfcheck.json",
+      "adaptive": true,
+      "selfcheck_early_stop": true,
+      "mode": "triggered",
+      "trigger_signal": "truth_proj",
+      "trigger_threshold": null,
+      "trigger_top_fraction": 0.4,
+      "sampled": 34,
+      "not_sampled": 34,
+      "triggered": 34,
+      "skipped_by_trigger": 34,
+      "total_generated_samples": 96,
+      "mean_samples_per_record": 1.411764705882353,
+      "mean_samples_per_sampled_record": 2.823529411764706,
+      "stopped_early": 6,
+      "stop_reason_counts": {
+        "selfcheck_thresholds_unreachable": 6
+      },
+      "total_seconds": 122.527663,
+      "inside_generation_seconds": 88.24526,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0
+    }
+  ],
+  "sample_efficiency_gate": {
+    "passed": true,
+    "baseline": "adaptive_selfcheck",
+    "checked_runs": [],
+    "failures": [],
+    "max_sample_ratios": {
+      "adaptive_selfcheck": 1.0
+    },
+    "max_inside_generation_seconds_ratio": null
+  },
+  "recommendation": {
+    "recommended_run": "adaptive_selfcheck",
+    "reason": "lowest_total_generated_samples_then_inside_generation_seconds"
+  }
+}

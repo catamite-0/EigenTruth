@@ -1,0 +1,202 @@
+{
+  "corpus_type": "alignment_review_approved_source_documents",
+  "description": "Approved alignment fact-review source documents. These are inputs for source-family structured QA corpus construction, not a broad route promotion by themselves.",
+  "documents": [
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+        "alignment_source_document_id": "alignment-approved:1",
+        "confidence": 0.871818,
+        "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "provider": "wikidata",
+        "review_id": "review:f824d0d0b4337e82",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "English"
+          ],
+          "value": [
+            "West Germanic language"
+          ]
+        },
+        "subject": "English",
+        "value": "West Germanic language"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q1860:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
+      "title": "Reviewed alignment fact: English description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:7efecb96df3cdbac",
+        "alignment_source_document_id": "alignment-approved:2",
+        "confidence": 0.843846,
+        "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+        "provider": "wikidata",
+        "review_id": "review:5213651e1f2bb3df",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "Americans"
+          ],
+          "value": [
+            "citizens and nationals of the United States of America"
+          ]
+        },
+        "subject": "Americans",
+        "value": "citizens and nationals of the United States of America"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q846570:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+      "title": "Reviewed alignment fact: Americans description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:048a582348764d1e",
+        "alignment_source_document_id": "alignment-approved:3",
+        "confidence": 0.962727,
+        "evidence_span": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+        "provider": "wikidata",
+        "review_id": "review:127ba68c0b9c936a",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q11660:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "artificial intelligence"
+          ],
+          "value": [
+            "field that develops and studies software enabling machines to exhibit intelligent behavior"
+          ]
+        },
+        "subject": "artificial intelligence",
+        "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q11660:description",
+      "source_family": "reference",
+      "text": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+      "title": "Reviewed alignment fact: artificial intelligence description"
+    },
+    {
+      "metadata": {
+        "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+        "alignment_source_document_id": "alignment-approved:4",
+        "confidence": 0.856667,
+        "evidence_span": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+        "provider": "wikidata",
+        "review_id": "review:493c95339ac7ce47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q15:P527:Q27381",
+        "source_family": "reference",
+        "statement_property": "P527",
+        "statement_property_label": "has part",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "P527"
+          ],
+          "statement_property_label": [
+            "has part(s)"
+          ],
+          "subject": [
+            "Africa"
+          ],
+          "value": [
+            "North Africa"
+          ]
+        },
+        "subject": "Africa",
+        "value": "North Africa"
+      },
+      "provider": "wikidata",
+      "source": "wikidata:Q15:P527:Q27381",
+      "source_family": "reference",
+      "text": "According to Wikidata structured data, Africa has has part(s) North Africa.",
+      "title": "Reviewed alignment fact: Africa has part"
+    }
+  ],
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "request_ids_copied_to_document_metadata": false,
+    "target_ids_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "builder": "alignment_fact_review_promotion_gate",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready",
+  "summary": {
+    "approved_source_document_count": 4,
+    "by_property": {
+      "P527": 1,
+      "description": 3
+    },
+    "by_provider": {
+      "wikidata": 4
+    },
+    "by_source_family": {
+      "reference": 4
+    },
+    "needs_more_evidence_count": 4,
+    "pending_review_count": 0,
+    "rejected_count": 0,
+    "review_decision_count": 8,
+    "review_document_count": 8,
+    "skip_counts": {
+      "approved": 4,
+      "duplicate_review_decision": 0,
+      "invalid_review_decision": 0,
+      "missing_candidate_id": 0,
+      "missing_reviewer": 0,
+      "needs_more_evidence": 4,
+      "pending_review": 0,
+      "rejected": 0,
+      "reserved_review_metadata": 0,
+      "unknown_candidate_id": 0,
+      "unsupported_evidence_source": 0
+    }
+  }
+}

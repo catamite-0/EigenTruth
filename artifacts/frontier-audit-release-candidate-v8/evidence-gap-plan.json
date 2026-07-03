@@ -1,0 +1,528 @@
+{
+  "actions": [
+    {
+      "action_id": "refresh_readiness_baseline",
+      "action_type": "benchmark",
+      "evidence_routes": [
+        "readiness_baseline",
+        "calibrated_observability"
+      ],
+      "metadata": {},
+      "priority": 100,
+      "rationale": "Frontier gates need stronger model/layer diagnostic quality and runtime-cost readiness evidence before a product contract can be trusted.",
+      "source_gap_ids": [
+        "gap-001-01",
+        "gap-001-02"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_adapter_readiness_registry_workflow.py",
+        "benchmarks/run_calibrated_observability_workflow.py"
+      ],
+      "title": "Refresh stronger adapter readiness evidence"
+    },
+    {
+      "action_id": "refresh_performance_baseline",
+      "action_type": "benchmark",
+      "evidence_routes": [
+        "performance_baseline",
+        "runtime_budget"
+      ],
+      "metadata": {},
+      "priority": 95,
+      "rationale": "The selected runtime must have a matching performance baseline before release comparison can measure cost drift.",
+      "source_gap_ids": [
+        "gap-002-01"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_performance_baseline_workflow.py"
+      ],
+      "title": "Refresh matching performance baseline"
+    },
+    {
+      "action_id": "run_counterfactual_verifier_audit",
+      "action_type": "experiment",
+      "evidence_routes": [
+        "counterfactual_verification",
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 88,
+      "rationale": "Verifier routes should flip on plausible false variants instead of remaining invariant to entity, numeric, temporal, or negation changes.",
+      "source_gap_ids": [
+        "gap-003-04"
+      ],
+      "suggested_commands": [
+        "benchmarks/eval_counterfactual_verification.py"
+      ],
+      "title": "Add counterfactual verifier sensitivity evidence"
+    },
+    {
+      "action_id": "rerun_product_trace_context_sensitivity_evidence",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "product_trace_replay",
+        "product_runtime_drift",
+        "context_sensitivity_evidence"
+      ],
+      "metadata": {},
+      "priority": 86,
+      "rationale": "Frontier runtime drift gates need trace-level context-sensitivity participation, coverage, flagged-result, trace-gap, and ratio evidence before the release can trust evidence-conditioned correction signals.",
+      "source_gap_ids": [
+        "gap-003-07"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_product_trace_replay_workflow.py",
+        "benchmarks/run_product_runtime_baseline.py",
+        "benchmarks/compare_product_runtime_baselines.py"
+      ],
+      "title": "Replay product traces with context-sensitivity evidence summaries"
+    },
+    {
+      "action_id": "rerun_product_trace_counterfactual_robustness_evidence",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "product_trace_replay",
+        "product_runtime_drift",
+        "counterfactual_robustness_evidence"
+      ],
+      "metadata": {},
+      "priority": 86,
+      "rationale": "Frontier runtime drift gates need trace-level counterfactual robustness participation, coverage, pass, flip-success, false-invariance, and trace-gap evidence before verifier behavior is treated as stable.",
+      "source_gap_ids": [
+        "gap-003-08"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_product_trace_replay_workflow.py",
+        "benchmarks/run_product_runtime_baseline.py",
+        "benchmarks/compare_product_runtime_baselines.py"
+      ],
+      "title": "Replay product traces with counterfactual-robustness evidence summaries"
+    },
+    {
+      "action_id": "rerun_product_trace_world_model_evidence",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "product_trace_replay",
+        "product_runtime_drift",
+        "world_model_evidence"
+      ],
+      "metadata": {},
+      "priority": 86,
+      "rationale": "Frontier runtime drift gates need trace-level world-model participation, coverage, conflict, low-agreement, and trace-gap evidence before the release can trust model-state correction signals.",
+      "source_gap_ids": [
+        "gap-003-06"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_product_trace_replay_workflow.py",
+        "benchmarks/run_product_runtime_baseline.py",
+        "benchmarks/compare_product_runtime_baselines.py"
+      ],
+      "title": "Replay product traces with world-model evidence summaries"
+    },
+    {
+      "action_id": "add_trace_level_triple_audit",
+      "action_type": "workflow",
+      "evidence_routes": [
+        "triple_evidence",
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 84,
+      "rationale": "Fact-level verification needs extracted triples, claim coverage, slot coverage, and pass rates rather than only sentence-level groundedness.",
+      "source_gap_ids": [
+        "gap-003-05"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_triple_extraction_fixture_matrix.py",
+        "benchmarks/run_product_runtime_baseline.py"
+      ],
+      "title": "Add trace-level triple and slot-audit evidence"
+    },
+    {
+      "action_id": "inspect_frontier_release_evidence_blocker",
+      "action_type": "manual_triage",
+      "evidence_routes": [
+        "frontier_release_evidence"
+      ],
+      "metadata": {},
+      "priority": 10,
+      "rationale": "No specific planner mapping exists yet for this blocker: frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
+      "source_gap_ids": [
+        "gap-004-01",
+        "gap-004-02"
+      ],
+      "suggested_commands": [],
+      "title": "Inspect release blocker"
+    },
+    {
+      "action_id": "inspect_product_runtime_drift_blocker",
+      "action_type": "manual_triage",
+      "evidence_routes": [
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 10,
+      "rationale": "No specific planner mapping exists yet for this blocker: product runtime drift frontier release evidence blocked 3 metric(s)",
+      "source_gap_ids": [
+        "gap-003-01",
+        "gap-003-02",
+        "gap-003-03",
+        "gap-003-09"
+      ],
+      "suggested_commands": [],
+      "title": "Inspect release blocker"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "gap-001-01",
+      "gate": "readiness_baseline",
+      "metadata": {
+        "evidence_kind": "readiness_baseline",
+        "research_axis": "internal_state"
+      },
+      "missing_metrics": [],
+      "reason": "benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-readiness:0.2: INSIDE sampling sample-count ratio above 1.05",
+      "recommended_action_ids": [
+        "refresh_readiness_baseline"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-02",
+      "gate": "readiness_baseline",
+      "metadata": {
+        "evidence_kind": "readiness_baseline",
+        "research_axis": "internal_state"
+      },
+      "missing_metrics": [],
+      "reason": "benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-readiness:0.2: INSIDE sampling generation-seconds ratio above 1.1",
+      "recommended_action_ids": [
+        "refresh_readiness_baseline"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-002-01",
+      "gate": "performance_baseline",
+      "metadata": {
+        "evidence_kind": "performance_baseline",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "release candidate is unavailable for performance baseline comparison",
+      "recommended_action_ids": [
+        "refresh_performance_baseline"
+      ],
+      "root_cause": "runtime",
+      "source": {
+        "blocker_index": 2,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-01",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-02",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift decision status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-03",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift blocked 3 metric(s)",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 3
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-04",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "counterfactual_verification",
+        "research_axis": "counterfactual"
+      },
+      "missing_metrics": [
+        "promotion_contract.counterfactual_verification.coverage_rate",
+        "promotion_contract.counterfactual_verification.manifest_verified_rate",
+        "promotion_contract.counterfactual_verification.record_count.mean",
+        "promotion_contract.counterfactual_verification.pass_rate.mean",
+        "promotion_contract.counterfactual_verification.false_invariance_rate.mean",
+        "promotion_contract.counterfactual_verification.flip_success_count.mean"
+      ],
+      "reason": "product runtime drift counterfactual evidence metrics are incomplete: promotion_contract.counterfactual_verification.coverage_rate, promotion_contract.counterfactual_verification.manifest_verified_rate, promotion_contract.counterfactual_verification.record_count.mean, promotion_contract.counterfactual_verification.pass_rate.mean, promotion_contract.counterfactual_verification.false_invariance_rate.mean, promotion_contract.counterfactual_verification.flip_success_count.mean",
+      "recommended_action_ids": [
+        "run_counterfactual_verifier_audit"
+      ],
+      "root_cause": "context",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 4
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-05",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "triple_audit",
+        "research_axis": "fact_level"
+      },
+      "missing_metrics": [
+        "triple_coverage.audit_claim_coverage_rate",
+        "triple_coverage.audit_pass_rate",
+        "triple_coverage.slot_coverage_rate"
+      ],
+      "reason": "product runtime drift triple audit evidence metrics are incomplete: triple_coverage.audit_claim_coverage_rate, triple_coverage.audit_pass_rate, triple_coverage.slot_coverage_rate",
+      "recommended_action_ids": [
+        "add_trace_level_triple_audit"
+      ],
+      "root_cause": "evidence_coverage",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 5
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-06",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "product_runtime_world_model_evidence",
+        "research_axis": "runtime_drift"
+      },
+      "missing_metrics": [
+        "world_model.conflict_rate",
+        "world_model.low_agreement_rate",
+        "world_model.trace_gap_rate"
+      ],
+      "reason": "product runtime drift world-model evidence metrics are incomplete: world_model.conflict_rate, world_model.low_agreement_rate, world_model.trace_gap_rate",
+      "recommended_action_ids": [
+        "rerun_product_trace_world_model_evidence"
+      ],
+      "root_cause": "world_model",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 6
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-07",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "product_runtime_context_sensitivity_evidence",
+        "research_axis": "runtime_drift"
+      },
+      "missing_metrics": [
+        "context_sensitivity.flagged_result_rate",
+        "context_sensitivity.trace_gap_rate",
+        "context_sensitivity.max_flagged_rate",
+        "context_sensitivity.max_context_sensitivity_ratio"
+      ],
+      "reason": "product runtime drift context-sensitivity evidence metrics are incomplete: context_sensitivity.flagged_result_rate, context_sensitivity.trace_gap_rate, context_sensitivity.max_flagged_rate, context_sensitivity.max_context_sensitivity_ratio",
+      "recommended_action_ids": [
+        "rerun_product_trace_context_sensitivity_evidence"
+      ],
+      "root_cause": "context_sensitivity",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 7
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-08",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "product_runtime_counterfactual_robustness_evidence",
+        "research_axis": "runtime_drift"
+      },
+      "missing_metrics": [
+        "counterfactual_robustness.pass_rate",
+        "counterfactual_robustness.flip_success_rate",
+        "counterfactual_robustness.false_invariance_rate",
+        "counterfactual_robustness.trace_gap_rate"
+      ],
+      "reason": "product runtime drift counterfactual-robustness evidence metrics are incomplete: counterfactual_robustness.pass_rate, counterfactual_robustness.flip_success_rate, counterfactual_robustness.false_invariance_rate, counterfactual_robustness.trace_gap_rate",
+      "recommended_action_ids": [
+        "rerun_product_trace_counterfactual_robustness_evidence"
+      ],
+      "root_cause": "counterfactual_robustness",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 8
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-003-09",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift frontier release evidence blocked 3 metric(s)",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 3,
+        "decision_status": "blocked",
+        "reason_index": 9
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-004-01",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "frontier release evidence decision status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_frontier_release_evidence_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 4,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-004-02",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_frontier_release_evidence_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 4,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    }
+  ],
+  "metadata": {
+    "evidence_scope": "frontier_trace_evidence_v1_10"
+  },
+  "schema_version": 1,
+  "source_path": "artifacts/frontier-audit-release-candidate-v8/frontier-audit-registry-workflow.json",
+  "source_status": "blocked",
+  "source_workflow": "release_candidate_registry_workflow",
+  "status": "needs_evidence",
+  "summary": {
+    "action_count": 9,
+    "gap_count": 14,
+    "gates": {
+      "frontier_release_evidence": 2,
+      "performance_baseline": 1,
+      "product_runtime_drift": 9,
+      "readiness_baseline": 2
+    },
+    "missing_metric_count": 20,
+    "research_axes": {
+      "counterfactual": 1,
+      "fact_level": 1,
+      "internal_state": 2,
+      "release_gate": 7,
+      "runtime_drift": 3
+    },
+    "root_causes": {
+      "context": 1,
+      "context_sensitivity": 1,
+      "counterfactual_robustness": 1,
+      "evidence_coverage": 1,
+      "model": 2,
+      "runtime": 1,
+      "unknown": 6,
+      "world_model": 1
+    },
+    "source_decision_status": "blocked",
+    "top_action_ids": [
+      "refresh_readiness_baseline",
+      "refresh_performance_baseline",
+      "run_counterfactual_verifier_audit",
+      "rerun_product_trace_context_sensitivity_evidence",
+      "rerun_product_trace_counterfactual_robustness_evidence"
+    ]
+  },
+  "workflow": "evidence_gap_plan"
+}

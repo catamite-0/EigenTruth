@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import sys
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping, Sequence
 
@@ -15,6 +16,10 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks import artifact_json_cache as _artifact_json_cache  # noqa: E402
+from benchmarks.compare_verifier_routes import (  # noqa: E402
+    _normalize_required_cache_key_modes,
+    _parse_cache_key_mode_requirement,
+)
 from benchmarks.runtime_budget_policy import (  # noqa: E402
     RuntimeBudgetPolicy,
     evaluate_runtime_budget,
@@ -55,6 +60,7 @@ def compare_route_baselines(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    required_cache_key_modes: Mapping[str, str] | None = None,
     min_covered_fact_properties: int | None = None,
     min_covered_fact_property_records: int | None = None,
     min_covered_fact_property_source_documents: int | None = None,
@@ -84,6 +90,7 @@ def compare_route_baselines(
     cache = verification_context.fingerprint_cache
     payload_cache = verification_context.json_cache
     payload_cache_stats = verification_context.json_cache_stats
+    required_cache_key_modes = _normalize_required_cache_key_modes(required_cache_key_modes)
     registry = ArtifactRegistry.load_json(registry_path)
     records = _select_records(registry, baseline_keys=baseline_keys)
     rows = [
@@ -106,6 +113,7 @@ def compare_route_baselines(
             max_retrieval_hit_count=max_retrieval_hit_count,
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+            required_cache_key_modes=required_cache_key_modes,
             min_covered_fact_properties=min_covered_fact_properties,
             min_covered_fact_property_records=min_covered_fact_property_records,
             min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
@@ -153,6 +161,7 @@ def compare_route_baselines(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "required_cache_key_modes": dict(required_cache_key_modes),
             "min_covered_fact_properties": min_covered_fact_properties,
             "min_covered_fact_property_records": min_covered_fact_property_records,
             "min_covered_fact_property_source_documents": min_covered_fact_property_source_documents,
@@ -241,6 +250,7 @@ def _route_baseline_row(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    required_cache_key_modes: Mapping[str, str],
     min_covered_fact_properties: int | None,
     min_covered_fact_property_records: int | None,
     min_covered_fact_property_source_documents: int | None,
@@ -345,6 +355,16 @@ def _route_baseline_row(
     covered_fact_property_count = _int_or_none(route_summary.get("property_count"))
     if covered_fact_property_count is None and covered_fact_property_metrics:
         covered_fact_property_count = len(covered_fact_property_metrics)
+    if not covered_fact_property_metrics:
+        derived_property_metrics = _derive_covered_fact_property_metrics_from_artifacts(
+            manifest_path=manifest_path,
+            manifest=manifest,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
+        if derived_property_metrics:
+            covered_fact_property_metrics = derived_property_metrics
+            covered_fact_property_count = len(covered_fact_property_metrics)
     route_status = (
         route_decision.get("status")
         or manifest_metadata.get("route_promotion_status")
@@ -371,6 +391,11 @@ def _route_baseline_row(
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
         json_cache_stats=json_cache_stats,
+    )
+    cache_key_mode_audit = _cache_key_mode_audit(
+        route_comparison,
+        manifest_metadata,
+        required_cache_key_modes=required_cache_key_modes,
     )
     gate = _gate(
         verification=verification,
@@ -416,6 +441,7 @@ def _route_baseline_row(
             min_retrieval_filter_score=min_retrieval_filter_score,
         ),
         retrieval_stress_audit=retrieval_stress_audit,
+        cache_key_mode_audit=cache_key_mode_audit,
     )
     runtime_metrics = dict(runtime_budget.get("metrics") or {})
     return {
@@ -453,6 +479,8 @@ def _route_baseline_row(
         "evidence_audit": gate["evidence_audit"],
         "retrieval_provenance_audit": gate["retrieval_provenance_audit"],
         "retrieval_stress_audit": gate["retrieval_stress_audit"],
+        "cache_key_mode_audit": gate["cache_key_mode_audit"],
+        "cache_key_modes": cache_key_mode_audit["observed_cache_key_modes"],
     }
 
 
@@ -553,6 +581,7 @@ def _gate(
     evidence_audit: Mapping[str, Any],
     retrieval_provenance_audit: Mapping[str, Any],
     retrieval_stress_audit: Mapping[str, Any],
+    cache_key_mode_audit: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures = []
     if manifest_error is not None:
@@ -691,12 +720,18 @@ def _gate(
             f"retrieval_stress_audit: {reason}"
             for reason in retrieval_stress_audit.get("blocking_reasons", ())
         )
+    if cache_key_mode_audit.get("enabled") and not cache_key_mode_audit.get("passed"):
+        failures.extend(
+            f"cache_key_mode_audit: {reason}"
+            for reason in cache_key_mode_audit.get("blocking_reasons", ())
+        )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
         "evidence_audit": dict(evidence_audit),
         "retrieval_provenance_audit": dict(retrieval_provenance_audit),
         "retrieval_stress_audit": dict(retrieval_stress_audit),
+        "cache_key_mode_audit": dict(cache_key_mode_audit),
     }
 
 
@@ -720,6 +755,242 @@ def _covered_fact_property_gate_enabled(
             min_covered_fact_property_false_refuted_rate,
         )
     )
+
+
+def _cache_key_mode_audit(
+    route_comparison: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+    *,
+    required_cache_key_modes: Mapping[str, str],
+) -> dict[str, Any]:
+    observed = _cache_key_modes_from_route_baseline(route_comparison, manifest_metadata)
+    failures: list[str] = []
+    for name, required_mode in required_cache_key_modes.items():
+        summary = _mapping(observed.get(name))
+        modes = tuple(str(mode) for mode in _sequence_or_empty(summary.get("modes")))
+        missing_runs = _int_or_none(summary.get("missing_runs"))
+        if modes != (required_mode,) or (missing_runs is not None and missing_runs > 0):
+            observed_text = "missing" if not modes else ",".join(modes)
+            failures.append(
+                f"{name} cache_key_mode is {observed_text!r}, expected {required_mode!r}"
+            )
+    return {
+        "enabled": bool(required_cache_key_modes),
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "required_cache_key_modes": dict(required_cache_key_modes),
+        "observed_cache_key_modes": observed,
+    }
+
+
+def _cache_key_modes_from_route_baseline(
+    route_comparison: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    observed: dict[str, dict[str, Any]] = {}
+    cache_summary = _mapping(route_comparison.get("cache_summary"))
+    for source in (
+        _mapping(manifest_metadata.get("cache_key_modes")),
+        _mapping(manifest_metadata.get("verifier_cache_key_modes")),
+        _mapping(cache_summary.get("cache_key_modes")),
+    ):
+        for name, summary in _normalize_cache_key_mode_summary(source).items():
+            observed[name] = summary
+    return observed
+
+
+def _normalize_cache_key_mode_summary(value: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    normalized: dict[str, dict[str, Any]] = {}
+    for name, payload in value.items():
+        name_text = str(name).strip()
+        if not name_text:
+            continue
+        if isinstance(payload, str):
+            mode = payload.strip().lower()
+            if mode:
+                normalized[name_text] = {
+                    "modes": (mode,),
+                    "mode_counts": {mode: 1},
+                    "run_count": 1,
+                    "missing_runs": 0,
+                }
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        raw_modes = payload.get("modes")
+        if isinstance(raw_modes, str):
+            modes = (raw_modes.strip().lower(),)
+        else:
+            modes = tuple(
+                str(mode).strip().lower()
+                for mode in _sequence_or_empty(raw_modes)
+                if str(mode).strip()
+            )
+        if not modes:
+            for key in ("mode", "cache_key_mode"):
+                mode = payload.get(key)
+                if isinstance(mode, str) and mode.strip():
+                    modes = (mode.strip().lower(),)
+                    break
+        mode_counts = _mapping(payload.get("mode_counts"))
+        normalized[name_text] = {
+            "modes": tuple(sorted(set(modes))),
+            "mode_counts": dict(sorted((str(key), value) for key, value in mode_counts.items())),
+            "run_count": _int_or_none(payload.get("run_count")),
+            "missing_runs": _int_or_none(payload.get("missing_runs")),
+        }
+    return normalized
+
+
+def _derive_covered_fact_property_metrics_from_artifacts(
+    *,
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    json_cache: MutableMapping[str, dict[str, Any]],
+    json_cache_stats: MutableMapping[str, int],
+) -> dict[str, dict[str, Any]]:
+    score_dump_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="covered_fact_score_dump",
+    )
+    verified_records_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="verified_records_jsonl",
+    )
+    if score_dump_path is None or verified_records_path is None:
+        return {}
+    score_dump, score_dump_error = _load_optional_json(
+        score_dump_path,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
+    if score_dump_error is not None:
+        return {}
+    statements = _sequence_or_empty(score_dump.get("statements"))
+    labels = _sequence_or_empty(score_dump.get("labels"))
+    if not statements or len(statements) != len(labels):
+        return {}
+    verified_records = _load_jsonl_mappings(verified_records_path)
+    if not verified_records:
+        return {}
+    status_by_index: dict[int, str] = {}
+    for row in verified_records:
+        index = _int_or_none(row.get("record_index"))
+        if index is None:
+            continue
+        status = _verification_status(row)
+        if status is not None:
+            status_by_index[index] = status
+    if not status_by_index:
+        return {}
+
+    buckets: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {
+            "n_records": 0,
+            "n_true": 0,
+            "n_false": 0,
+            "sources": set(),
+            "label_status": Counter(),
+            "property_label": None,
+        }
+    )
+    for index, statement in enumerate(statements):
+        status = status_by_index.get(index)
+        if status is None:
+            continue
+        metadata = _mapping(_mapping(statement).get("metadata"))
+        property_id = str(metadata.get("statement_property") or "").strip()
+        if not property_id:
+            continue
+        label = _int_or_none(labels[index])
+        if label is None:
+            continue
+        is_false = label == 1
+        bucket = buckets[property_id]
+        bucket["n_records"] += 1
+        bucket["n_false" if is_false else "n_true"] += 1
+        bucket["label_status"][(bool(is_false), status)] += 1
+        if bucket["property_label"] is None and metadata.get("statement_property_label") is not None:
+            bucket["property_label"] = str(metadata.get("statement_property_label"))
+        source = metadata.get("source")
+        if source is not None and str(source):
+            bucket["sources"].add(str(source))
+
+    metrics: dict[str, dict[str, Any]] = {}
+    for property_id, bucket in sorted(buckets.items()):
+        n_records = int(bucket["n_records"])
+        n_true = int(bucket["n_true"])
+        n_false = int(bucket["n_false"])
+        if n_records <= 0:
+            continue
+        label_status: Counter[tuple[bool, str]] = bucket["label_status"]
+        true_supported = int(label_status[(False, "supported")])
+        true_refuted = int(label_status[(False, "refuted")])
+        false_supported = int(label_status[(True, "supported")])
+        false_refuted = int(label_status[(True, "refuted")])
+        correct = true_supported + false_refuted
+        metrics[property_id] = {
+            "n_records": n_records,
+            "n_true": n_true,
+            "n_false": n_false,
+            "n_source_documents": len(bucket["sources"]),
+            "decision_accuracy": correct / n_records,
+            "false_supported_rate": _safe_rate(false_supported, n_false),
+            "false_refuted_rate": _safe_rate(false_refuted, n_false),
+            "true_supported_rate": _safe_rate(true_supported, n_true),
+            "true_refuted_rate": _safe_rate(true_refuted, n_true),
+            "statement_property_label": bucket["property_label"],
+            "status_counts": {
+                "true_supported": true_supported,
+                "true_refuted": true_refuted,
+                "false_supported": false_supported,
+                "false_refuted": false_refuted,
+            },
+            "metric_source": "derived_from_covered_fact_score_dump_and_verified_records",
+        }
+    return metrics
+
+
+def _load_jsonl_mappings(path: Path) -> tuple[dict[str, Any], ...]:
+    rows: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                payload = json.loads(stripped)
+                if isinstance(payload, Mapping):
+                    rows.append(dict(payload))
+    except (OSError, json.JSONDecodeError):
+        return ()
+    return tuple(rows)
+
+
+def _verification_status(row: Mapping[str, Any]) -> str | None:
+    record = _mapping(row.get("record"))
+    for key in ("final", "fact", "initial"):
+        status = _mapping(record.get(key)).get("status")
+        if status is not None and str(status):
+            return str(status)
+    status = row.get("status")
+    if status is not None and str(status):
+        return str(status)
+    return None
+
+
+def _safe_rate(numerator: int, denominator: int) -> float | None:
+    if denominator <= 0:
+        return None
+    return numerator / denominator
+
+
+def _sequence_or_empty(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return ()
 
 
 def _evidence_audit(
@@ -1363,6 +1634,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        required_cache_key_modes=dict(
+            _parse_cache_key_mode_requirement(value)
+            for value in args.require_cache_key_mode
+        ),
         min_covered_fact_properties=args.min_covered_fact_properties,
         min_covered_fact_property_records=args.min_covered_fact_property_records,
         min_covered_fact_property_source_documents=args.min_covered_fact_property_source_documents,
@@ -1470,6 +1745,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument(
+        "--require-cache-key-mode",
+        action="append",
+        default=[],
+        help="require a verifier cache mode recorded by the route baseline, formatted as verifier=mode",
+    )
     parser.add_argument("--min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
         value,
         flag="--min-covered-fact-properties",

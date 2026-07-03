@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "blind_spot_analysis_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spots.json",
+      "sha256": "d4e4cac478ce6cd3edddd58f9ae7de8791f91881dae1a0e7e9363a3bd887277f",
+      "size_bytes": 130790
+    },
+    "detectability_taxonomy_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+      "sha256": "d4acd8d350cbaeba986376adf10592924e4c4acd416042f9e02a5ee647104cb6",
+      "size_bytes": 12718
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "assignment_check_passed": true,
+    "cell": "entrenched",
+    "expected_selected_record_count": 89,
+    "runner": "analyze_detectability_blind_spots",
+    "selected_record_count": 89,
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

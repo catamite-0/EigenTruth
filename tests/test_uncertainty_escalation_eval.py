@@ -5,7 +5,10 @@ import json
 
 import pytest
 
-from eigentruth.eval import uncertainty_escalation_report
+from eigentruth.eval import (
+    uncertainty_escalation_policy_sweep,
+    uncertainty_escalation_report,
+)
 
 
 def test_uncertainty_escalation_report_summarizes_retrieval_and_quality_delta():
@@ -44,6 +47,41 @@ def test_uncertainty_escalation_report_summarizes_retrieval_and_quality_delta():
     assert report["quality"]["final"]["false_accept_rate"]["estimate"] == pytest.approx(0.0)
     assert report["quality"]["delta"]["accepted_false"] == -1
     assert report["quality"]["delta"]["false_accept_rate"] == pytest.approx(-1.0)
+    json.dumps(report, allow_nan=False)
+
+
+def test_uncertainty_escalation_report_summarizes_entity_sensitive_escalation():
+    record = _loop_result(
+        final_action="retrieve",
+        total_evidence=0,
+        final_status="insufficient_evidence",
+    )
+    escalation = record["uncertainty_escalation_plan"]
+    escalation["route_hints"][0]["metadata"] = {
+        "verification_escalation": {
+            "entity_candidates": ("AlphaCorp", "Beta Labs"),
+            "entity_sensitive": True,
+        }
+    }
+    escalation["budget"]["uncertainty_escalation"]["uncertainty_reasons"]["c1"] = (
+        "entity_confidence_below:0.75",
+        "entity_candidates_present",
+    )
+    escalation["budget"]["uncertainty_escalation"]["entity_candidates"] = {
+        "c1": ("AlphaCorp", "Beta Labs"),
+    }
+
+    report = uncertainty_escalation_report((record,))
+
+    summary = report["uncertainty_escalation"]
+    assert summary["entity_sensitive_records"] == 1
+    assert summary["entity_sensitive_rate"]["estimate"] == pytest.approx(1.0)
+    assert summary["entity_sensitive_claim_total"] == 1
+    assert summary["entity_candidate_total"] == 2
+    assert summary["uncertainty_reason_counts"] == {
+        "entity_candidates_present": 1,
+        "entity_confidence_below:0.75": 1,
+    }
     json.dumps(report, allow_nan=False)
 
 
@@ -104,6 +142,104 @@ def test_eval_uncertainty_escalation_cli_reads_jsonl_wrappers(tmp_path):
     assert payload["quality"]["delta"]["accepted_false"] == -1
 
 
+def test_uncertainty_escalation_policy_sweep_recommends_threshold():
+    records = (
+        {
+            "label": 0,
+            "result": _loop_result(
+                final_action="accept",
+                total_evidence=1,
+                final_status="supported",
+                initial_confidence=0.90,
+            ),
+        },
+        {
+            "label": 1,
+            "result": _loop_result(
+                final_action="retrieve",
+                total_evidence=0,
+                final_status="insufficient_evidence",
+                initial_confidence=0.40,
+            ),
+        },
+        {
+            "label": 1,
+            "result": _loop_result(
+                final_action="retrieve",
+                total_evidence=0,
+                final_status="insufficient_evidence",
+                initial_confidence=0.70,
+            ),
+        },
+    )
+
+    sweep = uncertainty_escalation_policy_sweep(
+        records,
+        min_confidence_values=(0.5, 0.65, 0.75, 1.0),
+        max_final_false_accept_rate=0.0,
+        max_trigger_rate=0.75,
+    )
+
+    assert sweep["status"] == "promote"
+    assert sweep["recommended"]["min_confidence"] == pytest.approx(0.75)
+    assert sweep["recommended"]["trigger_rate"] == pytest.approx(2 / 3)
+    assert sweep["recommended"]["final_false_accept_rate"] == pytest.approx(0.0)
+    assert sweep["recommended"]["final_coverage"] == pytest.approx(1 / 3)
+    by_threshold = {row["min_confidence"]: row for row in sweep["sweep"]}
+    assert by_threshold[0.5]["gate"]["passed"] is False
+    assert by_threshold[0.5]["final_false_accept_rate"] == pytest.approx(0.5)
+    assert by_threshold[1.0]["gate"]["passed"] is False
+    assert "trigger_rate" in by_threshold[1.0]["gate"]["blocking_reasons"][0]
+    json.dumps(sweep, allow_nan=False)
+
+
+def test_eval_uncertainty_escalation_cli_writes_policy_sweep(tmp_path):
+    module = importlib.import_module("benchmarks.eval_uncertainty_escalation")
+    input_path = tmp_path / "loop-results.jsonl"
+    output_path = tmp_path / "escalation-report.json"
+    rows = (
+        {
+            "label": 0,
+            "result": _loop_result(
+                final_action="accept",
+                total_evidence=1,
+                final_status="supported",
+                initial_confidence=0.90,
+            ),
+        },
+        {
+            "label": 1,
+            "result": _loop_result(
+                final_action="retrieve",
+                total_evidence=0,
+                final_status="insufficient_evidence",
+                initial_confidence=0.40,
+            ),
+        },
+    )
+    input_path.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+
+    exit_code = module.main([
+        "--results",
+        str(input_path),
+        "--json",
+        str(output_path),
+        "--sweep-min-confidence",
+        "0.5,0.95",
+        "--sweep-max-final-false-accept-rate",
+        "0.0",
+    ])
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert exit_code == 0
+    assert payload["policy_sweep"]["workflow"] == "uncertainty_escalation_policy_sweep"
+    assert payload["policy_sweep"]["recommended"]["min_confidence"] == pytest.approx(0.5)
+    assert payload["policy_sweep"]["recommended"]["selected_from_passing_rows"] is True
+
+
 def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path):
     workflow = importlib.import_module("benchmarks.run_uncertainty_escalation_workflow")
     evaluator = importlib.import_module("benchmarks.eval_uncertainty_escalation")
@@ -159,6 +295,8 @@ def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path
             verification_report_path=verification_path,
             registry_path=registry_path,
             retriever_min_overlap=0.2,
+            policy_sweep_min_confidence_values=(0.5, 0.9),
+            policy_sweep_max_final_false_accept_rate=0.0,
         )
     )
 
@@ -178,6 +316,8 @@ def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path
     assert report["quality"]["initial"]["false_accept_rate"]["estimate"] == pytest.approx(1.0)
     assert report["quality"]["final"]["false_accept_rate"]["estimate"] == pytest.approx(0.0)
     assert report["quality"]["delta"]["accepted_false"] == -1
+    assert report["policy_sweep"]["status"] == "promote"
+    assert report["policy_sweep"]["recommended"]["min_confidence"] == pytest.approx(0.5)
     assert payload["paths"]["artifact_manifest"] == str(manifest_path)
     assert payload["paths"]["manifest_verification"] == str(verification_path)
     assert payload["manifest_verification"]["passed"] is True
@@ -191,10 +331,14 @@ def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path
         "loop_results_jsonl",
         "workflow_report",
     ]
+    assert manifest["metadata"]["policy_sweep_status"] == "promote"
+    assert manifest["metadata"]["policy_sweep_recommended_min_confidence"] == pytest.approx(0.5)
     assert verification["passed"] is True
     assert record.metadata["manifest_verified"] is True
     assert record.metadata["record_count"] == 2
     assert record.metadata["accepted_false_delta"] == -1
+    assert record.metadata["policy_sweep_status"] == "promote"
+    assert record.metadata["policy_sweep_recommended_min_confidence"] == pytest.approx(0.5)
 
     exit_code = evaluator.main([
         "--results",
@@ -209,12 +353,18 @@ def test_uncertainty_escalation_workflow_writes_loop_sidecar_and_report(tmp_path
     assert replayed["uncertainty_escalation"]["triggered_records"] == 2
 
 
-def _loop_result(*, final_action: str, total_evidence: int, final_status: str) -> dict:
+def _loop_result(
+    *,
+    final_action: str,
+    total_evidence: int,
+    final_status: str,
+    initial_confidence: float = 0.4,
+) -> dict:
     return {
         "initial_verification_results": (
             {
                 "status": "supported",
-                "confidence": 0.4,
+                "confidence": initial_confidence,
                 "metadata": {"claim_id": "c1"},
             },
         ),

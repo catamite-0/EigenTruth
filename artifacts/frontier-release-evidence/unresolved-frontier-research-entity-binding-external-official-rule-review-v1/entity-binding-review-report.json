@@ -1,0 +1,367 @@
+{
+  "config": {
+    "decision_output_schema": "entity_binding_review_decisions",
+    "reviewed_at": null,
+    "reviewer": "rule_based_entity_binding_reviewer_v1",
+    "supported_source_families": [
+      "news",
+      "official",
+      "official_statistics",
+      "reference"
+    ]
+  },
+  "decisions": [
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-199-1",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:18894efcd1cc5abf",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-223-1",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:8998fe59172eb96b",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-485-1",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:2e8074f9ffa8b188",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-516-1",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:620b61b7ad7d9e3f",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-1",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:b99d6c69505e72a5",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-2",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:3254816933e938f9",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:c13bdcaba36f5711",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    },
+    {
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2",
+      "decision": "approved",
+      "notes": "source_closed_entity_binding_candidate",
+      "review_id": "entity-binding-rule-review:8915a9c82fc278e8",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1"
+    }
+  ],
+  "label_usage": {
+    "decisions_are_verifier_evidence": false,
+    "labels_copied_to_decisions": false,
+    "labels_used_for_review": false,
+    "model_answers_copied_to_decisions": false
+  },
+  "metadata": {
+    "stage": "external_official_entity_binding_rule_review"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-external-official-rule-review-v1/artifact-manifest.json",
+    "entity_binding_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-external-official-citation-collection-v1/entity-binding-plan.json",
+    "review_decisions": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-external-official-rule-review-v1/review-decisions.jsonl",
+    "review_records": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-external-official-rule-review-v1/review-records.jsonl",
+    "review_report": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-external-official-rule-review-v1/entity-binding-review-report.json"
+  },
+  "records": [
+    {
+      "answer_entity": "Big Bird",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-199-1",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "American children's television program",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "source_family_catalog",
+      "reasons": [],
+      "record_index": 1,
+      "request_id": "rule:record-199:1",
+      "requested_role": "physical_location_expected_entity",
+      "review_id": "entity-binding-rule-review:18894efcd1cc5abf",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "wikidata:Q155629:description",
+      "source_family": "reference",
+      "subject_entity": "Sesame Street",
+      "target_id": "record-199"
+    },
+    {
+      "answer_entity": "the Muppets",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-223-1",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "American children's television program",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "source_family_catalog",
+      "reasons": [],
+      "record_index": 2,
+      "request_id": "rule:record-223:1",
+      "requested_role": "physical_location_expected_entity",
+      "review_id": "entity-binding-rule-review:8998fe59172eb96b",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "wikidata:Q155629:description",
+      "source_family": "reference",
+      "subject_entity": "Sesame Street",
+      "target_id": "record-223"
+    },
+    {
+      "answer_entity": "Elon Musk",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-485-1",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "Elon Gold",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "elongold_official_site",
+      "reasons": [],
+      "record_index": 3,
+      "request_id": "rule:record-485:1",
+      "requested_role": "name_completion",
+      "review_id": "entity-binding-rule-review:2e8074f9ffa8b188",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "seeded_url:official:elongold-bio",
+      "source_family": "official",
+      "subject_entity": "Elon",
+      "target_id": "record-485"
+    },
+    {
+      "answer_entity": "Elon Musk",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-516-1",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "Elon Gold",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "elongold_official_site",
+      "reasons": [],
+      "record_index": 4,
+      "request_id": "rule:record-516:1",
+      "requested_role": "name_completion",
+      "review_id": "entity-binding-rule-review:620b61b7ad7d9e3f",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "seeded_url:official:elongold-bio",
+      "source_family": "official",
+      "subject_entity": "Elon",
+      "target_id": "record-516"
+    },
+    {
+      "answer_entity": "The Patriots",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-1",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "Boston United",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "wikipedia_mediawiki",
+      "reasons": [],
+      "record_index": 5,
+      "request_id": "rule:record-498:1",
+      "requested_role": "team_name",
+      "review_id": "entity-binding-rule-review:b99d6c69505e72a5",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "wikipedia:en:451155",
+      "source_family": "reference",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-498"
+    },
+    {
+      "answer_entity": "The Patriots",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-498-2",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "Boston United",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "wikipedia_mediawiki",
+      "reasons": [],
+      "record_index": 6,
+      "request_id": "rule:record-498:2",
+      "requested_role": "team_name",
+      "review_id": "entity-binding-rule-review:3254816933e938f9",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "wikipedia:en:451155",
+      "source_family": "reference",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-498"
+    },
+    {
+      "answer_entity": "New England Patriots",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "New England Patriots",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "cbs_sports",
+      "reasons": [],
+      "record_index": 7,
+      "request_id": "rule:record-517:1",
+      "requested_role": "team_name",
+      "review_id": "entity-binding-rule-review:c13bdcaba36f5711",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-517"
+    },
+    {
+      "answer_entity": "New England Patriots",
+      "candidate_binding_id": "candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2",
+      "candidate_status": "ready_for_review",
+      "checks": {
+        "answer_entity_present": true,
+        "candidate_ready_for_review": true,
+        "complete_required_fields": true,
+        "expected_entity_present": true,
+        "has_source_citation": true,
+        "not_verifier_evidence": true,
+        "source_family_supported": true,
+        "source_mentions_expected_entity": true,
+        "source_or_candidates_mentions_subject": true
+      },
+      "decision": "approved",
+      "expected_entity": "New England Patriots",
+      "notes": "source_closed_entity_binding_candidate",
+      "provider": "cbs_sports",
+      "reasons": [],
+      "record_index": 8,
+      "request_id": "rule:record-517:2",
+      "requested_role": "team_name",
+      "review_id": "entity-binding-rule-review:8915a9c82fc278e8",
+      "reviewed_at": null,
+      "reviewer": "rule_based_entity_binding_reviewer_v1",
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-517"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Rule-based review for entity-role binding candidates. Approval means the candidate has complete source-backed fields and a conservative source text/entity closure; it does not create verifier evidence.",
+  "source": {
+    "entity_binding_plan_status": "ready_for_review",
+    "entity_binding_plan_workflow": "world_model_rule_entity_binding_plan"
+  },
+  "status": "ready_for_promotion_gate",
+  "summary": {
+    "approved_count": 8,
+    "approved_source_family_counts": {
+      "news": 2,
+      "official": 2,
+      "reference": 4
+    },
+    "candidate_count": 8,
+    "decision_counts": {
+      "approved": 8
+    },
+    "needs_more_evidence_count": 0,
+    "reason_counts": {}
+  },
+  "workflow": "world_model_rule_entity_binding_rule_review"
+}

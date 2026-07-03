@@ -302,6 +302,118 @@ centering in `internal_eigenscore`, `inside_eigenscore` is above the
 single-forward `eigenscore` in this tiny run, but both are below chance and the
 sample is far too small for a signal-quality claim.
 
+## Source-Family Post-Correction Replay
+
+After the first source-family correction handoff promoted the Tesla founder
+slot, the remaining structured-QA mapping gaps were replayed through the same
+non-evidence fact-expansion boundary. The post-correction plan skips one
+already resolved mapping decision and keeps `88` targets. It emits `764`
+request rows, including `352` structured-fact requests, while preserving the
+label/model-answer boundary for external requests.
+
+The local source-family workflow returns `2178` candidate results, rebuilds
+`66` structured QA documents, and preserves `38` world-model/calculator rule
+stubs. The covered-fact route audit promotes on `132` balanced rows, but the
+conservative claim-mapping gate finds `0/88` new correction handoff candidates:
+`1` row is answer-supported, `12` are answer-entity collisions, `21` are
+subject-only gaps, `3` are intent-only gaps, `9` are weak-overlap rows, and
+`42` remain no-candidate rows.
+
+Interpretation: the source-family covered-fact route is working when exact QA
+facts exist, but the remaining frontier is fact acquisition and property
+modeling. The next useful work is richer property/indicator collection,
+provenance-audited citation evidence, and explicit world-model/calculator rules,
+not lowering the conservative mapping threshold.
+
+`triage_source_family_structured_qa_gaps.py` now turns that result into an
+explicit next-action artifact. The registered triage is `needs_collection` with
+`0` handoff-ready targets, `1` answer-support audit row, and all `88` rows still
+blocked from correction handoff. It preserves the executable request inventory:
+`352` structured-fact, `174` citation, `159` entity-resolution, `41`
+disambiguation, and `38` world-model/calculator-rule requests.
+
+`build_source_family_structured_qa_lane_execution_queue.py` lowers that triage
+into the next executable pass. The registered queue is
+`ready_for_adapter_execution`: it keeps `87` collection targets after excluding
+the audit-only row, writes `752` answer-free adapter/rule requests, and groups
+them into `29` batches. The first batch is `answer_collision_audit` fact
+disambiguation, so the next run can start with the highest-risk entity-collision
+lane before broader source-family coverage expansion.
+
+`run_source_family_structured_qa_lane_batch_workflow.py` now replays that first
+batch. `sfqa-lane-batch-0001` runs `12` disambiguation requests over `12`
+answer-collision targets, returns `36` candidate results, and rebuilds `9`
+structured QA facts. The covered-fact route promotes on `18` balanced rows with
+decision accuracy `1.0`, but claim mapping against the `88` unresolved rows is
+still blocked with `0` covered matches and `0` mapped correction candidates.
+This is a clean negative result: the disambiguation facts are locally reliable,
+but they do not yet answer the unresolved claim intents.
+
+The full lane replay confirms that negative result at the current local-catalog
+coverage ceiling. Replaying all `24` source-backed batches runs `715` requests
+over `87` targets, returns `2145` candidate results, and rebuilds `63`
+structured QA facts; the covered-fact route still promotes on `126` balanced
+rows, but unresolved-claim mapping remains `0/88`. Rule-only lane execution is
+now wired separately: the `5` world-model/calculator batches emit `37`
+non-evidence rule stubs over `34` targets and are `ready_for_rule_authoring`.
+The deterministic rule-authoring adapter now consumes those stubs and writes an
+explicit rule-input worklist. The registered run is `needs_inputs`: `0/37`
+stubs execute without a separate input file, and the missing work splits into
+`12` calculator checks, `12` entity-role disambiguation checks, `9`
+causal/procedural world-model checks, and `4` temporal-consistency checks.
+`build_world_model_rule_input_collection_plan.py` now lowers that worklist into
+`37` typed input tasks and `4` batches, adding the execution-only fields the
+adapter needs (`expected_entity`, `calculation.expression`,
+`calculation.expected`, and per-task `source_citation`).
+`fill_world_model_rule_inputs_from_correction_handoff.py` then fills the one
+task already covered by the promoted Tesla founder correction handoff and
+ProductTrace claim binding. The filled adapter replay executes `1/37` stubs and
+emits one candidate `refuted` entity-role result for `rule:record-1:1`; the
+remaining `36` tasks stay as explicit input requests.
+`promote_world_model_rule_candidates.py` now promotion-gates that deterministic
+candidate and promotes it with `0` blocked candidates and `36` pending input
+rows. `build_world_model_rule_candidate_handoff.py` then converts that promoted
+candidate into a ProductTrace-visible rule-candidate handoff: the deterministic
+entity-role result refutes the Elon Musk answer, the risk decision is
+`high/abstain`, and the dry-run action result is registered with source-citation
+provenance. The next implementation step is therefore expanding typed input
+fills and provenance-backed citation evidence for more rows, not another broad
+source-backed catalog replay.
+
+The causal/procedural rule lane now has a `mechanism_consistency` execution
+shell as well. It accepts explicit `mechanism`, `precondition`, and
+`source_citation` inputs, but it will not promote without a source-backed
+`mechanism_status`; missing status returns `insufficient_evidence` and blocks the
+promotion gate. `fill_world_model_rule_inputs_from_mechanism_bindings.py` now
+adds the matching source-backed fill boundary and blocks missing, unreviewed, or
+invalid mechanism statuses before adapter execution. The first real mechanism
+artifact now covers `record-10` ("How long do diamonds last?"): a WTAMU/GIA
+source-backed mechanism binding fills, executes as `supported`, promotes `1/1`,
+and enters ProductTrace as `accept/low` with one dry-run accept action. A second
+registered chain covers four repeated Africa poverty trend records
+(`record-133`, `record-165`, `record-274`, `record-299`) with World Bank
+rate/headcount evidence; it fills `4/4`, promotes `4/4`, and writes four
+ProductTrace `accept/low` dry-run actions. This proves the path for two cited
+mechanism families. The remaining Bill Gates and UFO rows now close the typed
+mechanism queue: Bill Gates high-school records promote as `supported`, UFO
+extraterrestrial-premise records promote as `refuted`, and the mixed handoff
+writes two `accept/low` plus two `abstain/high` dry-run actions. Mechanism
+coverage is now `9/9` causal/procedural tasks.
+
+`benchmarks/build_mechanism_handoff_evidence_bundle.py` now aggregates those
+three mechanism handoffs into
+`artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/`.
+The bundle release gate promotes with `3` handoff reports, `9` ProductTrace
+rows, `9/9` target coverage, `7` supported and `2` refuted verification
+results, `7` accept and `2` abstain actions, and source-family coverage across
+physics reference, official statistics, biographical reference, and official
+science report evidence. Its recursive artifact manifest verifies the three
+child handoff manifests, and `compare_release_candidates.py` /
+`run_release_candidate_registry_workflow.py` can now consume the bundle by file
+or registry key. The `frontier_audit` profile defaults to the registered
+`report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1`
+key.
+
 ## Product Trace Demo
 
 `examples/calibrated_control_demo.py` now defaults to the best repository l80
@@ -1221,6 +1333,43 @@ world-model or calculator-rule tasks. This is the next executable input for
 external-source collection and world-model adapter work; it is not verifier
 evidence until those sources are ingested and provenance-audited.
 
+The unresolved world-model/calculator branch now has the same explicit rule
+input contract as the source-family rule lane. `build_unresolved_world_model_rule_stubs.py`
+registers
+`report:truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs:0.1`:
+it extracts all `6/6` rule requests from the `182`-request queue, emits
+sanitized `world-model-rule-stubs.jsonl`, skips `0` rows, and keeps source
+`model_answer`, `record_index`, and `target_rank` fields out of the stubs. The
+family split is `5` `quantity_or_arithmetic` stubs plus `1`
+`temporal_consistency` stub normalized from `temporal_freshness`. Replaying
+`run_world_model_rule_authoring_adapter.py` over those stubs blocks as
+`needs_inputs` (`0/6` executed), and
+`build_world_model_rule_input_collection_plan.py` lowers the requests into `6`
+typed tasks across `2` batches (`5` numeric, `1` temporal snapshot). These rows
+are now actionable input-collection work items, not product corrections.
+
+`benchmarks/audit_world_model_rule_input_plan.py` now audits that worklist
+before any values are collected. The registered audit
+`report:truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit:0.1`
+is `needs_requeue`: it finds `9` pre-execution issues over the `6` tasks,
+including `4` rows where person/place/entity questions were routed to the
+numeric calculator lane and should be requeued as `entity_disambiguation`. It
+also records `5` numeric candidate-claim binding gaps. This keeps the rule lane
+honest: the next work is not to fill every numeric row, but to reroute the
+misclassified rows and only execute calculator checks once explicit
+candidate-claim values are supplied.
+
+`benchmarks/requeue_world_model_rule_stubs_from_audit.py` now performs that
+reroute without turning the rows into evidence. The registered requeue
+`report:truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue:0.1`
+is `ready_for_rule_authoring`: `4/4` audit suggestions become
+`entity_disambiguation` stubs, with `0` skipped suggestions and no copied
+answer/model-answer fields. Replaying `run_world_model_rule_authoring_adapter.py`
+over the requeued stubs blocks as `needs_inputs` (`0/4` executed), and
+`build_world_model_rule_input_collection_plan.py` rebuilds a one-batch
+`entity_role_rule_input_collection` plan with `4` tasks. The unresolved rule
+branch now has a real audit feedback path instead of a dead-end warning.
+
 The citation/search branch of that queue is now ready to hand to an external
 adapter. `build_citation_search_adapter_handoff.py` registers
 `report:truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff:0.1`
@@ -1294,6 +1443,272 @@ rows, rejects reserved catalog fields in tests, and verifies its artifact
 manifest. This is implementation evidence for the adapter command boundary, not
 TruthfulQA route-quality evidence.
 
+`benchmarks/run_source_family_citation_search_workflow.py` now wraps that local
+adapter in the full evidence gate. The synthetic smoke artifact
+`source-family-citation-search-workflow-smoke` consumes `2` unresolved citation
+requests, ranks `2` local catalog docs into `2` adapter results, passes
+provenance, and remains intentionally `blocked` because the external query
+sweep and controlled-vs-external comparison do not pass. This proves the
+one-command local catalog loop without promoting weak synthetic evidence.
+
+`benchmarks/build_source_family_catalog.py` now converts cached external source
+docs into adapter-ready catalogs without losing provenance. The registered
+Wikidata catalog artifact converts all `292` target-specific cached Wikidata
+source docs into `reference` catalog rows with provider `wikidata`, timestamps,
+URLs, and a verified manifest. Running
+`truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow`
+through the source-family evidence loop consumes `176` unresolved citation
+requests, returns results for `160/176`, writes `480` Wikidata-backed adapter
+results, and passes provenance. It remains `blocked`: the external query sweep
+refutes `0/89` entrenched blind spots, verified false alarm is `0.088`, and the
+controlled-vs-external generalization gap remains `1.0`. This is real negative
+evidence for generic cached Wikidata reference matching, not a route promotion.
+
+`benchmarks/audit_source_family_coverage.py` now turns that negative evidence
+into a concrete catalog-acquisition artifact. The registered Wikidata coverage
+audit compares the `176` source-family requests with the `480` adapter results:
+all returned documents are `reference`, so `176/176` requests still miss their
+non-fallback target families. The missing targets are `scholarly=156`,
+`official=36`, `official_statistics=4`, and `news=4`; `36` requests prefer
+official sources and `0` have an official result. The emitted acquisition plan
+is marked `not_verifier_evidence`, so it is a collection queue rather than a
+route-quality claim.
+
+`benchmarks/plan_source_family_catalog_collection.py` now deduplicates that
+collection queue into provider-specific tasks. The registered collection plan
+compresses `176` acquisition rows and `200` missing family gaps into `28`
+tasks: `scholarly=21`, `official=5`, `official_statistics=1`, and `news=1`.
+Those tasks carry query variants, provider hints, request ids, and queue
+fingerprints while remaining `not_verifier_evidence`. This is the next input to
+real OpenAlex/Crossref, official-site, statistics, news, or source-specific
+catalog adapters.
+
+`benchmarks/run_crossref_source_family_catalog_adapter.py` executes the first
+provider-specific slice of that plan. The registered Crossref scholarly catalog
+consumes the `21` scholarly tasks, runs `42` query variants, writes `48`
+deduplicated source-family documents, records `0` request errors, and excludes
+labels, target ids, row ids, and model answers from catalog metadata. Rerunning
+the source-family workflow with the cached Wikidata reference catalog plus this
+Crossref scholarly catalog gives `340` source catalog documents, `528` adapter
+results for `176/176` requests, and `164` Crossref scholarly result rows.
+Provenance passes, but route promotion stays blocked because no blind-spot
+query strategy passes and the controlled-vs-external comparison remains
+blocked. So this is a real catalog-family coverage step, not a correction-route
+promotion.
+
+`benchmarks/run_worldbank_source_family_catalog_adapter.py` now covers the first
+official-statistics slice. The registered World Bank catalog uses the Indicators
+API with `SP.POP.TOTL`, filters aggregate regions by default, writes `217`
+country-level population statistic documents, and records `0` request errors.
+Rerunning the source-family workflow with Wikidata reference, Crossref
+scholarly, and World Bank official-statistics catalogs gives `557` source
+catalog documents, `528` adapter results for `176/176` requests, and `12`
+World Bank official-statistics result rows. The route still blocks at the
+query-sweep and controlled-vs-external gates, but source-family coverage
+improves: `official_statistics=4/4` and `scholarly=100/156` are now covered,
+leaving `84` requests with missing target families. The refreshed collection
+plan is down to `12` tasks: `official=5`, `scholarly=6`, and `news=1`.
+
+`benchmarks/run_gdelt_source_family_catalog_adapter.py` now covers the news
+adapter shell against GDELT DOC 2.0. Its registered live run consumed the single
+news task and attempted `2` query variants, but the public endpoint returned
+rate-limit errors in this environment, so the artifact is an `empty` fail-closed
+run-status record with `0` news documents and `2` errors. A reduced Crossref
+replay over the remaining scholarly tasks did improve the catalog side:
+`6` tasks, `48` query variants, `69` deduplicated docs, and `0` request errors.
+The combined workflow with Wikidata, both Crossref catalogs, and World Bank now
+sees `626` source docs and the coverage audit drops missing target rows from
+`84` to `44`. The route still blocks at the evidence gates. The refreshed
+collection plan is now `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
+
+`benchmarks/run_official_site_source_family_catalog_adapter.py` now covers the
+official-webpage lane without introducing a search dependency. The registered
+URL-seeded run maps `9` official URLs across USDA ERS, Tesla, WHO, World Bank,
+and NOAA onto the `5` remaining official tasks, writes `9` official catalog
+documents, successfully fetches `7` pages, and records `2` Tesla access-denied
+fallbacks. Adding this catalog to the combined workflow still leaves route
+promotion blocked, but source-family coverage improves again: missing target
+rows fall from `44` to `28`, `official` coverage reaches `32/36`,
+`official_statistics` remains `4/4`, and `scholarly` is `128/156` under the new
+top-result mix. The refreshed collection plan is now `7` tasks:
+`scholarly=5`, `official=1`, and `news=1`.
+
+`benchmarks/run_openalex_source_family_catalog_adapter.py` now adds the
+OpenAlex scholarly lane. The registered OpenAlex run consumes the `5`
+scholarly tasks from the official-site plan, runs `40` query variants against
+OpenAlex `/works?search=`, writes `52` deduplicated scholarly catalog docs with
+reconstructed abstracts, and records `0` request errors. The source-family
+adapter also now supports `--diversify-source-families`, which selects
+non-fallback preferred source families before fallback `reference` /
+`encyclopedic` rows. With OpenAlex and source-family-diverse reranking, the
+combined workflow still blocks route promotion, but coverage improves again:
+missing target rows fall from `28` to `4`, `official=36/36`,
+`official_statistics=4/4`, and `scholarly=156/156` are covered, and only the
+`news=4` food-affordability gap remains. A GDELT retry on that single news task
+is still `empty` (`0` docs, `8` errors), so the next source-family work should
+replace or seed the news lane rather than rely on the current public GDELT path.
+
+`benchmarks/run_seeded_url_source_family_catalog_adapter.py` now closes that
+remaining source-family lane without adding a network-search dependency. The
+registered seeded-news run consumes the final `news=1` collection task, uses
+`4` AP/PBS URL seeds with short paraphrase fallback text, writes `4`
+`source_family=news` docs, records `0` errors, and verifies its manifest. Adding
+the seeded-news catalog to the existing Wikidata, Crossref, reduced Crossref,
+World Bank, official-site, and OpenAlex catalogs produces `691` catalog docs and
+`528` adapter results. The route still blocks promotion on query-sweep and
+controlled-vs-external comparison gates, but source-family coverage is now
+complete: `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`, and
+`news=4/4`, with an empty acquisition plan.
+
+The citation/search evidence workflows now carry an explicit target route into
+the blind-spot query sweep. Rerunning the seeded-news source-family workflow
+with `--target-route retrieval_groundedness` fixes the earlier route accounting
+mismatch: the external sweep now reports `7/89` blind spots refuted instead of
+`0/89`. This is still not release evidence. The same-route controlled
+`retrieval_groundedness` sweep reaches only `1/89`, the external verified false
+alarm is `0.136` against the `0.05` gate, and the workflow remains `blocked`.
+The practical conclusion is that source-family coverage is solved for this
+queue; next work should improve structured correction routes, not broaden
+lexical groundedness catalogs.
+
+`benchmarks/build_source_family_qa_corpus.py` is the first structured route
+bridge for that complete source-family queue. Running it on the seeded-news
+groundedness workflow results writes
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/`:
+`528` source-family result docs produce `164` structured-metadata candidates and
+`18` label-free structured QA records (`16` Wikidata/reference, `2` World Bank
+official-statistics). It skips unsupported providers and duplicate structured
+facts, and it rejects reserved label/model-answer/request metadata at the
+builder boundary. This is a covered-fact candidate corpus for structured QA
+verification, not a promotion of the blocked lexical groundedness route.
+
+`benchmarks/run_source_family_structured_qa_route_workflow.py` closes the next
+covered-facts audit step for that corpus. The resulting artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route/`
+turns the `18` structured QA facts into `36` balanced true/mismatch rows,
+selects `structured_qa` for all rows, supports all `18` true rows, refutes all
+`18` mismatched rows, and records decision accuracy `1.0` with false-supported
+rate `0.0`. Provider slices are `wikidata=32` records and `worldbank=4` records;
+source-family slices are `reference=32` and `official_statistics=4`. This
+promotes only exact covered-fact route quality; it still does not prove that the
+remaining SmolLM2 blind spots map to these facts.
+
+`benchmarks/audit_source_family_structured_qa_claim_mapping.py` adds that
+missing mapping check. Running it against the 89 SmolLM2 entrenched blind spots,
+the source-family structured QA corpus, and the promoted covered-fact route
+summary writes
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping/`.
+The audit is blocked: `0/89` records pass the conservative covered-fact
+subject/intent gate, with `55` no-candidate rows, `11` subject-only rows, `12`
+intent-only rows, `8` weak-overlap rows, and `3` answer-entity collisions. This
+negative result keeps the product boundary honest: route quality is solved for
+the extracted source-family facts, but those facts do not yet cover the current
+blind spots.
+
+`benchmarks/plan_source_family_structured_qa_fact_expansion.py` turns that
+blocked mapping audit into the next executable queue. The artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan/`
+is `ready_for_collection` with all `89` gaps preserved as targets: `55` missing
+subject+intent, `11` missing property/indicator, `12` missing subject/entity
+resolution, `8` citation-before-promotion gaps, and `3` answer-entity
+collisions. It emits `89` structured fact requests, `70` entity-resolution
+requests, `66` external citation requests, `26` world-model/calculator-rule
+requests, and `14` fact-disambiguation tasks. The plan does not use labels for
+collection planning and does not treat tasks as verifier evidence; its manifest
+verifies `2/2`.
+
+`benchmarks/build_source_family_structured_qa_fact_collection_corpus.py` lowers
+that plan into adapter-ready request sidecars. The artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-corpus/`
+is also `ready_for_collection`: `89` targets become `806` request rows (`356`
+source-family structured-fact requests, `210` entity-resolution requests, `198`
+citation requests, `14` fact-disambiguation requests, and `28`
+world-model/calculator-rule requests) plus `764` source-discovery document
+rows. The JSONL request sidecars intentionally contain no `label`, `answer`, or
+`model_answer` fields, so the next adapter boundary can collect sources without
+copying the model's wrong answer into external search. Its manifest verifies
+`8/8`.
+
+`benchmarks/run_source_family_structured_qa_fact_collection_workflow.py` now
+executes that request boundary against the local source-family catalogs. The
+registered artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/`
+is `ready_for_fact_mapping`: `778` source-backed requests all return local
+catalog matches, producing `2334` candidate result rows over `622` catalog
+documents and `28` preserved world-model/calculator rule stubs. Rebuilding
+structured QA from those matches yields `70` candidate facts; the follow-up
+covered-fact route audit promotes on `140` balanced rows, and the new
+claim-mapping audit improves blind-spot coverage from `0/89` to `1/89`. The
+single mapped correction candidate is the Tesla founder record: the model answer
+claims Elon Musk founded Tesla, while the mapped Wikidata `P112` fact gives
+Martin Eberhard. The claim-mapping report remains `observed`, not promoted as a
+broad route; the rest of the blind spots still require richer property mapping,
+source citations, entity disambiguation, or deterministic world-model rules.
+
+`benchmarks/build_source_family_structured_qa_correction_handoff.py` now turns
+that mapped source-family QA fact into the product-control handoff. The artifact
+`artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/`
+is `promote` for exactly one trace: the target-specific corpus maps "Who first
+started Tesla Motors?" to Martin Eberhard, `QuestionAnswerVerifier` refutes the
+generated Elon Musk answer through `source_family_structured_qa_correction`,
+the risk decision is `high/abstain`, and the executor registry records a
+dry-run abstain action result. The manifest verifies `5/5` files, and the
+handoff remains scoped to `1/89` rather than claiming broad source-family
+recall.
+
+`benchmarks/build_world_model_rule_candidate_handoff.py` now closes the
+deterministic-rule side of the same Tesla slot. It consumes the promoted rule
+candidate from
+`artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate/`
+and writes
+`artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff/`.
+The handoff is `promote` for one ProductTrace row: `world_model_rule_candidate`
+refutes the Elon Musk founder answer using the promoted entity-role candidate,
+the risk decision is `high/abstain`, and the executor registry records one
+dry-run abstain action. The manifest verifies `5/5` files; the other `36` rule
+rows stay pending input work and are not verifier evidence.
+
+`benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py` now closes the
+audited unresolved-rule requeue batch. The registered SmolLM2 L80 chain at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill/`,
+`...-adapter/`, and `...-promotion-gate/` is `filled -> observed -> promote`:
+all `4` requeued entity-role tasks are filled from explicit source-backed
+bindings, all `4` corrected stubs execute, and all `4` deterministic candidate
+rows promote with `0` blocked and `0` pending. The Sesame Street candidates are
+bound against a fictional-location citation, and the Elon candidates are bound
+against the source-backed expected entity `Elon Gold`; the rows remain
+candidate-only until citation matching passes the promotion gate.
+
+`benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py` now adds the
+numeric/calculator sibling for explicit source-backed bindings. The real
+`record-190` population artifact at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill/`
+is deliberately `blocked`: `0/1` tasks fill, with
+`binding_requires_review` and `missing_subject_entity`, because the question
+says "the country" and the binding does not prove which country the candidate
+claim refers to. This keeps the World Bank population value as source-backed
+context, not as an executable calculator input, until subject binding is
+resolved. `benchmarks/plan_world_model_rule_numeric_subject_bindings.py` now
+converts that blocked fill report shape into a non-evidence subject-binding
+collection request, so the next pass is explicit review plus
+`--subject-bindings`, not relaxed inference.
+
+`benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py` now fills
+the unresolved temporal rule lane from reviewed source-backed timestamp
+bindings before adapter execution, and
+`benchmarks/plan_world_model_rule_temporal_bindings.py` turns blocked temporal
+fill reports into non-evidence timestamp/citation collection requests. The
+registered `record-326` replay at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter/`
+observes one supported `temporal_consistency` candidate from `claim_time`,
+`source_time`, `retrieved_at`, and `source_citation`; the paired promotion gate
+at
+`artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate/`
+promotes that single source-timestamp candidate with `0` blocked and `0`
+pending, and both manifests verify. This proves only source snapshot freshness
+and timestamp ordering, not the food-affordability content itself; content truth
+still needs a citation or structured-evidence handoff before ProductTrace action.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -1319,10 +1734,16 @@ TruthfulQA route-quality evidence.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Populate the source-family adapter with real official or structured catalogs
-   for the unresolved blind spots, preserving the same command boundary and
-   promotion gates; only promote if provenance, external query-sweep, and
-   controlled-vs-external comparison gates pass.
+7. Source-family catalog acquisition is now closed for the current SmolLM2 l80
+   frontier queue: `official=36/36`, `official_statistics=4/4`,
+   `scholarly=156/156`, and `news=4/4` are covered. The source-family
+   structured QA route audit now promotes both the original `18` extracted
+   facts and the `70` fact-collection candidates. Claim/blind-spot mapping has
+   moved from `0/89` to `1/89`, and the Tesla/Martin Eberhard slot now has a
+   ProductTrace-visible source-family structured-QA correction handoff. Next,
+   keep the remaining `88/89` rows routed to richer property mapping, citation
+   evidence, entity disambiguation, and deterministic world-model/calculator
+   rules.
 8. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local

@@ -1,0 +1,78 @@
+{
+  "artifacts": {
+    "approved_command_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-approved-bindings.json",
+      "sha256": "a3d261975760224124fe6562533f56aa0f9311b0c85e416e137e7ffd8e57f779",
+      "size_bytes": 12099
+    },
+    "base_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execute-staged-bindings.json",
+      "sha256": "e3d648e8190bebd1747b4a71ca4827184d0dcef43a81f84f664af1c9db4df865",
+      "size_bytes": 11833
+    },
+    "bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execute-bound-command-plan.json",
+      "sha256": "e4d853196a1136176c0e66fe2e980a3b602c3feb1049b5f185401f7346baa2f5",
+      "size_bytes": 7116
+    },
+    "frontier_command_binding_review": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-command-binding-review.json",
+      "sha256": "20bd504cebdc0e946f0425517f179c3a21912575268256e8ef31d86fc802b960",
+      "size_bytes": 16800
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execute-review-decisions.jsonl",
+      "sha256": "95d3534be8a3bc5e09f570a2478f71cd0ac79989418955491077eedb7a4dcfae",
+      "size_bytes": 202
+    },
+    "review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review-records.jsonl",
+      "sha256": "201d6f6d524028ff664f073f87b9815fb5c6068c2db11bc225101c06ac1e9498",
+      "size_bytes": 452
+    },
+    "review_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review-template.jsonl",
+      "sha256": "c309a4b9442c7189ef949b920abe6bf50d92d0ebec3c51fe491fd7b79a80ed17",
+      "size_bytes": 570
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_entry_count": 1,
+    "blocked_entry_count": 0,
+    "entry_count": 1,
+    "not_verifier_evidence": true,
+    "runner": "review_frontier_research_queue_command_bindings",
+    "smoke": "frontier-queue-execution-smoke",
+    "status": "ready_for_execution",
+    "workflow": "frontier_research_queue_command_binding_review"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

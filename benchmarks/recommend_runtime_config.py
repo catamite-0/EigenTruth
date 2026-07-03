@@ -642,8 +642,12 @@ def _score_fusion_quality_signal(
         }
     passed = alpha_payload.get("pass") is True
     auroc = _float_or_none(best.get("auroc"))
+    release_gate = _score_ensemble_release_gate_payload(selected, str(method))
+    release_gate_configured = bool(release_gate)
+    release_gate_status = release_gate.get("status") if release_gate_configured else None
+    release_gate_passed = None if not release_gate_configured else release_gate_status == "promote"
     signal_name = f"score_fusion_{method}"
-    status = "promote" if passed and auroc is not None else "blocked"
+    status = "promote" if passed and auroc is not None and release_gate_passed is not False else "blocked"
     return {
         "status": status,
         "report": _optional_path_str(score_ensemble_report_path),
@@ -656,6 +660,26 @@ def _score_fusion_quality_signal(
         "detection": _float_or_none(alpha_payload.get("detection")),
         "coverage": _float_or_none(alpha_payload.get("coverage")),
         "conformal_gate_passed": passed,
+        "release_gate_configured": release_gate_configured,
+        "release_gate_status": release_gate_status,
+        "release_gate_passed": release_gate_passed,
+        "release_gate_reasons": tuple(release_gate.get("reasons", ())),
+        "release_gate_alpha": _float_or_none(release_gate.get("alpha")),
+        "max_high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("max_high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_false_count")
+        ),
+        "high_confidence_accepted_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_count")
+        ),
+        "fusion_release_gate_at_alpha": _score_ensemble_route_gate_summary(
+            _mapping(selected.get("fusion_release_gate_at_alpha"))
+        ),
         "artifact": _mapping(selected.get("best_fusion_artifact")),
     }
 
@@ -707,6 +731,34 @@ def _score_ensemble_alpha_payload(
     return {}
 
 
+def _score_ensemble_release_gate_payload(
+    run: Mapping[str, Any],
+    method: str,
+) -> dict[str, Any]:
+    method_payload = _mapping(_mapping(run.get("ensemble_results")).get(method))
+    return _mapping(method_payload.get("release_gate_at_best_alpha"))
+
+
+def _score_ensemble_route_gate_summary(gate: Mapping[str, Any]) -> dict[str, Any]:
+    if not gate:
+        return {}
+    recommended = _mapping(gate.get("recommended"))
+    return {
+        "status": gate.get("status"),
+        "alpha": _float_or_none(gate.get("alpha")),
+        "confidence_audit_enabled": gate.get("confidence_audit_enabled") is True,
+        "candidate_count": _int_or_none(gate.get("candidate_count")),
+        "promoted_candidate_count": _int_or_none(gate.get("promoted_candidate_count")),
+        "recommended_candidate_group": recommended.get("candidate_group"),
+        "recommended_candidate_name": recommended.get("candidate_name"),
+        "recommended_candidate_status": recommended.get("status"),
+        "recommended_high_confidence_accepted_false_rate": _float_or_none(
+            recommended.get("high_confidence_accepted_false_rate")
+        ),
+        "recommended_reasons": tuple(recommended.get("reasons", ())),
+    }
+
+
 def _selected_fusion_artifact_quality_signal(
     selected_fusion_artifact_report: Mapping[str, Any] | None,
     *,
@@ -715,11 +767,20 @@ def _selected_fusion_artifact_quality_signal(
 ) -> dict[str, Any]:
     if selected_fusion_artifact_report is None:
         return {"status": "not_configured"}
+    artifact_manifest = _selected_fusion_artifact_manifest_path(selected_fusion_artifact_report)
+    build_report = _optional_path_str(
+        _first_present(
+            selected_fusion_artifact_report.get("build_report_path"),
+            selected_fusion_artifact_report_path,
+        )
+    )
     runs = selected_fusion_artifact_report.get("runs")
     if not isinstance(runs, Sequence) or isinstance(runs, str) or not runs:
         return {
             "status": "no_runs",
             "report": _optional_path_str(selected_fusion_artifact_report_path),
+            "build_report": build_report,
+            "artifact_manifest": artifact_manifest,
         }
     selected, selection_status = _select_selected_fusion_artifact_run(
         runs,
@@ -729,6 +790,8 @@ def _selected_fusion_artifact_quality_signal(
         return {
             "status": selection_status,
             "report": _optional_path_str(selected_fusion_artifact_report_path),
+            "build_report": build_report,
+            "artifact_manifest": artifact_manifest,
             "run_count": len(runs),
             "requested_run": selected_fusion_run,
         }
@@ -737,10 +800,16 @@ def _selected_fusion_artifact_quality_signal(
     method = str(_first_present(selected.get("artifact_method"), selected.get("selected_method"), "fusion"))
     signal_name = f"selected_fusion_{method}"
     artifact_path = selected.get("artifact_path")
-    status = "promote" if auroc is not None and artifact_path else "blocked"
+    release_gate = _mapping(selected.get("release_gate"))
+    release_gate_configured = bool(release_gate)
+    release_gate_status = release_gate.get("status") if release_gate_configured else None
+    release_gate_passed = None if not release_gate_configured else release_gate_status == "promote"
+    status = "promote" if auroc is not None and artifact_path and release_gate_passed is not False else "blocked"
     return {
         "status": status,
         "report": _optional_path_str(selected_fusion_artifact_report_path),
+        "build_report": build_report,
+        "artifact_manifest": artifact_manifest,
         "run_name": selected.get("run_name"),
         "selected_candidate": selected.get("selected_candidate"),
         "method": method,
@@ -754,9 +823,36 @@ def _selected_fusion_artifact_quality_signal(
         "selected_signals": _string_sequence(selected.get("selected_signals")),
         "tracked_signal": selected.get("tracked_signal"),
         "tracked_signal_enabled": selected.get("tracked_signal_enabled") is True,
+        "release_gate_configured": release_gate_configured,
+        "release_gate_status": release_gate_status,
+        "release_gate_passed": release_gate_passed,
+        "release_gate_reasons": tuple(release_gate.get("reasons", ())),
+        "max_high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("max_high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_rate": _float_or_none(
+            release_gate.get("high_confidence_accepted_false_rate")
+        ),
+        "high_confidence_accepted_false_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_false_count")
+        ),
+        "high_confidence_accepted_count": _int_or_none(
+            release_gate.get("high_confidence_accepted_count")
+        ),
         "selection_status": selected_fusion_artifact_report.get("selection_status"),
         "workflow": selected_fusion_artifact_report.get("workflow"),
     }
+
+
+def _selected_fusion_artifact_manifest_path(report: Mapping[str, Any]) -> str | None:
+    paths = _mapping(report.get("paths"))
+    return _optional_path_str(
+        _first_present(
+            report.get("artifact_manifest_path"),
+            report.get("artifact_manifest"),
+            paths.get("artifact_manifest"),
+        )
+    )
 
 
 def _select_selected_fusion_artifact_run(
@@ -1802,7 +1898,25 @@ def _evidence(
         "score_fusion_false_alarm": score_fusion.get("false_alarm"),
         "score_fusion_detection": score_fusion.get("detection"),
         "score_fusion_alpha": score_fusion.get("alpha"),
+        "score_fusion_release_gate_configured": score_fusion.get("release_gate_configured"),
+        "score_fusion_release_gate_status": score_fusion.get("release_gate_status"),
+        "score_fusion_release_gate_passed": score_fusion.get("release_gate_passed"),
+        "score_fusion_release_gate_reasons": score_fusion.get("release_gate_reasons"),
+        "score_fusion_high_confidence_accepted_false_rate": score_fusion.get(
+            "high_confidence_accepted_false_rate"
+        ),
+        "score_fusion_high_confidence_accepted_false_count": score_fusion.get(
+            "high_confidence_accepted_false_count"
+        ),
+        "score_fusion_high_confidence_accepted_count": score_fusion.get(
+            "high_confidence_accepted_count"
+        ),
+        "score_fusion_max_high_confidence_accepted_false_rate": score_fusion.get(
+            "max_high_confidence_accepted_false_rate"
+        ),
         "selected_fusion_artifact_report": _optional_path_str(selected_fusion_artifact_report_path),
+        "selected_fusion_artifact_build_report": selected_fusion.get("build_report"),
+        "selected_fusion_artifact_manifest": selected_fusion.get("artifact_manifest"),
         "selected_fusion_requested_run": selected_fusion_run,
         "selected_fusion_status": selected_fusion.get("status"),
         "selected_fusion_run": selected_fusion.get("run_name"),
@@ -1813,6 +1927,22 @@ def _evidence(
         "selected_fusion_detection": selected_fusion.get("detection"),
         "selected_fusion_alpha": selected_fusion.get("alpha"),
         "selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
+        "selected_fusion_release_gate_configured": selected_fusion.get("release_gate_configured"),
+        "selected_fusion_release_gate_status": selected_fusion.get("release_gate_status"),
+        "selected_fusion_release_gate_passed": selected_fusion.get("release_gate_passed"),
+        "selected_fusion_release_gate_reasons": selected_fusion.get("release_gate_reasons"),
+        "selected_fusion_high_confidence_accepted_false_rate": selected_fusion.get(
+            "high_confidence_accepted_false_rate"
+        ),
+        "selected_fusion_high_confidence_accepted_false_count": selected_fusion.get(
+            "high_confidence_accepted_false_count"
+        ),
+        "selected_fusion_high_confidence_accepted_count": selected_fusion.get(
+            "high_confidence_accepted_count"
+        ),
+        "selected_fusion_max_high_confidence_accepted_false_rate": selected_fusion.get(
+            "max_high_confidence_accepted_false_rate"
+        ),
         "worker_sweep_report": None if worker_sweep_report_path is None else str(worker_sweep_report_path),
         "worker_sweep_status": None if worker_sweep_report is None else worker_decision.get("status"),
         "worker_recommended_worker_count": worker_decision.get("recommended_worker_count"),

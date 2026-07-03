@@ -23,7 +23,7 @@ from eigentruth.calibration import (
     RankScoreFusionCalibrator,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
-from eigentruth.eval.metrics import roc_auc
+from eigentruth.eval.metrics import confidence_error_report, roc_auc
 from eigentruth.eval.score_dump import (
     load_score_dump_columns,
     score_dump_cache_summary,
@@ -38,8 +38,16 @@ from eigentruth.eval.score_fusion import (
 
 ALPHAS = (0.05, 0.10, 0.20)
 METHODS = ("max_rank", "mean_rank")
-GEOMETRY_FUSION_METHODS = ("interaction",)
+GEOMETRY_FUSION_METHODS = ("interaction", "product")
 TOLERANCE = 0.03
+LOWER_IS_MORE_CONFIDENT_SIGNALS = {
+    "nll_answer",
+    "first_token_entropy",
+    "inside_eigenscore",
+    "inside_semantic_entropy",
+    "inside_embedding_entropy",
+    "inside_semantic_energy",
+}
 
 
 def _parse_named_path(value: str) -> tuple[str, Path]:
@@ -103,6 +111,16 @@ def _rate_payload(false_alarms: Sequence[float], detections: Sequence[float], al
         "pass": abs(false_alarm - alpha) <= TOLERANCE,
         "repeats": len(false_alarms),
     }
+
+
+def _resolve_confidence_direction(signal: str | None, direction: str | None) -> str | None:
+    if signal is None:
+        return None
+    if direction is not None:
+        if direction not in {"higher", "lower"}:
+            raise ValueError("confidence_direction must be 'higher' or 'lower'.")
+        return direction
+    return "lower" if signal in LOWER_IS_MORE_CONFIDENT_SIGNALS else "higher"
 
 
 def _load_scores(
@@ -213,6 +231,26 @@ def _score_ensemble(
     }
 
 
+def _ensemble_scores_for_full_dump(
+    *,
+    selected_scores: Mapping[str, torch.Tensor],
+    labels: torch.Tensor,
+    signals: Sequence[str],
+    directions: Mapping[str, str],
+    method: str,
+) -> torch.Tensor:
+    true_idx = torch.nonzero(labels == 0, as_tuple=False).flatten()
+    rank_scores = [
+        directional_rank_anomaly_scores(
+            selected_scores[name][true_idx],
+            selected_scores[name],
+            direction=directions[name],
+        )
+        for name in signals
+    ]
+    return combine_rank_anomaly_scores(rank_scores, method)
+
+
 def _score_geometry_fusion(
     *,
     selected_scores: Mapping[str, torch.Tensor],
@@ -274,6 +312,7 @@ def _score_geometry_fusion(
         "geometry_method": geometry_method,
         "uncertainty_method": uncertainty_method,
         "fusion_method": fusion_method,
+        "fusion_style": _geometry_fusion_style(fusion_method),
         "direction": "higher",
         "geometry_signals": list(geometry_signals),
         "uncertainty_signals": list(uncertainty_signals),
@@ -283,6 +322,51 @@ def _score_geometry_fusion(
             for alpha in alphas
         },
     }
+
+
+def _geometry_fusion_scores_for_full_dump(
+    *,
+    selected_scores: Mapping[str, torch.Tensor],
+    labels: torch.Tensor,
+    directions: Mapping[str, str],
+    geometry_signals: Sequence[str],
+    uncertainty_signals: Sequence[str],
+    geometry_method: str,
+    uncertainty_method: str,
+    fusion_method: str,
+) -> torch.Tensor:
+    true_idx = torch.nonzero(labels == 0, as_tuple=False).flatten()
+    geometry_rank_scores = [
+        directional_rank_anomaly_scores(
+            selected_scores[name][true_idx],
+            selected_scores[name],
+            direction=directions[name],
+        )
+        for name in geometry_signals
+    ]
+    uncertainty_rank_scores = [
+        directional_rank_anomaly_scores(
+            selected_scores[name][true_idx],
+            selected_scores[name],
+            direction=directions[name],
+        )
+        for name in uncertainty_signals
+    ]
+    geometry_scores = combine_rank_anomaly_scores(geometry_rank_scores, geometry_method)
+    uncertainty_scores = combine_rank_anomaly_scores(uncertainty_rank_scores, uncertainty_method)
+    return combine_geometry_uncertainty_scores(
+        geometry_scores,
+        uncertainty_scores,
+        method=fusion_method,
+    )
+
+
+def _geometry_fusion_style(fusion_method: str) -> str:
+    if fusion_method == "product":
+        return "global_local_uncertainty"
+    if fusion_method == "interaction":
+        return "geometry_uncertainty_interaction"
+    return "geometry_uncertainty_fusion"
 
 
 def _best_at_alpha(results: Mapping[str, Mapping[str, Any]], alpha: float) -> dict[str, Any] | None:
@@ -306,6 +390,145 @@ def _best_at_alpha(results: Mapping[str, Mapping[str, Any]], alpha: float) -> di
     }
 
 
+def _attach_confidence_audit(
+    result: dict[str, Any],
+    *,
+    candidate_scores: torch.Tensor,
+    labels: torch.Tensor,
+    direction: str,
+    alpha: float,
+    confidence_scores: torch.Tensor,
+    confidence_direction: str,
+    confidence_top_fraction: float,
+    max_high_confidence_accepted_false_rate: float,
+) -> None:
+    key = str(float(alpha))
+    true_idx = torch.nonzero(labels == 0, as_tuple=False).flatten()
+    threshold = directional_conformal_threshold(candidate_scores[true_idx], alpha, direction)
+    report = confidence_error_report(
+        candidate_scores,
+        labels,
+        threshold,
+        confidence_scores,
+        anomaly_direction=direction,
+        confidence_direction=confidence_direction,
+        confidence_top_fraction=confidence_top_fraction,
+    )
+    result["confidence_error_at_best_alpha"] = report
+    result["release_gate_at_best_alpha"] = _candidate_release_gate(
+        result,
+        alpha=alpha,
+        confidence_report=report,
+        max_high_confidence_accepted_false_rate=max_high_confidence_accepted_false_rate,
+    )
+    if key in result.get("alphas", {}):
+        result["alphas"][key]["confidence_error_report"] = report
+
+
+def _candidate_release_gate(
+    result: Mapping[str, Any],
+    *,
+    alpha: float,
+    confidence_report: Mapping[str, Any],
+    max_high_confidence_accepted_false_rate: float,
+) -> dict[str, Any]:
+    key = str(float(alpha))
+    alpha_payload = dict(result.get("alphas", {}).get(key, {}))
+    reasons = []
+    if alpha_payload.get("pass") is not True:
+        reasons.append("calibrated false-alarm gate failed at best alpha")
+    accepted_false_rate = _nested_rate(confidence_report, "high_confidence_accepted_false_rate")
+    accepted_false_count = int(confidence_report.get("n_high_confidence_accepted_false", 0))
+    if accepted_false_rate is not None and accepted_false_rate > max_high_confidence_accepted_false_rate:
+        reasons.append(
+            "high-confidence accepted false rate "
+            f"{accepted_false_rate:.6g} exceeds max {max_high_confidence_accepted_false_rate:.6g}"
+        )
+    elif accepted_false_rate is None and accepted_false_count > 0:
+        reasons.append("high-confidence accepted false count is nonzero with undefined denominator")
+    return {
+        "status": "promote" if not reasons else "blocked",
+        "alpha": float(alpha),
+        "false_alarm_pass": alpha_payload.get("pass"),
+        "false_alarm": alpha_payload.get("false_alarm"),
+        "detection": alpha_payload.get("detection"),
+        "max_high_confidence_accepted_false_rate": float(max_high_confidence_accepted_false_rate),
+        "high_confidence_accepted_false_rate": accepted_false_rate,
+        "high_confidence_accepted_false_count": accepted_false_count,
+        "high_confidence_accepted_count": int(
+            confidence_report.get("n_high_confidence_accepted", 0)
+        ),
+        "reasons": reasons,
+    }
+
+
+def _run_release_gate_at_alpha(
+    *,
+    single_results: Mapping[str, Mapping[str, Any]],
+    ensemble_results: Mapping[str, Mapping[str, Any]],
+    geometry_fusion_results: Mapping[str, Mapping[str, Any]],
+    alpha: float,
+    confidence_enabled: bool,
+) -> dict[str, Any]:
+    candidates = []
+    group_priority = {"geometry_fusion": 2, "ensemble": 1, "single": 0}
+    for group_name, results in (
+        ("geometry_fusion", geometry_fusion_results),
+        ("ensemble", ensemble_results),
+        ("single", single_results),
+    ):
+        for name, result in results.items():
+            gate = result.get("release_gate_at_best_alpha") if isinstance(result, Mapping) else None
+            alpha_payload = result.get("alphas", {}).get(str(float(alpha)), {})
+            candidates.append({
+                "candidate_group": group_name,
+                "candidate_name": name,
+                "status": None if gate is None else gate.get("status"),
+                "false_alarm": alpha_payload.get("false_alarm"),
+                "detection": alpha_payload.get("detection"),
+                "auroc": result.get("auroc"),
+                "high_confidence_accepted_false_rate": None
+                if gate is None
+                else gate.get("high_confidence_accepted_false_rate"),
+                "reasons": () if gate is None else tuple(gate.get("reasons", ())),
+            })
+    if not candidates:
+        return {
+            "status": "not_configured",
+            "alpha": float(alpha),
+            "confidence_audit_enabled": bool(confidence_enabled),
+            "candidate_count": 0,
+        }
+    passing = [candidate for candidate in candidates if candidate.get("status") == "promote"]
+    ranked = passing or candidates
+    recommended = max(
+        ranked,
+        key=lambda item: (
+            float(item.get("detection") or 0.0),
+            float(item.get("auroc") or 0.0),
+            -float(item.get("false_alarm") or 0.0),
+            group_priority.get(str(item.get("candidate_group")), -1),
+        ),
+    )
+    return {
+        "status": "promote" if passing else ("blocked" if confidence_enabled else "not_configured"),
+        "alpha": float(alpha),
+        "confidence_audit_enabled": bool(confidence_enabled),
+        "candidate_count": len(candidates),
+        "promoted_candidate_count": len(passing),
+        "recommended": recommended,
+        "candidates": candidates,
+    }
+
+
+def _nested_rate(report: Mapping[str, Any], key: str) -> float | None:
+    value = report.get(key)
+    if isinstance(value, Mapping):
+        estimate = value.get("estimate")
+        return None if estimate is None else float(estimate)
+    return None
+
+
 def build_ensemble_report(
     score_dumps: Sequence[tuple[str, Path]],
     *,
@@ -320,6 +543,10 @@ def build_ensemble_report(
     repeats: int = 20,
     seed: int = 0,
     best_alpha: float = 0.10,
+    confidence_signal: str | None = None,
+    confidence_direction: str | None = None,
+    confidence_top_fraction: float = 0.25,
+    max_high_confidence_accepted_false_rate: float = 0.0,
     score_dump_cache: MutableMapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not score_dumps:
@@ -330,8 +557,19 @@ def build_ensemble_report(
         raise ValueError("repeats must be >= 1.")
     if any(not (0.0 < float(alpha) < 1.0) for alpha in alphas):
         raise ValueError("alphas must be in (0, 1).")
+    if not (0.0 < float(confidence_top_fraction) <= 1.0):
+        raise ValueError("confidence_top_fraction must be in (0, 1].")
+    if not (0.0 <= float(max_high_confidence_accepted_false_rate) <= 1.0):
+        raise ValueError("max_high_confidence_accepted_false_rate must be in [0, 1].")
     geometry_signals, uncertainty_signals = _resolve_geometry_groups(geometry_signals, uncertainty_signals)
-    load_signals = _dedupe_signals(signals, geometry_signals, uncertainty_signals)
+    confidence_signal = None if confidence_signal is None else str(confidence_signal).strip() or None
+    resolved_confidence_direction = _resolve_confidence_direction(confidence_signal, confidence_direction)
+    load_signals = _dedupe_signals(
+        signals,
+        geometry_signals,
+        uncertainty_signals,
+        () if confidence_signal is None else (confidence_signal,),
+    )
 
     runs = []
     score_dump_metadata_cache = {} if score_dump_cache is None else score_dump_cache
@@ -387,6 +625,80 @@ def build_ensemble_report(
                 )
                 for method in geometry_fusion_methods
             }
+        confidence_audit_enabled = (
+            confidence_signal is not None
+            and resolved_confidence_direction is not None
+            and confidence_signal in selected_scores
+        )
+        if confidence_audit_enabled:
+            assert confidence_signal is not None and resolved_confidence_direction is not None
+            confidence_scores = selected_scores[confidence_signal]
+            for signal, result in single_results.items():
+                _attach_confidence_audit(
+                    result,
+                    candidate_scores=selected_scores[signal],
+                    labels=labels,
+                    direction=directions[signal],
+                    alpha=best_alpha,
+                    confidence_scores=confidence_scores,
+                    confidence_direction=resolved_confidence_direction,
+                    confidence_top_fraction=float(confidence_top_fraction),
+                    max_high_confidence_accepted_false_rate=float(
+                        max_high_confidence_accepted_false_rate
+                    ),
+                )
+            for method, result in ensemble_results.items():
+                ensemble_scores = _ensemble_scores_for_full_dump(
+                    selected_scores={signal: selected_scores[signal] for signal in signals},
+                    labels=labels,
+                    signals=signals,
+                    directions=directions,
+                    method=method,
+                )
+                _attach_confidence_audit(
+                    result,
+                    candidate_scores=ensemble_scores,
+                    labels=labels,
+                    direction="higher",
+                    alpha=best_alpha,
+                    confidence_scores=confidence_scores,
+                    confidence_direction=resolved_confidence_direction,
+                    confidence_top_fraction=float(confidence_top_fraction),
+                    max_high_confidence_accepted_false_rate=float(
+                        max_high_confidence_accepted_false_rate
+                    ),
+                )
+            for method, result in geometry_fusion_results.items():
+                fusion_scores = _geometry_fusion_scores_for_full_dump(
+                    selected_scores=selected_scores,
+                    labels=labels,
+                    directions=directions,
+                    geometry_signals=geometry_signals,
+                    uncertainty_signals=uncertainty_signals,
+                    geometry_method=geometry_method,
+                    uncertainty_method=uncertainty_method,
+                    fusion_method=method,
+                )
+                _attach_confidence_audit(
+                    result,
+                    candidate_scores=fusion_scores,
+                    labels=labels,
+                    direction="higher",
+                    alpha=best_alpha,
+                    confidence_scores=confidence_scores,
+                    confidence_direction=resolved_confidence_direction,
+                    confidence_top_fraction=float(confidence_top_fraction),
+                    max_high_confidence_accepted_false_rate=float(
+                        max_high_confidence_accepted_false_rate
+                    ),
+                )
+        fusion_release_gate = _run_release_gate_at_alpha(
+            single_results=single_results,
+            ensemble_results=ensemble_results,
+            geometry_fusion_results=geometry_fusion_results,
+            alpha=best_alpha,
+            confidence_enabled=confidence_audit_enabled,
+        )
         runs.append({
             "name": name,
             "scores_path": str(path),
@@ -401,6 +713,15 @@ def build_ensemble_report(
             "directions": directions,
             "geometry_signals": list(geometry_signals),
             "uncertainty_signals": list(uncertainty_signals),
+            "confidence_audit": {
+                "enabled": confidence_audit_enabled,
+                "confidence_signal": confidence_signal,
+                "confidence_direction": resolved_confidence_direction,
+                "confidence_top_fraction": float(confidence_top_fraction),
+                "max_high_confidence_accepted_false_rate": float(
+                    max_high_confidence_accepted_false_rate
+                ),
+            },
             "n_total": int(labels.numel()),
             "n_true": int((labels == 0).sum().item()),
             "n_false": int((labels == 1).sum().item()),
@@ -410,6 +731,7 @@ def build_ensemble_report(
             "best_single_at_alpha": _best_at_alpha(single_results, best_alpha),
             "best_ensemble_at_alpha": _best_at_alpha(ensemble_results, best_alpha),
             "best_geometry_fusion_at_alpha": _best_at_alpha(geometry_fusion_results, best_alpha),
+            "fusion_release_gate_at_alpha": fusion_release_gate,
         })
 
     return {
@@ -425,6 +747,15 @@ def build_ensemble_report(
         "repeats": int(repeats),
         "seed": int(seed),
         "best_alpha": float(best_alpha),
+        "confidence_audit": {
+            "enabled": confidence_signal is not None,
+            "confidence_signal": confidence_signal,
+            "confidence_direction": resolved_confidence_direction,
+            "confidence_top_fraction": float(confidence_top_fraction),
+            "max_high_confidence_accepted_false_rate": float(
+                max_high_confidence_accepted_false_rate
+            ),
+        },
         "score_dump_cache": score_dump_cache_summary(score_dump_metadata_cache),
         "runs": runs,
     }
@@ -529,6 +860,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         _parse_csv(getattr(args, "geometry_fusion_methods", None), name="geometry_fusion_methods")
         or GEOMETRY_FUSION_METHODS
     )
+    confidence_signal = getattr(args, "confidence_signal", None)
+    confidence_direction = getattr(args, "confidence_direction", None)
     alphas = tuple(float(value) for value in (_parse_csv(args.alphas, name="alphas") or ()))
     payload = build_ensemble_report(
         score_dumps,
@@ -543,6 +876,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         repeats=args.repeats,
         seed=args.seed,
         best_alpha=args.best_alpha,
+        confidence_signal=confidence_signal,
+        confidence_direction=confidence_direction,
+        confidence_top_fraction=float(getattr(args, "confidence_top_fraction", 0.25)),
+        max_high_confidence_accepted_false_rate=float(
+            getattr(args, "max_high_confidence_accepted_false_rate", 0.0)
+        ),
     )
     if args.save_best_fusion_artifact:
         if len(score_dumps) != 1:
@@ -597,6 +936,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         run_payload["best_geometry_fusion_artifact"] = {
             "path": str(artifact_path),
             "fusion_method": artifact.fusion_method,
+            "fusion_style": _geometry_fusion_style(artifact.fusion_method),
             "geometry_method": artifact.geometry_method,
             "uncertainty_method": artifact.uncertainty_method,
             "threshold": artifact.threshold,
@@ -639,6 +979,14 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--best-alpha", type=float, default=0.10,
                         help="alpha used for best single/ensemble summary")
+    parser.add_argument("--confidence-signal", default=None,
+                        help="optional score used to audit high-confidence accepted false errors")
+    parser.add_argument("--confidence-direction", choices=("higher", "lower"), default=None,
+                        help="whether higher or lower confidence-signal values mean more confidence")
+    parser.add_argument("--confidence-top-fraction", type=float, default=0.25,
+                        help="fraction of records treated as high confidence for the route gate")
+    parser.add_argument("--max-high-confidence-accepted-false-rate", type=float, default=0.0,
+                        help="maximum high-confidence accepted false rate allowed by the route gate")
     parser.add_argument("--save-best-fusion-artifact", default=None,
                         help="optional path to save a deployable artifact for the best ensemble")
     parser.add_argument("--save-best-geometry-fusion-artifact", default=None,
@@ -658,7 +1006,8 @@ def main() -> None:
             f"best_ensemble@{key}={None if best_ensemble is None else best_ensemble['name']} "
             f"det={None if best_ensemble is None else best_ensemble['detection']}  "
             f"best_geometry_fusion@{key}={None if best_geometry is None else best_geometry['name']} "
-            f"det={None if best_geometry is None else best_geometry['detection']}"
+            f"det={None if best_geometry is None else best_geometry['detection']}  "
+            f"route_gate={run_payload['fusion_release_gate_at_alpha']['status']}"
         )
 
 

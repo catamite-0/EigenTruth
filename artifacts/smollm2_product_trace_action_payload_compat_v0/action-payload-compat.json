@@ -1,0 +1,34 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 2,
+    "directory_count": 1,
+    "file_count": 1,
+    "missing_count": 0
+  },
+  "label_usage": {
+    "labels_used": false,
+    "legacy_action_payloads_repaired": true,
+    "model_outputs_generated": false,
+    "retrieval_evidence_generated": false,
+    "verifier_outputs_generated": false
+  },
+  "metadata": {
+    "source": "frontier_action_gate_rebuild"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_product_trace_action_payload_compat_v0/artifact-manifest.json",
+    "report": "artifacts/smollm2_product_trace_action_payload_compat_v0/action-payload-compat.json",
+    "traces_dir": "artifacts/smollm2_product_trace_action_payload_compat_v0/traces"
+  },
+  "schema_version": 1,
+  "status": "ready",
+  "summary": {
+    "added_retrieval_target_count": 2,
+    "blocked_trace_count": 0,
+    "input_trace_count": 12,
+    "modified_trace_count": 1,
+    "output_trace_count": 12,
+    "repaired_action_count": 1
+  },
+  "workflow": "product_trace_action_payload_compat"
+}

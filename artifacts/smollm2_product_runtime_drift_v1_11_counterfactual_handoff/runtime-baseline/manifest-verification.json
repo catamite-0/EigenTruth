@@ -1,0 +1,7 @@
+{
+  "checked": 14,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_product_runtime_drift_v1_11_counterfactual_handoff/runtime-baseline/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

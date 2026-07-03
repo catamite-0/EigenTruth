@@ -1,0 +1,188 @@
+{
+  "corpus_type": "source_family_structured_qa_external_evidence",
+  "description": "Structured QA corpus derived only from source-family rows with explicit structured metadata. Use as a covered-fact input for QuestionAnswerVerifier; do not treat it as broad open-domain TruthfulQA coverage.",
+  "documents": [
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+        "alignment_source_document_id": "alignment-approved:1",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:f824d0d0b4337e82",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "source_index": 0,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "English"
+          ],
+          "value": [
+            "West Germanic language"
+          ]
+        },
+        "subject": "English",
+        "title": "Reviewed alignment fact: English description"
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "source": "wikidata:Q1860:description",
+      "text": "What does Wikidata list as the description for English? West Germanic language"
+    },
+    {
+      "answer": "citizens and nationals of the United States of America",
+      "metadata": {
+        "alignment_candidate_id": "fact:7efecb96df3cdbac",
+        "alignment_source_document_id": "alignment-approved:2",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:5213651e1f2bb3df",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "source_index": 1,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "Americans"
+          ],
+          "value": [
+            "citizens and nationals of the United States of America"
+          ]
+        },
+        "subject": "Americans",
+        "title": "Reviewed alignment fact: Americans description"
+      },
+      "question": "What does Wikidata list as the description for Americans?",
+      "source": "wikidata:Q846570:description",
+      "text": "What does Wikidata list as the description for Americans? citizens and nationals of the United States of America"
+    },
+    {
+      "answer": "field that develops and studies software enabling machines to exhibit intelligent behavior",
+      "metadata": {
+        "alignment_candidate_id": "fact:048a582348764d1e",
+        "alignment_source_document_id": "alignment-approved:3",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:127ba68c0b9c936a",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q11660:description",
+        "source_family": "reference",
+        "source_index": 2,
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "artificial intelligence"
+          ],
+          "value": [
+            "field that develops and studies software enabling machines to exhibit intelligent behavior"
+          ]
+        },
+        "subject": "artificial intelligence",
+        "title": "Reviewed alignment fact: artificial intelligence description"
+      },
+      "question": "What does Wikidata list as the description for artificial intelligence?",
+      "source": "wikidata:Q11660:description",
+      "text": "What does Wikidata list as the description for artificial intelligence? field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "answer": "North Africa",
+      "metadata": {
+        "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+        "alignment_source_document_id": "alignment-approved:4",
+        "extraction_rule": "wikidata_subject_property_value",
+        "provider": "wikidata",
+        "review_id": "review:493c95339ac7ce47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q15:P527:Q27381",
+        "source_family": "reference",
+        "source_index": 3,
+        "statement_property": "P527",
+        "statement_property_label": "has part",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "P527"
+          ],
+          "statement_property_label": [
+            "has part(s)"
+          ],
+          "subject": [
+            "Africa"
+          ],
+          "value": [
+            "North Africa"
+          ]
+        },
+        "subject": "Africa",
+        "title": "Reviewed alignment fact: Africa has part"
+      },
+      "question": "What does Wikidata list as the has part for Africa?",
+      "source": "wikidata:Q15:P527:Q27381",
+      "text": "What does Wikidata list as the has part for Africa? North Africa"
+    }
+  ],
+  "label_usage": {
+    "claim_ids_copied_to_document_metadata": false,
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false,
+    "model_answers_copied_to_document_metadata": false,
+    "score_dump_rows_copied_to_document_metadata": false
+  },
+  "schema_version": 1,
+  "source": {
+    "accepted_providers": [
+      "wikidata",
+      "worldbank"
+    ],
+    "builder": "source_family_structured_qa_corpus_builder",
+    "skip_qid_values": true
+  },
+  "summary": {
+    "by_provider": {
+      "wikidata": 4
+    },
+    "by_source_family": {
+      "reference": 4
+    },
+    "n_candidate_documents": 4,
+    "n_documents": 4,
+    "n_source_documents": 4,
+    "skipped": {
+      "duplicates": 0,
+      "missing_fields": 0,
+      "qid_values": 0,
+      "reserved_metadata": 0,
+      "unsupported_provider": 0
+    }
+  }
+}

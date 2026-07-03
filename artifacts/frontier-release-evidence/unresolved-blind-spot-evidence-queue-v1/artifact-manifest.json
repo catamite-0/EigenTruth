@@ -1,0 +1,89 @@
+{
+  "artifacts": {
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-requests.jsonl",
+      "sha256": "8d356c4713c412cbcb9fc2bd0448766f61503a503e8ee1e65ddaba44d4603ad8",
+      "size_bytes": 338621
+    },
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-evidence-collection-corpus-v1/blind-spot-evidence-collection-corpus.json",
+      "sha256": "f2376672e3f1cee20a8f5f88dc92ec0b494276e50966b5bce9c2e683bb9cf580",
+      "size_bytes": 1525558
+    },
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-evidence-expansion-v1/evidence-expansion-plan.json",
+      "sha256": "99b0359db3e170c221630cdf80710db2f1dd8ca45650aaf561d524e4c1ba16cf",
+      "size_bytes": 452509
+    },
+    "covered_fact_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json",
+      "sha256": "68b5ae764f70b4ab3b2a6959c8f3cd58e321922efc742c0c65db6492400cb368",
+      "size_bytes": 203668
+    },
+    "execution_batches": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "execution-batches.jsonl",
+      "sha256": "128842971f186da8f2251781cec85cc9227c0bd112056cbd41944e84781ed009",
+      "size_bytes": 11000
+    },
+    "question_property_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-structured-qa-route-v1/blind-spot-question-property-mapping.json",
+      "sha256": "9bfe551bd40dc1effc6a7abb5235a459fa2195ac840b14d5f0ac8a4451dd8416",
+      "size_bytes": 329487
+    },
+    "unresolved_blind_spot_evidence_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    },
+    "unresolved_targets": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-targets.jsonl",
+      "sha256": "2cdfdd1104a67df727fe210f85ed7a6089f2ec2cc5d44b87e8d6ac722b602111",
+      "size_bytes": 101376
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_request_count": 332,
+    "batch_count": 8,
+    "counterfactual_probe_count": 46,
+    "external_citation_count": 260,
+    "model": "smollm2-l80",
+    "resolved_by_question_property_count": 1,
+    "source": "frontier-v4",
+    "status": "ready_for_adapter_execution",
+    "target_count": 88,
+    "workflow": "unresolved_blind_spot_evidence_queue",
+    "world_model_rule_count": 26
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

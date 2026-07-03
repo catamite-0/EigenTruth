@@ -1,0 +1,62 @@
+{
+  "config": {
+    "builder": "build_external_retrieval_corpus",
+    "corpus_name": "nasa_moon_composition",
+    "default_timestamp": null,
+    "min_chars": 1,
+    "require_source": true,
+    "source_kind": "nasa_science_public_page",
+    "trusted_source": [
+      "science.nasa.gov"
+    ]
+  },
+  "corpus_type": "external_evidence_candidate",
+  "description": "External-candidate retrieval corpus built from caller-supplied local source files. This builder rejects score labels, claim ids, and score-dump row links in document metadata.",
+  "documents": [
+    {
+      "metadata": {
+        "corpus_name": "nasa_moon_composition",
+        "external_source": true,
+        "inference_type": "source_backed_refutation",
+        "ingest_ordinal": 1,
+        "ingestion_builder": "build_external_retrieval_corpus",
+        "license_note": "NASA public web page; used as a source-backed local evidence document.",
+        "provider": "NASA Science",
+        "retrieved_at": "2026-06-30",
+        "source_file": "artifacts/nasa-moon-composition-external-corpus/nasa-moon-composition-source.jsonl",
+        "source_kind": "nasa_science_public_page",
+        "source_page": "Moon Composition",
+        "source_text_summary": "NASA Science describes lunar crust minerals as oxygen, silicon, magnesium, iron, calcium, and aluminum, with smaller amounts of titanium, uranium, thorium, potassium, and hydrogen.",
+        "url": "https://science.nasa.gov/moon/composition/"
+      },
+      "source": "nasa:moon:composition:crust-elements",
+      "text": "NASA Science's Moon composition page describes lunar crust minerals as made up of oxygen, silicon, magnesium, iron, calcium, and aluminum, with smaller amounts of titanium, uranium, thorium, potassium, and hydrogen. This source-backed composition evidence is used to refute the claim that the Moon is made of cheese."
+    }
+  ],
+  "input_provenance": {
+    "builder": "build_external_retrieval_corpus",
+    "sources": [
+      {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/nasa-moon-composition-external-corpus/nasa-moon-composition-source.jsonl",
+        "sha256": "a2248a1d6b5be765ca3c1d2e7ee8958f69ff283124b8e5516691e6f7f8a31c34",
+        "size_bytes": 864
+      }
+    ]
+  },
+  "label_usage": {
+    "labels_copied_to_document_metadata": false,
+    "labels_used_for_documents": false
+  },
+  "schema_version": 1,
+  "summary": {
+    "n_documents": 1,
+    "n_documents_with_source": 1,
+    "n_documents_with_timestamp": 0,
+    "n_documents_with_url": 1,
+    "n_skipped_short": 0,
+    "n_sources": 1
+  }
+}

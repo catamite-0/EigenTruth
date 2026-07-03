@@ -1,0 +1,73 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../alignment-fact-review-corpus.json",
+      "sha256": "2d7b1b274b6f18f9d5974c3eb5ae4fb35f5a52ffc5afb30b7b7416e3ce01b891",
+      "size_bytes": 14004
+    },
+    "alignment_fact_review_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-report.json",
+      "sha256": "ad2746c7bd7836e06e9a6cfd38ac46f7b4a514a71e3a10b86e4ce293674b6b8c",
+      "size_bytes": 27567
+    },
+    "approved_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "approved-source-documents.json",
+      "sha256": "361adcc326f3b451b53c26498bb420cd2808be0a0badd8eedb5e4ec12bdeea53",
+      "size_bytes": 9490
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-records.jsonl",
+      "sha256": "d045203e45066a4ed45fca133b22b790d571c2ed992c19b303a3d39a312015da",
+      "size_bytes": 4640
+    },
+    "review_decision_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decision-template.jsonl",
+      "sha256": "5bf75803b5b36cc703ed1e48f0c61135ba7ba1efd95e472b946c482dab660b38",
+      "size_bytes": 7447
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../alignment-rule-review/review-decisions.jsonl",
+      "sha256": "a75345a8a1e52f1d9871a1da81ae2fcc1f8057d588f60cc1cbad9307f8bc5104",
+      "size_bytes": 2510
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_source_document_count": 7,
+    "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
+    "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+    "parent_workflow": "retrieval_semantic_gap_review_workflow",
+    "pending_review_count": 0,
+    "promotes_verifier_evidence": false,
+    "review_document_count": 10,
+    "status": "ready_for_structured_qa",
+    "structured_fact_parsing": "worldbank_wikidata",
+    "workflow": "alignment_fact_review_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

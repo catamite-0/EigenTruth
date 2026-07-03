@@ -1,0 +1,57 @@
+{
+  "config": {
+    "default_review_status": "needs_review",
+    "expand_input_tasks": true,
+    "writes_empty_values_only": true
+  },
+  "downstream_commands": [],
+  "input_task_sources": {},
+  "label_usage": {
+    "labels_copied_to_binding_sidecars": false,
+    "labels_used_for_binding_scaffold": false,
+    "model_answers_copied_to_binding_sidecars": false,
+    "scaffold_approves_review": false,
+    "scaffold_executes_commands": false,
+    "scaffold_rows_are_verifier_evidence": false
+  },
+  "metadata": {},
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/artifact-manifest.json",
+    "entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+    "input_binding_scaffold": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
+    "mechanism_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-mechanism-bindings.jsonl",
+    "numeric_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
+    "review_requests": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-review-requests.jsonl",
+    "subject_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-subject-bindings.jsonl",
+    "temporal_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl"
+  },
+  "rows_by_request": {},
+  "schema_version": 1,
+  "scope": "Editable sidecar scaffold for source-backed frontier input bindings. Rows are empty non-evidence skeletons and remain review-gated until a human or external adapter fills values.",
+  "skipped_requests": [],
+  "source": {
+    "collection_request_count": 0,
+    "input_collection_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
+    "input_collection_status": "empty",
+    "input_collection_workflow": "frontier_research_queue_input_collection_plan",
+    "review_request_count": 0
+  },
+  "status": "empty",
+  "summary": {
+    "binding_skeleton_count": 0,
+    "downstream_command_count": 0,
+    "expanded_task_count": 0,
+    "request_level_skeleton_count": 0,
+    "review_family_counts": {},
+    "review_request_count": 0,
+    "sidecar_counts": {
+      "entity_bindings": 0,
+      "mechanism_bindings": 0,
+      "numeric_bindings": 0,
+      "subject_bindings": 0,
+      "temporal_bindings": 0
+    },
+    "skipped_request_count": 0
+  },
+  "workflow": "frontier_research_queue_input_binding_scaffold"
+}

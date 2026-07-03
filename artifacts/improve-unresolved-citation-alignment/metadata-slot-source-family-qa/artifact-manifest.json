@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "source_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../metadata-slot-fact-promotion-gate/approved-source-documents.json",
+      "sha256": "5acbd7c7e3325adaff1c85b8fbd73302080e8654b4d6e3927f2af00ed0798b28",
+      "size_bytes": 7533
+    },
+    "source_family_structured_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-corpus.json",
+      "sha256": "4e52eefcf559afae285706ec992ed8faddaafb28a887bc9a6b178d141f309afb",
+      "size_bytes": 6891
+    },
+    "source_family_structured_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-qa-report.json",
+      "sha256": "cd5633067c3ba13b178ccb10aec31a27f6d19d9d17a4fd558390e9cd54d771be",
+      "size_bytes": 1161
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_document_count": 4,
+    "corpus_type": "source_family_structured_qa_external_evidence",
+    "document_count": 4,
+    "source_workflow": "metadata_slot_fact_extraction",
+    "status": "ready",
+    "workflow": "source_family_structured_qa_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

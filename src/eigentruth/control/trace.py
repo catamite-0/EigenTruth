@@ -9,8 +9,14 @@ from typing import Any, Mapping, Optional, Sequence
 from eigentruth.control.action_audit import audit_action_requests
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.finalization import FinalAnswer
+from eigentruth.control.metacognition import audit_metacognitive_alignment
 from eigentruth.control.policy import ControlAction, RiskDecision
+from eigentruth.control.provenance import audit_evidence_graph_consistency, audit_trace_provenance
+from eigentruth.control.receipt_audit import audit_receipt_claim_support
+from eigentruth.control.receipts import action_receipt_summary_from_results
+from eigentruth.control.world_model_rollout import audit_world_model_rollout
 from eigentruth.json_utils import to_jsonable
+from eigentruth.verify.citations import extract_citation_references
 from eigentruth.verify.localization import localize_claim_risk_spans
 from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
 from eigentruth.verify.protocols import Claim, VerificationResult
@@ -254,10 +260,56 @@ class ProductTrace:
                 prepared.actions,
                 prepared.action_results,
             ),
+            "action_receipts": action_receipt_summary_from_results(prepared.action_results),
+            "evidence_quality": _evidence_quality_summary_from_action_results(
+                prepared.action_results,
+            ),
+            "world_model_action_gate": _world_model_action_gate_summary_from_action_results(
+                prepared.action_results,
+            ),
+            "world_model_rollout": _world_model_rollout_summary_from_action_results(
+                prepared.action_results,
+            ),
+            "metacognition": _metacognition_summary_from_payload(
+                diagnostics=prepared.diagnostics,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                final_answer=prepared.final_answer,
+            ),
+            "receipt_claim_support": _receipt_claim_support_summary_from_payload(
+                claims=prepared.claims,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
             "action_audit": _action_audit_summary_from_payload(
                 actions=prepared.actions,
                 risk_decision=prepared.risk_decision,
                 verification_plan=prepared.verification_plan,
+            ),
+            "trajectory_audit": _trajectory_audit_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_plan=prepared.verification_plan,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                actions=prepared.actions,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
+            "provenance": _provenance_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_results=prepared.verification_results,
+                risk_decision=prepared.risk_decision,
+                actions=prepared.actions,
+                action_results=prepared.action_results,
+                final_answer=prepared.final_answer,
+            ),
+            "evidence_graph_consistency": _evidence_graph_consistency_summary_from_payload(
+                request_id=self.request_id,
+                claims=prepared.claims,
+                verification_results=prepared.verification_results,
+                action_results=prepared.action_results,
             ),
             "verification_route": _verification_route_summary_from_results(
                 prepared.verification_results,
@@ -265,8 +317,27 @@ class ProductTrace:
             "verification_route_cost": _verification_route_cost_summary_from_results(
                 prepared.verification_results,
             ),
+            "world_model": _world_model_summary_from_results(
+                prepared.verification_results,
+            ),
+            "context_sensitivity": _context_sensitivity_summary_from_results(
+                prepared.verification_results,
+            ),
+            "evidence_alignment": _evidence_alignment_summary_from_results(
+                prepared.verification_results,
+            ),
+            "counterfactual_robustness": _counterfactual_robustness_summary_from_results(
+                prepared.verification_results,
+            ),
+            "citation_integrity": _citation_integrity_summary(
+                prepared.claims,
+                prepared.verification_results,
+            ),
             "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
             "cache": _cache_summary_from_metadata(prepared.metadata),
+            "pre_generation_risk": _pre_generation_risk_summary_from_metadata(
+                prepared.metadata,
+            ),
             "verification_stage": _verification_stage_summary_from_payload(
                 events=prepared.events,
                 metadata=prepared.metadata,
@@ -338,6 +409,45 @@ class ProductTrace:
             tuple(_action_result_to_dict(result) for result in self.action_results),
         )
 
+    def action_receipt_summary(self) -> dict[str, Any]:
+        """Summarize receipt coverage for action results."""
+        return action_receipt_summary_from_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def evidence_quality_summary(self) -> dict[str, Any]:
+        """Summarize retrieval evidence freshness/provenance checks."""
+        return _evidence_quality_summary_from_action_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def world_model_action_gate_summary(self) -> dict[str, Any]:
+        """Summarize pre-action world-model gates attached to action results."""
+        return _world_model_action_gate_summary_from_action_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def world_model_rollout_summary(self) -> dict[str, Any]:
+        """Summarize post-action world-model prediction drift."""
+        return _world_model_rollout_summary_from_action_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
+
+    def metacognition_summary(self) -> dict[str, Any]:
+        """Summarize alignment between expressed uncertainty and trace risk."""
+        return _metacognition_summary_from_payload(
+            diagnostics=_to_jsonable(self.diagnostics),
+            verification_results=tuple(
+                _verification_result_to_dict(result) for result in self.verification_results
+            ),
+            risk_decision=_risk_decision_to_dict(self.risk_decision),
+            final_answer=_final_answer_to_dict(self.final_answer),
+        )
+
+    def receipt_claim_support_summary(self) -> dict[str, Any]:
+        """Summarize explicit claim/final-answer references to action receipts."""
+        return audit_receipt_claim_support(self).summary()
+
     def action_audit_summary(self) -> dict[str, Any]:
         """Summarize planned action/tool-selection audit results."""
         return _action_audit_summary_from_payload(
@@ -345,6 +455,20 @@ class ProductTrace:
             risk_decision=_risk_decision_to_dict(self.risk_decision),
             verification_plan=_verification_plan_to_dict(self.verification_plan),
         )
+
+    def trajectory_audit_summary(self) -> dict[str, Any]:
+        """Summarize trace-level hallucination taxonomy audit results."""
+        from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
+
+        return audit_product_trace_trajectory(self).summary()
+
+    def provenance_summary(self) -> dict[str, Any]:
+        """Summarize trace evidence/execution provenance graph coverage."""
+        return audit_trace_provenance(self).summary()
+
+    def evidence_graph_consistency_summary(self) -> dict[str, Any]:
+        """Summarize lightweight content consistency for supported-claim evidence."""
+        return audit_evidence_graph_consistency(self).summary()
 
     def verification_route_summary(self) -> dict[str, Any]:
         """Summarize verifier route choices recorded in result metadata."""
@@ -358,6 +482,37 @@ class ProductTrace:
             tuple(_verification_result_to_dict(result) for result in self.verification_results)
         )
 
+    def world_model_summary(self) -> dict[str, Any]:
+        """Summarize world-model evidence, conflicts, and traceability gaps."""
+        return _world_model_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def context_sensitivity_summary(self) -> dict[str, Any]:
+        """Summarize evidence-context sensitivity signals recorded on verifier results."""
+        return _context_sensitivity_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def evidence_alignment_summary(self) -> dict[str, Any]:
+        """Summarize claim/evidence alignment reports recorded on verifier results."""
+        return _evidence_alignment_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def counterfactual_robustness_summary(self) -> dict[str, Any]:
+        """Summarize counterfactual perturbation audit signals on verifier results."""
+        return _counterfactual_robustness_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
+
+    def citation_integrity_summary(self) -> dict[str, Any]:
+        """Summarize citation-reference coverage and catalog-audit outcomes."""
+        return _citation_integrity_summary(
+            tuple(_claim_to_dict(claim) for claim in self.claims),
+            tuple(_verification_result_to_dict(result) for result in self.verification_results),
+        )
+
     def runtime_summary(self) -> dict[str, Any]:
         """Return a compact runtime profile summary for trace/registry metadata."""
         return _runtime_summary_from_payload(_runtime_trace_to_dict(self.runtime_trace))
@@ -366,6 +521,11 @@ class ProductTrace:
         """Return aggregate cache hit/miss statistics from trace metadata."""
         metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
         return _cache_summary_from_metadata(metadata)
+
+    def pre_generation_risk_summary(self) -> dict[str, Any]:
+        """Summarize pre-generation routing and learned-risk metadata."""
+        metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
+        return _pre_generation_risk_summary_from_metadata(metadata)
 
     def verification_stage_summary(self) -> dict[str, Any]:
         """Summarize staged-verification skip decisions from trace events."""
@@ -470,6 +630,227 @@ def _action_execution_summary_from_payload(
         "request_id_mismatch_count": alignment["request_id_mismatch_count"],
     })
     return summary
+
+
+def _evidence_quality_summary_from_action_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result_count = len(results)
+    checked_result_count = 0
+    failed_result_count = 0
+    document_count = 0
+    applied_count = 0
+    passed_count = 0
+    failed_count = 0
+    reason_counts: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    for result in results:
+        summaries = _evidence_quality_summaries_from_action_result(result)
+        if not summaries:
+            continue
+        checked_result_count += 1
+        result_failed = False
+        for summary in summaries:
+            summary_document_count = _non_negative_int(summary.get("document_count")) or 0
+            summary_applied_count = _non_negative_int(summary.get("applied_count")) or 0
+            summary_passed_count = _non_negative_int(summary.get("passed_count")) or 0
+            summary_failed_count = _non_negative_int(summary.get("failed_count")) or 0
+            document_count += summary_document_count
+            applied_count += summary_applied_count
+            passed_count += summary_passed_count
+            failed_count += summary_failed_count
+            _merge_counts(reason_counts, _mapping(summary.get("reason_counts")))
+            status = _evidence_quality_status(
+                summary,
+                document_count=summary_document_count,
+                applied_count=summary_applied_count,
+                failed_count=summary_failed_count,
+            )
+            _increment_count(status_counts, status)
+            if summary_failed_count > 0 or status == "fail":
+                result_failed = True
+        if result_failed:
+            failed_result_count += 1
+    available = checked_result_count > 0
+    return {
+        "available": available,
+        "status": _aggregate_evidence_quality_status(
+            available=available,
+            document_count=document_count,
+            applied_count=applied_count,
+            failed_count=failed_count,
+        ),
+        "result_count": result_count,
+        "checked_result_count": checked_result_count,
+        "coverage_rate": _safe_div(checked_result_count, result_count) or 0.0,
+        "document_count": document_count,
+        "applied_count": applied_count,
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "failed_result_count": failed_result_count,
+        "pass_rate": 1.0 if applied_count == 0 else passed_count / applied_count,
+        "failure_rate": 0.0 if applied_count == 0 else failed_count / applied_count,
+        "reason_counts": dict(sorted(reason_counts.items())),
+        "status_counts": dict(sorted(status_counts.items())),
+        "missing_source_count": reason_counts.get("missing_source", 0),
+        "untrusted_source_count": reason_counts.get("untrusted_source", 0),
+        "stale_evidence_count": reason_counts.get("stale_evidence", 0),
+        "missing_timestamp_count": reason_counts.get("missing_timestamp", 0),
+    }
+
+
+def _evidence_quality_summaries_from_action_result(
+    result: Mapping[str, Any],
+) -> tuple[dict[str, Any], ...]:
+    output = _mapping(result.get("output"))
+    top_level = _mapping(output.get("evidence_quality"))
+    if top_level:
+        return (top_level,)
+    query_summaries: list[dict[str, Any]] = []
+    for item in _as_sequence(output.get("hits_by_query")):
+        quality = _mapping(_mapping(item).get("evidence_quality"))
+        if quality:
+            query_summaries.append(quality)
+    return tuple(query_summaries)
+
+
+def _world_model_action_gate_summary_from_action_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result_count = len(results)
+    checked_result_count = 0
+    passed_count = 0
+    blocked_count = 0
+    side_effect_block_violation_count = 0
+    prediction_confidences: list[float] = []
+    counts_by_status: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    counts_by_action: dict[str, int] = {}
+
+    for result in results:
+        gate = _world_model_gate_summary_from_action_result(result)
+        if not gate:
+            continue
+        checked_result_count += 1
+        _increment_count(counts_by_action, result.get("action"))
+        status = gate.get("status")
+        _increment_count(counts_by_status, status)
+        _increment_count(counts_by_decision_rule, gate.get("decision_rule"))
+        _merge_counts(counts_by_code, _mapping(gate.get("counts_by_code")))
+        confidence = _finite_float(gate.get("prediction_confidence"))
+        if confidence is not None:
+            prediction_confidences.append(confidence)
+        blocked = _optional_bool(gate.get("blocked"))
+        if blocked is None:
+            blocked = str(status) in {"blocked", "error"}
+        passed = _optional_bool(gate.get("passed"))
+        if passed is None:
+            passed = str(status) == "passed"
+        if blocked:
+            blocked_count += 1
+            metadata = _mapping(result.get("metadata"))
+            if bool(metadata.get("side_effects", False)) or bool(metadata.get("possible_side_effects", False)):
+                side_effect_block_violation_count += 1
+        if passed:
+            passed_count += 1
+
+    return {
+        "available": checked_result_count > 0,
+        "result_count": result_count,
+        "checked_result_count": checked_result_count,
+        "coverage_rate": _safe_div(checked_result_count, result_count),
+        "passed_count": passed_count,
+        "blocked_count": blocked_count,
+        "pass_rate": _safe_div(passed_count, checked_result_count),
+        "blocked_rate": _safe_div(blocked_count, checked_result_count),
+        "side_effect_block_violation_count": side_effect_block_violation_count,
+        "prediction_confidence_mean": _mean_or_none(prediction_confidences),
+        "prediction_confidence_min": min(prediction_confidences) if prediction_confidences else None,
+        "low_prediction_confidence_count": counts_by_code.get("low_prediction_confidence", 0),
+        "low_agreement_count": counts_by_code.get("low_agreement", 0),
+        "no_rule_matched_count": counts_by_code.get("no_rule_matched", 0),
+        "postcondition_refuted_count": counts_by_code.get("postcondition_refuted", 0),
+        "postcondition_insufficient_evidence_count": counts_by_code.get(
+            "postcondition_insufficient_evidence",
+            0,
+        ),
+        "postcondition_error_count": counts_by_code.get("postcondition_error", 0),
+        "counts_by_status": dict(sorted(counts_by_status.items())),
+        "counts_by_decision_rule": dict(sorted(counts_by_decision_rule.items())),
+        "counts_by_code": dict(sorted(counts_by_code.items())),
+        "counts_by_action": dict(sorted(counts_by_action.items())),
+    }
+
+
+def _world_model_gate_summary_from_action_result(result: Mapping[str, Any]) -> dict[str, Any]:
+    metadata_gate = _mapping(_mapping(result.get("metadata")).get("world_model_gate"))
+    output_gate = _mapping(_mapping(result.get("output")).get("world_model_gate"))
+    output_summary = _mapping(output_gate.get("summary"))
+    if output_summary:
+        merged = dict(output_summary)
+        merged.update(metadata_gate)
+        return merged
+    return metadata_gate
+
+
+def _world_model_rollout_summary_from_action_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return audit_world_model_rollout(results).summary()
+
+
+def _metacognition_summary_from_payload(
+    *,
+    diagnostics: Mapping[str, Any] | Any,
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return audit_metacognitive_alignment(
+        diagnostics=_mapping(diagnostics),
+        verification_results=tuple(_mapping(result) for result in verification_results),
+        risk_decision=_mapping(risk_decision),
+        final_answer=_mapping(final_answer),
+    ).summary()
+
+
+def _evidence_quality_status(
+    summary: Mapping[str, Any],
+    *,
+    document_count: int,
+    applied_count: int,
+    failed_count: int,
+) -> str:
+    raw_status = summary.get("status")
+    if raw_status is not None:
+        text = str(raw_status).strip()
+        if text:
+            return text
+    return _aggregate_evidence_quality_status(
+        available=True,
+        document_count=document_count,
+        applied_count=applied_count,
+        failed_count=failed_count,
+    )
+
+
+def _aggregate_evidence_quality_status(
+    *,
+    available: bool,
+    document_count: int,
+    applied_count: int,
+    failed_count: int,
+) -> str:
+    if not available:
+        return "missing"
+    if document_count == 0:
+        return "empty"
+    if applied_count == 0:
+        return "not_applied"
+    if failed_count > 0:
+        return "fail"
+    return "pass"
 
 
 def _action_result_alignment(
@@ -612,6 +993,81 @@ def _action_audit_summary_from_payload(
     return report.summary()
 
 
+def _receipt_claim_support_summary_from_payload(
+    *,
+    claims: Sequence[Mapping[str, Any]],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    report = audit_receipt_claim_support({
+        "claims": tuple(claims),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    })
+    return report.summary()
+
+
+def _trajectory_audit_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_plan: Mapping[str, Any] | None,
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    actions: Sequence[Any],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    from eigentruth.control.trajectory_audit import audit_product_trace_trajectory
+
+    return audit_product_trace_trajectory({
+        "request_id": request_id,
+        "claims": tuple(claims),
+        "verification_plan": verification_plan,
+        "verification_results": tuple(verification_results),
+        "risk_decision": risk_decision,
+        "actions": tuple(actions),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    }).summary()
+
+
+def _provenance_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_results: Sequence[Mapping[str, Any]],
+    risk_decision: Mapping[str, Any] | None,
+    actions: Sequence[Any],
+    action_results: Sequence[Mapping[str, Any]],
+    final_answer: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return audit_trace_provenance({
+        "request_id": request_id,
+        "claims": tuple(claims),
+        "verification_results": tuple(verification_results),
+        "risk_decision": risk_decision,
+        "actions": tuple(actions),
+        "action_results": tuple(action_results),
+        "final_answer": final_answer,
+    }).summary()
+
+
+def _evidence_graph_consistency_summary_from_payload(
+    *,
+    request_id: str | None,
+    claims: Sequence[Mapping[str, Any]],
+    verification_results: Sequence[Mapping[str, Any]],
+    action_results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    return audit_evidence_graph_consistency({
+        "request_id": request_id,
+        "claims": tuple(claims),
+        "verification_results": tuple(verification_results),
+        "action_results": tuple(action_results),
+    }).summary()
+
+
 def _verification_route_summary_from_results(
     results: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
@@ -674,6 +1130,971 @@ def _verification_route_cost_summary_from_results(
     return summary
 
 
+def _world_model_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_adapter: dict[str, int] = {}
+    counts_by_reference_id: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    conflict_paths: dict[str, int] = {}
+    prediction_confidences: list[float] = []
+    agreement_rates: list[float] = []
+    world_model_total = 0
+    conflict_count = 0
+    low_agreement_count = 0
+    no_rule_matched_count = 0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_world_model_result(metadata):
+            continue
+        world_model_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        prediction_metadata = _world_model_prediction_metadata(metadata)
+        _increment_count(counts_by_adapter, _world_model_adapter_name(metadata))
+        reference = _world_model_reference(metadata)
+        view = _world_model_view(metadata)
+        _increment_count(counts_by_reference_id, reference.get("reference_id"))
+        _increment_count(counts_by_decision_rule, _world_model_decision_rule(metadata))
+
+        confidence = _finite_float(metadata.get("prediction_confidence"))
+        if confidence is not None:
+            prediction_confidences.append(confidence)
+        agreement_rate = _finite_float(metadata.get("agreement_rate"))
+        if agreement_rate is None:
+            agreement_rate = _finite_float(prediction_metadata.get("agreement_rate"))
+        if agreement_rate is not None:
+            agreement_rates.append(agreement_rate)
+
+        conflict = _world_model_conflict(metadata)
+        if conflict:
+            conflict_count += 1
+            _increment_count(conflict_paths, conflict.get("path"))
+        if _world_model_low_agreement(metadata):
+            low_agreement_count += 1
+        if metadata.get("no_rule_matched") is True or prediction_metadata.get("no_rule_matched") is True:
+            no_rule_matched_count += 1
+        if not reference or not view:
+            trace_gap_count += 1
+
+    return {
+        "total": len(results),
+        "world_model_total": world_model_total,
+        "coverage_rate": _safe_div(world_model_total, len(results)) or 0.0,
+        "conflict_count": conflict_count,
+        "conflict_rate": _safe_div(conflict_count, world_model_total) or 0.0,
+        "low_agreement_count": low_agreement_count,
+        "low_agreement_rate": _safe_div(low_agreement_count, world_model_total) or 0.0,
+        "no_rule_matched_count": no_rule_matched_count,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, world_model_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_adapter": counts_by_adapter,
+        "counts_by_reference_id": counts_by_reference_id,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "conflict_paths": conflict_paths,
+        "prediction_confidence_min": min(prediction_confidences) if prediction_confidences else None,
+        "prediction_confidence_mean": _mean_or_none(prediction_confidences),
+        "agreement_rate_min": min(agreement_rates) if agreement_rates else None,
+        "agreement_rate_mean": _mean_or_none(agreement_rates),
+        "traceable": world_model_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_world_model_result(metadata: Mapping[str, Any]) -> bool:
+    verifier = metadata.get("verifier")
+    if any(key in metadata for key in _WORLD_MODEL_TRACE_METADATA_KEYS):
+        return True
+    if verifier == "world_model_ensemble":
+        return True
+    prediction_metadata = _world_model_prediction_metadata(metadata)
+    return any(key in prediction_metadata for key in _WORLD_MODEL_TRACE_METADATA_KEYS)
+
+
+_WORLD_MODEL_TRACE_METADATA_KEYS = (
+    "world_model",
+    "world_model_reference",
+    "world_model_view",
+    "world_model_conflict",
+)
+
+
+def _world_model_adapter_name(metadata: Mapping[str, Any]) -> str | None:
+    raw = metadata.get("world_model")
+    if raw is not None:
+        return str(raw)
+    reference = _world_model_reference(metadata)
+    raw = reference.get("adapter")
+    if raw is not None:
+        return str(raw)
+    prediction_metadata = _world_model_prediction_metadata(metadata)
+    raw = prediction_metadata.get("world_model")
+    if raw is not None:
+        return str(raw)
+    if metadata.get("verifier") == "world_model_ensemble":
+        return "EnsembleWorldModelAdapter"
+    return None
+
+
+def _world_model_prediction_metadata(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    return _mapping(metadata.get("prediction_metadata"))
+
+
+def _world_model_reference(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    reference = _mapping(metadata.get("world_model_reference"))
+    if reference:
+        return reference
+    return _mapping(_world_model_prediction_metadata(metadata).get("world_model_reference"))
+
+
+def _world_model_view(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    view = _mapping(metadata.get("world_model_view"))
+    if view:
+        return view
+    return _mapping(_world_model_prediction_metadata(metadata).get("world_model_view"))
+
+
+def _world_model_conflict(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    conflict = _mapping(metadata.get("world_model_conflict"))
+    if conflict:
+        return conflict
+    return _mapping(_world_model_prediction_metadata(metadata).get("world_model_conflict"))
+
+
+def _world_model_decision_rule(metadata: Mapping[str, Any]) -> Any:
+    if metadata.get("decision_rule") is not None:
+        return metadata.get("decision_rule")
+    return _world_model_prediction_metadata(metadata).get("decision_rule")
+
+
+def _world_model_low_agreement(metadata: Mapping[str, Any]) -> bool:
+    if metadata.get("below_min_agreement") is True:
+        return True
+    prediction_metadata = _world_model_prediction_metadata(metadata)
+    if prediction_metadata.get("below_min_agreement") is True:
+        return True
+    decision_rule = str(metadata.get("decision_rule", ""))
+    prediction_rule = str(prediction_metadata.get("decision_rule", ""))
+    return "agreement_below_threshold" in decision_rule or "agreement_below_threshold" in prediction_rule
+
+
+def _context_sensitivity_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    flagged_rates: list[float] = []
+    max_shifts: list[float] = []
+    mean_shifts: list[float] = []
+    max_ratios: list[float] = []
+    context_sensitivity_total = 0
+    flagged_result_count = 0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_context_sensitivity_result(metadata):
+            continue
+        context_sensitivity_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        _increment_count(counts_by_source, _context_sensitivity_source(metadata))
+
+        summary = _context_sensitivity_result_summary(metadata)
+        if not summary:
+            trace_gap_count += 1
+
+        flagged_rate = _finite_float(
+            _first_present(
+                summary.get("flagged_rate"),
+                metadata.get("context_sensitivity_flagged_rate"),
+            )
+        )
+        max_shift = _finite_float(
+            _first_present(
+                summary.get("max_unsupported_context_shift"),
+                summary.get("max_shift"),
+                metadata.get("context_sensitivity_max_shift"),
+            )
+        )
+        mean_shift = _finite_float(
+            _first_present(
+                summary.get("mean_unsupported_context_shift"),
+                summary.get("mean_shift"),
+                metadata.get("context_sensitivity_mean_shift"),
+            )
+        )
+        max_ratio = _finite_float(
+            _first_present(
+                summary.get("max_context_sensitivity_ratio"),
+                summary.get("max_ratio"),
+                metadata.get("context_sensitivity_max_context_sensitivity_ratio"),
+                metadata.get("context_sensitivity_max_ratio"),
+            )
+        )
+
+        if flagged_rate is not None:
+            flagged_rates.append(flagged_rate)
+            if flagged_rate > 0.0:
+                flagged_result_count += 1
+        if max_shift is not None:
+            max_shifts.append(max_shift)
+        if mean_shift is not None:
+            mean_shifts.append(mean_shift)
+        if max_ratio is not None:
+            max_ratios.append(max_ratio)
+
+    return {
+        "total": len(results),
+        "context_sensitivity_total": context_sensitivity_total,
+        "coverage_rate": _safe_div(context_sensitivity_total, len(results)) or 0.0,
+        "flagged_result_count": flagged_result_count,
+        "flagged_result_rate": _safe_div(
+            flagged_result_count,
+            context_sensitivity_total,
+        ) or 0.0,
+        "max_flagged_rate": max(flagged_rates) if flagged_rates else None,
+        "mean_flagged_rate": _mean_or_none(flagged_rates),
+        "max_unsupported_context_shift": max(max_shifts) if max_shifts else None,
+        "mean_unsupported_context_shift": _mean_or_none(mean_shifts),
+        "max_context_sensitivity_ratio": max(max_ratios) if max_ratios else None,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, context_sensitivity_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_source": counts_by_source,
+        "traceable": context_sensitivity_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_context_sensitivity_result(metadata: Mapping[str, Any]) -> bool:
+    if any(key in metadata for key in _CONTEXT_SENSITIVITY_TRACE_METADATA_KEYS):
+        return True
+    context_sensitivity = _mapping(metadata.get("context_sensitivity"))
+    return any(key in context_sensitivity for key in ("summary", "token_scores", "tokens"))
+
+
+_CONTEXT_SENSITIVITY_TRACE_METADATA_KEYS = (
+    "context_sensitivity",
+    "context_sensitivity_summary",
+    "context_sensitivity_flagged_rate",
+    "context_sensitivity_max_shift",
+    "context_sensitivity_mean_shift",
+    "context_sensitivity_max_ratio",
+    "context_sensitivity_max_context_sensitivity_ratio",
+)
+
+
+def _context_sensitivity_result_summary(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    context_sensitivity = _mapping(metadata.get("context_sensitivity"))
+    summary = _mapping(context_sensitivity.get("summary"))
+    if summary:
+        return summary
+    summary = _mapping(metadata.get("context_sensitivity_summary"))
+    if summary:
+        return summary
+    flat = {
+        "flagged_rate": metadata.get("context_sensitivity_flagged_rate"),
+        "max_unsupported_context_shift": metadata.get("context_sensitivity_max_shift"),
+        "mean_unsupported_context_shift": metadata.get("context_sensitivity_mean_shift"),
+        "max_context_sensitivity_ratio": _first_present(
+            metadata.get("context_sensitivity_max_context_sensitivity_ratio"),
+            metadata.get("context_sensitivity_max_ratio"),
+        ),
+    }
+    return {key: value for key, value in flat.items() if value is not None}
+
+
+def _context_sensitivity_source(metadata: Mapping[str, Any]) -> str | None:
+    context_sensitivity = _mapping(metadata.get("context_sensitivity"))
+    context_metadata = _mapping(context_sensitivity.get("metadata"))
+    paired_metadata = _mapping(context_metadata.get("paired_metadata"))
+    raw = _first_present(
+        context_metadata.get("adapter"),
+        paired_metadata.get("adapter"),
+        metadata.get("context_sensitivity_source"),
+        metadata.get("selected_verifier"),
+        metadata.get("verifier"),
+    )
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _evidence_alignment_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_alignment_status: dict[str, int] = {}
+    counts_by_code: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    keyword_overlaps = []
+    number_recalls = []
+    entity_recalls = []
+    evidence_alignment_total = 0
+    record_count = 0.0
+    aligned_count = 0.0
+    misaligned_count = 0.0
+    insufficient_count = 0.0
+    reference_count = 0.0
+    matched_reference_count = 0.0
+    cited_evidence_count = 0.0
+    issue_count = 0.0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_evidence_alignment_result(metadata):
+            continue
+        evidence_alignment_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        _increment_count(counts_by_source, _evidence_alignment_source(metadata))
+        summary = _evidence_alignment_result_summary(metadata)
+        if not summary:
+            trace_gap_count += 1
+            continue
+
+        _merge_counts(counts_by_alignment_status, _mapping(summary.get("counts_by_status")))
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        records = _first_non_negative_float(summary.get("record_count"))
+        if records is None and any(
+            summary.get(key) is not None
+            for key in (
+                "alignment_rate",
+                "misalignment_rate",
+                "insufficient_evidence_rate",
+                "issue_count",
+            )
+        ):
+            records = 1.0
+        records = records or 0.0
+        record_count += records
+
+        aligned_count += _first_non_negative_float(
+            summary.get("aligned_count"),
+        ) or _count_from_rate(summary.get("alignment_rate"), records)
+        misaligned_count += _first_non_negative_float(
+            summary.get("misaligned_count"),
+        ) or _count_from_rate(summary.get("misalignment_rate"), records)
+        insufficient_count += _first_non_negative_float(
+            summary.get("insufficient_evidence_count"),
+        ) or _count_from_rate(summary.get("insufficient_evidence_rate"), records)
+        reference_count += _first_non_negative_float(
+            summary.get("citation_reference_count"),
+        ) or 0.0
+        matched_reference_count += _first_non_negative_float(
+            summary.get("matched_citation_reference_count"),
+        ) or _count_from_rate(
+            summary.get("citation_reference_coverage_rate"),
+            _first_non_negative_float(summary.get("citation_reference_count")),
+        )
+        cited_evidence_count += _first_non_negative_float(
+            summary.get("cited_evidence_count"),
+        ) or 0.0
+        issue_count += _first_non_negative_float(summary.get("issue_count")) or 0.0
+        for values, key in (
+            (keyword_overlaps, "keyword_overlap_mean"),
+            (number_recalls, "number_recall_mean"),
+            (entity_recalls, "entity_recall_mean"),
+        ):
+            numeric = _finite_float(summary.get(key))
+            if numeric is not None:
+                values.append(numeric)
+
+    return {
+        "total": len(results),
+        "available": evidence_alignment_total > 0,
+        "evidence_alignment_total": evidence_alignment_total,
+        "coverage_rate": _safe_div(evidence_alignment_total, len(results)) or 0.0,
+        "record_count": record_count,
+        "aligned_count": aligned_count,
+        "misaligned_count": misaligned_count,
+        "insufficient_evidence_count": insufficient_count,
+        "alignment_rate": _safe_div(aligned_count, record_count) or 0.0,
+        "misalignment_rate": _safe_div(misaligned_count, record_count) or 0.0,
+        "insufficient_evidence_rate": _safe_div(insufficient_count, record_count) or 0.0,
+        "keyword_overlap_mean": _mean_or_none(keyword_overlaps),
+        "number_recall_mean": _mean_or_none(number_recalls),
+        "entity_recall_mean": _mean_or_none(entity_recalls),
+        "citation_reference_count": reference_count,
+        "matched_citation_reference_count": matched_reference_count,
+        "cited_evidence_count": cited_evidence_count,
+        "citation_reference_coverage_rate": _safe_div(
+            matched_reference_count,
+            reference_count,
+        ),
+        "issue_count": issue_count,
+        "issue_rate": _safe_div(issue_count, record_count) or 0.0,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, evidence_alignment_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_alignment_status": counts_by_alignment_status,
+        "counts_by_code": counts_by_code,
+        "counts_by_source": counts_by_source,
+        "traceable": evidence_alignment_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_evidence_alignment_result(metadata: Mapping[str, Any]) -> bool:
+    if str(metadata.get("verifier", "")).strip() == "evidence_alignment":
+        return True
+    return any(key in metadata for key in _EVIDENCE_ALIGNMENT_TRACE_METADATA_KEYS)
+
+
+_EVIDENCE_ALIGNMENT_TRACE_METADATA_KEYS = (
+    "evidence_alignment",
+    "evidence_alignment_summary",
+    "evidence_alignment_alignment_rate",
+    "evidence_alignment_misalignment_rate",
+    "evidence_alignment_insufficient_evidence_rate",
+    "evidence_alignment_issue_count",
+)
+
+
+def _evidence_alignment_result_summary(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    report = _mapping(metadata.get("evidence_alignment"))
+    summary = _mapping(report.get("summary"))
+    if summary:
+        return summary
+    summary = _mapping(metadata.get("evidence_alignment_summary"))
+    if summary:
+        return summary
+    flat = {
+        "record_count": metadata.get("evidence_alignment_record_count"),
+        "aligned_count": metadata.get("evidence_alignment_aligned_count"),
+        "misaligned_count": metadata.get("evidence_alignment_misaligned_count"),
+        "insufficient_evidence_count": metadata.get(
+            "evidence_alignment_insufficient_evidence_count"
+        ),
+        "alignment_rate": metadata.get("evidence_alignment_alignment_rate"),
+        "misalignment_rate": metadata.get("evidence_alignment_misalignment_rate"),
+        "insufficient_evidence_rate": metadata.get(
+            "evidence_alignment_insufficient_evidence_rate"
+        ),
+        "keyword_overlap_mean": metadata.get("evidence_alignment_keyword_overlap_mean"),
+        "number_recall_mean": metadata.get("evidence_alignment_number_recall_mean"),
+        "entity_recall_mean": metadata.get("evidence_alignment_entity_recall_mean"),
+        "citation_reference_count": metadata.get(
+            "evidence_alignment_citation_reference_count"
+        ),
+        "matched_citation_reference_count": metadata.get(
+            "evidence_alignment_matched_citation_reference_count"
+        ),
+        "citation_reference_coverage_rate": metadata.get(
+            "evidence_alignment_citation_reference_coverage_rate"
+        ),
+        "issue_count": metadata.get("evidence_alignment_issue_count"),
+    }
+    return {key: value for key, value in flat.items() if value is not None}
+
+
+def _evidence_alignment_source(metadata: Mapping[str, Any]) -> str | None:
+    report = _mapping(metadata.get("evidence_alignment"))
+    report_metadata = _mapping(report.get("metadata"))
+    raw = _first_present(
+        report_metadata.get("adapter"),
+        report_metadata.get("source"),
+        metadata.get("evidence_alignment_source"),
+        metadata.get("selected_verifier"),
+        metadata.get("verifier"),
+    )
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _counterfactual_robustness_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_source: dict[str, int] = {}
+    counts_by_probe_type: dict[str, int] = {}
+    counts_by_failure_reason: dict[str, int] = {}
+    counts_by_entity_candidate: dict[str, int] = {}
+    false_invariance_by_entity_candidate: dict[str, int] = {}
+    counts_by_entity_source_kind: dict[str, int] = {}
+    counterfactual_result_total = 0
+    counterfactual_probe_total = 0.0
+    entity_probe_count = 0.0
+    passed_count = 0.0
+    failed_count = 0.0
+    expected_flip_count = 0.0
+    flip_success_count = 0.0
+    false_invariance_count = 0.0
+    expected_stable_count = 0.0
+    stable_success_count = 0.0
+    unexpected_flip_count = 0.0
+    trace_gap_count = 0
+
+    for result in results:
+        metadata = _mapping(result.get("metadata"))
+        if not _is_counterfactual_robustness_result(metadata):
+            continue
+        counterfactual_result_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        _increment_count(counts_by_source, _counterfactual_source(metadata))
+        summary = _counterfactual_result_summary(metadata)
+        if not summary:
+            trace_gap_count += 1
+            summary = _counterfactual_flat_summary(metadata)
+            if not summary:
+                continue
+
+        record_count = _first_non_negative_float(
+            summary.get("record_count"),
+            summary.get("probe_count"),
+            summary.get("counterfactual_probe_count"),
+        )
+        if record_count is None:
+            record_count = 1.0
+        counterfactual_probe_total += record_count
+        passed_count += _first_non_negative_float(
+            summary.get("passed_count"),
+            summary.get("pass_count"),
+        ) or _count_from_rate(summary.get("pass_rate"), record_count)
+        failed_count += _first_non_negative_float(
+            summary.get("failed_count"),
+            summary.get("failure_count"),
+        ) or _count_from_rate(summary.get("failure_rate"), record_count)
+        expected_flip = _first_non_negative_float(
+            summary.get("expected_flip_count"),
+            summary.get("flip_expected_count"),
+        )
+        flip_success = _first_non_negative_float(
+            summary.get("flip_success_count"),
+            summary.get("status_changed_count"),
+        )
+        false_invariance = _first_non_negative_float(summary.get("false_invariance_count"))
+        if false_invariance is None:
+            false_invariance = _count_from_rate(summary.get("false_invariance_rate"), expected_flip)
+        if expected_flip is None and flip_success is not None and false_invariance is not None:
+            expected_flip = flip_success + false_invariance
+        expected_flip_count += expected_flip or 0.0
+        flip_success_count += flip_success or 0.0
+        false_invariance_count += false_invariance or 0.0
+        expected_stable = _first_non_negative_float(summary.get("expected_stable_count"))
+        stable_success = _first_non_negative_float(summary.get("stable_success_count"))
+        unexpected_flip = _first_non_negative_float(summary.get("unexpected_flip_count"))
+        if unexpected_flip is None:
+            unexpected_flip = _count_from_rate(summary.get("unexpected_flip_rate"), expected_stable)
+        if expected_stable is None and stable_success is not None and unexpected_flip is not None:
+            expected_stable = stable_success + unexpected_flip
+        expected_stable_count += expected_stable or 0.0
+        stable_success_count += stable_success or 0.0
+        unexpected_flip_count += unexpected_flip or 0.0
+        entity_probe = _first_non_negative_float(summary.get("entity_probe_count"))
+        if entity_probe is None:
+            entity_probe = _counterfactual_entity_probe_count(summary.get("by_entity_candidate"))
+        entity_probe_count += entity_probe or 0.0
+        _merge_counterfactual_group_counts(
+            counts_by_probe_type,
+            summary.get("by_probe_type"),
+            count_key="record_count",
+        )
+        _merge_counts(counts_by_failure_reason, _mapping(summary.get("failure_reasons")))
+        _merge_counts(counts_by_failure_reason, _mapping(summary.get("counts_by_failure_reason")))
+        entity_source_kind_counts = _mapping(summary.get("counts_by_entity_source_kind"))
+        _merge_counts(
+            counts_by_entity_source_kind,
+            entity_source_kind_counts,
+        )
+        _merge_counterfactual_entity_candidate_counts(
+            counts_by_entity_candidate,
+            false_invariance_by_entity_candidate,
+            counts_by_entity_source_kind,
+            summary.get("by_entity_candidate"),
+            merge_source_kinds=not bool(entity_source_kind_counts),
+        )
+        failure_reason = metadata.get("counterfactual_failure_reason")
+        if failure_reason is not None:
+            _increment_count(counts_by_failure_reason, failure_reason)
+        probe_type = metadata.get("counterfactual_probe_type")
+        if probe_type is not None:
+            _increment_count(counts_by_probe_type, probe_type)
+
+    if failed_count == 0.0 and counterfactual_probe_total:
+        failed_count = max(counterfactual_probe_total - passed_count, 0.0)
+    return {
+        "total": len(results),
+        "counterfactual_result_total": counterfactual_result_total,
+        "counterfactual_probe_total": counterfactual_probe_total,
+        "entity_probe_count": entity_probe_count,
+        "entity_candidate_count": len(counts_by_entity_candidate),
+        "coverage_rate": _safe_div(counterfactual_result_total, len(results)) or 0.0,
+        "pass_rate": _safe_div(passed_count, counterfactual_probe_total) or 0.0,
+        "passed_count": passed_count,
+        "failed_count": failed_count,
+        "expected_flip_count": expected_flip_count,
+        "flip_success_count": flip_success_count,
+        "flip_success_rate": _safe_div(flip_success_count, expected_flip_count) or 0.0,
+        "false_invariance_count": false_invariance_count,
+        "false_invariance_rate": _safe_div(
+            false_invariance_count,
+            expected_flip_count,
+        ) or 0.0,
+        "expected_stable_count": expected_stable_count,
+        "stable_success_count": stable_success_count,
+        "stable_success_rate": _safe_div(stable_success_count, expected_stable_count) or 0.0,
+        "unexpected_flip_count": unexpected_flip_count,
+        "unexpected_flip_rate": _safe_div(
+            unexpected_flip_count,
+            expected_stable_count,
+        ) or 0.0,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, counterfactual_result_total) or 0.0,
+        "counts_by_status": counts_by_status,
+        "counts_by_source": counts_by_source,
+        "counts_by_probe_type": counts_by_probe_type,
+        "counts_by_failure_reason": counts_by_failure_reason,
+        "counts_by_entity_candidate": counts_by_entity_candidate,
+        "false_invariance_by_entity_candidate": false_invariance_by_entity_candidate,
+        "counts_by_entity_source_kind": counts_by_entity_source_kind,
+        "traceable": counterfactual_result_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _is_counterfactual_robustness_result(metadata: Mapping[str, Any]) -> bool:
+    if any(key in metadata for key in _COUNTERFACTUAL_ROBUSTNESS_TRACE_METADATA_KEYS):
+        return True
+    counterfactual = _mapping(metadata.get("counterfactual_verification"))
+    if counterfactual.get("workflow") == "counterfactual_verification_audit":
+        return True
+    if counterfactual.get("summary") is not None:
+        return True
+    return False
+
+
+_COUNTERFACTUAL_ROBUSTNESS_TRACE_METADATA_KEYS = (
+    "counterfactual_verification",
+    "counterfactual_verification_summary",
+    "counterfactual_probe",
+    "counterfactual_probe_type",
+    "counterfactual_status_changed",
+    "counterfactual_passed",
+    "counterfactual_false_invariance",
+    "counterfactual_failure_reason",
+)
+
+
+def _counterfactual_result_summary(metadata: Mapping[str, Any]) -> Mapping[str, Any]:
+    counterfactual = _mapping(metadata.get("counterfactual_verification"))
+    summary = _mapping(counterfactual.get("summary"))
+    if summary:
+        return summary
+    summary = _mapping(metadata.get("counterfactual_verification_summary"))
+    if summary:
+        return summary
+    if counterfactual.get("workflow") == "counterfactual_verification_audit":
+        return _mapping(counterfactual)
+    return _counterfactual_flat_summary(metadata)
+
+
+def _counterfactual_flat_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    status_changed = _optional_bool(metadata.get("counterfactual_status_changed"))
+    expected_flip = _optional_bool(metadata.get("counterfactual_expected_flip"))
+    passed = _optional_bool(metadata.get("counterfactual_passed"))
+    false_invariance = _optional_bool(metadata.get("counterfactual_false_invariance"))
+    unexpected_flip = _optional_bool(metadata.get("counterfactual_unexpected_flip"))
+    if not any(
+        value is not None
+        for value in (status_changed, expected_flip, passed, false_invariance, unexpected_flip)
+    ):
+        return {}
+    expected_flip = True if expected_flip is None else expected_flip
+    false_invariance = (
+        expected_flip and status_changed is False
+        if false_invariance is None and status_changed is not None
+        else false_invariance
+    )
+    unexpected_flip = (
+        (not expected_flip) and status_changed is True
+        if unexpected_flip is None and status_changed is not None
+        else unexpected_flip
+    )
+    if passed is None and status_changed is not None:
+        passed = status_changed is True if expected_flip else status_changed is False
+    return {
+        "record_count": 1,
+        "passed_count": 1 if passed else 0,
+        "failed_count": 0 if passed else 1,
+        "expected_flip_count": 1 if expected_flip else 0,
+        "flip_success_count": 1 if expected_flip and status_changed else 0,
+        "false_invariance_count": 1 if false_invariance else 0,
+        "expected_stable_count": 0 if expected_flip else 1,
+        "stable_success_count": 1 if (not expected_flip) and status_changed is False else 0,
+        "unexpected_flip_count": 1 if unexpected_flip else 0,
+    }
+
+
+def _counterfactual_source(metadata: Mapping[str, Any]) -> str | None:
+    counterfactual = _mapping(metadata.get("counterfactual_verification"))
+    counterfactual_metadata = _mapping(counterfactual.get("metadata"))
+    raw = _first_present(
+        counterfactual_metadata.get("adapter"),
+        counterfactual_metadata.get("verifier"),
+        metadata.get("counterfactual_source"),
+        metadata.get("selected_verifier"),
+        metadata.get("verifier"),
+    )
+    if raw is None:
+        return None
+    return str(raw)
+
+
+def _merge_counterfactual_group_counts(
+    target: dict[str, int],
+    groups: Any,
+    *,
+    count_key: str,
+) -> None:
+    for raw_key, raw_value in _mapping(groups).items():
+        key = str(raw_key).strip()
+        if not key:
+            continue
+        if isinstance(raw_value, Mapping):
+            count = _non_negative_int(raw_value.get(count_key))
+        else:
+            count = _non_negative_int(raw_value)
+        if count is None:
+            continue
+        target[key] = target.get(key, 0) + count
+
+
+def _merge_counterfactual_entity_candidate_counts(
+    counts_by_entity_candidate: dict[str, int],
+    false_invariance_by_entity_candidate: dict[str, int],
+    counts_by_entity_source_kind: dict[str, int],
+    groups: Any,
+    *,
+    merge_source_kinds: bool = True,
+) -> None:
+    for raw_entity, raw_value in _mapping(groups).items():
+        entity = str(raw_entity).strip()
+        if not entity:
+            continue
+        if isinstance(raw_value, Mapping):
+            record_count = _non_negative_int(raw_value.get("record_count"))
+            false_invariance_count = _non_negative_int(
+                raw_value.get("false_invariance_count")
+            )
+            if merge_source_kinds:
+                _merge_counts(
+                    counts_by_entity_source_kind,
+                    _mapping(raw_value.get("source_kinds")),
+                )
+        else:
+            record_count = _non_negative_int(raw_value)
+            false_invariance_count = None
+        if record_count is not None:
+            counts_by_entity_candidate[entity] = (
+                counts_by_entity_candidate.get(entity, 0) + record_count
+            )
+        if false_invariance_count is not None:
+            false_invariance_by_entity_candidate[entity] = (
+                false_invariance_by_entity_candidate.get(entity, 0)
+                + false_invariance_count
+            )
+
+
+def _counterfactual_entity_probe_count(groups: Any) -> float | None:
+    total = 0
+    observed = False
+    for raw_value in _mapping(groups).values():
+        if isinstance(raw_value, Mapping):
+            count = _non_negative_int(raw_value.get("record_count"))
+        else:
+            count = _non_negative_int(raw_value)
+        if count is None:
+            continue
+        observed = True
+        total += count
+    return float(total) if observed else None
+
+
+def _citation_integrity_summary(
+    claims: Sequence[Mapping[str, Any]],
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    claim_reference_counts: dict[str, int] = {}
+    counts_by_status: dict[str, int] = {}
+    counts_by_decision_rule: dict[str, int] = {}
+    counts_by_reference_source: dict[str, int] = {}
+    mismatch_fields: dict[str, int] = {}
+    matched_citation_ids: set[str] = set()
+    catalog_sizes: list[float] = []
+
+    for index, claim in enumerate(claims):
+        claim_id = _payload_claim_id(claim, fallback=f"claim:{index}")
+        references = _claim_citation_references(claim)
+        if references:
+            claim_reference_counts[claim_id] = len(references)
+        for reference in references:
+            _increment_count(counts_by_reference_source, reference.get("source"))
+
+    citation_result_total = 0
+    mismatch_count = 0
+    unresolved_count = 0
+    empty_catalog_count = 0
+    no_reference_result_count = 0
+    trace_gap_count = 0
+    covered_claim_ids: set[str] = set()
+
+    for index, result in enumerate(results):
+        metadata = _mapping(result.get("metadata"))
+        if not _is_citation_result(metadata):
+            continue
+        citation_result_total += 1
+        _increment_count(counts_by_status, result.get("status", "unknown"))
+        decision_rule = metadata.get("decision_rule")
+        _increment_count(counts_by_decision_rule, decision_rule)
+        claim_id = _payload_claim_id(metadata, fallback=f"result:{index}")
+        if claim_id != f"result:{index}":
+            covered_claim_ids.add(claim_id)
+
+        catalog_size = _finite_float(metadata.get("catalog_size"))
+        if catalog_size is not None:
+            catalog_sizes.append(catalog_size)
+        for citation_id in _as_sequence(metadata.get("matched_citation_ids", ())):
+            text = str(citation_id).strip()
+            if text:
+                matched_citation_ids.add(text)
+
+        references = tuple(
+            item for item in _as_sequence(metadata.get("references", ())) if isinstance(item, Mapping)
+        )
+        audits = tuple(item for item in _as_sequence(metadata.get("audits", ())) if isinstance(item, Mapping))
+        for reference in references:
+            _increment_count(counts_by_reference_source, reference.get("source"))
+
+        explicit_mismatch_count = _non_negative_int(metadata.get("mismatch_count"))
+        explicit_unresolved_count = _non_negative_int(metadata.get("unresolved_count"))
+        audit_mismatch_count = 0
+        audit_unresolved_count = 0
+        for audit in audits:
+            if str(audit.get("status", "")).strip().lower() == "unresolved":
+                audit_unresolved_count += 1
+            mismatches = tuple(
+                item for item in _as_sequence(audit.get("mismatches", ())) if isinstance(item, Mapping)
+            )
+            audit_mismatch_count += len(mismatches)
+            for mismatch in mismatches:
+                _increment_count(mismatch_fields, mismatch.get("field"))
+
+        mismatch_count += (
+            explicit_mismatch_count
+            if explicit_mismatch_count is not None
+            else audit_mismatch_count
+        )
+        unresolved_count += (
+            explicit_unresolved_count
+            if explicit_unresolved_count is not None
+            else audit_unresolved_count
+        )
+        if decision_rule == "empty_catalog":
+            empty_catalog_count += 1
+        if decision_rule == "no_citation_reference":
+            no_reference_result_count += 1
+        if (
+            decision_rule != "no_citation_reference"
+            and not references
+            and not audits
+            and catalog_size is None
+        ):
+            trace_gap_count += 1
+
+    cited_claim_count = len(claim_reference_counts)
+    citation_reference_count = sum(claim_reference_counts.values())
+    if covered_claim_ids:
+        covered_cited_claim_count = len(covered_claim_ids & set(claim_reference_counts))
+    else:
+        covered_cited_claim_count = min(citation_result_total, cited_claim_count)
+    issue_count = mismatch_count + unresolved_count + empty_catalog_count + trace_gap_count
+    available = cited_claim_count > 0 or citation_result_total > 0
+    return {
+        "available": available,
+        "passed": (issue_count == 0) if available else None,
+        "claim_count": len(claims),
+        "verification_result_count": len(results),
+        "cited_claim_count": cited_claim_count,
+        "citation_reference_count": citation_reference_count,
+        "citation_result_total": citation_result_total,
+        "coverage_rate": _safe_div(covered_cited_claim_count, cited_claim_count) or 0.0,
+        "covered_cited_claim_count": covered_cited_claim_count,
+        "mismatch_count": mismatch_count,
+        "unresolved_count": unresolved_count,
+        "empty_catalog_count": empty_catalog_count,
+        "no_reference_result_count": no_reference_result_count,
+        "issue_count": issue_count,
+        "trace_gap_count": trace_gap_count,
+        "trace_gap_rate": _safe_div(trace_gap_count, citation_result_total) or 0.0,
+        "matched_citation_count": len(matched_citation_ids),
+        "matched_citation_ids": tuple(sorted(matched_citation_ids))[:16],
+        "catalog_size_min": min(catalog_sizes) if catalog_sizes else None,
+        "catalog_size_mean": _mean_or_none(catalog_sizes),
+        "counts_by_status": counts_by_status,
+        "counts_by_decision_rule": counts_by_decision_rule,
+        "counts_by_reference_source": counts_by_reference_source,
+        "mismatch_fields": mismatch_fields,
+        "claim_reference_counts": dict(sorted(claim_reference_counts.items())),
+        "traceable": citation_result_total > 0 and trace_gap_count == 0,
+    }
+
+
+def _claim_citation_references(claim: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    try:
+        payload = Claim(
+            text=str(claim.get("text", "")),
+            claim_id=None if claim.get("claim_id") is None else str(claim.get("claim_id")),
+            span=None,
+            metadata=_mapping(claim.get("metadata")),
+        )
+        return extract_citation_references(payload)
+    except (TypeError, ValueError):
+        return ()
+
+
+def _is_citation_result(metadata: Mapping[str, Any]) -> bool:
+    verifier = metadata.get("verifier")
+    selected_route = metadata.get("selected_route")
+    selected_verifier = metadata.get("selected_verifier")
+    decision_rule = str(metadata.get("decision_rule", "")).strip()
+    if verifier == "citation" or selected_route == "citation":
+        return True
+    if selected_verifier is not None and "citation" in str(selected_verifier).lower():
+        return True
+    if decision_rule.startswith("citation_") or decision_rule in {
+        "empty_catalog",
+        "no_citation_reference",
+    }:
+        return True
+    return any(
+        key in metadata
+        for key in (
+            "references",
+            "audits",
+            "matched_citation_ids",
+            "mismatch_count",
+            "unresolved_count",
+            "catalog_size",
+        )
+    )
+
+
+def _first_non_negative_float(*values: Any) -> float | None:
+    for value in values:
+        numeric = _finite_float(value)
+        if numeric is not None and numeric >= 0.0:
+            return numeric
+    return None
+
+
+def _count_from_rate(rate: Any, denominator: float | None) -> float:
+    numeric_rate = _finite_float(rate)
+    if numeric_rate is None or denominator is None:
+        return 0.0
+    return max(numeric_rate, 0.0) * max(float(denominator), 0.0)
+
+
 def _runtime_summary_from_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]:
     if payload is None:
         return {
@@ -697,6 +2118,48 @@ def _cache_summary_from_metadata(metadata: Any) -> dict[str, Any]:
         "total_caches": len(caches),
         "aggregate": aggregate,
         "caches": caches,
+    }
+
+
+def _pre_generation_risk_summary_from_metadata(metadata: Any) -> dict[str, Any]:
+    metadata_payload = metadata if isinstance(metadata, Mapping) else {}
+    assessment = _mapping(metadata_payload.get("pre_generation_risk_assessment"))
+    policy = _mapping(metadata_payload.get("pre_generation_risk_policy"))
+    soft_risk = _mapping(assessment.get("soft_risk"))
+    learned_risk = _mapping(assessment.get("learned_risk"))
+    runtime_profile_source = metadata_payload.get("runtime_profile_source")
+    reason = assessment.get("reason")
+    used_for_runtime_profile = runtime_profile_source == "pre_generation"
+    soft_reason = "soft pre-generation risk estimate" in str(reason or "")
+    learned_reason = "learned pre-generation risk estimate" in str(reason or "")
+    soft_config = _mapping(policy.get("soft_risk_config"))
+    return {
+        "available": bool(assessment),
+        "requested": metadata_payload.get("pre_generation_profile_requested"),
+        "selected_profile": assessment.get("selected_profile"),
+        "risk_level": assessment.get("risk_level"),
+        "reason": reason,
+        "runtime_profile_source": runtime_profile_source,
+        "used_for_runtime_profile": used_for_runtime_profile,
+        "triggered_feature_count": len(_as_sequence(assessment.get("triggered_features", ()))),
+        "triggered_metadata_count": len(_as_sequence(assessment.get("triggered_metadata", ()))),
+        "soft_risk_available": bool(soft_risk),
+        "soft_risk_score": _finite_float(soft_risk.get("score")),
+        "soft_risk_probability": _finite_float(soft_risk.get("probability")),
+        "soft_risk_level": soft_risk.get("risk_level"),
+        "soft_risk_routed": bool(used_for_runtime_profile and soft_reason),
+        "route_on_soft_risk": _optional_bool(soft_config.get("route_on_soft_risk")),
+        "learned_risk_available": bool(learned_risk),
+        "learned_risk_score": _finite_float(learned_risk.get("score")),
+        "learned_risk_probability": _finite_float(learned_risk.get("probability")),
+        "learned_risk_level": learned_risk.get("risk_level"),
+        "learned_risk_source": learned_risk.get("source"),
+        "learned_risk_layer_idx": learned_risk.get("layer_idx"),
+        "learned_risk_routed": bool(used_for_runtime_profile and learned_reason),
+        "route_on_learned_risk": _optional_bool(policy.get("route_on_learned_risk")),
+        "learned_attention_max_weight": _finite_float(
+            _mapping(learned_risk.get("attention_summary")).get("max_weight")
+        ),
     }
 
 
@@ -792,6 +2255,15 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             "dependency_count": 0,
             "cost_estimate": None,
             "budget": {},
+            "hidden_evidence": {
+                "available": False,
+                "selected_count": 0,
+                "claim_count": 0,
+                "evidence_ref_count": 0,
+                "score_counts": {},
+                "layer_counts": {},
+                "max_anomaly_score": None,
+            },
         }
     route_counts: dict[str, int] = {}
     for hint in _as_sequence(plan.get("route_hints", ())):
@@ -837,6 +2309,77 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
         "cost_estimate": cost_estimate,
         "budget": budget_summary,
+        "hidden_evidence": _verification_plan_hidden_evidence_summary(plan),
+    }
+
+
+def _verification_plan_hidden_evidence_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
+    selected_count = 0
+    claim_ids: list[str] = []
+    evidence_refs: list[str] = []
+    score_counts: dict[str, int] = {}
+    layer_counts: dict[str, int] = {}
+    max_anomaly_score: float | None = None
+    for hint in _as_sequence(plan.get("route_hints", ())):
+        if not isinstance(hint, Mapping):
+            continue
+        metadata = hint.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            continue
+        hidden = metadata.get("hidden_evidence")
+        if not isinstance(hidden, Mapping):
+            continue
+        claim_id = str(hint.get("claim_id", "")).strip()
+        if claim_id:
+            claim_ids.append(claim_id)
+        items = tuple(item for item in _as_sequence(hidden.get("selected", ())) if isinstance(item, Mapping))
+        count = _non_negative_int(hidden.get("selected_count"))
+        if count is None:
+            count = len(items) or len(_as_sequence(hidden.get("evidence_refs", ())))
+        selected_count += count
+        if items:
+            for item in items:
+                ref = item.get("evidence_ref")
+                if ref is not None and str(ref).strip():
+                    evidence_refs.append(str(ref).strip())
+                score_name = item.get("score_name")
+                if score_name is not None and str(score_name).strip():
+                    text = str(score_name).strip()
+                    score_counts[text] = score_counts.get(text, 0) + 1
+                layer = "primary" if item.get("layer") is None else str(item.get("layer")).strip()
+                if layer:
+                    layer_counts[layer] = layer_counts.get(layer, 0) + 1
+                anomaly = _finite_float(item.get("anomaly_score"))
+                if anomaly is not None:
+                    max_anomaly_score = anomaly if max_anomaly_score is None else max(max_anomaly_score, anomaly)
+        else:
+            for ref in _as_sequence(hidden.get("evidence_refs", ())):
+                text = str(ref).strip()
+                if text:
+                    evidence_refs.append(text)
+            for score_name in _as_sequence(hidden.get("score_names", ())):
+                text = str(score_name).strip()
+                if text:
+                    score_counts[text] = score_counts.get(text, 0) + 1
+            for layer in _as_sequence(hidden.get("layers", ())):
+                text = str(layer).strip()
+                if text:
+                    layer_counts[text] = layer_counts.get(text, 0) + 1
+            hidden_max = _finite_float(hidden.get("max_anomaly_score"))
+            if hidden_max is not None:
+                max_anomaly_score = hidden_max if max_anomaly_score is None else max(max_anomaly_score, hidden_max)
+    unique_refs = tuple(dict.fromkeys(evidence_refs))
+    unique_claim_ids = tuple(dict.fromkeys(claim_ids))
+    return {
+        "available": bool(selected_count or unique_refs),
+        "selected_count": selected_count,
+        "claim_count": len(unique_claim_ids),
+        "claim_ids": unique_claim_ids,
+        "evidence_ref_count": len(unique_refs),
+        "evidence_refs": unique_refs[:12],
+        "score_counts": dict(sorted(score_counts.items())),
+        "layer_counts": dict(sorted(layer_counts.items())),
+        "max_anomaly_score": max_anomaly_score,
     }
 
 
@@ -1062,6 +2605,28 @@ def _verification_result_to_dict(result: VerificationResult | Mapping[str, Any])
     return dict(_to_jsonable(result))
 
 
+_FRONTIER_RELEASE_CITATION_BATCH_BOUNDED_METADATA_KEYS = tuple(
+    f"promotion_contract_frontier_release_evidence_{field_name}"
+    for field_name in (
+        "citation_batch_provenance_present_count",
+        "citation_batch_provenance_passed_count",
+        "citation_batch_provenance_failed_count",
+        "citation_batch_provenance_status_counts",
+        "citation_batch_evidence_class_counts",
+        "citation_batch_query_sweep_present_count",
+        "citation_batch_query_sweep_no_passing_strategy_count",
+        "citation_batch_query_sweep_best_strategy_counts",
+        "citation_batch_query_sweep_best_passing_strategy_counts",
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_sum",
+        "citation_batch_query_sweep_best_passing_blind_refuted_count_max",
+        "citation_batch_comparison_present_count",
+        "citation_batch_comparison_passed_count",
+        "citation_batch_comparison_failed_count",
+        "citation_batch_comparison_status_counts",
+    )
+)
+
+
 DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "artifact_model_id",
     "artifact_source",
@@ -1077,6 +2642,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_manifest_verification",
     "promotion_contract_registry",
     "promotion_contract_registry_key",
+    "promotion_contract_promotion_summary",
     "promotion_contract_runtime",
     "promotion_contract_verifier_route",
     "promotion_contract_recommended_route_covered_fact_property_count",
@@ -1093,8 +2659,52 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_pathway_intervention_workflow",
     "promotion_contract_feedback_policy_workflow",
     "promotion_contract_external_evidence_baseline_comparison",
+    "promotion_contract_frontier_release_evidence",
+    "promotion_contract_unresolved_frontier_evidence_summary",
     "promotion_contract_triple_extraction_fixture_matrix",
     "promotion_contract_release_efficiency",
+    "promotion_contract_frontier_release_evidence_status",
+    "promotion_contract_frontier_release_evidence_report",
+    "promotion_contract_frontier_release_evidence_manifest",
+    "promotion_contract_frontier_release_evidence_source",
+    "promotion_contract_frontier_release_evidence_registry",
+    "promotion_contract_frontier_release_evidence_record",
+    "promotion_contract_frontier_release_evidence_workflow",
+    "promotion_contract_frontier_release_evidence_report_status",
+    "promotion_contract_frontier_release_evidence_decision_status",
+    "promotion_contract_frontier_release_evidence_verifier_track_status",
+    "promotion_contract_frontier_release_evidence_abstention_track_status",
+    "promotion_contract_frontier_release_evidence_multiple_testing_track_status",
+    "promotion_contract_frontier_release_evidence_citation_batch_track_status",
+    "promotion_contract_frontier_release_evidence_citation_batch_rollup_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_duplicate_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_unexpected_batch_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count",
+    "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts",
+    *_FRONTIER_RELEASE_CITATION_BATCH_BOUNDED_METADATA_KEYS,
+    "promotion_contract_frontier_release_evidence_run_count",
+    "promotion_contract_frontier_release_evidence_run_names",
+    "promotion_contract_unresolved_frontier_evidence_summary_status",
+    "promotion_contract_unresolved_frontier_evidence_summary_report",
+    "promotion_contract_unresolved_frontier_evidence_summary_manifest",
+    "promotion_contract_unresolved_frontier_evidence_summary_source",
+    "promotion_contract_unresolved_frontier_evidence_summary_registry",
+    "promotion_contract_unresolved_frontier_evidence_summary_record",
+    "promotion_contract_unresolved_frontier_evidence_summary_workflow",
+    "promotion_contract_unresolved_frontier_evidence_summary_report_status",
+    "promotion_contract_unresolved_frontier_evidence_summary_closure_required",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required",
+    "promotion_contract_unresolved_frontier_evidence_summary_next_action_count",
+    "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count",
+    "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count",
+    "promotion_contract_unresolved_frontier_evidence_summary_blocking_reasons",
     "external_evidence_baseline_comparison_report",
     "external_evidence_baseline_comparison_source",
     "external_evidence_baseline_comparison_registry",
@@ -1728,6 +3338,13 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
 def _triple_payloads(value: Any) -> tuple[Mapping[str, Any], ...]:
     if value is None:
         return ()
@@ -1778,6 +3395,17 @@ def _increment_count(counts: dict[str, int], value: Any) -> None:
     if not text:
         return
     counts[text] = counts.get(text, 0) + 1
+
+
+def _merge_counts(target: dict[str, int], source: Mapping[str, Any]) -> None:
+    for raw_key, raw_value in source.items():
+        key = str(raw_key).strip()
+        if not key:
+            continue
+        count = _non_negative_int(raw_value)
+        if count is None:
+            continue
+        target[key] = target.get(key, 0) + count
 
 
 def _truthy_flag(value: Any) -> bool:

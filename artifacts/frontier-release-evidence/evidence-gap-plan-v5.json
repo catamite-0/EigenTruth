@@ -1,0 +1,259 @@
+{
+  "actions": [
+    {
+      "action_id": "rerun_frontier_multiple_testing_gate",
+      "action_type": "experiment",
+      "evidence_routes": [
+        "truthfulqa_frontier_workflow",
+        "multiple_testing_gate",
+        "frontier_release_evidence"
+      ],
+      "metadata": {},
+      "priority": 89,
+      "rationale": "The release is blocked by the family-wise multi-signal hallucination gate; rerun or inspect the frontier workflow cells to identify failing signal/layer families before promoting runtime defaults.",
+      "source_gap_ids": [
+        "gap-001-03",
+        "gap-001-04",
+        "gap-001-05",
+        "gap-001-06",
+        "gap-001-07",
+        "gap-001-08",
+        "gap-001-09"
+      ],
+      "suggested_commands": [
+        "benchmarks/run_truthfulqa_frontier_workflow.py --multiple-testing-signals ...",
+        "benchmarks/compare_frontier_release_evidence.py --frontier-workflow-report ..."
+      ],
+      "title": "Rerun frontier workflow multi-signal conformal gate"
+    },
+    {
+      "action_id": "audit_detectability_blind_spots",
+      "action_type": "analysis",
+      "evidence_routes": [
+        "detectability_taxonomy",
+        "blind_spot_audit"
+      ],
+      "metadata": {},
+      "priority": 85,
+      "rationale": "High-confidence/high-consistency false records need explicit blind-spot analysis before output-level uncertainty signals are trusted.",
+      "source_gap_ids": [
+        "gap-001-01",
+        "gap-001-02"
+      ],
+      "suggested_commands": [
+        "benchmarks/eval_detectability_taxonomy.py",
+        "benchmarks/analyze_detectability_blind_spots.py"
+      ],
+      "title": "Audit detectability-taxonomy blind spots"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "gap-001-01",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "detectability_taxonomy",
+        "research_axis": "blind_spot_taxonomy"
+      },
+      "missing_metrics": [],
+      "reason": "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25",
+      "recommended_action_ids": [
+        "audit_detectability_blind_spots"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 1
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-02",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "detectability_taxonomy",
+        "research_axis": "blind_spot_taxonomy"
+      },
+      "missing_metrics": [],
+      "reason": "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25",
+      "recommended_action_ids": [
+        "audit_detectability_blind_spots"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 2
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-03",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate missing",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 3
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-04",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.enabled is not true",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 4
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-05",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.all_pass is not true",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 5
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-06",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.cell_count is missing or zero",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 6
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-07",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.pass_count is missing",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 7
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-08",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.fail_count is missing",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 8
+      },
+      "status": "promote"
+    },
+    {
+      "gap_id": "gap-001-09",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "frontier_multiple_testing",
+        "research_axis": "multi_signal_calibration"
+      },
+      "missing_metrics": [],
+      "reason": "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.unknown_count is missing",
+      "recommended_action_ids": [
+        "rerun_frontier_multiple_testing_gate"
+      ],
+      "root_cause": "model",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "promote",
+        "reason_index": 9
+      },
+      "status": "promote"
+    }
+  ],
+  "metadata": {},
+  "schema_version": 1,
+  "source_path": "artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json",
+  "source_status": "promote",
+  "source_workflow": "frontier_release_evidence_comparison",
+  "status": "needs_evidence",
+  "summary": {
+    "action_count": 2,
+    "gap_count": 9,
+    "gates": {
+      "frontier_release_evidence": 9
+    },
+    "missing_metric_count": 0,
+    "research_axes": {
+      "blind_spot_taxonomy": 2,
+      "multi_signal_calibration": 7
+    },
+    "root_causes": {
+      "model": 9
+    },
+    "source_decision_status": "promote",
+    "top_action_ids": [
+      "rerun_frontier_multiple_testing_gate",
+      "audit_detectability_blind_spots"
+    ]
+  },
+  "workflow": "evidence_gap_plan"
+}

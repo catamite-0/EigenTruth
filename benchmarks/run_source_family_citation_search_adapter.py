@@ -47,6 +47,7 @@ RESERVED_CATALOG_FIELDS = {
 TEXT_FIELDS = ("text", "content", "document", "body", "snippet", "summary", "abstract")
 TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
 OFFICIAL_FAMILIES = {"official", "official_statistics", "domain_specific"}
+FALLBACK_FAMILIES = {"encyclopedic", "reference"}
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,8 @@ def run_source_family_citation_search_adapter(
     max_results: int = 3,
     max_query_variants: int = 3,
     min_text_overlap: float = 0.05,
+    min_request_coverage: float = 1.0,
+    diversify_source_families: bool = False,
     default_source_family: str = DEFAULT_SOURCE_FAMILY,
     compact_json: bool = True,
     fail_on_empty: bool = False,
@@ -111,6 +114,8 @@ def run_source_family_citation_search_adapter(
         raise ValueError("max_query_variants must be positive.")
     if not (0.0 <= min_text_overlap <= 1.0):
         raise ValueError("min_text_overlap must be in [0, 1].")
+    if not (0.0 <= min_request_coverage <= 1.0):
+        raise ValueError("min_request_coverage must be in [0, 1].")
 
     requests = _load_jsonl(input_path)
     catalog = _load_source_catalogs(
@@ -124,14 +129,17 @@ def run_source_family_citation_search_adapter(
             max_results=int(max_results),
             max_query_variants=int(max_query_variants),
             min_text_overlap=float(min_text_overlap),
+            diversify_source_families=bool(diversify_source_families),
         )
         for request in requests
     )
     _write_jsonl(output_path, rows, compact=compact_json)
     summary = _summary(rows, catalog=catalog)
+    gate = _adapter_gate(summary, min_request_coverage=float(min_request_coverage))
     payload = {
         "schema_version": 1,
         "workflow": "source_family_citation_search_adapter",
+        "status": gate["status"],
         "input_path": str(input_path),
         "output_path": str(output_path),
         "source_catalog_paths": [str(path) for path in source_catalog_paths],
@@ -139,9 +147,12 @@ def run_source_family_citation_search_adapter(
             "max_results": int(max_results),
             "max_query_variants": int(max_query_variants),
             "min_text_overlap": float(min_text_overlap),
+            "min_request_coverage": float(min_request_coverage),
+            "diversify_source_families": bool(diversify_source_families),
             "default_source_family": _normalize_family(default_source_family),
         },
         "summary": summary,
+        "gate": gate,
         "metadata": dict(metadata or {}),
     }
     if report_json_path is not None:
@@ -161,9 +172,14 @@ def run_source_family_citation_search_adapter(
             root=manifest_path.parent,
             metadata={
                 "workflow": payload["workflow"],
+                "status": payload["status"],
+                "gate_passed": gate["passed"],
+                "min_request_coverage": gate["min_request_coverage"],
                 "request_count": summary["request_count"],
                 "source_document_count": summary["source_document_count"],
                 "request_with_results_count": summary["request_with_results_count"],
+                "request_without_results_count": summary["request_without_results_count"],
+                "request_coverage": summary["request_coverage"],
                 "result_count": summary["result_count"],
                 **dict(metadata or {}),
             },
@@ -178,9 +194,14 @@ def run_source_family_citation_search_adapter(
             path=report_json_path or output_path,
             metadata={
                 "workflow": payload["workflow"],
+                "status": payload["status"],
+                "gate_passed": gate["passed"],
+                "min_request_coverage": gate["min_request_coverage"],
                 "request_count": summary["request_count"],
                 "source_document_count": summary["source_document_count"],
                 "request_with_results_count": summary["request_with_results_count"],
+                "request_without_results_count": summary["request_without_results_count"],
+                "request_coverage": summary["request_coverage"],
                 "result_count": summary["result_count"],
                 "artifact_manifest": payload.get("artifact_manifest"),
                 **dict(metadata or {}),
@@ -191,6 +212,44 @@ def run_source_family_citation_search_adapter(
     return payload
 
 
+def _adapter_gate(summary: Mapping[str, Any], *, min_request_coverage: float) -> dict[str, Any]:
+    request_count = int(summary.get("request_count") or 0)
+    request_with_results_count = int(summary.get("request_with_results_count") or 0)
+    request_coverage = float(summary.get("request_coverage") or 0.0)
+    blocking: list[dict[str, Any]] = []
+    if request_count == 0:
+        blocking.append({
+            "gate": "adapter_requests",
+            "reason": "No citation/search requests were selected for this adapter run.",
+        })
+    if request_count > 0 and request_with_results_count == 0:
+        blocking.append({
+            "gate": "adapter_results",
+            "reason": "No source-family catalog results matched any selected citation/search request.",
+        })
+    if request_coverage < min_request_coverage:
+        blocking.append({
+            "gate": "adapter_request_coverage",
+            "reason": (
+                "Source-family citation/search adapter covered "
+                f"{request_coverage:.3f} of selected requests, "
+                f"below required {min_request_coverage:.3f}."
+            ),
+            "request_without_results_count": int(summary.get("request_without_results_count") or 0),
+        })
+    if blocking:
+        status = "empty" if request_with_results_count == 0 else "partial"
+    else:
+        status = "complete"
+    return {
+        "status": status,
+        "passed": not blocking,
+        "request_coverage": request_coverage,
+        "min_request_coverage": float(min_request_coverage),
+        "blocking_reasons": tuple(blocking),
+    }
+
+
 def _rank_request(
     request: Mapping[str, Any],
     *,
@@ -198,6 +257,7 @@ def _rank_request(
     max_results: int,
     max_query_variants: int,
     min_text_overlap: float,
+    diversify_source_families: bool,
 ) -> dict[str, Any]:
     request_id = _clean(request.get("request_id"))
     query_variants = _request_query_variants(request, max_items=max_query_variants)
@@ -209,8 +269,19 @@ def _rank_request(
     plan = _source_family_plan(request)
     preferred_families = _preferred_families(plan)
     query_hint_tokens = _tokens(" ".join(_string_sequence(plan.get("query_hints", ()))))
+    request_source_keys = _source_binding_keys(_mapping(request.get("metadata")))
+    source_bound_catalog = (
+        tuple(
+            document
+            for document in catalog
+            if request_source_keys & _source_binding_keys(document.metadata)
+        )
+        if request_source_keys
+        else ()
+    )
+    candidate_catalog = source_bound_catalog or tuple(catalog)
     scored: list[tuple[float, dict[str, Any]]] = []
-    for document in catalog:
+    for document in candidate_catalog:
         score = _score_document(
             document,
             query_variants=query_variants,
@@ -227,9 +298,14 @@ def _rank_request(
         _family_priority(item[1].get("source_family"), preferred_families),
         -int(item[1].get("rank", 999999)),
     ), reverse=True)
+    selected = (
+        _select_family_diverse_results(scored, max_results=max_results, preferred_families=preferred_families)
+        if diversify_source_families
+        else tuple(result for _, result in scored[:max_results])
+    )
     results = tuple(
         {**result, "rank": rank}
-        for rank, (_, result) in enumerate(scored[:max_results], start=1)
+        for rank, result in enumerate(selected, start=1)
     )
     return {
         "request_id": request_id,
@@ -243,8 +319,66 @@ def _rank_request(
             "freshness_required": bool(plan.get("freshness_required")),
             "official_source_preferred": bool(plan.get("official_source_preferred")),
             "catalog_document_count": len(catalog),
+            "source_binding_key_count": len(request_source_keys),
+            "source_bound_document_count": len(source_bound_catalog),
+            "source_binding_mode": (
+                "exact_match"
+                if source_bound_catalog
+                else ("fallback_all_catalog" if request_source_keys else "none")
+            ),
+            "diversify_source_families": bool(diversify_source_families),
         },
     }
+
+
+def _select_family_diverse_results(
+    scored: Sequence[tuple[float, dict[str, Any]]],
+    *,
+    max_results: int,
+    preferred_families: Sequence[str],
+) -> tuple[dict[str, Any], ...]:
+    if max_results <= 0:
+        return ()
+    selected: list[dict[str, Any]] = []
+    selected_keys: set[int] = set()
+
+    def add_first_for_family(family: str) -> None:
+        if len(selected) >= max_results:
+            return
+        normalized = _normalize_family(family)
+        for index, (_score, result) in enumerate(scored):
+            if index in selected_keys:
+                continue
+            if _normalize_family(result.get("source_family")) != normalized:
+                continue
+            selected.append(result)
+            selected_keys.add(index)
+            return
+
+    family_order = (
+        *tuple(family for family in preferred_families if _normalize_family(family) not in FALLBACK_FAMILIES),
+        *tuple(family for family in preferred_families if _normalize_family(family) in FALLBACK_FAMILIES),
+    )
+    for family in family_order:
+        add_first_for_family(family)
+    for index, (_score, result) in enumerate(scored):
+        if len(selected) >= max_results:
+            break
+        if index in selected_keys:
+            continue
+        family = _normalize_family(result.get("source_family"))
+        if any(_normalize_family(existing.get("source_family")) == family for existing in selected):
+            continue
+        selected.append(result)
+        selected_keys.add(index)
+    for index, (_score, result) in enumerate(scored):
+        if len(selected) >= max_results:
+            break
+        if index in selected_keys:
+            continue
+        selected.append(result)
+        selected_keys.add(index)
+    return tuple(selected[:max_results])
 
 
 def _score_document(
@@ -444,6 +578,13 @@ def _summary(
     catalog: Sequence[SourceCatalogDocument],
 ) -> dict[str, Any]:
     result_counts = [len(_result_items(row.get("results"))) for row in rows]
+    request_count = len(rows)
+    request_with_results_count = sum(1 for count in result_counts if count > 0)
+    request_without_results_ids = tuple(
+        _clean(row.get("request_id"))
+        for row, count in zip(rows, result_counts)
+        if count == 0 and _clean(row.get("request_id"))
+    )
     families = Counter(document.source_family for document in catalog)
     result_families = Counter(
         str(result.get("source_family"))
@@ -459,10 +600,13 @@ def _summary(
         if result.get("provider")
     )
     return {
-        "request_count": len(rows),
+        "request_count": request_count,
         "source_document_count": len(catalog),
         "request_error_count": sum(1 for row in rows if row.get("error")),
-        "request_with_results_count": sum(1 for count in result_counts if count > 0),
+        "request_with_results_count": request_with_results_count,
+        "request_without_results_count": sum(1 for count in result_counts if count == 0),
+        "request_without_results_ids": request_without_results_ids,
+        "request_coverage": 1.0 if request_count == 0 else request_with_results_count / request_count,
         "result_count": sum(result_counts),
         "catalog_source_family_counts": _sorted_counter(families),
         "result_source_family_counts": _sorted_counter(result_families),
@@ -593,6 +737,24 @@ def _bool_metadata(value: Any) -> bool:
     return False
 
 
+def _source_binding_keys(metadata: Mapping[str, Any]) -> set[str]:
+    keys: set[str] = set()
+    for field_name in (
+        "source_queue_request_sha256",
+        "source_request_sha256",
+        "collection_request_sha256",
+    ):
+        value = metadata.get(field_name)
+        if isinstance(value, str):
+            values: Sequence[Any] = (value,)
+        elif isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+            values = value
+        else:
+            values = ()
+        keys.update(str(item).strip() for item in values if str(item).strip())
+    return keys
+
+
 def _normalize_family(value: Any) -> str:
     family = _clean(value).casefold().replace("-", "_").replace(" ", "_")
     return family or DEFAULT_SOURCE_FAMILY
@@ -668,6 +830,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-results", type=int, default=3)
     parser.add_argument("--max-query-variants", type=int, default=3)
     parser.add_argument("--min-text-overlap", type=float, default=0.05)
+    parser.add_argument("--min-request-coverage", type=float, default=1.0)
+    parser.add_argument("--diversify-source-families", action="store_true")
     parser.add_argument("--default-source-family", default=DEFAULT_SOURCE_FAMILY)
     parser.add_argument("--pretty-json", action="store_true")
     parser.add_argument("--fail-on-empty", action="store_true")
@@ -685,6 +849,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         max_results=args.max_results,
         max_query_variants=args.max_query_variants,
         min_text_overlap=args.min_text_overlap,
+        min_request_coverage=args.min_request_coverage,
+        diversify_source_families=bool(args.diversify_source_families),
         default_source_family=args.default_source_family,
         compact_json=not bool(args.pretty_json),
         fail_on_empty=bool(args.fail_on_empty),
@@ -696,6 +862,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         f"requests={summary['request_count']} "
         f"source_docs={summary['source_document_count']} "
         f"with_results={summary['request_with_results_count']} "
+        f"coverage={summary['request_coverage']:.3f} "
         f"results={summary['result_count']} "
         f"errors={summary['request_error_count']}"
     )

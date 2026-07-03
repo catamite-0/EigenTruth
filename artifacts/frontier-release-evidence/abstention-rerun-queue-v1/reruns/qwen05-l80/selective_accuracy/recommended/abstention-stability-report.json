@@ -1,0 +1,1796 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  },
+  "config": {
+    "alpha": 0.1,
+    "best_by": "empirical_selective_accuracy",
+    "directions": {
+      "truth_proj": "higher"
+    },
+    "release_gate": {
+      "max_abstention_rate": 0.5,
+      "min_conditional_correctness_lower_bound": 0.8
+    },
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "signals": [
+      "truth_proj"
+    ]
+  },
+  "paths": {
+    "abstention_stability_report": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/recommended/abstention-stability-report.json",
+    "artifact_manifest": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/selective_accuracy/recommended/artifact-manifest.json"
+  },
+  "runs": [
+    {
+      "name": "qwen05-l80",
+      "score_dump": {
+        "exists": true,
+        "identity": {
+          "cache_key": "score-dump-identity-v1:46b3a2233d16e899f89e090b317cd14fa1c2a101aa7e5c4e27668f0765fc2a01",
+          "content_hash": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+          "dataset_id": "truthfulqa",
+          "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_total": 556,
+          "primary_score_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "records_hash": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+          "schema_version": 1,
+          "score_schema_hash": "40f115f972ed54e982cd2aa006f87b8a64002bbece8a5933155a8340c89d7955",
+          "scoring_config_hash": "ac54b8319eb18f4096db3a39288ce9964c1c550b1319c196575d221dcea8557b",
+          "source_format": "eigentruth.score_dump.jsonl",
+          "sweep_score_names": {
+            "-10": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-12": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-14": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-16": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-8": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ]
+          },
+          "target_layer": -12
+        },
+        "kind": "file",
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+        "records": {
+          "exists": true,
+          "kind": "file",
+          "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.records.jsonl",
+          "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+          "size_bytes": 861209
+        },
+        "sha256": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+        "size_bytes": 3320,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "summary": {
+          "all_signal_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -12,
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_false": 306,
+          "n_total": 556,
+          "n_true": 250,
+          "score_count": 8,
+          "score_names": [
+            "maha_last",
+            "truth_proj",
+            "subspace_resid",
+            "resid_update_norm",
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "nll_answer"
+          ],
+          "statement_count": 556,
+          "sweep_layer_count": 5,
+          "sweep_layers": [
+            "-16",
+            "-14",
+            "-12",
+            "-10",
+            "-8"
+          ],
+          "sweep_score_count": 25,
+          "sweep_score_names": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ]
+        }
+      },
+      "scores_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+      "seed_runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4828627616238236,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.4888888888888889,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.4888888888888889,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4828627616238236,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.1906474820143885,
+            "empirical_participation_rate": 0.8093525179856115,
+            "empirical_selective_accuracy": 0.4888888888888889,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.4888888888888889,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.482863 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4828627616238236,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.4888888888888889
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 53,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.4828627616238236,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.4888888888888889,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8100358422939068,
+              "retained_count": 225,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 0
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.481742765693383,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.12949640287769784,
+              "empirical_participation_rate": 0.8705035971223022,
+              "empirical_selective_accuracy": 0.48760330578512395,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.48760330578512395,
+              "threshold": 3.955120325088501
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.481742765693383,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.12949640287769784,
+            "empirical_participation_rate": 0.8705035971223022,
+            "empirical_selective_accuracy": 0.48760330578512395,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.48760330578512395,
+            "threshold": 3.955120325088501
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.481743 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.481742765693383,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.12949640287769784,
+              "empirical_participation_rate": 0.8705035971223022,
+              "empirical_selective_accuracy": 0.48760330578512395
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 36,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.481742765693383,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.12949640287769784,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8705035971223022,
+              "empirical_selective_accuracy": 0.48760330578512395,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8709677419354839,
+              "retained_count": 242,
+              "score_name": "truth_proj",
+              "threshold": 3.955120325088501
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 1
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4893586732151755,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2014388489208633,
+              "empirical_participation_rate": 0.7985611510791367,
+              "empirical_selective_accuracy": 0.4954954954954955,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.4954954954954955,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4893586732151755,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.2014388489208633,
+            "empirical_participation_rate": 0.7985611510791367,
+            "empirical_selective_accuracy": 0.4954954954954955,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.4954954954954955,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.489359 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4893586732151755,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.2014388489208633,
+              "empirical_participation_rate": 0.7985611510791367,
+              "empirical_selective_accuracy": 0.4954954954954955
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 56,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.4893586732151755,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2014388489208633,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7985611510791367,
+              "empirical_selective_accuracy": 0.4954954954954955,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7992831541218638,
+              "retained_count": 222,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 2
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5026455026455027,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.19424460431654678,
+              "empirical_participation_rate": 0.8057553956834532,
+              "empirical_selective_accuracy": 0.5089285714285714,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5089285714285714,
+              "threshold": 3.7176513671875
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5026455026455027,
+            "correct_retention_lower_bound": 0.9047619047619048,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.19424460431654678,
+            "empirical_participation_rate": 0.8057553956834532,
+            "empirical_selective_accuracy": 0.5089285714285714,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5089285714285714,
+            "threshold": 3.7176513671875
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.502646 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5026455026455027,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "correct_retention_rate": 0.912,
+              "empirical_abstention_rate": 0.19424460431654678,
+              "empirical_participation_rate": 0.8057553956834532,
+              "empirical_selective_accuracy": 0.5089285714285714
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 54,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5026455026455027,
+              "correct_retained_count": 114,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "correct_retention_rate": 0.912,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.19424460431654678,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8057553956834532,
+              "empirical_selective_accuracy": 0.5089285714285714,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8064516129032258,
+              "retained_count": 224,
+              "score_name": "truth_proj",
+              "threshold": 3.7176513671875
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 3
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5092007304396685,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.5155555555555555,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5155555555555555,
+              "threshold": 3.7918155193328857
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5092007304396685,
+            "correct_retention_lower_bound": 0.9206349206349206,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.1906474820143885,
+            "empirical_participation_rate": 0.8093525179856115,
+            "empirical_selective_accuracy": 0.5155555555555555,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5155555555555555,
+            "threshold": 3.7918155193328857
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.509201 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5092007304396685,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "correct_retention_rate": 0.928,
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.5155555555555555
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 53,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5092007304396685,
+              "correct_retained_count": 116,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "correct_retention_rate": 0.928,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.5155555555555555,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8100358422939068,
+              "retained_count": 225,
+              "score_name": "truth_proj",
+              "threshold": 3.7918155193328857
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 4
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.47990063233965674,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.11870503597122302,
+              "empirical_participation_rate": 0.8812949640287769,
+              "empirical_selective_accuracy": 0.4857142857142857,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.4857142857142857,
+              "threshold": 3.964031457901001
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.47990063233965674,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.11870503597122302,
+            "empirical_participation_rate": 0.8812949640287769,
+            "empirical_selective_accuracy": 0.4857142857142857,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.4857142857142857,
+            "threshold": 3.964031457901001
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.479901 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.47990063233965674,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.11870503597122302,
+              "empirical_participation_rate": 0.8812949640287769,
+              "empirical_selective_accuracy": 0.4857142857142857
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 33,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.47990063233965674,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.11870503597122302,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8812949640287769,
+              "empirical_selective_accuracy": 0.4857142857142857,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8817204301075269,
+              "retained_count": 245,
+              "score_name": "truth_proj",
+              "threshold": 3.964031457901001
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 5
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.49812470698546646,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1510791366906475,
+              "empirical_participation_rate": 0.8489208633093526,
+              "empirical_selective_accuracy": 0.5042372881355932,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5042372881355932,
+              "threshold": 3.964031457901001
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.49812470698546646,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.1510791366906475,
+            "empirical_participation_rate": 0.8489208633093526,
+            "empirical_selective_accuracy": 0.5042372881355932,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5042372881355932,
+            "threshold": 3.964031457901001
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.498125 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.49812470698546646,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.1510791366906475,
+              "empirical_participation_rate": 0.8489208633093526,
+              "empirical_selective_accuracy": 0.5042372881355932
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 42,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.49812470698546646,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1510791366906475,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8489208633093526,
+              "empirical_selective_accuracy": 0.5042372881355932,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8494623655913979,
+              "retained_count": 236,
+              "score_name": "truth_proj",
+              "threshold": 3.964031457901001
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 6
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5164319248826291,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5099391781634772,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.23381294964028776,
+            "empirical_participation_rate": 0.7661870503597122,
+            "empirical_selective_accuracy": 0.5164319248826291,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5164319248826291,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.509939 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 65,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7670250896057348,
+              "retained_count": 213,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 7
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5164319248826291,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5099391781634772,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.23381294964028776,
+            "empirical_participation_rate": 0.7661870503597122,
+            "empirical_selective_accuracy": 0.5164319248826291,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5164319248826291,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.509939 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 65,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7670250896057348,
+              "retained_count": 213,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 8
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5118866420236283,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2158273381294964,
+              "empirical_participation_rate": 0.7841726618705036,
+              "empirical_selective_accuracy": 0.518348623853211,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.518348623853211,
+              "threshold": 3.6621735095977783
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5118866420236283,
+            "correct_retention_lower_bound": 0.8968253968253969,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.2158273381294964,
+            "empirical_participation_rate": 0.7841726618705036,
+            "empirical_selective_accuracy": 0.518348623853211,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.518348623853211,
+            "threshold": 3.6621735095977783
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.511887 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5118866420236283,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "correct_retention_rate": 0.904,
+              "empirical_abstention_rate": 0.2158273381294964,
+              "empirical_participation_rate": 0.7841726618705036,
+              "empirical_selective_accuracy": 0.518348623853211
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 60,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5118866420236283,
+              "correct_retained_count": 113,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "correct_retention_rate": 0.904,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2158273381294964,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7841726618705036,
+              "empirical_selective_accuracy": 0.518348623853211,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7849462365591398,
+              "retained_count": 218,
+              "score_name": "truth_proj",
+              "threshold": 3.6621735095977783
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 9
+        }
+      ],
+      "stability": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound": {
+          "count": 10,
+          "max": 0.5118866420236283,
+          "mean": 0.49756007712932593,
+          "min": 0.47990063233965674,
+          "stdev": 0.012323706244945281
+        },
+        "correct_retention_lower_bound": {
+          "count": 10,
+          "max": 0.9444444444444444,
+          "mean": 0.903968253968254,
+          "min": 0.873015873015873,
+          "stdev": 0.029149789955884048
+        },
+        "empirical_abstention_rate": {
+          "count": 10,
+          "max": 0.23381294964028776,
+          "mean": 0.18597122302158273,
+          "min": 0.11870503597122302,
+          "stdev": 0.03840844077218694
+        },
+        "empirical_participation_rate": {
+          "count": 10,
+          "max": 0.8812949640287769,
+          "mean": 0.8140287769784174,
+          "min": 0.7661870503597122,
+          "stdev": 0.03840844077218695
+        },
+        "empirical_selective_accuracy": {
+          "count": 10,
+          "max": 0.518348623853211,
+          "mean": 0.5037635864621983,
+          "min": 0.4857142857142857,
+          "stdev": 0.012554675605625207
+        },
+        "recommended_score_name_counts": {
+          "truth_proj": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "truth_proj"
+      },
+      "supervised_feasibility_frontier": {
+        "best": {
+          "abstained_count": 278,
+          "blocking_reasons": [
+            "conditional_correctness_lower_bound 0.624741 is below required minimum 0.8"
+          ],
+          "conditional_correctness_lower_bound": 0.6247411786545575,
+          "correct_retained_count": 175,
+          "correct_retention_lower_bound": 0.6972111553784861,
+          "direction": "higher",
+          "empirical_abstention_rate": 0.5,
+          "empirical_participation_rate": 0.5,
+          "empirical_selective_accuracy": 0.6294964028776978,
+          "retained_count": 278,
+          "score_name": "truth_proj",
+          "target_passed": false,
+          "threshold": 2.7185676097869873
+        },
+        "note": "Diagnostic upper bound only: this sweep uses held-out labels and must not be used as a runtime calibration artifact.",
+        "promotion_eligible": false,
+        "scope": "supervised_full_run_threshold_sweep",
+        "signals": [
+          {
+            "abstained_count": 278,
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.624741 is below required minimum 0.8"
+            ],
+            "conditional_correctness_lower_bound": 0.6247411786545575,
+            "correct_retained_count": 175,
+            "correct_retention_lower_bound": 0.6972111553784861,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.5,
+            "empirical_participation_rate": 0.5,
+            "empirical_selective_accuracy": 0.6294964028776978,
+            "retained_count": 278,
+            "score_name": "truth_proj",
+            "target_passed": false,
+            "threshold": 2.7185676097869873
+          }
+        ],
+        "target": {
+          "max_abstention_rate": 0.5,
+          "min_conditional_correctness_lower_bound": 0.8
+        },
+        "target_passed": false,
+        "uses_labels": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 5,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 2,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 2,
+      "writes": 2
+    },
+    "jsonl_manifest": {
+      "attempts": 2,
+      "hit_rate": 0.5,
+      "hits": 1,
+      "misses": 1,
+      "writes": 1
+    },
+    "jsonl_summary": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 2
+    },
+    "jsonl_view": {
+      "attempts": 1,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 1,
+      "writes": 1
+    }
+  },
+  "seed_reports": [
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4828627616238236,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.4888888888888889,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.4888888888888889,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4828627616238236,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.1906474820143885,
+            "empirical_participation_rate": 0.8093525179856115,
+            "empirical_selective_accuracy": 0.4888888888888889,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.4888888888888889,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.482863 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4828627616238236,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.4888888888888889
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 53,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.4828627616238236,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.4888888888888889,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8100358422939068,
+              "retained_count": 225,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 0
+        }
+      ],
+      "seed": 0
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.481742765693383,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.12949640287769784,
+              "empirical_participation_rate": 0.8705035971223022,
+              "empirical_selective_accuracy": 0.48760330578512395,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.48760330578512395,
+              "threshold": 3.955120325088501
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.481742765693383,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.12949640287769784,
+            "empirical_participation_rate": 0.8705035971223022,
+            "empirical_selective_accuracy": 0.48760330578512395,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.48760330578512395,
+            "threshold": 3.955120325088501
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.481743 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.481742765693383,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.12949640287769784,
+              "empirical_participation_rate": 0.8705035971223022,
+              "empirical_selective_accuracy": 0.48760330578512395
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 36,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.481742765693383,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.12949640287769784,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8705035971223022,
+              "empirical_selective_accuracy": 0.48760330578512395,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8709677419354839,
+              "retained_count": 242,
+              "score_name": "truth_proj",
+              "threshold": 3.955120325088501
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 1
+        }
+      ],
+      "seed": 1
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4893586732151755,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2014388489208633,
+              "empirical_participation_rate": 0.7985611510791367,
+              "empirical_selective_accuracy": 0.4954954954954955,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.4954954954954955,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4893586732151755,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.2014388489208633,
+            "empirical_participation_rate": 0.7985611510791367,
+            "empirical_selective_accuracy": 0.4954954954954955,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.4954954954954955,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.489359 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4893586732151755,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.2014388489208633,
+              "empirical_participation_rate": 0.7985611510791367,
+              "empirical_selective_accuracy": 0.4954954954954955
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 56,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.4893586732151755,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2014388489208633,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7985611510791367,
+              "empirical_selective_accuracy": 0.4954954954954955,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7992831541218638,
+              "retained_count": 222,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 2
+        }
+      ],
+      "seed": 2
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5026455026455027,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.19424460431654678,
+              "empirical_participation_rate": 0.8057553956834532,
+              "empirical_selective_accuracy": 0.5089285714285714,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5089285714285714,
+              "threshold": 3.7176513671875
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5026455026455027,
+            "correct_retention_lower_bound": 0.9047619047619048,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.19424460431654678,
+            "empirical_participation_rate": 0.8057553956834532,
+            "empirical_selective_accuracy": 0.5089285714285714,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5089285714285714,
+            "threshold": 3.7176513671875
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.502646 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5026455026455027,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "correct_retention_rate": 0.912,
+              "empirical_abstention_rate": 0.19424460431654678,
+              "empirical_participation_rate": 0.8057553956834532,
+              "empirical_selective_accuracy": 0.5089285714285714
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 54,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5026455026455027,
+              "correct_retained_count": 114,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "correct_retention_rate": 0.912,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.19424460431654678,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8057553956834532,
+              "empirical_selective_accuracy": 0.5089285714285714,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8064516129032258,
+              "retained_count": 224,
+              "score_name": "truth_proj",
+              "threshold": 3.7176513671875
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 3
+        }
+      ],
+      "seed": 3
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5092007304396685,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.5155555555555555,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5155555555555555,
+              "threshold": 3.7918155193328857
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5092007304396685,
+            "correct_retention_lower_bound": 0.9206349206349206,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.1906474820143885,
+            "empirical_participation_rate": 0.8093525179856115,
+            "empirical_selective_accuracy": 0.5155555555555555,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5155555555555555,
+            "threshold": 3.7918155193328857
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.509201 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5092007304396685,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "correct_retention_rate": 0.928,
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.5155555555555555
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 53,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5092007304396685,
+              "correct_retained_count": 116,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "correct_retention_rate": 0.928,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1906474820143885,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8093525179856115,
+              "empirical_selective_accuracy": 0.5155555555555555,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8100358422939068,
+              "retained_count": 225,
+              "score_name": "truth_proj",
+              "threshold": 3.7918155193328857
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 4
+        }
+      ],
+      "seed": 4
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.47990063233965674,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.11870503597122302,
+              "empirical_participation_rate": 0.8812949640287769,
+              "empirical_selective_accuracy": 0.4857142857142857,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.4857142857142857,
+              "threshold": 3.964031457901001
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.47990063233965674,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.11870503597122302,
+            "empirical_participation_rate": 0.8812949640287769,
+            "empirical_selective_accuracy": 0.4857142857142857,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.4857142857142857,
+            "threshold": 3.964031457901001
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.479901 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.47990063233965674,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.11870503597122302,
+              "empirical_participation_rate": 0.8812949640287769,
+              "empirical_selective_accuracy": 0.4857142857142857
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 33,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.47990063233965674,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.11870503597122302,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8812949640287769,
+              "empirical_selective_accuracy": 0.4857142857142857,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8817204301075269,
+              "retained_count": 245,
+              "score_name": "truth_proj",
+              "threshold": 3.964031457901001
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 5
+        }
+      ],
+      "seed": 5
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.49812470698546646,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1510791366906475,
+              "empirical_participation_rate": 0.8489208633093526,
+              "empirical_selective_accuracy": 0.5042372881355932,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5042372881355932,
+              "threshold": 3.964031457901001
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.49812470698546646,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.1510791366906475,
+            "empirical_participation_rate": 0.8489208633093526,
+            "empirical_selective_accuracy": 0.5042372881355932,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5042372881355932,
+            "threshold": 3.964031457901001
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.498125 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.49812470698546646,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.1510791366906475,
+              "empirical_participation_rate": 0.8489208633093526,
+              "empirical_selective_accuracy": 0.5042372881355932
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 42,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.49812470698546646,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.1510791366906475,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.8489208633093526,
+              "empirical_selective_accuracy": 0.5042372881355932,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.8494623655913979,
+              "retained_count": 236,
+              "score_name": "truth_proj",
+              "threshold": 3.964031457901001
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 6
+        }
+      ],
+      "seed": 6
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5164319248826291,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5099391781634772,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.23381294964028776,
+            "empirical_participation_rate": 0.7661870503597122,
+            "empirical_selective_accuracy": 0.5164319248826291,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5164319248826291,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.509939 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 65,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7670250896057348,
+              "retained_count": 213,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 7
+        }
+      ],
+      "seed": 7
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.5164319248826291,
+              "threshold": 3.640397071838379
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5099391781634772,
+            "correct_retention_lower_bound": 0.873015873015873,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.23381294964028776,
+            "empirical_participation_rate": 0.7661870503597122,
+            "empirical_selective_accuracy": 0.5164319248826291,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.5164319248826291,
+            "threshold": 3.640397071838379
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.509939 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 65,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5099391781634772,
+              "correct_retained_count": 110,
+              "correct_retention_lower_bound": 0.873015873015873,
+              "correct_retention_rate": 0.88,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.23381294964028776,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7661870503597122,
+              "empirical_selective_accuracy": 0.5164319248826291,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7670250896057348,
+              "retained_count": 213,
+              "score_name": "truth_proj",
+              "threshold": 3.640397071838379
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 8
+        }
+      ],
+      "seed": 8
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.5118866420236283,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2158273381294964,
+              "empirical_participation_rate": 0.7841726618705036,
+              "empirical_selective_accuracy": 0.518348623853211,
+              "rank": 1,
+              "score_name": "truth_proj",
+              "selection_metric": "empirical_selective_accuracy",
+              "selection_value": 0.518348623853211,
+              "threshold": 3.6621735095977783
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.5118866420236283,
+            "correct_retention_lower_bound": 0.8968253968253969,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.2158273381294964,
+            "empirical_participation_rate": 0.7841726618705036,
+            "empirical_selective_accuracy": 0.518348623853211,
+            "rank": 1,
+            "score_name": "truth_proj",
+            "selection_metric": "empirical_selective_accuracy",
+            "selection_value": 0.518348623853211,
+            "threshold": 3.6621735095977783
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.511887 is below required minimum 0.8"
+            ],
+            "candidate_count": 1,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.5118866420236283,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "correct_retention_rate": 0.904,
+              "empirical_abstention_rate": 0.2158273381294964,
+              "empirical_participation_rate": 0.7841726618705036,
+              "empirical_selective_accuracy": 0.518348623853211
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 60,
+              "alpha": 0.1,
+              "conditional_correctness_lower_bound": 0.5118866420236283,
+              "correct_retained_count": 113,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "correct_retention_rate": 0.904,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.2158273381294964,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.7841726618705036,
+              "empirical_selective_accuracy": 0.518348623853211,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.7849462365591398,
+              "retained_count": 218,
+              "score_name": "truth_proj",
+              "threshold": 3.6621735095977783
+            },
+            "selected_score_name": "truth_proj",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 9
+        }
+      ],
+      "seed": 9
+    }
+  ],
+  "status": "complete",
+  "workflow": "abstention_stability"
+}

@@ -1,0 +1,77 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-adapter-report.json",
+      "sha256": "85707b9bd1d1cbf31fa71f5610fb0904b1734d7e612e3665ce032e171793b4f4",
+      "size_bytes": 2813
+    },
+    "blocked_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../fill-and-promote-remaining-world-model-rules/command-3/blocked-rule-candidates.jsonl",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    },
+    "pending_rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../fill-and-promote-remaining-world-model-rules/command-3/pending-rule-inputs.jsonl",
+      "sha256": "f50c91783556ba0036c219a8c409666736f5958087855870cd441e8e72e294da",
+      "size_bytes": 4256
+    },
+    "promoted_rule_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../fill-and-promote-remaining-world-model-rules/command-3/promoted-rule-candidates.jsonl",
+      "sha256": "4dc6b2bf410db516bad95fca3ed0a739a18bd6c5935b21c7b69a3d3407bdd34c",
+      "size_bytes": 6784
+    },
+    "rule_candidate_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-promotion-report.json",
+      "sha256": "007bfba4e2c762d317ea0c942c7362b14825e23591d0f44500a4eb7f37abb8f6",
+      "size_bytes": 18449
+    },
+    "rule_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-fill-report-rule-inputs.jsonl",
+      "sha256": "1abdbcee0842933db9fd55ffd77f5413ecd1c7e6920258f67d66a0943604d317",
+      "size_bytes": 9614
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "numeric-rule-adapter-report-rule-results.jsonl",
+      "sha256": "afa90427d42148064c2ae0afb1c6cf2842ab71ceb17461f8a57ab70be82cf752",
+      "size_bytes": 32294
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_report_gate": "pass",
+    "blocked_count": 0,
+    "closure_lane": "numeric_rules",
+    "pending_count": 20,
+    "promoted_count": 6,
+    "status": "promote",
+    "workflow": "world_model_rule_candidate_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

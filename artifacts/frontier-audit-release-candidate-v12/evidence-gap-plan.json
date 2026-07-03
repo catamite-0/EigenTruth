@@ -1,0 +1,187 @@
+{
+  "actions": [
+    {
+      "action_id": "inspect_frontier_release_evidence_blocker",
+      "action_type": "manual_triage",
+      "evidence_routes": [
+        "frontier_release_evidence"
+      ],
+      "metadata": {},
+      "priority": 10,
+      "rationale": "No specific planner mapping exists yet for this blocker: frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
+      "source_gap_ids": [
+        "gap-002-01",
+        "gap-002-02"
+      ],
+      "suggested_commands": [],
+      "title": "Inspect release blocker"
+    },
+    {
+      "action_id": "inspect_product_runtime_drift_blocker",
+      "action_type": "manual_triage",
+      "evidence_routes": [
+        "product_runtime_drift"
+      ],
+      "metadata": {},
+      "priority": 10,
+      "rationale": "No specific planner mapping exists yet for this blocker: product runtime drift frontier release evidence blocked 3 metric(s)",
+      "source_gap_ids": [
+        "gap-001-01",
+        "gap-001-02",
+        "gap-001-03",
+        "gap-001-04"
+      ],
+      "suggested_commands": [],
+      "title": "Inspect release blocker"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "gap-001-01",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-02",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift decision status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-03",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift blocked 3 metric(s)",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 3
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-001-04",
+      "gate": "product_runtime_drift",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "product runtime drift frontier release evidence blocked 3 metric(s)",
+      "recommended_action_ids": [
+        "inspect_product_runtime_drift_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 1,
+        "decision_status": "blocked",
+        "reason_index": 4
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-002-01",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "frontier release evidence decision status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_frontier_release_evidence_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 2,
+        "decision_status": "blocked",
+        "reason_index": 1
+      },
+      "status": "blocked"
+    },
+    {
+      "gap_id": "gap-002-02",
+      "gate": "frontier_release_evidence",
+      "metadata": {
+        "evidence_kind": "manual_triage",
+        "research_axis": "release_gate"
+      },
+      "missing_metrics": [],
+      "reason": "frontier release evidence abstention_track_status is 'blocked', expected 'promote'",
+      "recommended_action_ids": [
+        "inspect_frontier_release_evidence_blocker"
+      ],
+      "root_cause": "unknown",
+      "source": {
+        "blocker_index": 2,
+        "decision_status": "blocked",
+        "reason_index": 2
+      },
+      "status": "blocked"
+    }
+  ],
+  "metadata": {},
+  "schema_version": 1,
+  "source_path": "artifacts/frontier-audit-release-candidate-v12/frontier-audit-comparison.json",
+  "source_status": "blocked",
+  "source_workflow": "release_candidate_comparison",
+  "status": "needs_evidence",
+  "summary": {
+    "action_count": 2,
+    "gap_count": 6,
+    "gates": {
+      "frontier_release_evidence": 2,
+      "product_runtime_drift": 4
+    },
+    "missing_metric_count": 0,
+    "research_axes": {
+      "release_gate": 6
+    },
+    "root_causes": {
+      "unknown": 6
+    },
+    "source_decision_status": "blocked",
+    "top_action_ids": [
+      "inspect_frontier_release_evidence_blocker",
+      "inspect_product_runtime_drift_blocker"
+    ]
+  },
+  "workflow": "evidence_gap_plan"
+}

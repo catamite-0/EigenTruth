@@ -107,6 +107,12 @@ python examples/calibrated_control_demo.py \
   --pre-generation-metadata '{"requires_current_facts": true}' \
   --text "The latest BTC price today is 100 dollars." \
   --diagnostics '{"truth_proj": 0.0}'
+python examples/calibrated_control_demo.py \
+  --pre-generation-profile auto \
+  --pre-generation-risk-policy artifacts/pre-generation-risk-policy.json \
+  --pre-generation-learned-risk artifacts/learned-pre-generation-risk.json \
+  --text "Explain calibration intuitively." \
+  --diagnostics '{"truth_proj": 0.0}'
 ```
 
 The balanced profile enables staged verification but still verifies diagnostic
@@ -122,7 +128,11 @@ verification, using prompt features and optional `--pre-generation-metadata`;
 its assessment is recorded in `metadata.pre_generation_risk_assessment`, and
 `metadata.runtime_profile_source` shows whether the effective runtime profile
 came from pre-generation routing, post-diagnostic auto routing, or an explicit
-profile. When no explicit or pre-generation profile is selected, a
+profile. A saved `LearnedPreGenerationRiskEstimate.to_dict()` payload can be
+passed with `--pre-generation-learned-risk` as an inline JSON object, a JSON
+file path, or `@path`; by default it is recorded only, and it changes the
+selected runtime profile only when the supplied `PreGenerationRiskPolicy`
+enables `route_on_learned_risk`. When no explicit or pre-generation profile is selected, a
 `ProductPromotionContract` with promoted release-efficiency evidence supplies
 the default runtime profile; the trace records this as
 `metadata.runtime_profile_source="promotion_contract_release_efficiency"`.
@@ -169,16 +179,12 @@ python examples/calibrated_control_demo.py \
   --max-route-budget-exhaustion-rate 0.0 \
   --max-retrieval-use-rate 0.5
 python examples/calibrated_control_demo.py \
-  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json
 python examples/calibrated_control_demo.py \
-  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
   --promotion-contract-registry artifacts/local-release-registry.json \
   --verify-promotion-contract-manifest \
-  --verify-selfcheck-signal-fusion-manifest \
-  --include-selfcheck-signal-fusion-record \
-  --require-selfcheck-signal-fusion-evidence \
-  --require-selfcheck-signal-fusion-manifest-verification \
-  --require-selfcheck-signal-fusion-record
+  --verify-promotion-contract-evidence-handoff-manifest
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
@@ -188,21 +194,24 @@ python examples/calibrated_control_demo.py \
   --max-verified-claim-count 0
 ```
 
-When the SmolLM2 strict structured-retrieval-audit release candidate is present,
-the demo loads its promotion contract by default as route, calibrated control
-defaults, adapter-family, and required-audit metadata. The current default is
-the compact v1.5 product promotion contract artifact, which also carries
-selector replay and product-runtime-drift evidence. Contract control defaults
-such as `max_verifier_route_attempts` fill unset demo controls, and any
-feedback-derived `ControlPolicyConfig` in the contract becomes the effective
-`RiskController` policy, while explicit CLI options still take precedence for
-runtime-budget flags. Passing the same file explicitly with
+When the SmolLM2 frontier-audit release candidate is present, the demo loads its
+promotion contract by default as route, calibrated control defaults,
+adapter-family, required-audit, frontier-release, evidence-handoff, and
+product-runtime-drift metadata. The current default is the compact v1.9 product
+promotion contract artifact exported from promoted frontier-audit v13; its
+sibling evidence-handoff manifest verifies the enriched `65/65` handoff fields.
+Contract control defaults such as `max_verifier_route_attempts` fill unset demo
+controls, and any feedback-derived `ControlPolicyConfig` in the contract becomes
+the effective `RiskController` policy, while explicit CLI options still take
+precedence for runtime-budget flags. Passing the same file explicitly with
 `--promotion-contract` also enforces its runtime budget, including the
-low-latency product-route gates `max_retrieval_use_rate=0.0` and
-`max_mean_attempted_route_count=1.1`. The demo uses
-`ProductRuntimeEvidenceBundle` to infer the sibling artifact manifest and can
-optionally attach manifest verification plus local registry provenance with
-`--verify-promotion-contract-manifest` and `--promotion-contract-registry`.
+frontier-audit route gates `max_retrieval_use_rate=1.0` and
+`max_mean_attempted_route_count=3.0`. The demo uses
+`ProductRuntimeEvidenceBundle` to infer sibling artifact and handoff manifests
+and can optionally attach manifest verification plus local registry provenance
+with `--verify-promotion-contract-manifest`,
+`--verify-promotion-contract-evidence-handoff-manifest`, and
+`--promotion-contract-registry`.
 When the contract carries selfcheck-signal-fusion evidence, the demo can also
 verify that child workflow manifest and attach its registry record with
 `--verify-selfcheck-signal-fusion-manifest` and

@@ -16,12 +16,20 @@ class QuestionAnswerFact:
     answer: str
     source: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    question_aliases: Sequence[str] = ()
 
     def __post_init__(self) -> None:
         if not self.question.strip():
             raise ValueError("question must be non-empty.")
         if not self.answer.strip():
             raise ValueError("answer must be non-empty.")
+        question_key = normalize_claim_text(self.question)
+        aliases = tuple(
+            alias
+            for alias in _unique_texts(self.question_aliases)
+            if normalize_claim_text(alias) != question_key
+        )
+        object.__setattr__(self, "question_aliases", aliases)
 
     def to_evidence(self) -> str:
         """Return a compact evidence string."""
@@ -39,10 +47,12 @@ class QuestionAnswerFact:
         if question is None or answer is None:
             raise ValueError("QA fact mapping must contain question and answer fields.")
         source = data.get("source")
+        aliases = _question_aliases_from_mapping(data, metadata)
         return cls(
             question=str(question),
             answer=str(answer),
             source=None if source is None else str(source),
+            question_aliases=aliases,
             metadata=metadata,
         )
 
@@ -62,11 +72,21 @@ class QuestionAnswerVerifier:
     def __post_init__(self) -> None:
         facts = tuple(_coerce_fact(item) for item in self.facts)
         index: dict[str, tuple[QuestionAnswerFact, ...]] = {}
+        aliases_by_key: dict[str, str] = {}
+        canonical_keys = {normalize_claim_text(fact.question) for fact in facts}
         for fact in facts:
-            key = normalize_claim_text(fact.question)
-            index[key] = (*index.get(key, ()), fact)
+            for raw_question, alias in ((fact.question, None), *((item, item) for item in fact.question_aliases)):
+                key = normalize_claim_text(raw_question)
+                if not key:
+                    continue
+                if fact not in index.get(key, ()):
+                    index[key] = (*index.get(key, ()), fact)
+                if alias is not None:
+                    aliases_by_key[key] = alias
         object.__setattr__(self, "facts", facts)
         object.__setattr__(self, "_index", index)
+        object.__setattr__(self, "_aliases_by_key", aliases_by_key)
+        object.__setattr__(self, "_canonical_keys", canonical_keys)
 
     @classmethod
     def from_corpus(cls, corpus: Mapping[str, Any]) -> "QuestionAnswerVerifier":
@@ -110,6 +130,12 @@ class QuestionAnswerVerifier:
             )
 
         answer_key = normalize_claim_text(answer)
+        matched_alias = None if question_key in self._canonical_keys else self._aliases_by_key.get(question_key)
+        alias_metadata = (
+            {"matched_question_alias": matched_alias, "canonical_question": candidates[0].question}
+            if matched_alias is not None and candidates
+            else {}
+        )
         for fact in candidates:
             if normalize_claim_text(fact.answer) == answer_key:
                 return VerificationResult(
@@ -122,6 +148,7 @@ class QuestionAnswerVerifier:
                         "decision_rule": "answer_match",
                         "question_key": question_key,
                         "n_known_answers": len(candidates),
+                        **alias_metadata,
                     },
                 )
 
@@ -136,6 +163,7 @@ class QuestionAnswerVerifier:
                 "decision_rule": "answer_mismatch",
                 "question_key": question_key,
                 "n_known_answers": len(candidates),
+                **alias_metadata,
             },
         )
 
@@ -152,6 +180,20 @@ def _coerce_fact(value: QuestionAnswerFact | Mapping[str, Any]) -> QuestionAnswe
     if isinstance(value, QuestionAnswerFact):
         return value
     return QuestionAnswerFact.from_mapping(value)
+
+
+def _question_aliases_from_mapping(
+    data: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+) -> tuple[str, ...]:
+    values: list[Any] = []
+    for key in ("question_aliases", "aliases"):
+        if key in data:
+            values.extend(_as_sequence(data.get(key)))
+    for key in ("question_aliases", "aliases"):
+        if key in metadata:
+            values.extend(_as_sequence(metadata.get(key)))
+    return tuple(_unique_texts(values))
 
 
 def _claim_question_answer(
@@ -177,3 +219,26 @@ def _optional_text(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _as_sequence(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return (value,)
+
+
+def _unique_texts(values: Sequence[Any]) -> tuple[str, ...]:
+    items: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = _optional_text(value)
+        if text is None:
+            continue
+        key = normalize_claim_text(text)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        items.append(text)
+    return tuple(items)

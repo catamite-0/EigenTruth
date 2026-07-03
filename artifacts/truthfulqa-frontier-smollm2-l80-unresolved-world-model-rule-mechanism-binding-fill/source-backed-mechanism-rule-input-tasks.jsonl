@@ -1,0 +1,1 @@
+{"collection_family": "mechanism_rule_input_collection", "not_verifier_evidence": true, "question": "How long do diamonds last?", "rule_family": "causal_or_procedural", "schema_version": 1, "source_request_id": "rule:record-10:1", "target_id": "record-10", "task_id": "diamond-mechanism-task-0001", "workflow": "frontier_mechanism_handoff_source_workflow"}

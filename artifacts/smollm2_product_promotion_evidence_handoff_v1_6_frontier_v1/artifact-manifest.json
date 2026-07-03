@@ -1,0 +1,102 @@
+{
+  "artifacts": {
+    "frontier_release_evidence": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-release-evidence/frontier-release-evidence-refreshed.json",
+      "sha256": "7415f3d34ea65b1601df47c4faa9a34fd83d02f9b8048df2219410738d2d681a",
+      "size_bytes": 21390
+    },
+    "pre_generation_probe_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json",
+      "sha256": "eb47f845d63e4891befca11a26a0e7dc0e94cdec68bfb37ab6d884f1fd41a716",
+      "size_bytes": 4612
+    },
+    "product_promotion_contract_evidence_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-promotion-contract-evidence-handoff.json",
+      "sha256": "3e0537e8ca2aa3383c03aaf2de0388215ded028570ce75fcb24bae3623288bf6",
+      "size_bytes": 31678
+    },
+    "product_promotion_contract_evidence_handoff_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-promotion-contract-evidence-audit.json",
+      "sha256": "42bb7e8321145cb252f75017a7c7d974ffcd9d103560fd26d698a8cb047ef581",
+      "size_bytes": 34167
+    },
+    "product_trace_replay_workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json",
+      "sha256": "89647cc4442711e6a789bb3fa68170b6a2165abfa53e96c0f78a024febf3d1e0",
+      "size_bytes": 28126
+    },
+    "runtime_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json",
+      "sha256": "12ad01ea2e82684e435e96053eeb856e7ea7ec0fdc23ca423d8f5638847ecce3",
+      "size_bytes": 1436923
+    },
+    "source_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+      "sha256": "6525b324c212d5a136d24545c43d26d0b3a4b4d147b8f545be515f260f5d0981",
+      "size_bytes": 14471
+    },
+    "triple_extraction_fixture_matrix": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json",
+      "sha256": "ccf96d6cd88be370a8909f72579dfbee9bad56f73ad62ebeaee5e1dbdc88af46",
+      "size_bytes": 6695
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "after_missing_metric_count": 15,
+    "before_missing_metric_count": 64,
+    "evidence_scope": "local_frontier_handoff",
+    "filled_groups": [
+      "promotion",
+      "pre_generation",
+      "action_gate",
+      "frontier_release_evidence",
+      "triple_audit"
+    ],
+    "release_boundary": "blocked_source_contract_no_v1_9_promotion",
+    "required_groups": [
+      "promotion",
+      "pre_generation",
+      "counterfactual",
+      "triple_audit",
+      "covered_fact_property",
+      "action_gate",
+      "frontier_release_evidence"
+    ],
+    "resolved_missing_metric_count": 49,
+    "runner": "export_product_promotion_contract_evidence_handoff",
+    "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+    "status": "blocked"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

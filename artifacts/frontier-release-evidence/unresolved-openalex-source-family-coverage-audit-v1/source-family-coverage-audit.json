@@ -1,0 +1,1565 @@
+{
+  "config": {
+    "fallback_families": [
+      "encyclopedic",
+      "reference"
+    ],
+    "max_examples": 20
+  },
+  "examples": {
+    "covered": [
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-8b58995470ea78f9",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-bbd5cdf975d44a83",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-af6fc174863183f2",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-b677934f044dafc7",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "who",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c00b806315ac398b",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-89534a0c11134e44",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-523c555cc76d5706",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-71ae3e3c71ef376a",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-4ffa9f0785eeb9da",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-ebda97c2ac1f8395",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0694b6748461aa0f",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-96a58e762235e5fa",
+        "result_count": 3,
+        "result_providers": [
+          "cdc",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-7e7112ad3e70ad2a",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "source_family_catalog",
+          "cdc"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "reference",
+          "official"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-f0466d8b7e767b38",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "source_family_catalog",
+          "cdc"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "reference",
+          "official"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e708ed159977f5b7",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "source_family_catalog",
+          "cdc"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "reference",
+          "official"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-299e36c021f5da02",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "source_family_catalog",
+          "cdc"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "reference",
+          "official"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-369260c9393016fd",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "openalex",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-fce13203fec54cdb",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "openalex",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-97afdb455d58cd3d",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "openalex",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "scholarly"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": false,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "doing next definition",
+        "question_type": "definition",
+        "request_id": "cite-search-eee772a66671b8cc",
+        "result_count": 3,
+        "result_providers": [
+          "openalex",
+          "openalex",
+          "openalex"
+        ],
+        "result_source_families": [
+          "scholarly",
+          "scholarly",
+          "scholarly"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "scholarly"
+        ]
+      }
+    ],
+    "missing_target_family": [
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-001487e174e4e658",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0825d1e6bab6d172",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e5b9550016de8b47",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-23f868db0c80918e",
+        "result_count": 3,
+        "result_providers": [
+          "usda_ers",
+          "openalex",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "official",
+          "scholarly",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-2602f5b94a7a69ed",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-a39f99597a4256cc",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-f0f97e5119afdb8e",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-12120b3ddd0f9bd3",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "time right now date",
+        "question_type": "temporal",
+        "request_id": "cite-search-a7ecc84be2554504",
+        "result_count": 3,
+        "result_providers": [
+          "nist_usno",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "time right now date",
+        "question_type": "temporal",
+        "request_id": "cite-search-ae73eb22553569a7",
+        "result_count": 3,
+        "result_providers": [
+          "nist_usno",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "time right now date",
+        "question_type": "temporal",
+        "request_id": "cite-search-cb6d59ecd61a461c",
+        "result_count": 3,
+        "result_providers": [
+          "nist_usno",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "time right now date",
+        "question_type": "temporal",
+        "request_id": "cite-search-0ccfab9b979f2fe4",
+        "result_count": 3,
+        "result_providers": [
+          "nist_usno",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "should watch out vampires date",
+        "question_type": "temporal",
+        "request_id": "cite-search-96a3ccc2bdfb944a",
+        "result_count": 3,
+        "result_providers": [
+          "un_population_division",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "should watch out vampires date",
+        "question_type": "temporal",
+        "request_id": "cite-search-1cb7eed00806e225",
+        "result_count": 3,
+        "result_providers": [
+          "un_population_division",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "should watch out vampires date",
+        "question_type": "temporal",
+        "request_id": "cite-search-04217e69d82766af",
+        "result_count": 3,
+        "result_providers": [
+          "un_population_division",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "should watch out vampires date",
+        "question_type": "temporal",
+        "request_id": "cite-search-f72aa0e063ea6a8f",
+        "result_count": 3,
+        "result_providers": [
+          "un_population_division",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-852380cf2f764ae8",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-62d1b9499c90aa6f",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-c5385eab11d5c5c9",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official"
+        ],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "news"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference"
+        ],
+        "priority": "medium",
+        "query": "Pilgrims Nicknamed football team based Boston plays national",
+        "question_type": "other",
+        "request_id": "cite-search-4979816771988c51",
+        "result_count": 3,
+        "result_providers": [
+          "nfl",
+          "source_family_catalog",
+          "openalex"
+        ],
+        "result_source_families": [
+          "official",
+          "reference",
+          "scholarly"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news"
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "schema_version": 1,
+  "source": {
+    "adapter_results": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+    "requests": "artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl"
+  },
+  "status": "needs_catalog_expansion",
+  "summary": {
+    "acquisition_plan_count": 20,
+    "covered_target_source_family_counts": {
+      "official": 52,
+      "official_statistics": 4,
+      "reference": 68,
+      "scholarly": 156
+    },
+    "freshness_required_count": 20,
+    "freshness_required_with_fresh_result_count": 20,
+    "missing_target_source_family_counts": {
+      "news": 20
+    },
+    "official_source_preferred_count": 52,
+    "official_source_preferred_with_official_result_count": 52,
+    "preferred_source_family_counts": {
+      "encyclopedic": 244,
+      "news": 20,
+      "official": 52,
+      "official_statistics": 4,
+      "reference": 260,
+      "scholarly": 156
+    },
+    "request_count": 260,
+    "request_missing_target_family_count": 20,
+    "request_with_fresh_result_count": 260,
+    "request_with_official_result_count": 216,
+    "request_with_results_count": 260,
+    "request_with_target_family_count": 260,
+    "result_provider_counts": {
+      "cdc": 24,
+      "nfl": 8,
+      "nist_usno": 16,
+      "openalex": 320,
+      "source_family_catalog": 240,
+      "un_population_division": 4,
+      "usda_ers": 28,
+      "who": 12,
+      "worldbank": 128
+    },
+    "result_request_count": 260,
+    "result_source_family_counts": {
+      "official": 92,
+      "official_statistics": 128,
+      "reference": 240,
+      "scholarly": 320
+    },
+    "target_source_family_counts": {
+      "news": 20,
+      "official": 52,
+      "official_statistics": 4,
+      "reference": 68,
+      "scholarly": 156
+    }
+  },
+  "workflow": "source_family_coverage_audit"
+}

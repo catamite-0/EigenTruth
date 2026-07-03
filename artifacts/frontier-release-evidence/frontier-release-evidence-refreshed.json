@@ -1,0 +1,568 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 11,
+    "directory_count": 0,
+    "file_count": 11,
+    "missing_count": 0
+  },
+  "citation_batch_decisions": [],
+  "config": {
+    "max_abstention_rate_mean": 0.5,
+    "max_detectability_entrenched_false_rate": 0.25,
+    "max_verified_false_alarm_mean": 0.02,
+    "min_abstention_conditional_correctness_lower_bound_mean": 0.8,
+    "min_abstention_pass_seed_rate": 1.0,
+    "min_verified_detection_mean": 0.2,
+    "min_verifier_beats_internal_seed_rate": 1.0,
+    "min_verifier_delta_detection_mean": 0.0,
+    "min_verifier_pass_seed_rate": 1.0
+  },
+  "decision": {
+    "abstention_track_status": "blocked",
+    "base_abstention_track_status": "blocked",
+    "base_detectability_track_status": "blocked",
+    "base_multiple_testing_track_status": "blocked",
+    "base_verifier_track_status": "promote",
+    "blocking_reasons": [
+      "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+      "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+      "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+      "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+      "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+    ],
+    "citation_batch_track_status": "not_required",
+    "detectability_track_status": "blocked",
+    "frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_track_status": "promote",
+    "multiple_testing_track_status": "promote",
+    "status": "blocked",
+    "verifier_track_status": "promote"
+  },
+  "evidence_summary": {
+    "abstention_signals": [
+      "maha_last",
+      "truth_proj",
+      "subspace_resid",
+      "disp_euclid",
+      "disp_hse",
+      "nll_answer",
+      "eigenscore",
+      "resid_update_norm"
+    ],
+    "abstention_track_status": "blocked",
+    "base_abstention_track_status": "blocked",
+    "base_detectability_track_status": "blocked",
+    "base_multiple_testing_track_status": "blocked",
+    "base_verifier_track_status": "promote",
+    "citation_batch_adapter_request_count": 0,
+    "citation_batch_adapter_result_count": 0,
+    "citation_batch_blocked_child_report_count": 0,
+    "citation_batch_blocked_rollups": [],
+    "citation_batch_child_manifest_failed_count": 0,
+    "citation_batch_child_report_count": 0,
+    "citation_batch_corpus_document_count": 0,
+    "citation_batch_duplicate_batch_count": 0,
+    "citation_batch_duplicate_batches": [],
+    "citation_batch_expected_batch_count": 0,
+    "citation_batch_expected_batch_ids": [],
+    "citation_batch_missing_expected_batch_count": 0,
+    "citation_batch_missing_expected_batches": [],
+    "citation_batch_observed_batch_count": 0,
+    "citation_batch_observed_batch_ids": [],
+    "citation_batch_promotion_ready_count": 0,
+    "citation_batch_rollup_count": 0,
+    "citation_batch_rollup_names": [],
+    "citation_batch_rollup_report_count": 0,
+    "citation_batch_source_document_count": 0,
+    "citation_batch_unexpected_batch_count": 0,
+    "citation_batch_unexpected_batches": [],
+    "detectability_report_count": 2,
+    "detectability_track_status": "blocked",
+    "frontier_rerun_rollup_blocked_candidate_count": 0,
+    "frontier_rerun_rollup_blocked_names": [],
+    "frontier_rerun_rollup_candidate_count": 2,
+    "frontier_rerun_rollup_invalid_report_count": 0,
+    "frontier_rerun_rollup_missing_report_count": 0,
+    "frontier_rerun_rollup_names": [
+      "frontier-rerun-rollup"
+    ],
+    "frontier_rerun_rollup_observed_report_count": 2,
+    "frontier_rerun_rollup_promoted_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_promotion_ready_count": 2,
+    "frontier_rerun_rollup_report_count": 1,
+    "frontier_rerun_rollup_tracks": [
+      "multiple_testing"
+    ],
+    "frontier_rerun_rollup_workflows": [
+      "frontier_multiple_testing_rerun_rollup"
+    ],
+    "frontier_workflow_report_count": 1,
+    "multiple_testing_blocked_cells": [],
+    "multiple_testing_cell_count": 0,
+    "multiple_testing_fail_count": 0,
+    "multiple_testing_failed_cells": [],
+    "multiple_testing_frontier_workflow_names": [
+      "truthfulqa-frontier-workflow"
+    ],
+    "multiple_testing_pass_count": 0,
+    "multiple_testing_signals": [],
+    "multiple_testing_track_status": "promote",
+    "multiple_testing_unknown_cells": [],
+    "multiple_testing_unknown_count": 0,
+    "run_count": 2,
+    "run_names": [
+      "qwen05-l80",
+      "smollm2-l80"
+    ],
+    "verifier_signal": "truth_proj",
+    "verifier_track_status": "promote"
+  },
+  "frontier_rerun_rollup_decisions": [
+    {
+      "blocking_reasons": [],
+      "checks": [],
+      "metrics": {
+        "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+        "audit_ready": null,
+        "audit_ready_count": null,
+        "blocked_candidate_count": 0,
+        "candidate_count": 2,
+        "cells": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "gate_passed": true,
+        "invalid_report_count": 0,
+        "missing_report_count": 0,
+        "observed_report_count": 2,
+        "passing_candidate_count": null,
+        "promotion_ready": true,
+        "promotion_ready_count": 2,
+        "runs": [
+          "truthfulqa-frontier-workflow"
+        ],
+        "status": "promote",
+        "track": "multiple_testing",
+        "track_statuses": {},
+        "tracks": [],
+        "workflow": "frontier_multiple_testing_rerun_rollup"
+      },
+      "name": "frontier-rerun-rollup",
+      "status": "promote",
+      "track": "frontier_rerun_rollup"
+    }
+  ],
+  "inputs": {
+    "abstention_stability_report": {
+      "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/artifact-manifest.json",
+      "artifact_manifest_summary": {
+        "artifact_count": 5,
+        "directory_count": 0,
+        "file_count": 5,
+        "missing_count": 0
+      },
+      "blocking_reasons": [],
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json",
+      "status": "complete",
+      "workflow": "abstention_stability"
+    },
+    "citation_batch_rollup_reports": [],
+    "detectability_taxonomy_reports": [
+      {
+        "artifact_manifest": null,
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json",
+        "status": "complete",
+        "workflow": "detectability_taxonomy"
+      },
+      {
+        "artifact_manifest": null,
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json",
+        "status": "complete",
+        "workflow": "detectability_taxonomy"
+      }
+    ],
+    "frontier_rerun_rollup_reports": [
+      {
+        "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+        "artifact_manifest_summary": {},
+        "blocking_reasons": [],
+        "path": "artifacts/frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json",
+        "status": "promote",
+        "track": "multiple_testing",
+        "workflow": "frontier_multiple_testing_rerun_rollup"
+      }
+    ],
+    "frontier_workflow_reports": [
+      {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 10,
+          "directory_count": 0,
+          "file_count": 10,
+          "missing_count": 0
+        },
+        "blocking_reasons": [],
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/truthfulqa-frontier-workflow.json",
+        "status": "complete",
+        "workflow": "truthfulqa_frontier_workflow"
+      }
+    ],
+    "verifier_stability_report": {
+      "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+      "artifact_manifest_summary": {
+        "artifact_count": 6,
+        "directory_count": 0,
+        "file_count": 6,
+        "missing_count": 0
+      },
+      "blocking_reasons": [],
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json",
+      "status": "complete",
+      "workflow": "verifier_stability"
+    }
+  },
+  "manifest_verification": {
+    "checked": 11,
+    "failure_count": 0,
+    "passed": true,
+    "path": "artifacts/frontier-release-evidence/manifest-verification.json",
+    "recursive": true
+  },
+  "multiple_testing_decisions": [
+    {
+      "blocking_reasons": [
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate missing",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.enabled is not true",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.all_pass is not true",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.cell_count is missing or zero",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.pass_count is missing",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.fail_count is missing",
+        "truthfulqa_frontier_workflow.truthfulqa-frontier-workflow.multiple_testing_gate.unknown_count is missing"
+      ],
+      "checks": [],
+      "metrics": {
+        "all_pass": null,
+        "alpha": null,
+        "blocked_cells": [],
+        "cell_count": null,
+        "enabled": null,
+        "fail_count": null,
+        "failed_cells": [],
+        "method": null,
+        "pass_count": null,
+        "signals": [],
+        "unknown_cells": [],
+        "unknown_count": null
+      },
+      "name": "truthfulqa-frontier-workflow",
+      "status": "blocked",
+      "track": "truthfulqa_frontier_workflow.multiple_testing_gate"
+    }
+  ],
+  "notes": [
+    "multiple-testing-rerun-rollup-v1-promoted"
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/artifact-manifest.json",
+    "frontier_release_evidence_report": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
+    "manifest_verification": "artifacts/frontier-release-evidence/manifest-verification.json"
+  },
+  "run_decisions": [
+    {
+      "abstention_decision": {
+        "blocking_reasons": [
+          "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+          "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+        ],
+        "checks": [
+          {
+            "name": "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+            "threshold": 0.8,
+            "value": 0.49756007712932593
+          },
+          {
+            "name": "abstention_stability.qwen05-l80.empirical_abstention_rate_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.5,
+            "value": 0.18597122302158273
+          },
+          {
+            "name": "abstention_stability.qwen05-l80.release_gate_pass_seed_rate",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+            "threshold": 1.0,
+            "value": 0.0
+          }
+        ],
+        "metrics": {
+          "conditional_correctness_lower_bound_mean": 0.49756007712932593,
+          "empirical_abstention_rate_mean": 0.18597122302158273,
+          "recommended_score_name_counts": {
+            "truth_proj": 10
+          },
+          "release_gate_block_seed_count": 10,
+          "release_gate_pass_seed_count": 0,
+          "release_gate_pass_seed_rate": 0.0,
+          "stable_recommended_score_name": "truth_proj",
+          "supervised_feasibility_conditional_correctness_lower_bound": null,
+          "supervised_feasibility_empirical_abstention_rate": null,
+          "supervised_feasibility_empirical_selective_accuracy": null,
+          "supervised_feasibility_score_name": null,
+          "supervised_feasibility_target_passed": null
+        },
+        "name": "qwen05-l80",
+        "status": "blocked",
+        "track": "abstention_stability"
+      },
+      "blocking_reasons": [
+        "abstention_stability.qwen05-l80.conditional_correctness_lower_bound_mean 0.49756 is below required minimum 0.8",
+        "abstention_stability.qwen05-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+      ],
+      "detectability_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "detectability_taxonomy.qwen05-l80.entrenched_false_rate",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.25,
+            "value": 0.0
+          }
+        ],
+        "metrics": {
+          "blind_spot_false_count": 0,
+          "confidence_signal": "nll_answer",
+          "consistency_signal": "eigenscore",
+          "entrenched_false_count": 0,
+          "entrenched_false_rate": 0.0,
+          "n_false": 306,
+          "n_total": 556
+        },
+        "name": "qwen05-l80",
+        "status": "promote",
+        "track": "detectability_taxonomy"
+      },
+      "name": "qwen05-l80",
+      "status": "blocked",
+      "verifier_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "verifier_stability.qwen05-l80.verified_false_alarm_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.02,
+            "value": 0.00608
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.2,
+            "value": 0.3051143790849673
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.delta_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.0,
+            "value": 0.02787581699346401
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          },
+          {
+            "name": "verifier_stability.qwen05-l80.verified_beats_internal_detection_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "delta_detection_mean": 0.02787581699346401,
+          "verified_beats_internal_detection_seed_count": 10,
+          "verified_beats_internal_detection_seed_rate": 1.0,
+          "verified_detection_mean": 0.3051143790849673,
+          "verified_false_alarm_mean": 0.00608,
+          "verified_pass_seed_count": 10,
+          "verified_pass_seed_rate": 1.0
+        },
+        "name": "qwen05-l80",
+        "status": "promote",
+        "track": "verifier_stability"
+      }
+    },
+    {
+      "abstention_decision": {
+        "blocking_reasons": [
+          "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+          "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1"
+        ],
+        "checks": [
+          {
+            "name": "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+            "threshold": 0.8,
+            "value": 0.4845096335353289
+          },
+          {
+            "name": "abstention_stability.smollm2-l80.empirical_abstention_rate_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.5,
+            "value": 0.16726618705035973
+          },
+          {
+            "name": "abstention_stability.smollm2-l80.release_gate_pass_seed_rate",
+            "operator": ">=",
+            "passed": false,
+            "reason": "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+            "threshold": 1.0,
+            "value": 0.0
+          }
+        ],
+        "metrics": {
+          "conditional_correctness_lower_bound_mean": 0.4845096335353289,
+          "empirical_abstention_rate_mean": 0.16726618705035973,
+          "recommended_score_name_counts": {
+            "truth_proj": 10
+          },
+          "release_gate_block_seed_count": 10,
+          "release_gate_pass_seed_count": 0,
+          "release_gate_pass_seed_rate": 0.0,
+          "stable_recommended_score_name": "truth_proj",
+          "supervised_feasibility_conditional_correctness_lower_bound": null,
+          "supervised_feasibility_empirical_abstention_rate": null,
+          "supervised_feasibility_empirical_selective_accuracy": null,
+          "supervised_feasibility_score_name": null,
+          "supervised_feasibility_target_passed": null
+        },
+        "name": "smollm2-l80",
+        "status": "blocked",
+        "track": "abstention_stability"
+      },
+      "blocking_reasons": [
+        "abstention_stability.smollm2-l80.conditional_correctness_lower_bound_mean 0.48451 is below required minimum 0.8",
+        "abstention_stability.smollm2-l80.release_gate_pass_seed_rate 0 is below required minimum 1",
+        "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+      ],
+      "detectability_decision": {
+        "blocking_reasons": [
+          "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25"
+        ],
+        "checks": [
+          {
+            "name": "detectability_taxonomy.smollm2-l80.entrenched_false_rate",
+            "operator": "<=",
+            "passed": false,
+            "reason": "detectability_taxonomy.smollm2-l80.entrenched_false_rate 0.29085 exceeds maximum 0.25",
+            "threshold": 0.25,
+            "value": 0.2908496732026144
+          }
+        ],
+        "metrics": {
+          "blind_spot_false_count": 89,
+          "confidence_signal": "nll_answer",
+          "consistency_signal": "eigenscore",
+          "entrenched_false_count": 89,
+          "entrenched_false_rate": 0.2908496732026144,
+          "n_false": 306,
+          "n_total": 556
+        },
+        "name": "smollm2-l80",
+        "status": "blocked",
+        "track": "detectability_taxonomy"
+      },
+      "name": "smollm2-l80",
+      "status": "blocked",
+      "verifier_decision": {
+        "blocking_reasons": [],
+        "checks": [
+          {
+            "name": "verifier_stability.smollm2-l80.verified_false_alarm_mean",
+            "operator": "<=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.02,
+            "value": 0.010239999999999999
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.2,
+            "value": 0.24387254901960786
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.delta_detection_mean",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 0.0,
+            "value": 0.005375816993464089
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_pass_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          },
+          {
+            "name": "verifier_stability.smollm2-l80.verified_beats_internal_detection_seed_rate",
+            "operator": ">=",
+            "passed": true,
+            "reason": null,
+            "threshold": 1.0,
+            "value": 1.0
+          }
+        ],
+        "metrics": {
+          "delta_detection_mean": 0.005375816993464089,
+          "verified_beats_internal_detection_seed_count": 10,
+          "verified_beats_internal_detection_seed_rate": 1.0,
+          "verified_detection_mean": 0.24387254901960786,
+          "verified_false_alarm_mean": 0.010239999999999999,
+          "verified_pass_seed_count": 10,
+          "verified_pass_seed_rate": 1.0
+        },
+        "name": "smollm2-l80",
+        "status": "promote",
+        "track": "verifier_stability"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "status": "complete",
+  "workflow": "frontier_release_evidence_comparison"
+}

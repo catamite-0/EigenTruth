@@ -46,8 +46,14 @@ _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES = (
 _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_KEYS
 )
+_PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_KEYS
+)
 _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_KEYS
 )
 _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_KEYS
@@ -57,6 +63,59 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES = (
 )
 _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES = (
     _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_PREFIXES = (
+    "product_trace_evidence_quality_trace_coverage_rate",
+    "product_trace_evidence_quality_coverage_rate",
+    "product_trace_evidence_quality_pass_rate",
+    "product_trace_evidence_quality_failure_rate",
+    "product_trace_evidence_quality_failed_result_rate",
+    "product_trace_evidence_quality_stale_evidence_rate",
+    "product_trace_evidence_quality_untrusted_source_rate",
+    "product_trace_evidence_quality_missing_source_rate",
+    "product_trace_evidence_quality_missing_timestamp_rate",
+)
+_PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_KEYS
+)
+_PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES = (
+    _runtime_drift_keys.PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_KEYS
 )
 
 
@@ -68,12 +127,15 @@ def _apply_release_policy_profile_to_config(
         disabled_profile_defaults.append("external_evidence_baseline_comparison_key")
     if config.triple_extraction_fixture_matrix_path is not None:
         disabled_profile_defaults.append("triple_extraction_fixture_matrix_key")
+    if config.mechanism_handoff_evidence_bundle_path is not None:
+        disabled_profile_defaults.append("mechanism_handoff_evidence_bundle_key")
     profile, values, applied = apply_release_policy_profile_defaults(
         config.release_policy_profile,
         {
             "require_structured_fact_robustness": config.require_structured_fact_robustness,
             "min_best_quality_auroc": config.min_best_quality_auroc,
             "max_uncached_forward_seconds": config.max_uncached_forward_seconds,
+            "max_recommended_runtime_seconds": config.max_recommended_runtime_seconds,
             "min_selected": config.min_selected,
             "min_decision_accuracy": config.min_decision_accuracy,
             "max_false_supported_rate": config.max_false_supported_rate,
@@ -98,6 +160,36 @@ def _apply_release_policy_profile_to_config(
             "required_route_min_covered_fact_property_false_refuted_rate": (
                 config.required_route_min_covered_fact_property_false_refuted_rate
             ),
+            "structured_fact_robustness_min_selected": (
+                config.structured_fact_robustness_min_selected
+            ),
+            "structured_fact_robustness_min_decision_accuracy": (
+                config.structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                config.structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                config.structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                config.structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                config.structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                config.structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_profile": config.adapter_family_profile,
             "require_state_transition_world_model": config.require_state_transition_world_model,
             "require_product_runtime_drift_promotion_evidence": (
@@ -106,8 +198,17 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_pre_generation_evidence": (
                 config.require_product_runtime_drift_pre_generation_evidence
             ),
+            "require_product_runtime_drift_claim_factuality_evidence": (
+                config.require_product_runtime_drift_claim_factuality_evidence
+            ),
+            "require_product_runtime_drift_claim_risk_localization_evidence": (
+                config.require_product_runtime_drift_claim_risk_localization_evidence
+            ),
             "require_product_runtime_drift_counterfactual_evidence": (
                 config.require_product_runtime_drift_counterfactual_evidence
+            ),
+            "require_product_runtime_drift_fact_selfcheck_gate_evidence": (
+                config.require_product_runtime_drift_fact_selfcheck_gate_evidence
             ),
             "require_product_runtime_drift_triple_audit_evidence": (
                 config.require_product_runtime_drift_triple_audit_evidence
@@ -118,6 +219,63 @@ def _apply_release_policy_profile_to_config(
             "require_product_runtime_drift_action_gate_evidence": (
                 config.require_product_runtime_drift_action_gate_evidence
             ),
+            "require_product_runtime_drift_world_model_action_gate_evidence": (
+                config.require_product_runtime_drift_world_model_action_gate_evidence
+            ),
+            "require_product_runtime_drift_world_model_rollout_evidence": (
+                config.require_product_runtime_drift_world_model_rollout_evidence
+            ),
+            "require_product_runtime_drift_action_receipts_evidence": (
+                config.require_product_runtime_drift_action_receipts_evidence
+            ),
+            "require_product_runtime_drift_receipt_claim_support_evidence": (
+                config.require_product_runtime_drift_receipt_claim_support_evidence
+            ),
+            "require_product_runtime_drift_trajectory_audit_evidence": (
+                config.require_product_runtime_drift_trajectory_audit_evidence
+            ),
+            "require_product_runtime_drift_provenance_evidence": (
+                config.require_product_runtime_drift_provenance_evidence
+            ),
+            "require_product_runtime_drift_citation_integrity_evidence": (
+                config.require_product_runtime_drift_citation_integrity_evidence
+            ),
+            "require_product_runtime_drift_evidence_quality_evidence": (
+                config.require_product_runtime_drift_evidence_quality_evidence
+            ),
+            "require_product_runtime_drift_metacognition_evidence": (
+                config.require_product_runtime_drift_metacognition_evidence
+            ),
+            "require_product_runtime_drift_evidence_handoff_evidence": (
+                config.require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": (
+                config.require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_context_sensitivity_evidence": (
+                config.require_product_runtime_drift_context_sensitivity_evidence
+            ),
+            "require_product_runtime_drift_counterfactual_robustness_evidence": (
+                config.require_product_runtime_drift_counterfactual_robustness_evidence
+            ),
+            "require_product_runtime_drift_frontier_release_evidence": (
+                config.require_product_runtime_drift_frontier_release_evidence
+            ),
+            "require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence": (
+                config.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
+            ),
+            "require_frontier_release_input_manifests": (
+                config.require_frontier_release_input_manifests
+            ),
+            "require_unresolved_frontier_evidence_closure": (
+                config.require_unresolved_frontier_evidence_closure
+            ),
+            "require_frontier_queue_execution_smoke": (
+                config.require_frontier_queue_execution_smoke
+            ),
+            "unresolved_frontier_evidence_summary_key": (
+                config.unresolved_frontier_evidence_summary_key
+            ),
             "require_product_trace_action_audit_gate": config.require_product_trace_action_audit_gate,
             "require_product_trace_action_execution_gate": (
                 config.require_product_trace_action_execution_gate
@@ -126,6 +284,9 @@ def _apply_release_policy_profile_to_config(
                 config.external_evidence_baseline_comparison_key
             ),
             "triple_extraction_fixture_matrix_key": config.triple_extraction_fixture_matrix_key,
+            "mechanism_handoff_evidence_bundle_key": (
+                config.mechanism_handoff_evidence_bundle_key
+            ),
             "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
             "min_triple_extraction_distinct_predicates": (
                 config.min_triple_extraction_distinct_predicates
@@ -165,15 +326,45 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_structured_fact_robustness: bool = False
     structured_fact_canonical_route_key: str | None = None
     structured_fact_paraphrase_route_key: str | None = None
+    structured_fact_robustness_min_selected: int | None = None
+    structured_fact_robustness_min_decision_accuracy: float | None = None
+    structured_fact_robustness_max_false_supported_rate: float | None = None
+    structured_fact_robustness_min_false_refuted_rate: float | None = None
+    structured_fact_robustness_min_covered_fact_properties: int | None = None
+    structured_fact_robustness_min_covered_fact_property_records: int | None = None
+    structured_fact_robustness_min_covered_fact_property_source_documents: int | None = None
+    structured_fact_robustness_min_covered_fact_property_decision_accuracy: float | None = None
+    structured_fact_robustness_max_covered_fact_property_false_supported_rate: float | None = None
+    structured_fact_robustness_min_covered_fact_property_false_refuted_rate: float | None = None
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
     require_product_runtime_drift_promotion_evidence: bool = False
     require_product_runtime_drift_pre_generation_evidence: bool = False
+    require_product_runtime_drift_claim_factuality_evidence: bool = False
+    require_product_runtime_drift_claim_risk_localization_evidence: bool = False
     require_product_runtime_drift_counterfactual_evidence: bool = False
+    require_product_runtime_drift_fact_selfcheck_gate_evidence: bool = False
     require_product_runtime_drift_triple_audit_evidence: bool = False
     require_product_runtime_drift_covered_fact_property_evidence: bool = False
     require_product_runtime_drift_action_gate_evidence: bool = False
+    require_product_runtime_drift_world_model_action_gate_evidence: bool = False
+    require_product_runtime_drift_world_model_rollout_evidence: bool = False
+    require_product_runtime_drift_action_receipts_evidence: bool = False
+    require_product_runtime_drift_receipt_claim_support_evidence: bool = False
+    require_product_runtime_drift_trajectory_audit_evidence: bool = False
+    require_product_runtime_drift_provenance_evidence: bool = False
+    require_product_runtime_drift_citation_integrity_evidence: bool = False
+    require_product_runtime_drift_evidence_quality_evidence: bool = False
+    require_product_runtime_drift_metacognition_evidence: bool = False
+    require_product_runtime_drift_evidence_handoff_evidence: bool = False
+    require_product_runtime_drift_world_model_evidence: bool = False
+    require_product_runtime_drift_context_sensitivity_evidence: bool = False
+    require_product_runtime_drift_counterfactual_robustness_evidence: bool = False
+    require_product_runtime_drift_frontier_release_evidence: bool = False
+    require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence: (
+        bool
+    ) = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
     external_evidence_baseline_comparison_registry_path: Path | None = None
@@ -181,12 +372,27 @@ class ReleaseCandidateRegistryWorkflowConfig:
     pre_generation_probe_comparison_path: Path | None = None
     pre_generation_probe_comparison_registry_path: Path | None = None
     pre_generation_probe_comparison_key: str | None = None
+    claim_factuality_probe_comparison_path: Path | None = None
+    claim_factuality_probe_comparison_registry_path: Path | None = None
+    claim_factuality_probe_comparison_key: str | None = None
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
+    require_frontier_release_input_manifests: bool = False
+    unresolved_frontier_evidence_summary_path: Path | None = None
+    unresolved_frontier_evidence_summary_registry_path: Path | None = None
+    unresolved_frontier_evidence_summary_key: str | None = None
+    require_unresolved_frontier_evidence_closure: bool = False
+    require_frontier_queue_execution_smoke: bool = False
     world_model_signal_workflow_path: Path | None = None
     world_model_signal_workflow_registry_path: Path | None = None
     world_model_signal_workflow_key: str | None = None
+    context_sensitivity_workflow_path: Path | None = None
+    context_sensitivity_workflow_registry_path: Path | None = None
+    context_sensitivity_workflow_key: str | None = None
+    mechanism_handoff_evidence_bundle_path: Path | None = None
+    mechanism_handoff_evidence_bundle_registry_path: Path | None = None
+    mechanism_handoff_evidence_bundle_key: str | None = None
     pathway_intervention_workflow_path: Path | None = None
     pathway_intervention_workflow_registry_path: Path | None = None
     pathway_intervention_workflow_key: str | None = None
@@ -251,6 +457,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
     max_cache_only_seconds: float | None = None
+    max_recommended_runtime_seconds: float | None = None
     max_covariance_maha_last_auroc_drop: float | None = None
     max_inside_sample_count_ratio: float | None = None
     max_inside_generation_seconds_ratio: float | None = None
@@ -364,6 +571,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 "pre_generation_probe_comparison_registry_path",
                 Path(self.pre_generation_probe_comparison_registry_path),
             )
+        if self.claim_factuality_probe_comparison_path is not None:
+            object.__setattr__(
+                self,
+                "claim_factuality_probe_comparison_path",
+                Path(self.claim_factuality_probe_comparison_path),
+            )
+        if self.claim_factuality_probe_comparison_registry_path is not None:
+            object.__setattr__(
+                self,
+                "claim_factuality_probe_comparison_registry_path",
+                Path(self.claim_factuality_probe_comparison_registry_path),
+            )
         if self.frontier_release_evidence_path is not None:
             object.__setattr__(
                 self,
@@ -376,6 +595,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 "frontier_release_evidence_registry_path",
                 Path(self.frontier_release_evidence_registry_path),
             )
+        if self.unresolved_frontier_evidence_summary_path is not None:
+            object.__setattr__(
+                self,
+                "unresolved_frontier_evidence_summary_path",
+                Path(self.unresolved_frontier_evidence_summary_path),
+            )
+        if self.unresolved_frontier_evidence_summary_registry_path is not None:
+            object.__setattr__(
+                self,
+                "unresolved_frontier_evidence_summary_registry_path",
+                Path(self.unresolved_frontier_evidence_summary_registry_path),
+            )
         if self.world_model_signal_workflow_path is not None:
             object.__setattr__(
                 self,
@@ -387,6 +618,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "world_model_signal_workflow_registry_path",
                 Path(self.world_model_signal_workflow_registry_path),
+            )
+        if self.context_sensitivity_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "context_sensitivity_workflow_path",
+                Path(self.context_sensitivity_workflow_path),
+            )
+        if self.context_sensitivity_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "context_sensitivity_workflow_registry_path",
+                Path(self.context_sensitivity_workflow_registry_path),
             )
         if self.pathway_intervention_workflow_path is not None:
             object.__setattr__(
@@ -628,6 +871,36 @@ def run_release_candidate_registry_workflow(
         require_structured_fact_robustness=config.require_structured_fact_robustness,
         structured_fact_canonical_route_key=config.structured_fact_canonical_route_key,
         structured_fact_paraphrase_route_key=config.structured_fact_paraphrase_route_key,
+        structured_fact_robustness_min_selected=(
+            config.structured_fact_robustness_min_selected
+        ),
+        structured_fact_robustness_min_decision_accuracy=(
+            config.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            config.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            config.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            config.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            config.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            config.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+        ),
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
@@ -638,8 +911,17 @@ def run_release_candidate_registry_workflow(
         require_product_runtime_drift_pre_generation_evidence=(
             config.require_product_runtime_drift_pre_generation_evidence
         ),
+        require_product_runtime_drift_claim_factuality_evidence=(
+            config.require_product_runtime_drift_claim_factuality_evidence
+        ),
+        require_product_runtime_drift_claim_risk_localization_evidence=(
+            config.require_product_runtime_drift_claim_risk_localization_evidence
+        ),
         require_product_runtime_drift_counterfactual_evidence=(
             config.require_product_runtime_drift_counterfactual_evidence
+        ),
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=(
+            config.require_product_runtime_drift_fact_selfcheck_gate_evidence
         ),
         require_product_runtime_drift_triple_audit_evidence=(
             config.require_product_runtime_drift_triple_audit_evidence
@@ -649,6 +931,51 @@ def run_release_candidate_registry_workflow(
         ),
         require_product_runtime_drift_action_gate_evidence=(
             config.require_product_runtime_drift_action_gate_evidence
+        ),
+        require_product_runtime_drift_world_model_action_gate_evidence=(
+            config.require_product_runtime_drift_world_model_action_gate_evidence
+        ),
+        require_product_runtime_drift_world_model_rollout_evidence=(
+            config.require_product_runtime_drift_world_model_rollout_evidence
+        ),
+        require_product_runtime_drift_action_receipts_evidence=(
+            config.require_product_runtime_drift_action_receipts_evidence
+        ),
+        require_product_runtime_drift_receipt_claim_support_evidence=(
+            config.require_product_runtime_drift_receipt_claim_support_evidence
+        ),
+        require_product_runtime_drift_trajectory_audit_evidence=(
+            config.require_product_runtime_drift_trajectory_audit_evidence
+        ),
+        require_product_runtime_drift_provenance_evidence=(
+            config.require_product_runtime_drift_provenance_evidence
+        ),
+        require_product_runtime_drift_citation_integrity_evidence=(
+            config.require_product_runtime_drift_citation_integrity_evidence
+        ),
+        require_product_runtime_drift_evidence_quality_evidence=(
+            config.require_product_runtime_drift_evidence_quality_evidence
+        ),
+        require_product_runtime_drift_metacognition_evidence=(
+            config.require_product_runtime_drift_metacognition_evidence
+        ),
+        require_product_runtime_drift_evidence_handoff_evidence=(
+            config.require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_product_runtime_drift_world_model_evidence=(
+            config.require_product_runtime_drift_world_model_evidence
+        ),
+        require_product_runtime_drift_context_sensitivity_evidence=(
+            config.require_product_runtime_drift_context_sensitivity_evidence
+        ),
+        require_product_runtime_drift_counterfactual_robustness_evidence=(
+            config.require_product_runtime_drift_counterfactual_robustness_evidence
+        ),
+        require_product_runtime_drift_frontier_release_evidence=(
+            config.require_product_runtime_drift_frontier_release_evidence
+        ),
+        require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence=(
+            config.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
         ),
         release_efficiency_report_path=config.release_efficiency_report_path,
         external_evidence_baseline_comparison_path=(
@@ -665,12 +992,49 @@ def run_release_candidate_registry_workflow(
             config.pre_generation_probe_comparison_registry_path
         ),
         pre_generation_probe_comparison_key=config.pre_generation_probe_comparison_key,
+        claim_factuality_probe_comparison_path=(
+            config.claim_factuality_probe_comparison_path
+        ),
+        claim_factuality_probe_comparison_registry_path=(
+            config.claim_factuality_probe_comparison_registry_path
+        ),
+        claim_factuality_probe_comparison_key=(
+            config.claim_factuality_probe_comparison_key
+        ),
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
+        require_frontier_release_input_manifests=(
+            config.require_frontier_release_input_manifests
+        ),
+        unresolved_frontier_evidence_summary_path=(
+            config.unresolved_frontier_evidence_summary_path
+        ),
+        unresolved_frontier_evidence_summary_registry_path=(
+            config.unresolved_frontier_evidence_summary_registry_path
+        ),
+        unresolved_frontier_evidence_summary_key=(
+            config.unresolved_frontier_evidence_summary_key
+        ),
+        require_unresolved_frontier_evidence_closure=(
+            config.require_unresolved_frontier_evidence_closure
+        ),
+        require_frontier_queue_execution_smoke=(
+            config.require_frontier_queue_execution_smoke
+        ),
         world_model_signal_workflow_path=config.world_model_signal_workflow_path,
         world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
         world_model_signal_workflow_key=config.world_model_signal_workflow_key,
+        context_sensitivity_workflow_path=config.context_sensitivity_workflow_path,
+        context_sensitivity_workflow_registry_path=(
+            config.context_sensitivity_workflow_registry_path
+        ),
+        context_sensitivity_workflow_key=config.context_sensitivity_workflow_key,
+        mechanism_handoff_evidence_bundle_path=config.mechanism_handoff_evidence_bundle_path,
+        mechanism_handoff_evidence_bundle_registry_path=(
+            config.mechanism_handoff_evidence_bundle_registry_path
+        ),
+        mechanism_handoff_evidence_bundle_key=config.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=config.pathway_intervention_workflow_path,
         pathway_intervention_workflow_registry_path=(
             config.pathway_intervention_workflow_registry_path
@@ -768,6 +1132,7 @@ def run_release_candidate_registry_workflow(
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
         max_cache_only_seconds=config.max_cache_only_seconds,
+        max_recommended_runtime_seconds=config.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=config.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=config.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
@@ -925,8 +1290,17 @@ def run_release_candidate_registry_workflow(
             "require_product_runtime_drift_pre_generation_evidence": (
                 config.require_product_runtime_drift_pre_generation_evidence
             ),
+            "require_product_runtime_drift_claim_factuality_evidence": (
+                config.require_product_runtime_drift_claim_factuality_evidence
+            ),
+            "require_product_runtime_drift_claim_risk_localization_evidence": (
+                config.require_product_runtime_drift_claim_risk_localization_evidence
+            ),
             "require_product_runtime_drift_counterfactual_evidence": (
                 config.require_product_runtime_drift_counterfactual_evidence
+            ),
+            "require_product_runtime_drift_fact_selfcheck_gate_evidence": (
+                config.require_product_runtime_drift_fact_selfcheck_gate_evidence
             ),
             "require_product_runtime_drift_triple_audit_evidence": (
                 config.require_product_runtime_drift_triple_audit_evidence
@@ -936,6 +1310,51 @@ def run_release_candidate_registry_workflow(
             ),
             "require_product_runtime_drift_action_gate_evidence": (
                 config.require_product_runtime_drift_action_gate_evidence
+            ),
+            "require_product_runtime_drift_world_model_action_gate_evidence": (
+                config.require_product_runtime_drift_world_model_action_gate_evidence
+            ),
+            "require_product_runtime_drift_world_model_rollout_evidence": (
+                config.require_product_runtime_drift_world_model_rollout_evidence
+            ),
+            "require_product_runtime_drift_action_receipts_evidence": (
+                config.require_product_runtime_drift_action_receipts_evidence
+            ),
+            "require_product_runtime_drift_receipt_claim_support_evidence": (
+                config.require_product_runtime_drift_receipt_claim_support_evidence
+            ),
+            "require_product_runtime_drift_trajectory_audit_evidence": (
+                config.require_product_runtime_drift_trajectory_audit_evidence
+            ),
+            "require_product_runtime_drift_provenance_evidence": (
+                config.require_product_runtime_drift_provenance_evidence
+            ),
+            "require_product_runtime_drift_citation_integrity_evidence": (
+                config.require_product_runtime_drift_citation_integrity_evidence
+            ),
+            "require_product_runtime_drift_evidence_quality_evidence": (
+                config.require_product_runtime_drift_evidence_quality_evidence
+            ),
+            "require_product_runtime_drift_metacognition_evidence": (
+                config.require_product_runtime_drift_metacognition_evidence
+            ),
+            "require_product_runtime_drift_evidence_handoff_evidence": (
+                config.require_product_runtime_drift_evidence_handoff_evidence
+            ),
+            "require_product_runtime_drift_world_model_evidence": (
+                config.require_product_runtime_drift_world_model_evidence
+            ),
+            "require_product_runtime_drift_context_sensitivity_evidence": (
+                config.require_product_runtime_drift_context_sensitivity_evidence
+            ),
+            "require_product_runtime_drift_counterfactual_robustness_evidence": (
+                config.require_product_runtime_drift_counterfactual_robustness_evidence
+            ),
+            "require_product_runtime_drift_frontier_release_evidence": (
+                config.require_product_runtime_drift_frontier_release_evidence
+            ),
+            "require_frontier_release_input_manifests": (
+                config.require_frontier_release_input_manifests
             ),
             "release_efficiency_report": (
                 None
@@ -966,6 +1385,19 @@ def run_release_candidate_registry_workflow(
                 else str(config.pre_generation_probe_comparison_registry_path)
             ),
             "pre_generation_probe_comparison_key": config.pre_generation_probe_comparison_key,
+            "claim_factuality_probe_comparison": (
+                None
+                if config.claim_factuality_probe_comparison_path is None
+                else str(config.claim_factuality_probe_comparison_path)
+            ),
+            "claim_factuality_probe_comparison_registry": (
+                None
+                if config.claim_factuality_probe_comparison_registry_path is None
+                else str(config.claim_factuality_probe_comparison_registry_path)
+            ),
+            "claim_factuality_probe_comparison_key": (
+                config.claim_factuality_probe_comparison_key
+            ),
             "frontier_release_evidence": (
                 None
                 if config.frontier_release_evidence_path is None
@@ -977,6 +1409,25 @@ def run_release_candidate_registry_workflow(
                 else str(config.frontier_release_evidence_registry_path)
             ),
             "frontier_release_evidence_key": config.frontier_release_evidence_key,
+            "unresolved_frontier_evidence_summary": (
+                None
+                if config.unresolved_frontier_evidence_summary_path is None
+                else str(config.unresolved_frontier_evidence_summary_path)
+            ),
+            "unresolved_frontier_evidence_summary_registry": (
+                None
+                if config.unresolved_frontier_evidence_summary_registry_path is None
+                else str(config.unresolved_frontier_evidence_summary_registry_path)
+            ),
+            "unresolved_frontier_evidence_summary_key": (
+                config.unresolved_frontier_evidence_summary_key
+            ),
+            "require_unresolved_frontier_evidence_closure": (
+                config.require_unresolved_frontier_evidence_closure
+            ),
+            "require_frontier_queue_execution_smoke": (
+                config.require_frontier_queue_execution_smoke
+            ),
             "world_model_signal_workflow": (
                 None
                 if config.world_model_signal_workflow_path is None
@@ -988,6 +1439,17 @@ def run_release_candidate_registry_workflow(
                 else str(config.world_model_signal_workflow_registry_path)
             ),
             "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+            "context_sensitivity_workflow": (
+                None
+                if config.context_sensitivity_workflow_path is None
+                else str(config.context_sensitivity_workflow_path)
+            ),
+            "context_sensitivity_workflow_registry": (
+                None
+                if config.context_sensitivity_workflow_registry_path is None
+                else str(config.context_sensitivity_workflow_registry_path)
+            ),
+            "context_sensitivity_workflow_key": config.context_sensitivity_workflow_key,
             "pathway_intervention_workflow": (
                 None
                 if config.pathway_intervention_workflow_path is None
@@ -1069,6 +1531,36 @@ def run_release_candidate_registry_workflow(
             "require_structured_fact_robustness": config.require_structured_fact_robustness,
             "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
             "structured_fact_paraphrase_route_key": config.structured_fact_paraphrase_route_key,
+            "structured_fact_robustness_min_selected": (
+                config.structured_fact_robustness_min_selected
+            ),
+            "structured_fact_robustness_min_decision_accuracy": (
+                config.structured_fact_robustness_min_decision_accuracy
+            ),
+            "structured_fact_robustness_max_false_supported_rate": (
+                config.structured_fact_robustness_max_false_supported_rate
+            ),
+            "structured_fact_robustness_min_false_refuted_rate": (
+                config.structured_fact_robustness_min_false_refuted_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_properties": (
+                config.structured_fact_robustness_min_covered_fact_properties
+            ),
+            "structured_fact_robustness_min_covered_fact_property_records": (
+                config.structured_fact_robustness_min_covered_fact_property_records
+            ),
+            "structured_fact_robustness_min_covered_fact_property_source_documents": (
+                config.structured_fact_robustness_min_covered_fact_property_source_documents
+            ),
+            "structured_fact_robustness_min_covered_fact_property_decision_accuracy": (
+                config.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+            ),
+            "structured_fact_robustness_max_covered_fact_property_false_supported_rate": (
+                config.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+            ),
+            "structured_fact_robustness_min_covered_fact_property_false_refuted_rate": (
+                config.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_matrix": (
                 None
                 if config.adapter_family_matrix_path is None
@@ -1314,6 +1806,17 @@ def _comparison_with_registry_config(
             else str(config.world_model_signal_workflow_registry_path)
         ),
         "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+        "context_sensitivity_workflow": (
+            comparison_config.get("context_sensitivity_workflow")
+            if config.context_sensitivity_workflow_path is None
+            else str(config.context_sensitivity_workflow_path)
+        ),
+        "context_sensitivity_workflow_registry": (
+            comparison_config.get("context_sensitivity_workflow_registry")
+            if config.context_sensitivity_workflow_registry_path is None
+            else str(config.context_sensitivity_workflow_registry_path)
+        ),
+        "context_sensitivity_workflow_key": config.context_sensitivity_workflow_key,
         "pathway_intervention_workflow": (
             comparison_config.get("pathway_intervention_workflow")
             if config.pathway_intervention_workflow_path is None
@@ -1423,6 +1926,42 @@ def _comparison_with_registry_config(
             if config.pre_generation_probe_comparison_key is None
             else config.pre_generation_probe_comparison_key
         ),
+        "claim_factuality_probe_comparison": (
+            comparison_config.get("claim_factuality_probe_comparison")
+            if config.claim_factuality_probe_comparison_path is None
+            else str(config.claim_factuality_probe_comparison_path)
+        ),
+        "claim_factuality_probe_comparison_registry": (
+            comparison_config.get("claim_factuality_probe_comparison_registry")
+            if config.claim_factuality_probe_comparison_registry_path is None
+            else str(config.claim_factuality_probe_comparison_registry_path)
+        ),
+        "claim_factuality_probe_comparison_key": (
+            comparison_config.get("claim_factuality_probe_comparison_key")
+            if config.claim_factuality_probe_comparison_key is None
+            else config.claim_factuality_probe_comparison_key
+        ),
+        "unresolved_frontier_evidence_summary": (
+            comparison_config.get("unresolved_frontier_evidence_summary")
+            if config.unresolved_frontier_evidence_summary_path is None
+            else str(config.unresolved_frontier_evidence_summary_path)
+        ),
+        "unresolved_frontier_evidence_summary_registry": (
+            comparison_config.get("unresolved_frontier_evidence_summary_registry")
+            if config.unresolved_frontier_evidence_summary_registry_path is None
+            else str(config.unresolved_frontier_evidence_summary_registry_path)
+        ),
+        "unresolved_frontier_evidence_summary_key": (
+            comparison_config.get("unresolved_frontier_evidence_summary_key")
+            if config.unresolved_frontier_evidence_summary_key is None
+            else config.unresolved_frontier_evidence_summary_key
+        ),
+        "require_unresolved_frontier_evidence_closure": (
+            config.require_unresolved_frontier_evidence_closure
+        ),
+        "require_frontier_queue_execution_smoke": (
+            config.require_frontier_queue_execution_smoke
+        ),
     })
     payload["config"] = comparison_config
     return payload
@@ -1456,10 +1995,22 @@ def _write_artifact_manifest(
             "pre_generation_probe_comparison_manifest"
         )
         or _nested(comparison, "pre_generation_probe_comparison_gate", "manifest_path"),
+        "claim_factuality_probe_comparison_manifest": manifests.get(
+            "claim_factuality_probe_comparison_manifest"
+        )
+        or _nested(comparison, "claim_factuality_probe_comparison_gate", "manifest_path"),
         "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
+        "unresolved_frontier_evidence_summary_manifest": manifests.get(
+            "unresolved_frontier_evidence_summary_manifest"
+        )
+        or _nested(comparison, "unresolved_frontier_evidence_summary_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
         or _nested(comparison, "world_model_signal_workflow_gate", "manifest_path"),
+        "context_sensitivity_workflow_manifest": manifests.get(
+            "context_sensitivity_workflow_manifest"
+        )
+        or _nested(comparison, "context_sensitivity_workflow_gate", "manifest_path"),
         "pathway_intervention_workflow_manifest": manifests.get(
             "pathway_intervention_workflow_manifest"
         )
@@ -1625,6 +2176,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             comparison.get("pre_generation_probe_comparison_gate") or {}
         )
     pre_generation_best_run = dict(pre_generation_probe_comparison.get("best_run") or {})
+    claim_factuality_probe_comparison = dict(
+        candidate.get("claim_factuality_probe_comparison") or {}
+    )
+    if not claim_factuality_probe_comparison:
+        claim_factuality_probe_comparison = dict(
+            comparison.get("claim_factuality_probe_comparison_gate") or {}
+        )
+    claim_factuality_best_run = dict(
+        claim_factuality_probe_comparison.get("best_run") or {}
+    )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
     product_trace_action_audit_gate = dict(
         product_trace_replay_workflow.get("action_audit_gate") or {}
@@ -1650,9 +2211,28 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     frontier_release_evidence = dict(candidate.get("frontier_release_evidence") or {})
     if not frontier_release_evidence:
         frontier_release_evidence = dict(comparison.get("frontier_release_evidence_gate") or {})
+    unresolved_frontier_evidence_summary = dict(
+        candidate.get("unresolved_frontier_evidence_summary") or {}
+    )
+    if not unresolved_frontier_evidence_summary:
+        unresolved_frontier_evidence_summary = dict(
+            comparison.get("unresolved_frontier_evidence_summary_gate") or {}
+        )
     world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
     if not world_model_signal_workflow:
         world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
+    context_sensitivity_workflow = dict(candidate.get("context_sensitivity_workflow") or {})
+    if not context_sensitivity_workflow:
+        context_sensitivity_workflow = dict(
+            comparison.get("context_sensitivity_workflow_gate") or {}
+        )
+    mechanism_handoff_evidence_bundle = dict(
+        candidate.get("mechanism_handoff_evidence_bundle") or {}
+    )
+    if not mechanism_handoff_evidence_bundle:
+        mechanism_handoff_evidence_bundle = dict(
+            comparison.get("mechanism_handoff_evidence_bundle_gate") or {}
+        )
     pathway_intervention_workflow = dict(candidate.get("pathway_intervention_workflow") or {})
     if not pathway_intervention_workflow:
         pathway_intervention_workflow = dict(
@@ -1674,11 +2254,23 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_pre_generation_probe_comparison_status": decision.get(
             "pre_generation_probe_comparison_status"
         ),
+        "release_claim_factuality_probe_comparison_status": decision.get(
+            "claim_factuality_probe_comparison_status"
+        ),
         "release_frontier_release_evidence_status": decision.get(
             "frontier_release_evidence_status"
         ),
+        "release_unresolved_frontier_evidence_summary_status": decision.get(
+            "unresolved_frontier_evidence_summary_status"
+        ),
         "release_world_model_signal_workflow_status": decision.get(
             "world_model_signal_workflow_status"
+        ),
+        "release_context_sensitivity_workflow_status": decision.get(
+            "context_sensitivity_workflow_status"
+        ),
+        "release_mechanism_handoff_evidence_bundle_status": decision.get(
+            "mechanism_handoff_evidence_bundle_status"
         ),
         "release_pathway_intervention_workflow_status": decision.get(
             "pathway_intervention_workflow_status"
@@ -1721,11 +2313,23 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_pre_generation_probe_comparison_report": decision.get(
             "recommended_pre_generation_probe_comparison_report"
         ),
+        "recommended_claim_factuality_probe_comparison_report": decision.get(
+            "recommended_claim_factuality_probe_comparison_report"
+        ),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
         ),
+        "recommended_unresolved_frontier_evidence_summary_report": decision.get(
+            "recommended_unresolved_frontier_evidence_summary_report"
+        ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
+        ),
+        "recommended_context_sensitivity_workflow_report": decision.get(
+            "recommended_context_sensitivity_workflow_report"
+        ),
+        "recommended_mechanism_handoff_evidence_bundle_report": decision.get(
+            "recommended_mechanism_handoff_evidence_bundle_report"
         ),
         "recommended_pathway_intervention_workflow_report": decision.get(
             "recommended_pathway_intervention_workflow_report"
@@ -1792,8 +2396,27 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_score_fusion_conformal_gate_passed": (
             performance_evidence_recommendation.get("score_fusion_conformal_gate_passed")
         ),
+        "recommended_score_fusion_release_gate_status": (
+            performance_evidence_recommendation.get("score_fusion_release_gate_status")
+        ),
+        "recommended_score_fusion_release_gate_passed": (
+            performance_evidence_recommendation.get("score_fusion_release_gate_passed")
+        ),
+        "recommended_score_fusion_high_confidence_accepted_false_rate": (
+            performance_evidence_recommendation.get(
+                "score_fusion_high_confidence_accepted_false_rate"
+            )
+        ),
+        "recommended_score_fusion_high_confidence_accepted_false_count": (
+            performance_evidence_recommendation.get(
+                "score_fusion_high_confidence_accepted_false_count"
+            )
+        ),
         "performance_selected_fusion_artifact_report": performance_evidence.get(
             "selected_fusion_artifact_report"
+        ),
+        "performance_selected_fusion_artifact_manifest": performance_evidence.get(
+            "selected_fusion_artifact_manifest"
         ),
         "recommended_selected_fusion_status": performance_evidence_recommendation.get(
             "selected_fusion_status"
@@ -1810,8 +2433,27 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_selected_fusion_auroc": performance_evidence_recommendation.get(
             "selected_fusion_auroc"
         ),
+        "recommended_selected_fusion_release_gate_status": (
+            performance_evidence_recommendation.get("selected_fusion_release_gate_status")
+        ),
+        "recommended_selected_fusion_release_gate_passed": (
+            performance_evidence_recommendation.get("selected_fusion_release_gate_passed")
+        ),
+        "recommended_selected_fusion_high_confidence_accepted_false_rate": (
+            performance_evidence_recommendation.get(
+                "selected_fusion_high_confidence_accepted_false_rate"
+            )
+        ),
+        "recommended_selected_fusion_high_confidence_accepted_false_count": (
+            performance_evidence_recommendation.get(
+                "selected_fusion_high_confidence_accepted_false_count"
+            )
+        ),
         "recommended_selected_fusion_artifact_path": performance_evidence_recommendation.get(
             "selected_fusion_artifact_path"
+        ),
+        "recommended_selected_fusion_artifact_manifest": (
+            performance_evidence_recommendation.get("selected_fusion_artifact_manifest")
         ),
         "performance_uncached_total_seconds": performance_evidence_cost.get(
             "uncached_total_seconds"
@@ -1978,8 +2620,17 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_pre_generation_evidence_required": config.get(
             "require_product_runtime_drift_pre_generation_evidence"
         ),
+        "product_runtime_drift_claim_factuality_evidence_required": config.get(
+            "require_product_runtime_drift_claim_factuality_evidence"
+        ),
+        "product_runtime_drift_claim_risk_localization_evidence_required": config.get(
+            "require_product_runtime_drift_claim_risk_localization_evidence"
+        ),
         "product_runtime_drift_counterfactual_evidence_required": config.get(
             "require_product_runtime_drift_counterfactual_evidence"
+        ),
+        "product_runtime_drift_fact_selfcheck_gate_evidence_required": config.get(
+            "require_product_runtime_drift_fact_selfcheck_gate_evidence"
         ),
         "product_runtime_drift_triple_audit_evidence_required": config.get(
             "require_product_runtime_drift_triple_audit_evidence"
@@ -1989,6 +2640,51 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "product_runtime_drift_action_gate_evidence_required": config.get(
             "require_product_runtime_drift_action_gate_evidence"
+        ),
+        "product_runtime_drift_world_model_action_gate_evidence_required": config.get(
+            "require_product_runtime_drift_world_model_action_gate_evidence"
+        ),
+        "product_runtime_drift_world_model_rollout_evidence_required": config.get(
+            "require_product_runtime_drift_world_model_rollout_evidence"
+        ),
+        "product_runtime_drift_action_receipts_evidence_required": config.get(
+            "require_product_runtime_drift_action_receipts_evidence"
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_required": config.get(
+            "require_product_runtime_drift_receipt_claim_support_evidence"
+        ),
+        "product_runtime_drift_trajectory_audit_evidence_required": config.get(
+            "require_product_runtime_drift_trajectory_audit_evidence"
+        ),
+        "product_runtime_drift_provenance_evidence_required": config.get(
+            "require_product_runtime_drift_provenance_evidence"
+        ),
+        "product_runtime_drift_citation_integrity_evidence_required": config.get(
+            "require_product_runtime_drift_citation_integrity_evidence"
+        ),
+        "product_runtime_drift_evidence_quality_evidence_required": config.get(
+            "require_product_runtime_drift_evidence_quality_evidence"
+        ),
+        "product_runtime_drift_metacognition_evidence_required": config.get(
+            "require_product_runtime_drift_metacognition_evidence"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_required": config.get(
+            "require_product_runtime_drift_evidence_handoff_evidence"
+        ),
+        "product_runtime_drift_world_model_evidence_required": config.get(
+            "require_product_runtime_drift_world_model_evidence"
+        ),
+        "product_runtime_drift_context_sensitivity_evidence_required": config.get(
+            "require_product_runtime_drift_context_sensitivity_evidence"
+        ),
+        "product_runtime_drift_counterfactual_robustness_evidence_required": config.get(
+            "require_product_runtime_drift_counterfactual_robustness_evidence"
+        ),
+        "product_runtime_drift_frontier_release_evidence_required": config.get(
+            "require_product_runtime_drift_frontier_release_evidence"
+        ),
+        "product_runtime_drift_unresolved_frontier_evidence_summary_evidence_required": config.get(
+            "require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence"
         ),
         "product_runtime_drift_compared_metric_count": product_runtime_drift_summary.get(
             "compared_metric_count"
@@ -2080,6 +2776,73 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "pre_generation_probe_comparison_best_redline_margin": (
             pre_generation_best_run.get("redline_margin")
+        ),
+        "claim_factuality_probe_comparison_report": (
+            claim_factuality_probe_comparison.get("report_path")
+        ),
+        "claim_factuality_probe_comparison_manifest": (
+            manifests.get("claim_factuality_probe_comparison_manifest")
+            or claim_factuality_probe_comparison.get("manifest_path")
+        ),
+        "claim_factuality_probe_comparison_source": (
+            claim_factuality_probe_comparison.get("source")
+        ),
+        "claim_factuality_probe_comparison_registry": (
+            claim_factuality_probe_comparison.get("registry")
+        ),
+        "claim_factuality_probe_comparison_record": (
+            claim_factuality_probe_comparison.get("record_key")
+        ),
+        "claim_factuality_probe_comparison_model_count": (
+            claim_factuality_probe_comparison.get("model_count")
+        ),
+        "claim_factuality_probe_comparison_run_count": (
+            claim_factuality_probe_comparison.get("run_count")
+        ),
+        "claim_factuality_probe_comparison_dataset_count": (
+            claim_factuality_probe_comparison.get("dataset_count")
+        ),
+        "claim_factuality_probe_comparison_datasets": (
+            claim_factuality_probe_comparison.get("datasets")
+        ),
+        "claim_factuality_probe_comparison_redline_passed": (
+            claim_factuality_probe_comparison.get("redline_passed")
+        ),
+        "claim_factuality_probe_comparison_redline_run_count": (
+            claim_factuality_probe_comparison.get("redline_run_count")
+        ),
+        "claim_factuality_probe_comparison_best_run": (
+            claim_factuality_best_run.get("name")
+        ),
+        "claim_factuality_probe_comparison_best_model": (
+            claim_factuality_best_run.get("model")
+        ),
+        "claim_factuality_probe_comparison_best_record_count": (
+            claim_factuality_best_run.get("record_count")
+        ),
+        "claim_factuality_probe_comparison_best_layer": (
+            claim_factuality_best_run.get("recommended_layer")
+        ),
+        "claim_factuality_probe_comparison_best_test_label_auroc": (
+            claim_factuality_best_run.get("test_label_auroc")
+        ),
+        "claim_factuality_probe_comparison_best_test_selective_accuracy": (
+            claim_factuality_best_run.get("test_selective_accuracy")
+        ),
+        "claim_factuality_probe_comparison_best_test_selective_coverage": (
+            claim_factuality_best_run.get("test_selective_coverage")
+        ),
+        "claim_factuality_probe_comparison_best_conformal_threshold": (
+            claim_factuality_best_run.get("conformal_threshold")
+        ),
+        "claim_factuality_probe_comparison_best_redline_signal": (
+            claim_factuality_best_run.get("redline_best_signal")
+        ),
+        "claim_factuality_probe_comparison_best_redline_auroc": (
+            claim_factuality_best_run.get("redline_best_auroc")
+        ),
+        "claim_factuality_probe_comparison_best_redline_margin": (
+            claim_factuality_best_run.get("redline_margin")
         ),
         "product_trace_replay_workflow_report": product_trace_replay_workflow.get("report_path"),
         "product_trace_replay_workflow_source": product_trace_replay_workflow.get("source"),
@@ -2392,6 +3155,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
                 "required_route_min_covered_fact_property_decision_accuracy",
                 "required_route_max_covered_fact_property_false_supported_rate",
                 "required_route_min_covered_fact_property_false_refuted_rate",
+                "structured_fact_robustness_min_selected",
+                "structured_fact_robustness_min_decision_accuracy",
+                "structured_fact_robustness_max_false_supported_rate",
+                "structured_fact_robustness_min_false_refuted_rate",
+                "structured_fact_robustness_min_covered_fact_properties",
+                "structured_fact_robustness_min_covered_fact_property_records",
+                "structured_fact_robustness_min_covered_fact_property_source_documents",
+                "structured_fact_robustness_min_covered_fact_property_decision_accuracy",
+                "structured_fact_robustness_max_covered_fact_property_false_supported_rate",
+                "structured_fact_robustness_min_covered_fact_property_false_refuted_rate",
                 "required_route_require_non_oracle_evidence",
                 "required_route_require_retrieval_provenance_filter",
                 "required_route_required_retrieval_source_prefixes",
@@ -2421,6 +3194,133 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_abstention_track_status": frontier_release_evidence.get(
             "abstention_track_status"
         ),
+        "frontier_release_evidence_multiple_testing_track_status": frontier_release_evidence.get(
+            "multiple_testing_track_status"
+        ),
+        "frontier_release_evidence_citation_batch_track_status": frontier_release_evidence.get(
+            "citation_batch_track_status"
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_track_status": (
+            frontier_release_evidence.get("frontier_rerun_rollup_track_status")
+        ),
+        "frontier_release_evidence_base_verifier_track_status": (
+            frontier_release_evidence.get("base_verifier_track_status")
+        ),
+        "frontier_release_evidence_base_abstention_track_status": (
+            frontier_release_evidence.get("base_abstention_track_status")
+        ),
+        "frontier_release_evidence_base_detectability_track_status": (
+            frontier_release_evidence.get("base_detectability_track_status")
+        ),
+        "frontier_release_evidence_base_multiple_testing_track_status": (
+            frontier_release_evidence.get("base_multiple_testing_track_status")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_promoted_tracks": (
+            frontier_release_evidence.get("frontier_rerun_rollup_promoted_tracks")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_report_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_candidate_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_candidate_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_missing_report_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_missing_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_invalid_report_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_invalid_report_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_blocked_candidate_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_blocked_candidate_count")
+        ),
+        "frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count": (
+            frontier_release_evidence.get("frontier_rerun_rollup_promotion_ready_count")
+        ),
+        "frontier_release_evidence_citation_batch_rollup_count": frontier_release_evidence.get(
+            "citation_batch_rollup_count"
+        ),
+        "frontier_release_evidence_citation_batch_expected_batch_count": (
+            frontier_release_evidence.get("citation_batch_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_observed_batch_count": (
+            frontier_release_evidence.get("citation_batch_observed_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_missing_expected_batch_count": (
+            frontier_release_evidence.get("citation_batch_missing_expected_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_duplicate_batch_count": (
+            frontier_release_evidence.get("citation_batch_duplicate_batch_count")
+        ),
+        "frontier_release_evidence_citation_batch_unexpected_batch_count": (
+            frontier_release_evidence.get("citation_batch_unexpected_batch_count")
+        ),
+        "frontier_release_evidence_require_input_manifests": (
+            frontier_release_evidence.get("require_input_manifests")
+        ),
+        "frontier_release_evidence_input_manifest_required": (
+            frontier_release_evidence.get("input_manifest_required")
+        ),
+        "frontier_release_evidence_input_manifest_required_count": (
+            frontier_release_evidence.get("input_manifest_required_count")
+        ),
+        "frontier_release_evidence_input_manifest_verified_count": (
+            frontier_release_evidence.get("input_manifest_verified_count")
+        ),
+        "frontier_release_evidence_input_manifest_failed_count": (
+            frontier_release_evidence.get("input_manifest_failed_count")
+        ),
+        "frontier_release_evidence_input_manifest_missing_count": (
+            frontier_release_evidence.get("input_manifest_missing_count")
+        ),
+        "frontier_release_evidence_input_manifest_failure_count": (
+            frontier_release_evidence.get("input_manifest_failure_count")
+        ),
+        "unresolved_frontier_evidence_summary_manifest": (
+            manifests.get("unresolved_frontier_evidence_summary_manifest")
+            or unresolved_frontier_evidence_summary.get("manifest_path")
+        ),
+        "unresolved_frontier_evidence_summary_report": (
+            unresolved_frontier_evidence_summary.get("report_path")
+        ),
+        "unresolved_frontier_evidence_summary_source": (
+            unresolved_frontier_evidence_summary.get("source")
+        ),
+        "unresolved_frontier_evidence_summary_registry": (
+            unresolved_frontier_evidence_summary.get("registry")
+        ),
+        "unresolved_frontier_evidence_summary_record": (
+            unresolved_frontier_evidence_summary.get("record_key")
+        ),
+        "unresolved_frontier_evidence_summary_required": (
+            unresolved_frontier_evidence_summary.get("require_closure")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_required": (
+            unresolved_frontier_evidence_summary.get("require_queue_execution_smoke")
+        ),
+        "unresolved_frontier_evidence_summary_status": (
+            unresolved_frontier_evidence_summary.get("report_status")
+        ),
+        "unresolved_frontier_evidence_summary_next_action_count": (
+            unresolved_frontier_evidence_summary.get("next_action_count")
+        ),
+        "unresolved_frontier_evidence_summary_lane_statuses": (
+            unresolved_frontier_evidence_summary.get("lane_statuses")
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_status": (
+            unresolved_frontier_evidence_summary.get(
+                "frontier_queue_execution_smoke_status"
+            )
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_count": (
+            unresolved_frontier_evidence_summary.get(
+                "frontier_queue_execution_smoke_count"
+            )
+        ),
+        "unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": (
+            unresolved_frontier_evidence_summary.get(
+                "frontier_queue_execution_smoke_manifest_verified_count"
+            )
+        ),
         "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
         "world_model_signal_workflow_manifest": (
             manifests.get("world_model_signal_workflow_manifest")
@@ -2440,6 +3340,63 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "world_model_signal_workflow_calibrated_conflict_signal_count": (
             world_model_signal_workflow.get("calibrated_conflict_signal_count")
+        ),
+        "context_sensitivity_workflow_report": context_sensitivity_workflow.get("report_path"),
+        "context_sensitivity_workflow_manifest": (
+            manifests.get("context_sensitivity_workflow_manifest")
+            or context_sensitivity_workflow.get("manifest_path")
+        ),
+        "context_sensitivity_workflow_source": context_sensitivity_workflow.get("source"),
+        "context_sensitivity_workflow_registry": context_sensitivity_workflow.get("registry"),
+        "context_sensitivity_workflow_record": context_sensitivity_workflow.get("record_key"),
+        "context_sensitivity_workflow_paired_logprob_record_count": (
+            context_sensitivity_workflow.get("paired_logprob_record_count")
+        ),
+        "context_sensitivity_workflow_enriched_record_count": (
+            context_sensitivity_workflow.get("enriched_record_count")
+        ),
+        "context_sensitivity_workflow_enhanced_score_signal_count": (
+            context_sensitivity_workflow.get("enhanced_score_signal_count")
+        ),
+        "context_sensitivity_workflow_max_flagged_rate": (
+            context_sensitivity_workflow.get("max_flagged_rate")
+        ),
+        "context_sensitivity_workflow_mean_flagged_rate": (
+            context_sensitivity_workflow.get("mean_flagged_rate")
+        ),
+        "context_sensitivity_workflow_max_context_sensitivity_ratio": (
+            context_sensitivity_workflow.get("max_context_sensitivity_ratio")
+        ),
+        "context_sensitivity_workflow_manifest_verified": (
+            context_sensitivity_workflow.get("manifest_verified")
+        ),
+        "mechanism_handoff_evidence_bundle_report": (
+            mechanism_handoff_evidence_bundle.get("report_path")
+        ),
+        "mechanism_handoff_evidence_bundle_manifest": (
+            manifests.get("mechanism_handoff_evidence_bundle_manifest")
+            or mechanism_handoff_evidence_bundle.get("manifest_path")
+        ),
+        "mechanism_handoff_evidence_bundle_source": (
+            mechanism_handoff_evidence_bundle.get("source")
+        ),
+        "mechanism_handoff_evidence_bundle_registry": (
+            mechanism_handoff_evidence_bundle.get("registry")
+        ),
+        "mechanism_handoff_evidence_bundle_record": (
+            mechanism_handoff_evidence_bundle.get("record_key")
+        ),
+        "mechanism_handoff_evidence_bundle_handoff_count": (
+            mechanism_handoff_evidence_bundle.get("handoff_count")
+        ),
+        "mechanism_handoff_evidence_bundle_trace_count": (
+            mechanism_handoff_evidence_bundle.get("trace_count")
+        ),
+        "mechanism_handoff_evidence_bundle_target_count": (
+            mechanism_handoff_evidence_bundle.get("target_count")
+        ),
+        "mechanism_handoff_evidence_bundle_source_citation_count": (
+            mechanism_handoff_evidence_bundle.get("source_citation_count")
         ),
         "pathway_intervention_workflow_report": pathway_intervention_workflow.get("report_path"),
         "pathway_intervention_workflow_manifest": (
@@ -2482,11 +3439,29 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_pre_generation_evidence_blocked_metric_count": summary.get(
             "pre_generation_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_claim_factuality_evidence_metric_count": summary.get(
+            "claim_factuality_evidence_metric_count"
+        ),
+        "product_runtime_drift_claim_factuality_evidence_blocked_metric_count": summary.get(
+            "claim_factuality_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_claim_risk_localization_evidence_metric_count": (
+            summary.get("claim_risk_localization_evidence_metric_count")
+        ),
+        "product_runtime_drift_claim_risk_localization_evidence_blocked_metric_count": (
+            summary.get("claim_risk_localization_evidence_blocked_metric_count")
+        ),
         "product_runtime_drift_counterfactual_evidence_metric_count": summary.get(
             "counterfactual_evidence_metric_count"
         ),
         "product_runtime_drift_counterfactual_evidence_blocked_metric_count": summary.get(
             "counterfactual_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_fact_selfcheck_gate_evidence_metric_count": summary.get(
+            "fact_selfcheck_gate_evidence_metric_count"
+        ),
+        "product_runtime_drift_fact_selfcheck_gate_evidence_blocked_metric_count": (
+            summary.get("fact_selfcheck_gate_evidence_blocked_metric_count")
         ),
         "product_runtime_drift_triple_audit_evidence_metric_count": summary.get(
             "triple_audit_evidence_metric_count"
@@ -2506,6 +3481,90 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
             "action_gate_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_world_model_action_gate_evidence_metric_count": summary.get(
+            "world_model_action_gate_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_action_gate_evidence_blocked_metric_count": (
+            summary.get("world_model_action_gate_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_world_model_rollout_evidence_metric_count": summary.get(
+            "world_model_rollout_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_rollout_evidence_blocked_metric_count": (
+            summary.get("world_model_rollout_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_action_receipts_evidence_metric_count": summary.get(
+            "action_receipts_evidence_metric_count"
+        ),
+        "product_runtime_drift_action_receipts_evidence_blocked_metric_count": (
+            summary.get("action_receipts_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_metric_count": (
+            summary.get("receipt_claim_support_evidence_metric_count")
+        ),
+        "product_runtime_drift_receipt_claim_support_evidence_blocked_metric_count": (
+            summary.get("receipt_claim_support_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_trajectory_audit_evidence_metric_count": summary.get(
+            "trajectory_audit_evidence_metric_count"
+        ),
+        "product_runtime_drift_trajectory_audit_evidence_blocked_metric_count": summary.get(
+            "trajectory_audit_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_provenance_evidence_metric_count": summary.get(
+            "provenance_evidence_metric_count"
+        ),
+        "product_runtime_drift_provenance_evidence_blocked_metric_count": summary.get(
+            "provenance_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_citation_integrity_evidence_metric_count": summary.get(
+            "citation_integrity_evidence_metric_count"
+        ),
+        "product_runtime_drift_citation_integrity_evidence_blocked_metric_count": (
+            summary.get("citation_integrity_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_evidence_quality_evidence_metric_count": summary.get(
+            "evidence_quality_evidence_metric_count"
+        ),
+        "product_runtime_drift_evidence_quality_evidence_blocked_metric_count": (
+            summary.get("evidence_quality_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_metacognition_evidence_metric_count": summary.get(
+            "metacognition_evidence_metric_count"
+        ),
+        "product_runtime_drift_metacognition_evidence_blocked_metric_count": (
+            summary.get("metacognition_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_metric_count": summary.get(
+            "evidence_handoff_evidence_metric_count"
+        ),
+        "product_runtime_drift_evidence_handoff_evidence_blocked_metric_count": summary.get(
+            "evidence_handoff_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_world_model_evidence_metric_count": summary.get(
+            "world_model_evidence_metric_count"
+        ),
+        "product_runtime_drift_world_model_evidence_blocked_metric_count": summary.get(
+            "world_model_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_context_sensitivity_evidence_metric_count": summary.get(
+            "context_sensitivity_evidence_metric_count"
+        ),
+        "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": (
+            summary.get("context_sensitivity_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_counterfactual_robustness_evidence_metric_count": (
+            summary.get("counterfactual_robustness_evidence_metric_count")
+        ),
+        "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count": (
+            summary.get("counterfactual_robustness_evidence_blocked_metric_count")
+        ),
+        "product_runtime_drift_frontier_release_evidence_metric_count": summary.get(
+            "frontier_release_evidence_metric_count"
+        ),
+        "product_runtime_drift_frontier_release_evidence_blocked_metric_count": summary.get(
+            "frontier_release_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -2513,7 +3572,13 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
     for prefix in _PRODUCT_RUNTIME_DRIFT_PRE_GENERATION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CLAIM_RISK_LOCALIZATION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_FACT_SELFCHECK_GATE_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES:
@@ -2523,6 +3588,51 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ACTION_GATE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_ROLLOUT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_RECEIPTS_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_RECEIPT_CLAIM_SUPPORT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_TRAJECTORY_AUDIT_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_PROVENANCE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CITATION_INTEGRITY_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_QUALITY_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_METACOGNITION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_HANDOFF_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_WORLD_MODEL_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_CONTEXT_SENSITIVITY_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_COUNTERFACTUAL_ROBUSTNESS_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_FRONTIER_RELEASE_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_UNRESOLVED_FRONTIER_EVIDENCE_SUMMARY_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -2717,8 +3827,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         require_product_runtime_drift_pre_generation_evidence=bool(
             args.require_product_runtime_drift_pre_generation_evidence
         ),
+        require_product_runtime_drift_claim_factuality_evidence=bool(
+            args.require_product_runtime_drift_claim_factuality_evidence
+        ),
+        require_product_runtime_drift_claim_risk_localization_evidence=bool(
+            args.require_product_runtime_drift_claim_risk_localization_evidence
+        ),
         require_product_runtime_drift_counterfactual_evidence=bool(
             args.require_product_runtime_drift_counterfactual_evidence
+        ),
+        require_product_runtime_drift_fact_selfcheck_gate_evidence=bool(
+            args.require_product_runtime_drift_fact_selfcheck_gate_evidence
         ),
         require_product_runtime_drift_triple_audit_evidence=bool(
             args.require_product_runtime_drift_triple_audit_evidence
@@ -2728,6 +3847,51 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         require_product_runtime_drift_action_gate_evidence=bool(
             args.require_product_runtime_drift_action_gate_evidence
+        ),
+        require_product_runtime_drift_world_model_action_gate_evidence=bool(
+            args.require_product_runtime_drift_world_model_action_gate_evidence
+        ),
+        require_product_runtime_drift_world_model_rollout_evidence=bool(
+            args.require_product_runtime_drift_world_model_rollout_evidence
+        ),
+        require_product_runtime_drift_action_receipts_evidence=bool(
+            args.require_product_runtime_drift_action_receipts_evidence
+        ),
+        require_product_runtime_drift_receipt_claim_support_evidence=bool(
+            args.require_product_runtime_drift_receipt_claim_support_evidence
+        ),
+        require_product_runtime_drift_trajectory_audit_evidence=bool(
+            args.require_product_runtime_drift_trajectory_audit_evidence
+        ),
+        require_product_runtime_drift_provenance_evidence=bool(
+            args.require_product_runtime_drift_provenance_evidence
+        ),
+        require_product_runtime_drift_citation_integrity_evidence=bool(
+            args.require_product_runtime_drift_citation_integrity_evidence
+        ),
+        require_product_runtime_drift_evidence_quality_evidence=bool(
+            args.require_product_runtime_drift_evidence_quality_evidence
+        ),
+        require_product_runtime_drift_metacognition_evidence=bool(
+            args.require_product_runtime_drift_metacognition_evidence
+        ),
+        require_product_runtime_drift_evidence_handoff_evidence=bool(
+            args.require_product_runtime_drift_evidence_handoff_evidence
+        ),
+        require_product_runtime_drift_world_model_evidence=bool(
+            args.require_product_runtime_drift_world_model_evidence
+        ),
+        require_product_runtime_drift_context_sensitivity_evidence=bool(
+            args.require_product_runtime_drift_context_sensitivity_evidence
+        ),
+        require_product_runtime_drift_counterfactual_robustness_evidence=bool(
+            args.require_product_runtime_drift_counterfactual_robustness_evidence
+        ),
+        require_product_runtime_drift_frontier_release_evidence=bool(
+            args.require_product_runtime_drift_frontier_release_evidence
+        ),
+        require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence=bool(
+            args.require_product_runtime_drift_unresolved_frontier_evidence_summary_evidence
         ),
         release_efficiency_report_path=(
             None
@@ -2758,6 +3922,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.pre_generation_probe_comparison_registry)
         ),
         pre_generation_probe_comparison_key=args.pre_generation_probe_comparison_key,
+        claim_factuality_probe_comparison_path=(
+            None
+            if args.claim_factuality_probe_comparison is None
+            else Path(args.claim_factuality_probe_comparison)
+        ),
+        claim_factuality_probe_comparison_registry_path=(
+            None
+            if args.claim_factuality_probe_comparison_registry is None
+            else Path(args.claim_factuality_probe_comparison_registry)
+        ),
+        claim_factuality_probe_comparison_key=args.claim_factuality_probe_comparison_key,
         frontier_release_evidence_path=(
             None
             if args.frontier_release_evidence is None
@@ -2769,6 +3944,26 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.frontier_release_evidence_registry)
         ),
         frontier_release_evidence_key=args.frontier_release_evidence_key,
+        require_frontier_release_input_manifests=bool(
+            args.require_frontier_release_input_manifests
+        ),
+        unresolved_frontier_evidence_summary_path=(
+            None
+            if args.unresolved_frontier_evidence_summary is None
+            else Path(args.unresolved_frontier_evidence_summary)
+        ),
+        unresolved_frontier_evidence_summary_registry_path=(
+            None
+            if args.unresolved_frontier_evidence_summary_registry is None
+            else Path(args.unresolved_frontier_evidence_summary_registry)
+        ),
+        unresolved_frontier_evidence_summary_key=args.unresolved_frontier_evidence_summary_key,
+        require_unresolved_frontier_evidence_closure=bool(
+            args.require_unresolved_frontier_evidence_closure
+        ),
+        require_frontier_queue_execution_smoke=bool(
+            args.require_frontier_queue_execution_smoke
+        ),
         world_model_signal_workflow_path=(
             None
             if args.world_model_signal_workflow is None
@@ -2780,6 +3975,28 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.world_model_signal_workflow_registry)
         ),
         world_model_signal_workflow_key=args.world_model_signal_workflow_key,
+        context_sensitivity_workflow_path=(
+            None
+            if args.context_sensitivity_workflow is None
+            else Path(args.context_sensitivity_workflow)
+        ),
+        context_sensitivity_workflow_registry_path=(
+            None
+            if args.context_sensitivity_workflow_registry is None
+            else Path(args.context_sensitivity_workflow_registry)
+        ),
+        context_sensitivity_workflow_key=args.context_sensitivity_workflow_key,
+        mechanism_handoff_evidence_bundle_path=(
+            None
+            if args.mechanism_handoff_evidence_bundle is None
+            else Path(args.mechanism_handoff_evidence_bundle)
+        ),
+        mechanism_handoff_evidence_bundle_registry_path=(
+            None
+            if args.mechanism_handoff_evidence_bundle_registry is None
+            else Path(args.mechanism_handoff_evidence_bundle_registry)
+        ),
+        mechanism_handoff_evidence_bundle_key=args.mechanism_handoff_evidence_bundle_key,
         pathway_intervention_workflow_path=(
             None
             if args.pathway_intervention_workflow is None
@@ -2928,6 +4145,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_recommended_runtime_seconds=args.max_recommended_runtime_seconds,
         max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -2985,6 +4203,34 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         required_route_min_covered_fact_property_false_refuted_rate=(
             args.required_route_min_covered_fact_property_false_refuted_rate
+        ),
+        structured_fact_robustness_min_selected=args.structured_fact_robustness_min_selected,
+        structured_fact_robustness_min_decision_accuracy=(
+            args.structured_fact_robustness_min_decision_accuracy
+        ),
+        structured_fact_robustness_max_false_supported_rate=(
+            args.structured_fact_robustness_max_false_supported_rate
+        ),
+        structured_fact_robustness_min_false_refuted_rate=(
+            args.structured_fact_robustness_min_false_refuted_rate
+        ),
+        structured_fact_robustness_min_covered_fact_properties=(
+            args.structured_fact_robustness_min_covered_fact_properties
+        ),
+        structured_fact_robustness_min_covered_fact_property_records=(
+            args.structured_fact_robustness_min_covered_fact_property_records
+        ),
+        structured_fact_robustness_min_covered_fact_property_source_documents=(
+            args.structured_fact_robustness_min_covered_fact_property_source_documents
+        ),
+        structured_fact_robustness_min_covered_fact_property_decision_accuracy=(
+            args.structured_fact_robustness_min_covered_fact_property_decision_accuracy
+        ),
+        structured_fact_robustness_max_covered_fact_property_false_supported_rate=(
+            args.structured_fact_robustness_max_covered_fact_property_false_supported_rate
+        ),
+        structured_fact_robustness_min_covered_fact_property_false_refuted_rate=(
+            args.structured_fact_robustness_min_covered_fact_property_false_refuted_rate
         ),
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         required_route_require_retrieval_provenance_filter=bool(
@@ -3070,10 +4316,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-pre-generation-evidence", action="store_true",
                         help="require the product runtime drift report to include pre-generation "
                              "probe comparison coverage, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-claim-factuality-evidence", action="store_true",
+                        help="require the product runtime drift report to include claim factuality "
+                             "probe comparison coverage, conformal/selective, redline, and quality metrics")
+    parser.add_argument("--require-product-runtime-drift-claim-risk-localization-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include claim-risk localization "
+                             "coverage, claim counts, and entity-candidate risk drift metrics")
     parser.add_argument("--require-product-runtime-drift-counterfactual-evidence", action="store_true",
                         help="require the product runtime drift report to include counterfactual "
                              "verifier-audit coverage, manifest, pass-rate, false-invariance, "
                              "and flip-success metrics")
+    parser.add_argument("--require-product-runtime-drift-fact-selfcheck-gate-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include fact-selfcheck "
+                             "signal-fusion gate coverage, manifest, pass, run, and "
+                             "triple-count metrics")
     parser.add_argument("--require-product-runtime-drift-triple-audit-evidence", action="store_true",
                         help="require the product runtime drift report to include trace-level "
                              "triple coverage, audit coverage, audit pass-rate, and slot coverage metrics")
@@ -3082,6 +4340,64 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-product-runtime-drift-action-gate-evidence", action="store_true",
                         help="require the product runtime drift report to include product-trace "
                              "action-audit and action-execution drift metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-action-gate-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include world-model "
+                             "guarded-action coverage, pass/block, and failure-reason metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-rollout-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include post-action "
+                             "world-model rollout coverage, sync, drift, trace-gap, and "
+                             "path-mismatch metrics")
+    parser.add_argument("--require-product-runtime-drift-action-receipts-evidence", action="store_true",
+                        help="require the product runtime drift report to include product-trace "
+                             "action receipt coverage, validity, signature, and fingerprint metrics")
+    parser.add_argument("--require-product-runtime-drift-receipt-claim-support-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include receipt-backed "
+                             "claim-support reference quality metrics")
+    parser.add_argument("--require-product-runtime-drift-trajectory-audit-evidence", action="store_true",
+                        help="require the product runtime drift report to include trajectory-audit "
+                             "failed-trace/error and hallucination-taxonomy drift metrics")
+    parser.add_argument("--require-product-runtime-drift-provenance-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-provenance "
+                             "coverage, support-reference, and missing-evidence drift metrics")
+    parser.add_argument("--require-product-runtime-drift-citation-integrity-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include citation-integrity "
+                             "participation, coverage, mismatch, unresolved, issue, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-quality-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include retrieval evidence-quality "
+                             "coverage, pass/failure, source, freshness, and timestamp metrics")
+    parser.add_argument("--require-product-runtime-drift-metacognition-evidence",
+                        action="store_true",
+                        help="require the product runtime drift report to include metacognition "
+                             "coverage, pass-rate, overconfidence, and miscalibration metrics")
+    parser.add_argument("--require-product-runtime-drift-evidence-handoff-evidence", action="store_true",
+                        help="require the product runtime drift report to include promotion-contract "
+                             "evidence handoff coverage, manifest, metric completeness, and promoted-group "
+                             "drift metrics")
+    parser.add_argument("--require-product-runtime-drift-world-model-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level world-model "
+                             "participation, coverage, conflict, low-agreement, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-context-sensitivity-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level "
+                             "context-sensitivity participation, coverage, flagged, trace-gap, "
+                             "and ratio metrics")
+    parser.add_argument("--require-product-runtime-drift-counterfactual-robustness-evidence", action="store_true",
+                        help="require the product runtime drift report to include trace-level "
+                             "counterfactual robustness participation, coverage, pass, "
+                             "false-invariance, flip-success, and trace-gap metrics")
+    parser.add_argument("--require-product-runtime-drift-frontier-release-evidence", action="store_true",
+                        help="require the product runtime drift report to include frontier release "
+                             "evidence coverage, artifact presence, promote-rate, and run-count metrics")
+    parser.add_argument(
+        "--require-product-runtime-drift-unresolved-frontier-evidence-summary-evidence",
+        action="store_true",
+        help="require the product runtime drift report to include unresolved frontier "
+        "closure and queue-smoke evidence coverage, status, and completion metrics",
+    )
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,
@@ -3102,6 +4418,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--pre-generation-probe-comparison-key", default=None,
                         help="optional report:<name>:<version> registry key for a pre-generation "
                              "probe workflow comparison")
+    parser.add_argument("--claim-factuality-probe-comparison", default=None,
+                        help="optional compare_claim_factuality_probe_workflows.py report that must "
+                             "pass multi-model, conformal, and text-redline release gates")
+    parser.add_argument("--claim-factuality-probe-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--claim-factuality-probe-comparison-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--claim-factuality-probe-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for a claim factuality "
+                             "probe workflow comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,
@@ -3109,6 +4435,24 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--frontier-release-evidence-key", default=None,
                         help="optional report:<name>:<version> registry key for frontier release evidence")
+    parser.add_argument("--require-frontier-release-input-manifests", action="store_true",
+                        help="require frontier release evidence to prove all input artifact manifests "
+                             "were required and verified")
+    parser.add_argument("--unresolved-frontier-evidence-summary", default=None,
+                        help="optional unresolved frontier evidence closure summary report")
+    parser.add_argument("--unresolved-frontier-evidence-summary-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--unresolved-frontier-evidence-summary-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--unresolved-frontier-evidence-summary-key", default=None,
+                        help="optional report:<name>:<version> registry key for an unresolved "
+                             "frontier evidence closure summary")
+    parser.add_argument("--require-unresolved-frontier-evidence-closure", action="store_true",
+                        help="require the unresolved frontier evidence summary to promote with "
+                             "zero next actions before release registration")
+    parser.add_argument("--require-frontier-queue-execution-smoke", action="store_true",
+                        help="require the unresolved frontier evidence summary to record a passing "
+                             "frontier queue execution smoke with verified manifest")
     parser.add_argument("--world-model-signal-workflow", default=None,
                         help="optional world-model signal calibration workflow report that must pass its "
                              "conflict/trace-gap release gate")
@@ -3117,6 +4461,24 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--world-model-signal-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a world-model signal workflow")
+    parser.add_argument("--context-sensitivity-workflow", default=None,
+                        help="optional context-sensitivity workflow report that must verify and contain "
+                             "paired/enriched/enhanced score evidence")
+    parser.add_argument("--context-sensitivity-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --context-sensitivity-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--context-sensitivity-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a context-sensitivity workflow")
+    parser.add_argument("--mechanism-handoff-evidence-bundle", default=None,
+                        help="optional mechanism handoff evidence bundle report that must promote "
+                             "and verify")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--mechanism-handoff-evidence-bundle-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--mechanism-handoff-evidence-bundle-key", default=None,
+                        help="optional report:<name>:<version> registry key for a mechanism "
+                             "handoff evidence bundle")
     parser.add_argument("--pathway-intervention-workflow", default=None,
                         help="optional pathway intervention workflow report that must be release-ready "
                              "and manifest-verified")
@@ -3331,6 +4693,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-recommended-runtime-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-recommended-runtime-seconds",
+    ), default=None,
+                        help="maximum selected deployment-path runtime cost from the readiness recommendation")
     parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-covariance-maha-last-auroc-drop",
@@ -3600,6 +4967,72 @@ def main(argv: Sequence[str] | None = None) -> None:
             flag="--required-route-min-covered-fact-property-false-refuted-rate",
         )
     ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-selected", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--structured-fact-robustness-min-selected",
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-decision-accuracy", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-max-false-supported-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-max-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-false-refuted-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--structured-fact-robustness-min-false-refuted-rate",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-properties", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-properties",
+        )
+    ), default=None)
+    parser.add_argument("--structured-fact-robustness-min-covered-fact-property-records", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-records",
+        )
+    ), default=None)
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-source-documents",
+        type=lambda value: _parse_non_negative_int(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-source-documents",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-decision-accuracy",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-max-covered-fact-property-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--structured-fact-robustness-min-covered-fact-property-false-refuted-rate",
+        ),
+        default=None,
+    )
     parser.add_argument(
         "--required-route-require-non-oracle-evidence",
         action="store_true",

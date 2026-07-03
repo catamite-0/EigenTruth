@@ -1,0 +1,38 @@
+{
+  "artifacts": {
+    "frontier_research_queue_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-command-plan.json",
+      "sha256": "eb650ea1145b2c2f260a2a25056227dce1b6716a857315e8109f06740d264632",
+      "size_bytes": 7177
+    },
+    "source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fixture/unresolved-frontier-summary.json",
+      "sha256": "ad82315a0c418f34b868ee248ba0ade7eaa9831283ce877983ed1cad62fa7c6a",
+      "size_bytes": 738
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "command_count": 2,
+    "entry_count": 1,
+    "missing_input_count": 1,
+    "not_verifier_evidence": true,
+    "runner": "plan_frontier_research_queue_commands",
+    "smoke": "frontier-queue-execution-smoke",
+    "status": "needs_inputs",
+    "workflow": "frontier_research_queue_command_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

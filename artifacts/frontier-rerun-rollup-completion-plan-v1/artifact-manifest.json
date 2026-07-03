@@ -1,0 +1,44 @@
+{
+  "artifacts": {
+    "frontier_rerun_rollup_completion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "completion-plan.json",
+      "sha256": "fa34476bdaaaeed871830ba2e9ef0180f08a357bd681057b52542c2aaa33b9e2",
+      "size_bytes": 1179
+    },
+    "multiple_testing_rerun_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-multiple-testing-rerun-queue-v1/rerun-queue.json",
+      "sha256": "d9481b2170cfcef89b2dc06852aeaf03bcc81cdc4b38b3e6531e18752a137e3f",
+      "size_bytes": 10380
+    },
+    "source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-release-evidence/frontier-release-evidence-refreshed.json",
+      "sha256": "7415f3d34ea65b1601df47c4faa9a34fd83d02f9b8048df2219410738d2d681a",
+      "size_bytes": 21390
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "command_count": 0,
+    "entry_count": 0,
+    "missing_queue_count": 0,
+    "runner": "plan_release_evidence_gaps",
+    "status": "empty",
+    "workflow": "frontier_rerun_rollup_completion_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

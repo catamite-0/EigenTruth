@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "adapter_report_gate": "pass",
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/artifact-manifest.json",
+        "blocked_count": 0,
+        "closure_action": "promote_citation_reviewed_entity_role_rule_candidates",
+        "pending_count": 4,
+        "promoted_count": 4,
+        "status": "promote",
+        "workflow": "world_model_rule_candidate_promotion_gate"
+      },
+      "name": "unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-citation-reviewed-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

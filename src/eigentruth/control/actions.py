@@ -448,11 +448,7 @@ class DefaultCorrectionPolicy:
         elif action is ControlAction.RETRIEVE:
             payload = {
                 **base_payload,
-                "retrieval_targets": _targets(
-                    claim_groups,
-                    VerificationStatus.INSUFFICIENT_EVIDENCE,
-                    VerificationStatus.ERROR,
-                ),
+                "retrieval_targets": _retrieval_targets(claim_groups),
                 "instruction": "retrieve evidence for unresolved claims before answering",
             }
         elif action is ControlAction.REWRITE:
@@ -1118,12 +1114,13 @@ def _with_plan_retrieval_payload(
     plan: Mapping[str, Any],
 ) -> ActionRequest:
     payload = dict(request.payload)
+    replace_existing = _replace_retrieval_payload_from_plan(plan)
     payload["retrieval_targets"] = _merge_retrieval_targets(
-        payload.get("retrieval_targets", ()),
+        () if replace_existing else payload.get("retrieval_targets", ()),
         retrieval_targets,
     )
     payload["retrieval_queries"] = _merge_retrieval_queries(
-        payload.get("retrieval_queries", ()),
+        () if replace_existing else payload.get("retrieval_queries", ()),
         retrieval_queries,
     )
     payload["plan_retrieval_query_count"] = len(retrieval_queries)
@@ -1182,6 +1179,21 @@ def _plan_aware_metadata(
         "verification_plan_action_injected": bool(injected),
         "verification_plan_cost": estimate_verification_plan_cost(plan).to_dict(),
     }
+
+
+def _replace_retrieval_payload_from_plan(plan: Mapping[str, Any]) -> bool:
+    budget = plan.get("budget", {})
+    if not isinstance(budget, Mapping):
+        return False
+    acquisition = budget.get("evidence_acquisition", {})
+    if not isinstance(acquisition, Mapping):
+        return False
+    if str(acquisition.get("action", "")).strip().lower() != "acquire":
+        return False
+    return bool(
+        _as_tuple(acquisition.get("selected_retrieval_queries", ()))
+        or _as_tuple(acquisition.get("dropped_retrieval_queries", ()))
+    )
 
 
 def _merge_retrieval_targets(
@@ -1410,6 +1422,22 @@ def _targets(claim_groups: Mapping[str, Any], *statuses: VerificationStatus) -> 
         for status in statuses:
             selected.extend(groups.get(status.value, ()))
     return tuple(dict(item) for item in selected)
+
+
+def _retrieval_targets(claim_groups: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    targets = _targets(
+        claim_groups,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+        VerificationStatus.ERROR,
+    )
+    if targets:
+        return targets
+    counts = claim_groups.get("counts", {})
+    total = claim_groups.get("total", 0)
+    not_applicable_count = counts.get(VerificationStatus.NOT_APPLICABLE.value, 0) if isinstance(counts, Mapping) else 0
+    if total and not_applicable_count == total:
+        return _targets(claim_groups, VerificationStatus.NOT_APPLICABLE)
+    return targets
 
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any] | None, *, fallback_id: str) -> dict[str, Any]:

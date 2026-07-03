@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "source_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+      "sha256": "19554dd1874d0ed2577a993c496077ea7702db4dd836c8b3c1343892c34ab488",
+      "size_bytes": 1351962
+    },
+    "source_family_structured_qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-structured-qa-corpus.json",
+      "sha256": "9a10da6b5bf4c192b17fbf90ab74a235be573b1722a62e6e61758922ebc09352",
+      "size_bytes": 14358
+    },
+    "source_family_structured_qa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-structured-qa-corpus-report.json",
+      "sha256": "703f8c13dde5a10177128473ed2f2f879ed9b9f37de01eac6531780e9a7e1f5f",
+      "size_bytes": 1284
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_document_count": 204,
+    "corpus_type": "source_family_structured_qa_external_evidence",
+    "document_count": 12,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "ready",
+    "workflow": "source_family_structured_qa_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

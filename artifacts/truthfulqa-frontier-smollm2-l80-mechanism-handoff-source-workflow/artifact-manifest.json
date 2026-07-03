@@ -1,0 +1,100 @@
+{
+  "artifacts": {
+    "africa_poverty_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "sha256": "5900ab6f553337f8fa89ca4161fa129c77495969adc98c73a2f2639aa5b785de",
+      "size_bytes": 4213
+    },
+    "africa_poverty_handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/artifact-manifest.json",
+      "sha256": "ed5bed6edb4deb9a7dfb5d33ec1d83d412eb87550fb6dc6e8f53f33acdba5b67",
+      "size_bytes": 1730
+    },
+    "africa_poverty_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "bf07d87e43b937c43c7dd7ffe63ef48f806f1d38e68683de141475f01ac3142d",
+      "size_bytes": 10147
+    },
+    "diamond_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "sha256": "640075ba344d9f56e9171bdaf3495665a50d46ad7b690250f34ed1ff7351327a",
+      "size_bytes": 2964
+    },
+    "diamond_handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/artifact-manifest.json",
+      "sha256": "b663a6c2009905b9fb5251b4ffeb96e69ef4e053855d44d415ab57f500ee58ff",
+      "size_bytes": 1699
+    },
+    "diamond_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "693881e4ec7ef742c02e27c12e26c0ee7ee71b9cabb5a078e560bcd4ae615a83",
+      "size_bytes": 5029
+    },
+    "frontier_mechanism_handoff_source_workflow": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-mechanism-handoff-source-workflow.json",
+      "sha256": "35da2302ad1cc09404d86cd77df7746a8b76e193b84882127ec81f27db833079",
+      "size_bytes": 11199
+    },
+    "remaining_handoff": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json",
+      "sha256": "f2362b21ed6d7c1c9d361ced010a82e5d58fb7128f10f41e1dd9229d8d75d7ce",
+      "size_bytes": 4233
+    },
+    "remaining_handoff_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/artifact-manifest.json",
+      "sha256": "d95ef2128d0d0f1c8621e4810f7b344f083512cdf204c2225273087653aff7eb",
+      "size_bytes": 1715
+    },
+    "remaining_promotion_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "b39592b07744c1b10e9b52af6e58b1b043db836951da281ddbf597554ede82e3",
+      "size_bytes": 10234
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "promoted_count": 9,
+    "source": "frontier_mechanism_handoff_rebuild",
+    "status": "promote",
+    "target_count": 9,
+    "trace_count": 9,
+    "workflow": "frontier_mechanism_handoff_source_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 10,
+    "directory_count": 0,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

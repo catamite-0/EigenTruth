@@ -1,0 +1,96 @@
+{
+  "binding_audit_rows": [],
+  "config": {
+    "ready_review_statuses": [
+      "<empty>",
+      "approved",
+      "ready"
+    ],
+    "subject_resolvable_review_statuses": [
+      "ambiguous_subject",
+      "subject_ambiguous"
+    ]
+  },
+  "downstream_commands": [],
+  "label_usage": {
+    "audit_executes_commands": false,
+    "bindings_are_verifier_evidence": false,
+    "labels_allowed_in_sidecars": false,
+    "labels_used_for_binding_audit": false,
+    "model_answers_allowed_in_sidecars": false
+  },
+  "metadata": {
+    "closure_action": "fill_and_promote_remaining_world_model_rules",
+    "source_backed_rows": "0"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/artifact-manifest.json",
+    "binding_audit_rows": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/binding-audit-rows.jsonl",
+    "entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+    "input_binding_scaffold": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
+    "mechanism_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-mechanism-bindings.jsonl",
+    "numeric_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-audit-v1/frontier-input-binding-audit.json",
+    "subject_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-subject-bindings.jsonl",
+    "temporal_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl"
+  },
+  "schema_version": 1,
+  "scope": "Pre-execution audit for edited source-backed frontier input bindings. Ready rows may be passed to typed rule-input fill scripts; blocked rows need review, source values, or corrected provenance first.",
+  "sidecar_files": {
+    "entity_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl",
+      "row_count": 0
+    },
+    "mechanism_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-mechanism-bindings.jsonl",
+      "row_count": 0
+    },
+    "numeric_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-numeric-bindings.jsonl",
+      "row_count": 0
+    },
+    "subject_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-subject-bindings.jsonl",
+      "row_count": 0
+    },
+    "temporal_bindings": {
+      "exists": true,
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-temporal-bindings.jsonl",
+      "row_count": 0
+    }
+  },
+  "source": {
+    "binding_skeleton_count": 0,
+    "input_binding_scaffold": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/frontier-input-binding-scaffold.json",
+    "input_binding_scaffold_status": "empty",
+    "input_binding_scaffold_workflow": "frontier_research_queue_input_binding_scaffold"
+  },
+  "status": "empty",
+  "summary": {
+    "audit_row_count": 0,
+    "binding_row_count": 0,
+    "blocked_binding_count": 0,
+    "blocked_by_sidecar": {},
+    "downstream_command_count": 0,
+    "downstream_ready_command_count": 0,
+    "failure_counts": {},
+    "missing_sidecar_count": 0,
+    "pending_review_count": 0,
+    "ready_binding_count": 0,
+    "ready_by_sidecar": {},
+    "reserved_field_count": 0,
+    "sidecar_counts": {
+      "entity_bindings": 0,
+      "mechanism_bindings": 0,
+      "numeric_bindings": 0,
+      "subject_bindings": 0,
+      "temporal_bindings": 0
+    },
+    "sidecar_status_counts": {}
+  },
+  "workflow": "frontier_research_queue_input_binding_audit"
+}

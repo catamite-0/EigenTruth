@@ -1,0 +1,918 @@
+{
+  "config": {
+    "max_tasks": null,
+    "max_tasks_per_batch": 50,
+    "priorities": [],
+    "rule_families": []
+  },
+  "execution_batches": [
+    {
+      "batch_id": "rule-input-batch-0001",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "not_verifier_evidence": true,
+      "recommended_adapters": [
+        "entity_resolution",
+        "source_family_fact_disambiguation",
+        "claim_trace_binding",
+        "external_citation_search"
+      ],
+      "rule_families": [
+        "entity_disambiguation"
+      ],
+      "source_request_ids": [
+        "rule:record-199:1",
+        "rule:record-223:1",
+        "rule:record-485:1",
+        "rule:record-516:1",
+        "rule:record-498:1",
+        "rule:record-498:2",
+        "rule:record-517:1",
+        "rule:record-517:2"
+      ],
+      "target_count": 6,
+      "task_count": 8
+    }
+  ],
+  "input_tasks": [
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "subject_only_or_unsupported_property",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-199:1",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-199:1",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "high",
+      "priority_score": 101.0,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "question_type": "person",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-199:1",
+      "target_id": "record-199",
+      "task_id": "rule-input-task-0001"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "unmapped_low_relevance",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-223:1",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-223:1",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "high",
+      "priority_score": 101.0,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "question_type": "person",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-223:1",
+      "target_id": "record-223",
+      "task_id": "rule-input-task-0002"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "generic_fact_only",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-485:1",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-485:1",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "high",
+      "priority_score": 101.0,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "question_type": "definition",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-485:1",
+      "target_id": "record-485",
+      "task_id": "rule-input-task-0003"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "no_joined_facts",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-516:1",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-516:1",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "high",
+      "priority_score": 101.0,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "question_type": "definition",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-516:1",
+      "target_id": "record-516",
+      "task_id": "rule-input-task-0004"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "subject_only_or_unsupported_property",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-498:1",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-498:1",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "medium",
+      "priority_score": 51.0,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-498:1",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0005"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "subject_only_or_unsupported_property",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-498:2",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-498:2",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "medium",
+      "priority_score": 51.0,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-498:2",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0007"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "no_joined_facts",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-517:1",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-517:1",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "medium",
+      "priority_score": 51.0,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-517:1",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0006"
+    },
+    {
+      "adapter": "entity_role_disambiguation",
+      "collection_family": "entity_role_rule_input_collection",
+      "execution_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role",
+        "expected_entity",
+        "source_citation"
+      ],
+      "field_tasks": [
+        {
+          "collection_hint": "Identify the entity in the question whose role or property is being queried.",
+          "field": "subject_entity",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Bind the candidate answer entity from the claim trace; do not infer it from labels.",
+          "field": "answer_entity",
+          "recommended_adapters": [
+            "claim_trace_binding",
+            "entity_resolution"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Normalize the role, relation, or property requested by the question.",
+          "field": "requested_role",
+          "recommended_adapters": [
+            "entity_resolution",
+            "source_family_fact_disambiguation"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Collect the provenance-backed entity that should satisfy the requested role.",
+          "field": "expected_entity",
+          "recommended_adapters": [
+            "source_family_fact_disambiguation",
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        },
+        {
+          "collection_hint": "Attach a provenance-bearing citation before any rule result can be promoted.",
+          "field": "source_citation",
+          "recommended_adapters": [
+            "external_citation_search"
+          ],
+          "requires_provenance": true
+        }
+      ],
+      "gap_type": "no_joined_facts",
+      "metadata": {
+        "queue_workflow": "world_model_rule_input_collection_plan",
+        "source_request_id": "rule:record-517:2",
+        "source_workflow": "world_model_rule_authoring_adapter"
+      },
+      "missing_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "not_verifier_evidence": true,
+      "output_contract": {
+        "accepted_execution_inputs": [
+          "subject_entity",
+          "answer_entity",
+          "requested_role",
+          "expected_entity",
+          "source_citation"
+        ],
+        "adapter_execution": "candidate_only_requires_promotion_gate",
+        "family_hint": "entity_disambiguation",
+        "rule_input_request_id": "rule:record-517:2",
+        "rule_inputs_format": "JSON object keyed by request_id or JSONL rows with request_id"
+      },
+      "priority": "medium",
+      "priority_score": 51.0,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "question_type": "other",
+      "required_inputs": [
+        "subject_entity",
+        "answer_entity",
+        "requested_role"
+      ],
+      "rule_family": "entity_disambiguation",
+      "source_policy": {
+        "do_not_copy_labels_or_model_answers": true,
+        "not_verifier_evidence": true,
+        "requires_explicit_rule_input_values": true,
+        "requires_promotion_gate_after_adapter_execution": true
+      },
+      "source_request_id": "rule:record-517:2",
+      "target_id": "record-517",
+      "task_id": "rule-input-task-0008"
+    }
+  ],
+  "label_usage": {
+    "answers_copied_to_rule_inputs": false,
+    "generated_rule_inputs_execute_adapter": false,
+    "input_tasks_are_verifier_evidence": false,
+    "labels_used_for_input_planning": false,
+    "model_answers_copied_to_rule_inputs": false
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/artifact-manifest.json",
+    "execution_batches": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-execution-batches.jsonl",
+    "input_requests": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-authoring-adapter-v1/world-model-rule-input-requests.jsonl",
+    "input_tasks": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json"
+  },
+  "schema_version": 1,
+  "scope": "Typed collection plan for deterministic rule inputs. Tasks are not verifier evidence and do not execute rule checks; they define the explicit fields required before the rule-authoring adapter can produce candidate results.",
+  "skipped_requests": [],
+  "source": {
+    "input_request_count": 8,
+    "input_request_workflow": "world_model_rule_authoring_adapter"
+  },
+  "status": "ready_for_input_collection",
+  "summary": {
+    "adapter_counts": {
+      "entity_role_disambiguation": 8
+    },
+    "batch_count": 1,
+    "collection_family_counts": {
+      "entity_role_rule_input_collection": 8
+    },
+    "execution_input_counts": {
+      "answer_entity": 8,
+      "expected_entity": 8,
+      "requested_role": 8,
+      "source_citation": 8,
+      "subject_entity": 8
+    },
+    "missing_input_counts": {
+      "answer_entity": 8,
+      "requested_role": 8,
+      "subject_entity": 8
+    },
+    "priority_counts": {
+      "high": 4,
+      "medium": 4
+    },
+    "rule_family_counts": {
+      "entity_disambiguation": 8
+    },
+    "skipped_request_count": 0,
+    "skipped_request_counts": {},
+    "source_input_request_count": 8,
+    "task_count": 8,
+    "top_task": {
+      "collection_family": "entity_role_rule_input_collection",
+      "priority_score": 101.0,
+      "source_request_id": "rule:record-199:1",
+      "task_id": "rule-input-task-0001"
+    }
+  },
+  "workflow": "world_model_rule_input_collection_plan"
+}

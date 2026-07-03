@@ -1,0 +1,2912 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  },
+  "config": {
+    "alpha": 0.05,
+    "best_by": "conditional_correctness_lower_bound",
+    "directions": {
+      "disp_euclid": "higher",
+      "disp_hse": "higher",
+      "eigenscore": "higher",
+      "nll_answer": "higher",
+      "resid_update_norm": "higher"
+    },
+    "release_gate": {
+      "max_abstention_rate": 0.5,
+      "min_conditional_correctness_lower_bound": 0.8
+    },
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "signals": [
+      "disp_euclid",
+      "disp_hse",
+      "nll_answer",
+      "eigenscore",
+      "resid_update_norm"
+    ]
+  },
+  "paths": {
+    "abstention_stability_report": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/uncertainty/abstention-stability-report.json",
+    "artifact_manifest": "artifacts/frontier-release-evidence/abstention-rerun-queue-v1/reruns/qwen05-l80/alpha_0p05/uncertainty/artifact-manifest.json"
+  },
+  "runs": [
+    {
+      "name": "qwen05-l80",
+      "score_dump": {
+        "exists": true,
+        "identity": {
+          "cache_key": "score-dump-identity-v1:46b3a2233d16e899f89e090b317cd14fa1c2a101aa7e5c4e27668f0765fc2a01",
+          "content_hash": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+          "dataset_id": "truthfulqa",
+          "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_total": 556,
+          "primary_score_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "records_hash": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+          "schema_version": 1,
+          "score_schema_hash": "40f115f972ed54e982cd2aa006f87b8a64002bbece8a5933155a8340c89d7955",
+          "scoring_config_hash": "ac54b8319eb18f4096db3a39288ce9964c1c550b1319c196575d221dcea8557b",
+          "source_format": "eigentruth.score_dump.jsonl",
+          "sweep_score_names": {
+            "-10": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-12": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-14": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-16": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ],
+            "-8": [
+              "eigenscore",
+              "maha_last",
+              "resid_update_norm",
+              "subspace_resid",
+              "truth_proj"
+            ]
+          },
+          "target_layer": -12
+        },
+        "kind": "file",
+        "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+        "records": {
+          "exists": true,
+          "kind": "file",
+          "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.records.jsonl",
+          "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+          "size_bytes": 861209
+        },
+        "sha256": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+        "size_bytes": 3320,
+        "source_format": "eigentruth.score_dump.jsonl",
+        "summary": {
+          "all_signal_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -12,
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_false": 306,
+          "n_total": 556,
+          "n_true": 250,
+          "score_count": 8,
+          "score_names": [
+            "maha_last",
+            "truth_proj",
+            "subspace_resid",
+            "resid_update_norm",
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "nll_answer"
+          ],
+          "statement_count": 556,
+          "sweep_layer_count": 5,
+          "sweep_layers": [
+            "-16",
+            "-14",
+            "-12",
+            "-10",
+            "-8"
+          ],
+          "sweep_score_count": 25,
+          "sweep_score_names": [
+            "eigenscore",
+            "maha_last",
+            "resid_update_norm",
+            "subspace_resid",
+            "truth_proj"
+          ]
+        }
+      },
+      "scores_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+      "seed_runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4564246484398576,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4618320610687023,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4564246484398576,
+              "threshold": 0.22644731019952874
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44790926320777075,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.039568345323741004,
+              "empirical_participation_rate": 0.960431654676259,
+              "empirical_selective_accuracy": 0.45318352059925093,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44790926320777075,
+              "threshold": 7.292734622955322
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44333972905401475,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.4485294117647059,
+              "rank": 3,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44333972905401475,
+              "threshold": 12.276283264160156
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44333972905401475,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.4485294117647059,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44333972905401475,
+              "threshold": 4.211822509765625
+            },
+            {
+              "conditional_correctness_lower_bound": 0.435629356293563,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02877697841726619,
+              "empirical_participation_rate": 0.9712230215827338,
+              "empirical_selective_accuracy": 0.44074074074074077,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.435629356293563,
+              "threshold": 4.466789245605469
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4564246484398576,
+            "correct_retention_lower_bound": 0.9603174603174603,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.05755395683453238,
+            "empirical_participation_rate": 0.9424460431654677,
+            "empirical_selective_accuracy": 0.4618320610687023,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4564246484398576,
+            "threshold": 0.22644731019952874
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.456425 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4564246484398576,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4618320610687023
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 16,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4564246484398576,
+              "correct_retained_count": 121,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4618320610687023,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.942652329749104,
+              "retained_count": 262,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22644731019952874
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 0
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45581295581295583,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07194244604316546,
+              "empirical_participation_rate": 0.9280575539568345,
+              "empirical_selective_accuracy": 0.46124031007751937,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45581295581295583,
+              "threshold": 0.22558578332372836
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44215563878485226,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.04316546762589928,
+              "empirical_participation_rate": 0.9568345323741008,
+              "empirical_selective_accuracy": 0.4473684210526316,
+              "rank": 2,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44215563878485226,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4401154401154401,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.014388489208633094,
+              "empirical_participation_rate": 0.9856115107913669,
+              "empirical_selective_accuracy": 0.44525547445255476,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4401154401154401,
+              "threshold": 5.622445583343506
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43835363602805466,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.44357976653696496,
+              "rank": 4,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43835363602805466,
+              "threshold": 7.287386417388916
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4354477159820671,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.44061302681992337,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4354477159820671,
+              "threshold": 12.031607627868652
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45581295581295583,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.07194244604316546,
+            "empirical_participation_rate": 0.9280575539568345,
+            "empirical_selective_accuracy": 0.46124031007751937,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45581295581295583,
+            "threshold": 0.22558578332372836
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.455813 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45581295581295583,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.07194244604316546,
+              "empirical_participation_rate": 0.9280575539568345,
+              "empirical_selective_accuracy": 0.46124031007751937
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 20,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45581295581295583,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07194244604316546,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9280575539568345,
+              "empirical_selective_accuracy": 0.46124031007751937,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9283154121863799,
+              "retained_count": 258,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22558578332372836
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 1
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45549996911864615,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.4609375,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45549996911864615,
+              "threshold": 0.2249634614989065
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4405058043117745,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.039568345323741004,
+              "empirical_participation_rate": 0.960431654676259,
+              "empirical_selective_accuracy": 0.44569288389513106,
+              "rank": 2,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4405058043117745,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4400883160281656,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.046762589928057555,
+              "empirical_participation_rate": 0.9532374100719424,
+              "empirical_selective_accuracy": 0.44528301886792454,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4400883160281656,
+              "threshold": 4.336012363433838
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43962029256146906,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.08633093525179857,
+              "empirical_participation_rate": 0.9136690647482014,
+              "empirical_selective_accuracy": 0.4448818897637795,
+              "rank": 4,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43962029256146906,
+              "threshold": 7.2856855392456055
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4321488696488696,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0539568345323741,
+              "empirical_participation_rate": 0.9460431654676259,
+              "empirical_selective_accuracy": 0.4372623574144487,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4321488696488696,
+              "threshold": 12.031607627868652
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45549996911864615,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.07913669064748201,
+            "empirical_participation_rate": 0.920863309352518,
+            "empirical_selective_accuracy": 0.4609375,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45549996911864615,
+            "threshold": 0.2249634614989065
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.4555 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45549996911864615,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.4609375
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 22,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45549996911864615,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.4609375,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.921146953405018,
+              "retained_count": 256,
+              "score_name": "resid_update_norm",
+              "threshold": 0.2249634614989065
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 2
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45373446536237233,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4591439688715953,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45373446536237233,
+              "threshold": 0.2249634614989065
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4385208189556016,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.01079136690647482,
+              "empirical_participation_rate": 0.9892086330935251,
+              "empirical_selective_accuracy": 0.44363636363636366,
+              "rank": 2,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4385208189556016,
+              "threshold": 5.622445583343506
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4379030257936508,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.08273381294964029,
+              "empirical_participation_rate": 0.9172661870503597,
+              "empirical_selective_accuracy": 0.44313725490196076,
+              "rank": 3,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4379030257936508,
+              "threshold": 7.2856855392456055
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4379030257936508,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.08273381294964029,
+              "empirical_participation_rate": 0.9172661870503597,
+              "empirical_selective_accuracy": 0.44313725490196076,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4379030257936508,
+              "threshold": 4.123105049133301
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43756412577705356,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.44274809160305345,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43756412577705356,
+              "threshold": 12.060379028320312
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45373446536237233,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.07553956834532374,
+            "empirical_participation_rate": 0.9244604316546763,
+            "empirical_selective_accuracy": 0.4591439688715953,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45373446536237233,
+            "threshold": 0.2249634614989065
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.453734 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45373446536237233,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4591439688715953
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 21,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45373446536237233,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4591439688715953,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9247311827956989,
+              "retained_count": 257,
+              "score_name": "resid_update_norm",
+              "threshold": 0.2249634614989065
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 3
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4616910866910867,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0683453237410072,
+              "empirical_participation_rate": 0.9316546762589928,
+              "empirical_selective_accuracy": 0.4671814671814672,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4616910866910867,
+              "threshold": 0.22644731019952874
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4495868259913204,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.04316546762589928,
+              "empirical_participation_rate": 0.9568345323741008,
+              "empirical_selective_accuracy": 0.4548872180451128,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4495868259913204,
+              "threshold": 7.292734622955322
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4457096848401196,
+              "correct_retention_lower_bound": 0.9841269841269841,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.01079136690647482,
+              "empirical_participation_rate": 0.9892086330935251,
+              "empirical_selective_accuracy": 0.4509090909090909,
+              "rank": 3,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4457096848401196,
+              "threshold": 12.408249855041504
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44333972905401475,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.4485294117647059,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44333972905401475,
+              "threshold": 4.211822509765625
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43650793650793657,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.014388489208633094,
+              "empirical_participation_rate": 0.9856115107913669,
+              "empirical_selective_accuracy": 0.4416058394160584,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43650793650793657,
+              "threshold": 5.3878302574157715
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4616910866910867,
+            "correct_retention_lower_bound": 0.9603174603174603,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.0683453237410072,
+            "empirical_participation_rate": 0.9316546762589928,
+            "empirical_selective_accuracy": 0.4671814671814672,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4616910866910867,
+            "threshold": 0.22644731019952874
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.461691 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4616910866910867,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "empirical_abstention_rate": 0.0683453237410072,
+              "empirical_participation_rate": 0.9316546762589928,
+              "empirical_selective_accuracy": 0.4671814671814672
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 19,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4616910866910867,
+              "correct_retained_count": 121,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0683453237410072,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9316546762589928,
+              "empirical_selective_accuracy": 0.4671814671814672,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.931899641577061,
+              "retained_count": 259,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22644731019952874
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 4
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45232013622818223,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.4576923076923077,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45232013622818223,
+              "threshold": 0.22558578332372836
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44607171405732565,
+              "correct_retention_lower_bound": 0.9920634920634921,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0035971223021582736,
+              "empirical_participation_rate": 0.9964028776978417,
+              "empirical_selective_accuracy": 0.45126353790613716,
+              "rank": 2,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44607171405732565,
+              "threshold": 5.894517421722412
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44549266247379454,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.45075757575757575,
+              "rank": 3,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44549266247379454,
+              "threshold": 7.291707992553711
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43800539083557954,
+              "correct_retention_lower_bound": 0.9285714285714286,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4431818181818182,
+              "rank": 4,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43800539083557954,
+              "threshold": 12.076576232910156
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43767507002801115,
+              "correct_retention_lower_bound": 0.9523809523809523,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.025179856115107913,
+              "empirical_participation_rate": 0.9748201438848921,
+              "empirical_selective_accuracy": 0.44280442804428044,
+              "rank": 5,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43767507002801115,
+              "threshold": 4.194973468780518
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45232013622818223,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.06474820143884892,
+            "empirical_participation_rate": 0.935251798561151,
+            "empirical_selective_accuracy": 0.4576923076923077,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45232013622818223,
+            "threshold": 0.22558578332372836
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.45232 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45232013622818223,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.4576923076923077
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 18,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45232013622818223,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.4576923076923077,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9354838709677419,
+              "retained_count": 260,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22558578332372836
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 5
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4567235699311171,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4621212121212121,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4567235699311171,
+              "threshold": 0.22816851606980862
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44790926320777075,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.039568345323741004,
+              "empirical_participation_rate": 0.960431654676259,
+              "empirical_selective_accuracy": 0.45318352059925093,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44790926320777075,
+              "threshold": 7.292734622955322
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44607171405732565,
+              "correct_retention_lower_bound": 0.9920634920634921,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0035971223021582736,
+              "empirical_participation_rate": 0.9964028776978417,
+              "empirical_selective_accuracy": 0.45126353790613716,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44607171405732565,
+              "threshold": 5.894517421722412
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43724279835390945,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.4423791821561338,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43724279835390945,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.436358754027927,
+              "correct_retention_lower_bound": 0.9285714285714286,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.046762589928057555,
+              "empirical_participation_rate": 0.9532374100719424,
+              "empirical_selective_accuracy": 0.44150943396226416,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.436358754027927,
+              "threshold": 12.076576232910156
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4567235699311171,
+            "correct_retention_lower_bound": 0.9682539682539683,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.050359712230215826,
+            "empirical_participation_rate": 0.9496402877697842,
+            "empirical_selective_accuracy": 0.4621212121212121,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4567235699311171,
+            "threshold": 0.22816851606980862
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.456724 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4567235699311171,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4621212121212121
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 14,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4567235699311171,
+              "correct_retained_count": 122,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4621212121212121,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9498207885304659,
+              "retained_count": 264,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22816851606980862
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 6
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.44851912668004623,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.45384615384615384,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44851912668004623,
+              "threshold": 0.2249634614989065
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44219884336163406,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4474708171206226,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44219884336163406,
+              "threshold": 7.28797721862793
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4409171075837742,
+              "correct_retention_lower_bound": 0.9523809523809523,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.44609665427509293,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4409171075837742,
+              "threshold": 4.724928379058838
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4388682362660058,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03597122302158273,
+              "empirical_participation_rate": 0.9640287769784173,
+              "empirical_selective_accuracy": 0.44402985074626866,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4388682362660058,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4284787845099129,
+              "correct_retention_lower_bound": 0.8809523809523809,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.43359375,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4284787845099129,
+              "threshold": 11.990880966186523
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.44851912668004623,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.06474820143884892,
+            "empirical_participation_rate": 0.935251798561151,
+            "empirical_selective_accuracy": 0.45384615384615384,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.44851912668004623,
+            "threshold": 0.2249634614989065
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.448519 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.44851912668004623,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.45384615384615384
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 18,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.44851912668004623,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.45384615384615384,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9354838709677419,
+              "retained_count": 260,
+              "score_name": "resid_update_norm",
+              "threshold": 0.2249634614989065
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 7
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4482657260435038,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.45353159851301117,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4482657260435038,
+              "threshold": 0.22816851606980862
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4449696545284781,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.025179856115107913,
+              "empirical_participation_rate": 0.9748201438848921,
+              "empirical_selective_accuracy": 0.45018450184501846,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4449696545284781,
+              "threshold": 7.298512935638428
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4441006246060397,
+              "correct_retention_lower_bound": 0.9841269841269841,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.007194244604316547,
+              "empirical_participation_rate": 0.9928057553956835,
+              "empirical_selective_accuracy": 0.4492753623188406,
+              "rank": 3,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4441006246060397,
+              "threshold": 12.408249855041504
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44051916795599105,
+              "correct_retention_lower_bound": 0.9761904761904762,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.007194244604316547,
+              "empirical_participation_rate": 0.9928057553956835,
+              "empirical_selective_accuracy": 0.44565217391304346,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44051916795599105,
+              "threshold": 4.224138259887695
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43844004518161817,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.04316546762589928,
+              "empirical_participation_rate": 0.9568345323741008,
+              "empirical_selective_accuracy": 0.44360902255639095,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43844004518161817,
+              "threshold": 4.336012363433838
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4482657260435038,
+            "correct_retention_lower_bound": 0.9682539682539683,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.03237410071942446,
+            "empirical_participation_rate": 0.9676258992805755,
+            "empirical_selective_accuracy": 0.45353159851301117,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4482657260435038,
+            "threshold": 0.22816851606980862
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.448266 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4482657260435038,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.45353159851301117
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 9,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4482657260435038,
+              "correct_retained_count": 122,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.45353159851301117,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.967741935483871,
+              "retained_count": 269,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22816851606980862
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 8
+        },
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45816672725069674,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.46360153256704983,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45816672725069674,
+              "threshold": 0.22644731019952874
+            },
+            {
+              "conditional_correctness_lower_bound": 0.45027235986645586,
+              "correct_retention_lower_bound": 0.9761904761904762,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02877697841726619,
+              "empirical_participation_rate": 0.9712230215827338,
+              "empirical_selective_accuracy": 0.45555555555555555,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45027235986645586,
+              "threshold": 7.299289226531982
+            },
+            {
+              "conditional_correctness_lower_bound": 0.439705796848654,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.44485294117647056,
+              "rank": 3,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.439705796848654,
+              "threshold": 4.204304218292236
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4354477159820671,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.44061302681992337,
+              "rank": 4,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4354477159820671,
+              "threshold": 12.031607627868652
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43379202124449273,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4389312977099237,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43379202124449273,
+              "threshold": 4.281679153442383
+            }
+          ],
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45816672725069674,
+            "correct_retention_lower_bound": 0.9603174603174603,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.06115107913669065,
+            "empirical_participation_rate": 0.9388489208633094,
+            "empirical_selective_accuracy": 0.46360153256704983,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45816672725069674,
+            "threshold": 0.22644731019952874
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.458167 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45816672725069674,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.46360153256704983
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 17,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45816672725069674,
+              "correct_retained_count": 121,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.46360153256704983,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9390681003584229,
+              "retained_count": 261,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22644731019952874
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 9
+        }
+      ],
+      "stability": {
+        "all_release_gates_passed": false,
+        "conditional_correctness_lower_bound": {
+          "count": 10,
+          "max": 0.4616910866910867,
+          "mean": 0.4547158411558465,
+          "min": 0.4482657260435038,
+          "stdev": 0.0039501637348831895
+        },
+        "correct_retention_lower_bound": {
+          "count": 10,
+          "max": 0.9682539682539683,
+          "mean": 0.9515873015873015,
+          "min": 0.9365079365079365,
+          "stdev": 0.012523598284174214
+        },
+        "empirical_abstention_rate": {
+          "count": 10,
+          "max": 0.07913669064748201,
+          "mean": 0.06258992805755395,
+          "min": 0.03237410071942446,
+          "stdev": 0.012889548825301378
+        },
+        "empirical_participation_rate": {
+          "count": 10,
+          "max": 0.9676258992805755,
+          "mean": 0.937410071942446,
+          "min": 0.920863309352518,
+          "stdev": 0.012889548825301368
+        },
+        "empirical_selective_accuracy": {
+          "count": 10,
+          "max": 0.4671814671814672,
+          "mean": 0.4601128111939019,
+          "min": 0.45353159851301117,
+          "stdev": 0.004005730662166512
+        },
+        "recommended_score_name_counts": {
+          "resid_update_norm": 10
+        },
+        "release_gate_block_seed_count": 10,
+        "release_gate_pass_seed_count": 0,
+        "seed_count": 10,
+        "stable_recommended_score_name": "resid_update_norm"
+      },
+      "supervised_feasibility_frontier": {
+        "best": {
+          "abstained_count": 212,
+          "blocking_reasons": [
+            "conditional_correctness_lower_bound 0.473468 is below required minimum 0.8"
+          ],
+          "conditional_correctness_lower_bound": 0.47346844506033836,
+          "correct_retained_count": 164,
+          "correct_retention_lower_bound": 0.6533864541832669,
+          "direction": "higher",
+          "empirical_abstention_rate": 0.381294964028777,
+          "empirical_participation_rate": 0.6187050359712231,
+          "empirical_selective_accuracy": 0.47674418604651164,
+          "retained_count": 344,
+          "score_name": "resid_update_norm",
+          "target_passed": false,
+          "threshold": 0.20037674739486708
+        },
+        "note": "Diagnostic upper bound only: this sweep uses held-out labels and must not be used as a runtime calibration artifact.",
+        "promotion_eligible": false,
+        "scope": "supervised_full_run_threshold_sweep",
+        "signals": [
+          {
+            "abstained_count": 212,
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.473468 is below required minimum 0.8"
+            ],
+            "conditional_correctness_lower_bound": 0.47346844506033836,
+            "correct_retained_count": 164,
+            "correct_retention_lower_bound": 0.6533864541832669,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.381294964028777,
+            "empirical_participation_rate": 0.6187050359712231,
+            "empirical_selective_accuracy": 0.47674418604651164,
+            "retained_count": 344,
+            "score_name": "resid_update_norm",
+            "target_passed": false,
+            "threshold": 0.20037674739486708
+          },
+          {
+            "abstained_count": 266,
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.465492 is below required minimum 0.8"
+            ],
+            "conditional_correctness_lower_bound": 0.4654919839542174,
+            "correct_retained_count": 136,
+            "correct_retention_lower_bound": 0.5418326693227091,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.4784172661870504,
+            "empirical_participation_rate": 0.5215827338129496,
+            "empirical_selective_accuracy": 0.4689655172413793,
+            "retained_count": 290,
+            "score_name": "disp_hse",
+            "target_passed": false,
+            "threshold": 7.226609706878662
+          },
+          {
+            "abstained_count": 251,
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.465458 is below required minimum 0.8"
+            ],
+            "conditional_correctness_lower_bound": 0.4654584277270005,
+            "correct_retained_count": 143,
+            "correct_retention_lower_bound": 0.5697211155378487,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.45143884892086333,
+            "empirical_participation_rate": 0.5485611510791367,
+            "empirical_selective_accuracy": 0.46885245901639344,
+            "retained_count": 305,
+            "score_name": "disp_euclid",
+            "target_passed": false,
+            "threshold": 11.138598442077637
+          },
+          {
+            "abstained_count": 153,
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.456096 is below required minimum 0.8"
+            ],
+            "conditional_correctness_lower_bound": 0.45609640645339433,
+            "correct_retained_count": 185,
+            "correct_retention_lower_bound": 0.7370517928286853,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.2751798561151079,
+            "empirical_participation_rate": 0.7248201438848921,
+            "empirical_selective_accuracy": 0.45905707196029777,
+            "retained_count": 403,
+            "score_name": "eigenscore",
+            "target_passed": false,
+            "threshold": 3.8395919799804688
+          },
+          {
+            "abstained_count": 0,
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.447045 is below required minimum 0.8"
+            ],
+            "conditional_correctness_lower_bound": 0.4470448546925404,
+            "correct_retained_count": 250,
+            "correct_retention_lower_bound": 0.9960159362549801,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.0,
+            "empirical_participation_rate": 1.0,
+            "empirical_selective_accuracy": 0.44964028776978415,
+            "retained_count": 556,
+            "score_name": "nll_answer",
+            "target_passed": false,
+            "threshold": 10.48039436340332
+          }
+        ],
+        "target": {
+          "max_abstention_rate": 0.5,
+          "min_conditional_correctness_lower_bound": 0.8
+        },
+        "target_passed": false,
+        "uses_labels": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 5,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 2,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 2,
+      "writes": 2
+    },
+    "jsonl_manifest": {
+      "attempts": 2,
+      "hit_rate": 0.5,
+      "hits": 1,
+      "misses": 1,
+      "writes": 1
+    },
+    "jsonl_summary": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 2
+    },
+    "jsonl_view": {
+      "attempts": 1,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 1,
+      "writes": 1
+    }
+  },
+  "seed_reports": [
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4564246484398576,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4618320610687023,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4564246484398576,
+              "threshold": 0.22644731019952874
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44790926320777075,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.039568345323741004,
+              "empirical_participation_rate": 0.960431654676259,
+              "empirical_selective_accuracy": 0.45318352059925093,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44790926320777075,
+              "threshold": 7.292734622955322
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44333972905401475,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.4485294117647059,
+              "rank": 3,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44333972905401475,
+              "threshold": 12.276283264160156
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44333972905401475,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.4485294117647059,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44333972905401475,
+              "threshold": 4.211822509765625
+            },
+            {
+              "conditional_correctness_lower_bound": 0.435629356293563,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02877697841726619,
+              "empirical_participation_rate": 0.9712230215827338,
+              "empirical_selective_accuracy": 0.44074074074074077,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.435629356293563,
+              "threshold": 4.466789245605469
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4564246484398576,
+            "correct_retention_lower_bound": 0.9603174603174603,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.05755395683453238,
+            "empirical_participation_rate": 0.9424460431654677,
+            "empirical_selective_accuracy": 0.4618320610687023,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4564246484398576,
+            "threshold": 0.22644731019952874
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.456425 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4564246484398576,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4618320610687023
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 16,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4564246484398576,
+              "correct_retained_count": 121,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4618320610687023,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.942652329749104,
+              "retained_count": 262,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22644731019952874
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 0
+        }
+      ],
+      "seed": 0
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45581295581295583,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07194244604316546,
+              "empirical_participation_rate": 0.9280575539568345,
+              "empirical_selective_accuracy": 0.46124031007751937,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45581295581295583,
+              "threshold": 0.22558578332372836
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44215563878485226,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.04316546762589928,
+              "empirical_participation_rate": 0.9568345323741008,
+              "empirical_selective_accuracy": 0.4473684210526316,
+              "rank": 2,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44215563878485226,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4401154401154401,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.014388489208633094,
+              "empirical_participation_rate": 0.9856115107913669,
+              "empirical_selective_accuracy": 0.44525547445255476,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4401154401154401,
+              "threshold": 5.622445583343506
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43835363602805466,
+              "correct_retention_lower_bound": 0.9047619047619048,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.44357976653696496,
+              "rank": 4,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43835363602805466,
+              "threshold": 7.287386417388916
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4354477159820671,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.44061302681992337,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4354477159820671,
+              "threshold": 12.031607627868652
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45581295581295583,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.07194244604316546,
+            "empirical_participation_rate": 0.9280575539568345,
+            "empirical_selective_accuracy": 0.46124031007751937,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45581295581295583,
+            "threshold": 0.22558578332372836
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.455813 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45581295581295583,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.07194244604316546,
+              "empirical_participation_rate": 0.9280575539568345,
+              "empirical_selective_accuracy": 0.46124031007751937
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 20,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45581295581295583,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07194244604316546,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9280575539568345,
+              "empirical_selective_accuracy": 0.46124031007751937,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9283154121863799,
+              "retained_count": 258,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22558578332372836
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 1
+        }
+      ],
+      "seed": 1
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45549996911864615,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.4609375,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45549996911864615,
+              "threshold": 0.2249634614989065
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4405058043117745,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.039568345323741004,
+              "empirical_participation_rate": 0.960431654676259,
+              "empirical_selective_accuracy": 0.44569288389513106,
+              "rank": 2,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4405058043117745,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4400883160281656,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.046762589928057555,
+              "empirical_participation_rate": 0.9532374100719424,
+              "empirical_selective_accuracy": 0.44528301886792454,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4400883160281656,
+              "threshold": 4.336012363433838
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43962029256146906,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.08633093525179857,
+              "empirical_participation_rate": 0.9136690647482014,
+              "empirical_selective_accuracy": 0.4448818897637795,
+              "rank": 4,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43962029256146906,
+              "threshold": 7.2856855392456055
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4321488696488696,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0539568345323741,
+              "empirical_participation_rate": 0.9460431654676259,
+              "empirical_selective_accuracy": 0.4372623574144487,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4321488696488696,
+              "threshold": 12.031607627868652
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45549996911864615,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.07913669064748201,
+            "empirical_participation_rate": 0.920863309352518,
+            "empirical_selective_accuracy": 0.4609375,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45549996911864615,
+            "threshold": 0.2249634614989065
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.4555 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45549996911864615,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.4609375
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 22,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45549996911864615,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.4609375,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.921146953405018,
+              "retained_count": 256,
+              "score_name": "resid_update_norm",
+              "threshold": 0.2249634614989065
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 2
+        }
+      ],
+      "seed": 2
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45373446536237233,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4591439688715953,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45373446536237233,
+              "threshold": 0.2249634614989065
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4385208189556016,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.01079136690647482,
+              "empirical_participation_rate": 0.9892086330935251,
+              "empirical_selective_accuracy": 0.44363636363636366,
+              "rank": 2,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4385208189556016,
+              "threshold": 5.622445583343506
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4379030257936508,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.08273381294964029,
+              "empirical_participation_rate": 0.9172661870503597,
+              "empirical_selective_accuracy": 0.44313725490196076,
+              "rank": 3,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4379030257936508,
+              "threshold": 7.2856855392456055
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4379030257936508,
+              "correct_retention_lower_bound": 0.8968253968253969,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.08273381294964029,
+              "empirical_participation_rate": 0.9172661870503597,
+              "empirical_selective_accuracy": 0.44313725490196076,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4379030257936508,
+              "threshold": 4.123105049133301
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43756412577705356,
+              "correct_retention_lower_bound": 0.9206349206349206,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.44274809160305345,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43756412577705356,
+              "threshold": 12.060379028320312
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45373446536237233,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.07553956834532374,
+            "empirical_participation_rate": 0.9244604316546763,
+            "empirical_selective_accuracy": 0.4591439688715953,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45373446536237233,
+            "threshold": 0.2249634614989065
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.453734 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45373446536237233,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4591439688715953
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 21,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45373446536237233,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4591439688715953,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9247311827956989,
+              "retained_count": 257,
+              "score_name": "resid_update_norm",
+              "threshold": 0.2249634614989065
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 3
+        }
+      ],
+      "seed": 3
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4616910866910867,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0683453237410072,
+              "empirical_participation_rate": 0.9316546762589928,
+              "empirical_selective_accuracy": 0.4671814671814672,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4616910866910867,
+              "threshold": 0.22644731019952874
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4495868259913204,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.04316546762589928,
+              "empirical_participation_rate": 0.9568345323741008,
+              "empirical_selective_accuracy": 0.4548872180451128,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4495868259913204,
+              "threshold": 7.292734622955322
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4457096848401196,
+              "correct_retention_lower_bound": 0.9841269841269841,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.01079136690647482,
+              "empirical_participation_rate": 0.9892086330935251,
+              "empirical_selective_accuracy": 0.4509090909090909,
+              "rank": 3,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4457096848401196,
+              "threshold": 12.408249855041504
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44333972905401475,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.4485294117647059,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44333972905401475,
+              "threshold": 4.211822509765625
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43650793650793657,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.014388489208633094,
+              "empirical_participation_rate": 0.9856115107913669,
+              "empirical_selective_accuracy": 0.4416058394160584,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43650793650793657,
+              "threshold": 5.3878302574157715
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4616910866910867,
+            "correct_retention_lower_bound": 0.9603174603174603,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.0683453237410072,
+            "empirical_participation_rate": 0.9316546762589928,
+            "empirical_selective_accuracy": 0.4671814671814672,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4616910866910867,
+            "threshold": 0.22644731019952874
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.461691 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4616910866910867,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "empirical_abstention_rate": 0.0683453237410072,
+              "empirical_participation_rate": 0.9316546762589928,
+              "empirical_selective_accuracy": 0.4671814671814672
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 19,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4616910866910867,
+              "correct_retained_count": 121,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0683453237410072,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9316546762589928,
+              "empirical_selective_accuracy": 0.4671814671814672,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.931899641577061,
+              "retained_count": 259,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22644731019952874
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 4
+        }
+      ],
+      "seed": 4
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45232013622818223,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.4576923076923077,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45232013622818223,
+              "threshold": 0.22558578332372836
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44607171405732565,
+              "correct_retention_lower_bound": 0.9920634920634921,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0035971223021582736,
+              "empirical_participation_rate": 0.9964028776978417,
+              "empirical_selective_accuracy": 0.45126353790613716,
+              "rank": 2,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44607171405732565,
+              "threshold": 5.894517421722412
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44549266247379454,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.45075757575757575,
+              "rank": 3,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44549266247379454,
+              "threshold": 7.291707992553711
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43800539083557954,
+              "correct_retention_lower_bound": 0.9285714285714286,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4431818181818182,
+              "rank": 4,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43800539083557954,
+              "threshold": 12.076576232910156
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43767507002801115,
+              "correct_retention_lower_bound": 0.9523809523809523,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.025179856115107913,
+              "empirical_participation_rate": 0.9748201438848921,
+              "empirical_selective_accuracy": 0.44280442804428044,
+              "rank": 5,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43767507002801115,
+              "threshold": 4.194973468780518
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45232013622818223,
+            "correct_retention_lower_bound": 0.9444444444444444,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.06474820143884892,
+            "empirical_participation_rate": 0.935251798561151,
+            "empirical_selective_accuracy": 0.4576923076923077,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45232013622818223,
+            "threshold": 0.22558578332372836
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.45232 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45232013622818223,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.4576923076923077
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 18,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45232013622818223,
+              "correct_retained_count": 119,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "correct_retention_rate": 0.952,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.4576923076923077,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9354838709677419,
+              "retained_count": 260,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22558578332372836
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 5
+        }
+      ],
+      "seed": 5
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4567235699311171,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4621212121212121,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4567235699311171,
+              "threshold": 0.22816851606980862
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44790926320777075,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.039568345323741004,
+              "empirical_participation_rate": 0.960431654676259,
+              "empirical_selective_accuracy": 0.45318352059925093,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44790926320777075,
+              "threshold": 7.292734622955322
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44607171405732565,
+              "correct_retention_lower_bound": 0.9920634920634921,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.0035971223021582736,
+              "empirical_participation_rate": 0.9964028776978417,
+              "empirical_selective_accuracy": 0.45126353790613716,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44607171405732565,
+              "threshold": 5.894517421722412
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43724279835390945,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.4423791821561338,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43724279835390945,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.436358754027927,
+              "correct_retention_lower_bound": 0.9285714285714286,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.046762589928057555,
+              "empirical_participation_rate": 0.9532374100719424,
+              "empirical_selective_accuracy": 0.44150943396226416,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.436358754027927,
+              "threshold": 12.076576232910156
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4567235699311171,
+            "correct_retention_lower_bound": 0.9682539682539683,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.050359712230215826,
+            "empirical_participation_rate": 0.9496402877697842,
+            "empirical_selective_accuracy": 0.4621212121212121,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4567235699311171,
+            "threshold": 0.22816851606980862
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.456724 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4567235699311171,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4621212121212121
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 14,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4567235699311171,
+              "correct_retained_count": 122,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.050359712230215826,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9496402877697842,
+              "empirical_selective_accuracy": 0.4621212121212121,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9498207885304659,
+              "retained_count": 264,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22816851606980862
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 6
+        }
+      ],
+      "seed": 6
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.44851912668004623,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.45384615384615384,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44851912668004623,
+              "threshold": 0.2249634614989065
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44219884336163406,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07553956834532374,
+              "empirical_participation_rate": 0.9244604316546763,
+              "empirical_selective_accuracy": 0.4474708171206226,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44219884336163406,
+              "threshold": 7.28797721862793
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4409171075837742,
+              "correct_retention_lower_bound": 0.9523809523809523,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.44609665427509293,
+              "rank": 3,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4409171075837742,
+              "threshold": 4.724928379058838
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4388682362660058,
+              "correct_retention_lower_bound": 0.9444444444444444,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03597122302158273,
+              "empirical_participation_rate": 0.9640287769784173,
+              "empirical_selective_accuracy": 0.44402985074626866,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4388682362660058,
+              "threshold": 4.189411163330078
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4284787845099129,
+              "correct_retention_lower_bound": 0.8809523809523809,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.07913669064748201,
+              "empirical_participation_rate": 0.920863309352518,
+              "empirical_selective_accuracy": 0.43359375,
+              "rank": 5,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4284787845099129,
+              "threshold": 11.990880966186523
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.44851912668004623,
+            "correct_retention_lower_bound": 0.9365079365079365,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.06474820143884892,
+            "empirical_participation_rate": 0.935251798561151,
+            "empirical_selective_accuracy": 0.45384615384615384,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.44851912668004623,
+            "threshold": 0.2249634614989065
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.448519 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.44851912668004623,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.45384615384615384
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 18,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.44851912668004623,
+              "correct_retained_count": 118,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "correct_retention_rate": 0.944,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06474820143884892,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.935251798561151,
+              "empirical_selective_accuracy": 0.45384615384615384,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9354838709677419,
+              "retained_count": 260,
+              "score_name": "resid_update_norm",
+              "threshold": 0.2249634614989065
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 7
+        }
+      ],
+      "seed": 7
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.4482657260435038,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.45353159851301117,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4482657260435038,
+              "threshold": 0.22816851606980862
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4449696545284781,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.025179856115107913,
+              "empirical_participation_rate": 0.9748201438848921,
+              "empirical_selective_accuracy": 0.45018450184501846,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4449696545284781,
+              "threshold": 7.298512935638428
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4441006246060397,
+              "correct_retention_lower_bound": 0.9841269841269841,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.007194244604316547,
+              "empirical_participation_rate": 0.9928057553956835,
+              "empirical_selective_accuracy": 0.4492753623188406,
+              "rank": 3,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4441006246060397,
+              "threshold": 12.408249855041504
+            },
+            {
+              "conditional_correctness_lower_bound": 0.44051916795599105,
+              "correct_retention_lower_bound": 0.9761904761904762,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.007194244604316547,
+              "empirical_participation_rate": 0.9928057553956835,
+              "empirical_selective_accuracy": 0.44565217391304346,
+              "rank": 4,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.44051916795599105,
+              "threshold": 4.224138259887695
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43844004518161817,
+              "correct_retention_lower_bound": 0.9365079365079365,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.04316546762589928,
+              "empirical_participation_rate": 0.9568345323741008,
+              "empirical_selective_accuracy": 0.44360902255639095,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43844004518161817,
+              "threshold": 4.336012363433838
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.4482657260435038,
+            "correct_retention_lower_bound": 0.9682539682539683,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.03237410071942446,
+            "empirical_participation_rate": 0.9676258992805755,
+            "empirical_selective_accuracy": 0.45353159851301117,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.4482657260435038,
+            "threshold": 0.22816851606980862
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.448266 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.4482657260435038,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.45353159851301117
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 9,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.4482657260435038,
+              "correct_retained_count": 122,
+              "correct_retention_lower_bound": 0.9682539682539683,
+              "correct_retention_rate": 0.976,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.03237410071942446,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9676258992805755,
+              "empirical_selective_accuracy": 0.45353159851301117,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.967741935483871,
+              "retained_count": 269,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22816851606980862
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 8
+        }
+      ],
+      "seed": 8
+    },
+    {
+      "runs": [
+        {
+          "candidates": [
+            {
+              "conditional_correctness_lower_bound": 0.45816672725069674,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.46360153256704983,
+              "rank": 1,
+              "score_name": "resid_update_norm",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45816672725069674,
+              "threshold": 0.22644731019952874
+            },
+            {
+              "conditional_correctness_lower_bound": 0.45027235986645586,
+              "correct_retention_lower_bound": 0.9761904761904762,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02877697841726619,
+              "empirical_participation_rate": 0.9712230215827338,
+              "empirical_selective_accuracy": 0.45555555555555555,
+              "rank": 2,
+              "score_name": "disp_hse",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.45027235986645586,
+              "threshold": 7.299289226531982
+            },
+            {
+              "conditional_correctness_lower_bound": 0.439705796848654,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.02158273381294964,
+              "empirical_participation_rate": 0.9784172661870504,
+              "empirical_selective_accuracy": 0.44485294117647056,
+              "rank": 3,
+              "score_name": "eigenscore",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.439705796848654,
+              "threshold": 4.204304218292236
+            },
+            {
+              "conditional_correctness_lower_bound": 0.4354477159820671,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.44061302681992337,
+              "rank": 4,
+              "score_name": "disp_euclid",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.4354477159820671,
+              "threshold": 12.031607627868652
+            },
+            {
+              "conditional_correctness_lower_bound": 0.43379202124449273,
+              "correct_retention_lower_bound": 0.9126984126984127,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.05755395683453238,
+              "empirical_participation_rate": 0.9424460431654677,
+              "empirical_selective_accuracy": 0.4389312977099237,
+              "rank": 5,
+              "score_name": "nll_answer",
+              "selection_metric": "conditional_correctness_lower_bound",
+              "selection_value": 0.43379202124449273,
+              "threshold": 4.281679153442383
+            }
+          ],
+          "name": "qwen05-l80",
+          "recommended": {
+            "conditional_correctness_lower_bound": 0.45816672725069674,
+            "correct_retention_lower_bound": 0.9603174603174603,
+            "direction": "higher",
+            "empirical_abstention_rate": 0.06115107913669065,
+            "empirical_participation_rate": 0.9388489208633094,
+            "empirical_selective_accuracy": 0.46360153256704983,
+            "rank": 1,
+            "score_name": "resid_update_norm",
+            "selection_metric": "conditional_correctness_lower_bound",
+            "selection_value": 0.45816672725069674,
+            "threshold": 0.22644731019952874
+          },
+          "release_gate": {
+            "blocking_reasons": [
+              "conditional_correctness_lower_bound 0.458167 is below required minimum 0.8"
+            ],
+            "candidate_count": 5,
+            "metrics": {
+              "conditional_correctness_lower_bound": 0.45816672725069674,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.46360153256704983
+            },
+            "passed": false,
+            "selected_report": {
+              "abstained_count": 17,
+              "alpha": 0.05,
+              "conditional_correctness_lower_bound": 0.45816672725069674,
+              "correct_retained_count": 121,
+              "correct_retention_lower_bound": 0.9603174603174603,
+              "correct_retention_rate": 0.968,
+              "direction": "higher",
+              "empirical_abstention_rate": 0.06115107913669065,
+              "empirical_base_accuracy": 0.44964028776978415,
+              "empirical_participation_rate": 0.9388489208633094,
+              "empirical_selective_accuracy": 0.46360153256704983,
+              "n_calibration": 278,
+              "n_correct": 125,
+              "participation_upper_bound": 0.9390681003584229,
+              "retained_count": 261,
+              "score_name": "resid_update_norm",
+              "threshold": 0.22644731019952874
+            },
+            "selected_score_name": "resid_update_norm",
+            "source": "conformal_abstention_comparison_report",
+            "status": "blocked",
+            "thresholds": {
+              "max_abstention_rate": 0.5,
+              "min_conditional_correctness_lower_bound": 0.8
+            }
+          },
+          "seed": 9
+        }
+      ],
+      "seed": 9
+    }
+  ],
+  "status": "complete",
+  "workflow": "abstention_stability"
+}

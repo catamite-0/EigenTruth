@@ -181,6 +181,47 @@ def geometry_calibrated_anomaly_scores(
     )
 
 
+def global_local_uncertainty_scores(
+    *,
+    calibration_scores: Mapping[str, ArrayLike],
+    scores: Mapping[str, ArrayLike],
+    global_signals: Sequence[str],
+    local_signals: Sequence[str],
+    directions: Mapping[str, str] | None = None,
+    global_method: str = "mean_rank",
+    local_method: str = "mean_rank",
+    gate_method: str = "product",
+    global_weight: float = 1.0,
+    local_weight: float = 1.0,
+    interaction_weight: float = 1.0,
+) -> Tensor:
+    """Return a Global-Local Uncertainty (GLU) anomaly score.
+
+    ``global_signals`` are hidden-state or representation-geometry signals.
+    ``local_signals`` are token-level confidence/entropy signals. Both groups
+    are rank-calibrated against normal calibration records, then fused with a
+    multiplicative gate by default so high scores require both global geometry
+    and local uncertainty evidence.
+    """
+    global_names = _unique_signal_names(global_signals, name="global_signals")
+    local_names = _unique_signal_names(local_signals, name="local_signals")
+    if set(global_names) & set(local_names):
+        raise ValueError("global_signals and local_signals must not overlap.")
+    return geometry_calibrated_anomaly_scores(
+        calibration_scores=calibration_scores,
+        scores=scores,
+        geometry_signals=global_names,
+        uncertainty_signals=local_names,
+        directions=directions,
+        geometry_method=global_method,
+        uncertainty_method=local_method,
+        fusion_method=gate_method,
+        geometry_weight=global_weight,
+        uncertainty_weight=local_weight,
+        interaction_weight=interaction_weight,
+    )
+
+
 def _group_rank_scores(
     *,
     calibration_scores: Mapping[str, ArrayLike],
@@ -206,6 +247,15 @@ def _group_rank_scores(
             )
         )
     return combine_rank_anomaly_scores(rank_scores, method)
+
+
+def _unique_signal_names(signals: Sequence[str], *, name: str) -> tuple[str, ...]:
+    signal_names = tuple(str(signal).strip() for signal in signals if str(signal).strip())
+    if not signal_names:
+        raise ValueError(f"{name} must contain at least one signal.")
+    if len(set(signal_names)) != len(signal_names):
+        raise ValueError(f"{name} must contain unique signals.")
+    return signal_names
 
 
 def _non_negative_float(value: float, *, name: str) -> float:

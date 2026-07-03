@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "frontier_research_queue_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-research-command-plan.json",
+      "sha256": "a600d57956d0096cf37ba215409177ef9defd37f1d58ace6cfa79c7277422cbb",
+      "size_bytes": 13109
+    },
+    "source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "sha256": "dd31177cbaa46c14673f2637871c64379e218d9de548b210e64026c5a747138c",
+      "size_bytes": 26704
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "command_count": 3,
+    "entry_count": 1,
+    "missing_input_count": 1,
+    "runner": "plan_frontier_research_queue_commands",
+    "status": "needs_inputs",
+    "workflow": "frontier_research_queue_command_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

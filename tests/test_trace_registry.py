@@ -29,11 +29,14 @@ from eigentruth.control import (
     RuntimePhaseTiming,
     RuntimeTrace,
     TraceEvent,
+    audit_evidence_graph_consistency,
+    audit_trace_provenance,
     evaluate_product_runtime_budget,
     first_existing_product_promotion_contract_path,
     load_product_promotion_contract,
     load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
+    product_promotion_contract_summary,
     product_runtime_budget_policy_from_release_candidate,
     product_runtime_metrics,
     product_trace_fingerprint,
@@ -52,6 +55,9 @@ from eigentruth.registry import (
     save_json_cache,
 )
 from eigentruth.verify import (
+    CitationRecord,
+    CitationVerifier,
+    Claim,
     ClaimVerificationPlanner,
     InMemoryVerifier,
     VerificationBudgetPolicy,
@@ -199,6 +205,37 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
     assert budgeted_bounded_metrics["verification_plan_budget_enabled"] is True
     assert budgeted_bounded_metrics["verification_plan_budget_selected_claim_count"] == 1.0
 
+    hidden_plan = ClaimVerificationPlanner().plan(
+        claims,
+        hidden_evidence={
+            "selected": (
+                {
+                    "record_id": "c2",
+                    "record_index": 1,
+                    "score_name": "subspace_resid",
+                    "score": 5.0,
+                    "direction": "higher",
+                    "anomaly_score": 1.0,
+                    "layer": "-8",
+                    "evidence_ref": "sweep:layer:-8:subspace_resid:c2",
+                },
+            ),
+        },
+    )
+    hidden_trace = ProductTrace(
+        request_id="req-plan-hidden-evidence",
+        claims=claims,
+        verification_plan=hidden_plan,
+    )
+    hidden_bounded = hidden_trace.to_bounded_dict()
+
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["available"] is True
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["selected_count"] == 1
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["claim_ids"] == ["c2"]
+    assert hidden_bounded["summaries"]["verification_plan"]["hidden_evidence"]["score_counts"] == {
+        "subspace_resid": 1,
+    }
+
 
 def test_product_trace_summarizes_triple_and_slot_coverage():
     triple = {"subject": "France", "predicate": "capital_of", "object": "Paris"}
@@ -278,6 +315,44 @@ def test_product_trace_summarizes_triple_and_slot_coverage():
     assert bounded_metrics["triple_coverage_source"] == "bounded_summary"
     assert bounded_metrics["triple_slot_coverage_rate"] == pytest.approx(1.0)
     json.dumps(bounded)
+
+
+def test_product_runtime_metrics_exposes_triple_audit_evidence_provenance():
+    trace = ProductTrace(
+        request_id="req-provenance",
+        metadata={
+            "promotion_contract_metadata": {
+                "triple_audit_evidence_source": "claim_correction_workflow",
+                "triple_audit_evidence_report": "claim-correction-workflow.json",
+                "triple_audit_evidence_workflow": (
+                    "source_family_structured_qa_claim_correction_workflow"
+                ),
+                "triple_audit_evidence_status": "promote",
+            }
+        },
+    )
+
+    metrics = product_runtime_metrics(trace)
+
+    assert metrics["promotion_contract_available"] is True
+    assert metrics["promotion_contract_triple_audit_evidence_available"] is True
+    assert metrics["promotion_contract_triple_audit_evidence_source"] == (
+        "claim_correction_workflow"
+    )
+    assert metrics["promotion_contract_triple_audit_evidence_report"] == (
+        "claim-correction-workflow.json"
+    )
+    assert metrics["promotion_contract_triple_audit_evidence_workflow"] == (
+        "source_family_structured_qa_claim_correction_workflow"
+    )
+    assert metrics["promotion_contract_triple_audit_evidence_status"] == "promote"
+    assert metrics["promotion_contract_summary"]["triple_audit_evidence"] == {
+        "available": True,
+        "source": "claim_correction_workflow",
+        "report": "claim-correction-workflow.json",
+        "workflow": "source_family_structured_qa_claim_correction_workflow",
+        "status": "promote",
+    }
 
 
 def test_product_trace_feedback_and_registry_normalize_strict_json_values(tmp_path):
@@ -424,6 +499,14 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         metadata={
             "artifact_source": "artifact.json",
             "promotion_contract_source": "contract.json",
+            "promotion_contract_promotion_summary": {
+                "status": "promote",
+                "blocking_gate_count": 0,
+                "source_status": "promote",
+                "runtime": {"layer": -2, "recommended_runtime_seconds": 0.2},
+                "verifier_route": {"route": "structured_fact"},
+                "action_gates": {"action_audit_status": "promote"},
+            },
             "promotion_contract_verifier_route": {
                 "route": "structured_fact",
                 "covered_fact_property_count": 3,
@@ -454,6 +537,55 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
                 "recommended_route": "structured_fact",
                 "route_passed": True,
             },
+            "promotion_contract_frontier_release_evidence": {
+                "status": "promote",
+                "report_path": "frontier-evidence.json",
+                "manifest_path": "frontier-manifest.json",
+                "decision_status": "promote",
+                "verifier_track_status": "promote",
+                "abstention_track_status": "promote",
+                "run_names": ["verifier", "abstention"],
+            },
+            "promotion_contract_frontier_release_evidence_decision_status": "promote",
+            "promotion_contract_frontier_release_evidence_verifier_track_status": "promote",
+            "promotion_contract_frontier_release_evidence_abstention_track_status": (
+                "promote"
+            ),
+            "promotion_contract_frontier_release_evidence_run_names": [
+                "verifier",
+                "abstention",
+            ],
+            "promotion_contract_frontier_release_evidence_run_count": 2,
+            "promotion_contract_frontier_release_evidence_citation_batch_provenance_failed_count": 0,
+            "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count": 0,
+            "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts": {
+                "pass": 2,
+            },
+            "promotion_contract_unresolved_frontier_evidence_summary": {
+                "status": "promote",
+                "report_path": "unresolved-frontier-summary.json",
+                "manifest_path": "unresolved-frontier-manifest.json",
+                "workflow": "unresolved_frontier_evidence_summary",
+                "next_action_count": 0,
+                "queue_execution_smoke_status": "pass",
+            },
+            "promotion_contract_unresolved_frontier_evidence_summary_status": "promote",
+            "promotion_contract_unresolved_frontier_evidence_summary_report": (
+                "unresolved-frontier-summary.json"
+            ),
+            "promotion_contract_unresolved_frontier_evidence_summary_manifest": (
+                "unresolved-frontier-manifest.json"
+            ),
+            "promotion_contract_unresolved_frontier_evidence_summary_closure_required": True,
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_required": True,
+            "promotion_contract_unresolved_frontier_evidence_summary_next_action_count": 0,
+            "promotion_contract_unresolved_frontier_evidence_summary_lane_statuses": {
+                "world_model_rules": "promote",
+                "frontier_queue_execution": "promote",
+            },
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status": "pass",
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count": 1,
+            "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count": 1,
             "external_evidence_baseline_comparison_source": "registry",
             "external_evidence_baseline_comparison_status": "promote",
             "external_evidence_baseline_comparison_decision_status": "promote",
@@ -525,6 +657,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert "large_unselected_metadata" not in payload["metadata"]
     assert payload["metadata"]["artifact_source"] == "artifact.json"
     assert payload["metadata"]["promotion_contract_source"] == "contract.json"
+    assert payload["metadata"]["promotion_contract_promotion_summary"]["status"] == (
+        "promote"
+    )
+    assert payload["metadata"]["promotion_contract_promotion_summary"][
+        "blocking_gate_count"
+    ] == 0
     assert payload["metadata"]["promotion_contract_verifier_route"][
         "covered_fact_property_count"
     ] == 3
@@ -551,6 +689,36 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         "_truncated": True,
         "_omitted_keys": 1,
     }
+    assert payload["metadata"]["promotion_contract_frontier_release_evidence"] == {
+        "status": "promote",
+        "report_path": "frontier-evidence.json",
+        "_truncated": True,
+        "_omitted_keys": 5,
+    }
+    assert payload["metadata"]["promotion_contract_frontier_release_evidence_run_count"] == 2
+    assert (
+        payload["metadata"][
+            "promotion_contract_frontier_release_evidence_citation_batch_provenance_failed_count"
+        ]
+        == 0
+    )
+    assert payload["metadata"][
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
+    assert payload["metadata"][
+        "promotion_contract_unresolved_frontier_evidence_summary"
+    ] == {
+        "status": "promote",
+        "report_path": "unresolved-frontier-summary.json",
+        "_truncated": True,
+        "_omitted_keys": 4,
+    }
+    assert payload["metadata"][
+        "promotion_contract_unresolved_frontier_evidence_summary_status"
+    ] == "promote"
+    assert payload["metadata"][
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
     assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
         "status": "promote",
         "distinct_predicate_count": 6,
@@ -566,6 +734,10 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics["final_answer_evidence_count"] == 4.0
     assert metrics["promotion_contract_available"] is True
     assert metrics["promotion_contract_source"] == "contract.json"
+    assert metrics["promotion_contract_promotion_summary_status"] == "promote"
+    assert metrics["promotion_contract_promotion_summary_blocking_gate_count"] == (
+        pytest.approx(0.0)
+    )
     assert metrics["promotion_contract_recommended_route_covered_fact_property_count"] == 3.0
     assert metrics["promotion_contract_recommended_route_covered_fact_properties"] == [
         "P36",
@@ -578,6 +750,45 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         metrics["promotion_contract_external_evidence_baseline_comparison_available"]
         is True
     )
+    assert metrics["promotion_contract_frontier_release_evidence_available"] is True
+    assert metrics["promotion_contract_frontier_release_evidence_status"] == "promote"
+    assert metrics["promotion_contract_frontier_release_evidence_report"] == (
+        "frontier-evidence.json"
+    )
+    assert metrics["promotion_contract_frontier_release_evidence_decision_status"] == (
+        "promote"
+    )
+    assert metrics[
+        "promotion_contract_frontier_release_evidence_run_count"
+    ] == pytest.approx(2.0)
+    assert metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_no_passing_strategy_count"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
+    assert (
+        metrics["promotion_contract_unresolved_frontier_evidence_summary_available"]
+        is True
+    )
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_status"
+    ] == "promote"
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_report"
+    ] == "unresolved-frontier-summary.json"
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_count"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == pytest.approx(1.0)
     assert metrics[
         "promotion_contract_external_evidence_baseline_comparison_source"
     ] == "registry"
@@ -611,6 +822,77 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_mean_best_f1"] == 1.0
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift"] == 0.5
     json.dumps(payload)
+
+
+def test_product_runtime_metrics_exposes_fact_selfcheck_gate_from_contract():
+    gate = {
+        "report_path": "fact-selfcheck-workflow.json",
+        "manifest_path": "fact-selfcheck-artifact-manifest.json",
+        "manifest_verified": True,
+        "source": "runtime_evidence_bundle",
+        "workflow": "verifier_signal_fusion_workflow",
+        "status": "promote",
+        "gate_status": "promote",
+        "gate_enabled": True,
+        "gate_passed": True,
+        "run_count": 2,
+        "failed_run_count": 0,
+        "min_executed_rate": 0.95,
+        "min_decided_rate": 0.85,
+        "max_not_applicable_rate": 0.05,
+        "min_claim_triples_per_record": 1.0,
+        "min_sample_triples_per_record": 2.0,
+        "failed_runs": (),
+        "blocking_reasons": (),
+    }
+    contract = ProductPromotionContract(
+        source_status="promote",
+        fact_selfcheck_gate=gate,
+        metadata={"fact_selfcheck_gate_source": "legacy-handoff"},
+    )
+    loaded = ProductPromotionContract.from_mapping(contract.to_dict())
+    payload = product_promotion_contract_metadata(
+        loaded,
+        source="contract.json",
+        budget_enabled=True,
+    )
+    metrics = product_runtime_metrics({"metadata": payload})
+
+    assert loaded.fact_selfcheck_gate == gate
+    assert payload["promotion_contract_fact_selfcheck_gate_status"] == "promote"
+    assert payload["promotion_contract_fact_selfcheck_gate_source"] == (
+        "runtime_evidence_bundle"
+    )
+    assert metrics["promotion_contract_available"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_available"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_status"] == "promote"
+    assert metrics["promotion_contract_fact_selfcheck_gate_manifest_verified"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_passed"] is True
+    assert metrics["promotion_contract_fact_selfcheck_gate_run_count"] == pytest.approx(2.0)
+    assert metrics[
+        "promotion_contract_fact_selfcheck_gate_min_sample_triples_per_record"
+    ] == pytest.approx(2.0)
+    assert metrics["promotion_contract_summary"]["fact_selfcheck_gate"] == {
+        "available": True,
+        "report": "fact-selfcheck-workflow.json",
+        "manifest": "fact-selfcheck-artifact-manifest.json",
+        "source": "runtime_evidence_bundle",
+        "manifest_verified": True,
+        "workflow": "verifier_signal_fusion_workflow",
+        "status": "promote",
+        "gate_status": "promote",
+        "enabled": True,
+        "passed": True,
+        "run_count": 2.0,
+        "failed_run_count": 0.0,
+        "min_executed_rate": 0.95,
+        "min_decided_rate": 0.85,
+        "max_not_applicable_rate": 0.05,
+        "min_claim_triples_per_record": 1.0,
+        "min_sample_triples_per_record": 2.0,
+        "failed_runs": [],
+        "blocking_reasons": [],
+    }
 
 
 def test_product_trace_bounded_payload_reuses_prepared_trace_payload(monkeypatch):
@@ -1184,6 +1466,272 @@ def test_product_trace_action_execution_summary_flags_result_alignment_gaps():
     assert bounded["summaries"]["action_execution"]["missing_result_count"] == 1
 
 
+def test_product_trace_world_model_action_gate_summary_feeds_runtime_metrics():
+    passed_gate = {
+        "available": True,
+        "passed": True,
+        "blocked": False,
+        "status": "passed",
+        "decision_rule": "prediction_and_postconditions_passed",
+        "prediction_confidence": 0.9,
+        "counts_by_code": {},
+    }
+    blocked_gate = {
+        "available": True,
+        "passed": False,
+        "blocked": True,
+        "status": "blocked",
+        "decision_rule": "blocked_postcondition_refuted",
+        "prediction_confidence": 0.8,
+        "counts_by_code": {"postcondition_refuted": 1},
+    }
+    trace = ProductTrace(
+        action_results=(
+            ActionResult(
+                action=ControlAction.EXECUTE_TOOL,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="tool-1",
+                metadata={"world_model_gate": passed_gate, "side_effects": True},
+            ),
+            ActionResult(
+                action=ControlAction.EXECUTE_TOOL,
+                status=ActionExecutionStatus.SKIPPED,
+                request_id="tool-2",
+                output={"world_model_gate": {"summary": blocked_gate}},
+                metadata={"side_effects": False},
+            ),
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="retrieve-1",
+            ),
+        ),
+    )
+
+    summary = trace.world_model_action_gate_summary()
+    bounded = trace.to_bounded_dict()
+    full_metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["result_count"] == 3
+    assert summary["checked_result_count"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["passed_count"] == 1
+    assert summary["blocked_count"] == 1
+    assert summary["pass_rate"] == pytest.approx(0.5)
+    assert summary["blocked_rate"] == pytest.approx(0.5)
+    assert summary["postcondition_refuted_count"] == 1
+    assert summary["side_effect_block_violation_count"] == 0
+    assert bounded["summaries"]["world_model_action_gate"]["checked_result_count"] == 2
+    assert full_metrics["world_model_action_gate_source"] == "full_trace"
+    assert full_metrics["world_model_action_gate_available"] is True
+    assert full_metrics["world_model_action_gate_coverage_rate"] == pytest.approx(2 / 3)
+    assert full_metrics["world_model_action_gate_postcondition_refuted_count"] == pytest.approx(1.0)
+    assert full_metrics["world_model_action_gate_prediction_confidence_min"] == pytest.approx(0.8)
+    assert bounded_metrics["world_model_action_gate_source"] == "bounded_summary"
+    assert bounded_metrics["world_model_action_gate_blocked_rate"] == pytest.approx(0.5)
+
+
+def test_product_trace_world_model_rollout_summary_feeds_runtime_metrics():
+    matching = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 2}},
+                "observed_state": {"quota": {"remaining": 2}},
+                "prediction_confidence": 0.95,
+            }
+        },
+        request_id="quota-ok",
+    )
+    drifted = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 2}},
+                "observed_state": {"quota": {"remaining": 1}},
+                "prediction_confidence": 0.85,
+            }
+        },
+        request_id="quota-drift",
+    )
+    trace_gap = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={
+            "world_model_rollout": {
+                "predicted_state": {"quota": {"remaining": 4}},
+                "prediction_confidence": 0.7,
+            }
+        },
+        request_id="quota-gap",
+    )
+    trace = ProductTrace(action_results=(matching, drifted, trace_gap))
+
+    summary = trace.world_model_rollout_summary()
+    full_metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(trace.to_bounded_dict())
+
+    assert summary["available"] is True
+    assert summary["status"] == "drifted"
+    assert summary["compared_count"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["sync_rate"] == pytest.approx(0.5)
+    assert summary["drift_rate"] == pytest.approx(0.5)
+    assert summary["trace_gap_rate"] == pytest.approx(1 / 3)
+    assert full_metrics["world_model_rollout_source"] == "full_trace"
+    assert full_metrics["world_model_rollout_numeric_drift_count"] == pytest.approx(1.0)
+    assert full_metrics["world_model_rollout_numeric_error_max"] == pytest.approx(1.0)
+    assert full_metrics["world_model_rollout_prediction_confidence_min"] == pytest.approx(0.7)
+    assert bounded_metrics["world_model_rollout_source"] == "bounded_summary"
+    assert bounded_metrics["world_model_rollout_drift_rate"] == pytest.approx(0.5)
+
+
+def test_product_trace_evidence_quality_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={
+                    "evidence_quality": {
+                        "status": "fail",
+                        "document_count": 2,
+                        "applied_count": 2,
+                        "passed_count": 1,
+                        "failed_count": 1,
+                        "pass_rate": 0.5,
+                        "failure_rate": 0.5,
+                        "reason_counts": {
+                            "stale_evidence": 1,
+                            "untrusted_source": 1,
+                        },
+                    },
+                },
+            ),
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"hits": ()},
+            ),
+        )
+    )
+
+    summary = trace.evidence_quality_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["status"] == "fail"
+    assert summary["result_count"] == 2
+    assert summary["checked_result_count"] == 1
+    assert summary["coverage_rate"] == pytest.approx(0.5)
+    assert summary["document_count"] == 2
+    assert summary["failed_result_count"] == 1
+    assert summary["reason_counts"] == {
+        "stale_evidence": 1,
+        "untrusted_source": 1,
+    }
+    assert bounded["summaries"]["evidence_quality"]["failed_count"] == 1
+    assert metrics["evidence_quality_available"] is True
+    assert metrics["evidence_quality_source"] == "full_trace"
+    assert metrics["evidence_quality_failure_rate"] == pytest.approx(0.5)
+    assert metrics["evidence_quality_stale_evidence_count"] == 1.0
+    assert bounded_metrics["evidence_quality_source"] == "bounded_summary"
+    assert bounded_metrics["evidence_quality_failure_rate"] == pytest.approx(0.5)
+
+
+def test_product_trace_metacognition_flags_overconfident_high_risk_answer():
+    trace = ProductTrace(
+        diagnostics={"semantic_entropy": 0.88},
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.92,
+                evidence=("fact-check",),
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ABSTAIN,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.95,
+            reason="claim was refuted",
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="The claim is definitely true.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.95,
+            reason="draft answer",
+        ),
+    )
+
+    summary = trace.metacognition_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["status"] == "fail"
+    assert summary["passed"] is False
+    assert summary["overconfident_risk"] is True
+    assert summary["risk_proxy"] >= 0.9
+    assert summary["verbal_uncertainty_score"] <= 0.35
+    assert "high_risk_low_verbal_uncertainty" in summary["reasons"]
+    assert bounded["summaries"]["metacognition"]["status"] == "fail"
+    assert metrics["metacognition_available"] is True
+    assert metrics["metacognition_source"] == "full_trace"
+    assert metrics["metacognition_passed"] is False
+    assert metrics["metacognition_overconfident_risk"] is True
+    assert bounded_metrics["metacognition_source"] == "bounded_summary"
+    assert bounded_metrics["metacognition_overconfident_risk"] is True
+    json.dumps(bounded)
+
+
+def test_product_trace_metacognition_accepts_uncertain_high_risk_non_answer():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.9,
+                evidence=(),
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ABSTAIN,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.9,
+            reason="insufficient evidence",
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ABSTAINED,
+            text="I don't know; there is not enough evidence to answer reliably.",
+            answerable=False,
+            action=ControlAction.ABSTAIN,
+            risk_level=RiskLevel.HIGH,
+            confidence=0.9,
+            reason="insufficient evidence",
+        ),
+    )
+
+    summary = trace.metacognition_summary()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["available"] is True
+    assert summary["status"] == "pass"
+    assert summary["passed"] is True
+    assert summary["overconfident_risk"] is False
+    assert summary["verbal_uncertainty_score"] >= 0.65
+    assert metrics["metacognition_passed"] is True
+    assert metrics["metacognition_overconfident_risk"] is False
+
+
 def test_product_trace_action_execution_summary_handles_many_request_ids():
     actions = tuple(
         ActionRequest(
@@ -1219,6 +1767,327 @@ def test_product_trace_action_execution_summary_handles_many_request_ids():
         f"request-{index}" for index in range(24, 32)
     )
     assert summary["alignment"]["unexpected_request_ids"] == ("request-extra",)
+
+
+def test_product_trace_trajectory_audit_flags_cascading_failed_retrieval_acceptance():
+    trace = ProductTrace(
+        request_id="trace-cascade-1",
+        claims=({"claim_id": "c1", "text": "The answer needs retrieved evidence."},),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.2,
+                metadata={"claim_id": "c1", "retrieval_request_id": "retrieve-1"},
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.91,
+            reason="accepted after retrieval",
+        ),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="fetch evidence",
+                request_id="retrieve-1",
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.FAILED,
+                request_id="retrieve-1",
+                error="retriever unavailable",
+            ),
+        ),
+    )
+
+    summary = trace.trajectory_audit_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["passed"] is False
+    assert summary["cascade_count"] == 1
+    assert summary["counts_by_code"]["accepted_after_failed_upstream_action"] == 1
+    assert summary["counts_by_code"]["accepted_unsupported_claim"] == 1
+    assert bounded["summaries"]["trajectory_audit"]["cascade_count"] == 1
+    assert metrics["trajectory_audit_cascade_count"] == 1.0
+
+
+def test_product_trace_trajectory_audit_flags_supported_claim_from_empty_retrieval():
+    trace = ProductTrace(
+        request_id="trace-cascade-2",
+        claims=({"claim_id": "c1", "text": "A cited source supports the statement."},),
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.86,
+                metadata={
+                    "claim_id": "c1",
+                    "route": "retrieval_groundedness",
+                    "retrieval_request_id": "retrieve-1",
+                },
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.88,
+            reason="supported",
+        ),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="fetch evidence",
+                request_id="retrieve-1",
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"hits": ()},
+                request_id="retrieve-1",
+            ),
+        ),
+    )
+
+    summary = trace.trajectory_audit_summary()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["passed"] is False
+    assert summary["cascade_count"] == 1
+    assert summary["counts_by_code"]["supported_claim_from_empty_retrieval"] == 1
+    cascade_issue = next(
+        item for item in summary["top_issues"] if item["code"] == "supported_claim_from_empty_retrieval"
+    )
+    assert cascade_issue["claim_ids"] == ("c1",)
+    assert cascade_issue["metadata"]["request_id"] == "retrieve-1"
+    assert metrics["trajectory_audit_counts_by_code"]["supported_claim_from_empty_retrieval"] == 1
+
+
+def test_product_trace_provenance_links_final_answer_to_retrieval_evidence():
+    trace = ProductTrace(
+        request_id="trace-provenance-pass",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Paris is the capital of France.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.92,
+                evidence=("atlas: Paris is the capital of France.",),
+                metadata={"claim_id": "c1", "action_request_id": "retrieve-1"},
+            ),
+        ),
+        risk_decision=RiskDecision(
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.91,
+            reason="claim supported",
+        ),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="retrieve evidence",
+                payload={"claim_ids": ("c1",)},
+                request_id="retrieve-1",
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={
+                    "hits": (
+                        {
+                            "text": "Paris is the capital of France.",
+                            "source": "atlas",
+                            "claim_id": "c1",
+                        },
+                    ),
+                },
+                request_id="retrieve-1",
+            ),
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="Paris is the capital of France.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.91,
+            reason="claim supported",
+            evidence=(
+                {
+                    "claim_id": "c1",
+                    "status": "supported",
+                    "request_id": "retrieve-1",
+                },
+            ),
+        ),
+    )
+
+    summary = trace.provenance_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+
+    assert summary["passed"] is True
+    assert summary["supported_claim_evidence_coverage"] == pytest.approx(1.0)
+    assert summary["retrieval_hit_count"] == 1
+    assert summary["source_count"] == 1
+    assert summary["final_answer_evidence_reference_rate"] == pytest.approx(1.0)
+    assert summary["counts_by_relation"]["evidence_for_final_answer"] == 1
+    assert bounded["summaries"]["provenance"]["passed"] is True
+    assert metrics["provenance_supported_claim_evidence_coverage"] == pytest.approx(1.0)
+    assert metrics["provenance_retrieval_hit_count"] == pytest.approx(1.0)
+
+
+def test_product_trace_provenance_flags_missing_action_reference():
+    trace = ProductTrace(
+        request_id="trace-provenance-missing",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "The source-backed claim is true.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.88,
+                metadata={"claim_id": "c1", "action_request_id": "missing-retrieve"},
+            ),
+        ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="The source-backed claim is true.",
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.88,
+            reason="claim supported",
+            evidence=(
+                {
+                    "claim_id": "c1",
+                    "status": "supported",
+                    "request_id": "missing-retrieve",
+                },
+            ),
+        ),
+    )
+
+    report = audit_trace_provenance(trace)
+    summary = report.summary()
+    metrics = product_runtime_metrics(trace.to_bounded_dict())
+
+    assert report.passed is False
+    assert summary["supported_claim_evidence_coverage"] == pytest.approx(0.0)
+    assert summary["missing_reference_count"] == 2
+    assert summary["counts_by_code"]["missing_referenced_action_result"] == 2
+    assert summary["counts_by_code"]["supported_claim_without_evidence"] == 1
+    assert metrics["provenance_source"] == "bounded_summary"
+    assert metrics["provenance_missing_reference_count"] == pytest.approx(2.0)
+    assert metrics["provenance_unsupported_supported_claim_count"] == pytest.approx(1.0)
+
+
+def test_product_trace_evidence_graph_consistency_accepts_matching_retrieval_hit():
+    trace = ProductTrace(
+        request_id="trace-evidence-graph-pass",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Tesla was founded in 2003 by Martin Eberhard.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.93,
+                metadata={"claim_id": "c1", "action_request_id": "retrieve-1"},
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="retrieve-1",
+                output={
+                    "hits": (
+                        {
+                            "claim_id": "c1",
+                            "source": "company-registry",
+                            "text": "Tesla was founded in 2003 by Martin Eberhard.",
+                        },
+                    ),
+                },
+            ),
+        ),
+    )
+
+    report = audit_evidence_graph_consistency(trace)
+    summary = trace.evidence_graph_consistency_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+
+    assert report.passed is True
+    assert summary["supported_claim_consistency_rate"] == pytest.approx(1.0)
+    assert summary["number_recall_mean"] == pytest.approx(1.0)
+    assert summary["entity_recall_mean"] == pytest.approx(1.0)
+    assert bounded["summaries"]["evidence_graph_consistency"]["passed"] is True
+    assert metrics["evidence_graph_consistency_source"] == "full_trace"
+    assert metrics["evidence_graph_consistency_supported_claim_consistency_rate"] == pytest.approx(1.0)
+
+
+def test_product_trace_evidence_graph_consistency_flags_numeric_conflict():
+    trace = ProductTrace(
+        request_id="trace-evidence-graph-fail",
+        claims=(
+            {
+                "claim_id": "c1",
+                "text": "Tesla was founded in 2003 by Martin Eberhard.",
+            },
+        ),
+        verification_results=(
+            VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.93,
+                metadata={"claim_id": "c1", "action_request_id": "retrieve-1"},
+            ),
+        ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id="retrieve-1",
+                output={
+                    "hits": (
+                        {
+                            "claim_id": "c1",
+                            "source": "company-registry",
+                            "text": "Tesla was founded in 2004 by Elon Musk.",
+                        },
+                    ),
+                },
+            ),
+        ),
+    )
+
+    summary = trace.evidence_graph_consistency_summary()
+    bounded_metrics = product_runtime_metrics(trace.to_bounded_dict())
+
+    assert summary["passed"] is False
+    assert summary["counts_by_status"] == {"inconsistent": 1}
+    assert summary["counts_by_code"]["missing_claim_number"] == 1
+    assert summary["missing_number_count"] == 1
+    assert summary["top_records"][0]["missing_numbers"] == ("2003",)
+    assert bounded_metrics["evidence_graph_consistency_source"] == "bounded_summary"
+    assert bounded_metrics["evidence_graph_consistency_passed"] is False
+    assert bounded_metrics["evidence_graph_consistency_missing_number_count"] == pytest.approx(1.0)
 
 
 def test_product_trace_runtime_summary_counts_phase_timings():
@@ -1271,6 +2140,81 @@ def test_product_trace_cache_summary_aggregates_named_cache_stats():
     assert summary["aggregate"]["hit_rate"] == 0.5
     assert summary["caches"]["verifier"]["hit_rate"] == 0.75
     json.dumps(summary)
+
+
+def test_product_trace_pre_generation_risk_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        metadata={
+            "pre_generation_profile_requested": "auto",
+            "runtime_profile_source": "pre_generation",
+            "pre_generation_risk_policy": {
+                "route_on_learned_risk": True,
+                "soft_risk_config": {"route_on_soft_risk": False},
+            },
+            "pre_generation_risk_assessment": {
+                "selected_profile": "audit",
+                "risk_level": "high",
+                "reason": "learned pre-generation risk estimate exceeded high threshold",
+                "triggered_features": ("question_mark", "answer_length"),
+                "triggered_metadata": ("domain",),
+                "soft_risk": {
+                    "score": -1.0,
+                    "probability": 0.25,
+                    "risk_level": "low",
+                },
+                "learned_risk": {
+                    "score": 2.0,
+                    "probability": 0.88,
+                    "risk_level": "high",
+                    "source": "unit_probe",
+                    "layer_idx": 2,
+                    "attention_summary": {"max_weight": 0.7},
+                },
+            },
+        },
+    )
+
+    summary = trace.pre_generation_risk_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["selected_profile"] == "audit"
+    assert summary["used_for_runtime_profile"] is True
+    assert summary["triggered_feature_count"] == 2
+    assert summary["triggered_metadata_count"] == 1
+    assert summary["soft_risk_available"] is True
+    assert summary["soft_risk_routed"] is False
+    assert summary["route_on_soft_risk"] is False
+    assert summary["learned_risk_available"] is True
+    assert summary["learned_risk_probability"] == pytest.approx(0.88)
+    assert summary["learned_risk_source"] == "unit_probe"
+    assert summary["learned_risk_layer_idx"] == 2
+    assert summary["learned_risk_routed"] is True
+    assert summary["route_on_learned_risk"] is True
+    assert summary["learned_attention_max_weight"] == pytest.approx(0.7)
+
+    bounded_summary = bounded["summaries"]["pre_generation_risk"]
+    assert bounded_summary["learned_risk_source"] == "unit_probe"
+    assert bounded_summary["learned_risk_routed"] is True
+
+    assert metrics["pre_generation_risk_source"] == "full_trace"
+    assert metrics["pre_generation_learned_risk_available"] is True
+    assert metrics["pre_generation_learned_risk_probability"] == pytest.approx(0.88)
+    assert metrics["pre_generation_learned_risk_source_name"] == "unit_probe"
+    assert metrics["pre_generation_learned_risk_layer_idx"] == pytest.approx(2.0)
+    assert metrics["pre_generation_learned_risk_routed"] is True
+    assert metrics["pre_generation_route_on_learned_risk"] is True
+    assert metrics["pre_generation_soft_risk_routed"] is False
+    assert metrics["pre_generation_route_on_soft_risk"] is False
+
+    assert bounded_metrics["pre_generation_risk_source"] == "bounded_summary"
+    assert bounded_metrics["pre_generation_selected_profile"] == "audit"
+    assert bounded_metrics["pre_generation_learned_risk_probability"] == pytest.approx(0.88)
+    assert bounded_metrics["pre_generation_learned_risk_source_name"] == "unit_probe"
+    json.dumps(summary)
+    json.dumps(bounded)
 
 
 def test_product_trace_verification_stage_summary_counts_saved_claims():
@@ -1562,6 +2506,487 @@ def test_product_trace_verification_route_summary_counts_runtime_routes():
     json.dumps(summary)
 
 
+def test_product_trace_world_model_summary_counts_conflicts_and_trace_gaps():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.82,
+                metadata={
+                    "world_model": "RuleBasedWorldModelAdapter",
+                    "world_model_reference": {
+                        "reference_id": "orders",
+                        "adapter": "RuleBasedWorldModelAdapter",
+                    },
+                    "world_model_view": {
+                        "base_state_fingerprint": "base",
+                        "predicted_state_fingerprint": "predicted",
+                        "postcondition": {"path": "inventory.sku_123.available"},
+                    },
+                    "world_model_conflict": {
+                        "path": "inventory.sku_123.available",
+                        "expected": 10,
+                        "actual": 7,
+                    },
+                    "prediction_confidence": 0.9,
+                    "prediction_metadata": {
+                        "decision_rule": "rule_transition_applied",
+                        "agreement_rate": 1.0,
+                    },
+                    "decision_rule": "transition_postcondition_failed",
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.0,
+                metadata={
+                    "verifier": "world_model_ensemble",
+                    "world_model_reference": {
+                        "reference_id": "orders",
+                        "adapter": "EnsembleWorldModelAdapter",
+                    },
+                    "prediction_metadata": {
+                        "below_min_agreement": True,
+                        "agreement_rate": 0.5,
+                        "decision_rule": "prediction_agreement_below_threshold",
+                    },
+                    "decision_rule": "prediction_agreement_below_threshold",
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.7,
+                metadata={
+                    "verifier": "world_model_ensemble",
+                    "prediction_metadata": {
+                        "world_model_reference": {
+                            "reference_id": "payments",
+                            "adapter": "EnsembleWorldModelAdapter",
+                        },
+                        "world_model_view": {
+                            "base_state_fingerprint": "base-nested",
+                            "predicted_state_fingerprint": "predicted-nested",
+                            "postcondition": {"path": "payments.invoice_1.status"},
+                        },
+                        "agreement_rate": 0.8,
+                        "decision_rule": "prediction_consensus",
+                    },
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.8),
+        )
+    )
+
+    summary = trace.world_model_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 4
+    assert summary["world_model_total"] == 3
+    assert summary["coverage_rate"] == pytest.approx(3 / 4)
+    assert summary["conflict_count"] == 1
+    assert summary["low_agreement_count"] == 1
+    assert summary["trace_gap_count"] == 1
+    assert summary["traceable"] is False
+    assert summary["counts_by_status"] == {
+        "refuted": 1,
+        "insufficient_evidence": 1,
+        "supported": 1,
+    }
+    assert summary["counts_by_adapter"] == {
+        "RuleBasedWorldModelAdapter": 1,
+        "EnsembleWorldModelAdapter": 2,
+    }
+    assert summary["counts_by_reference_id"] == {"orders": 2, "payments": 1}
+    assert summary["conflict_paths"] == {"inventory.sku_123.available": 1}
+    assert summary["prediction_confidence_mean"] == pytest.approx(0.9)
+    assert summary["agreement_rate_min"] == pytest.approx(0.5)
+    assert bounded["summaries"]["world_model"]["world_model_total"] == 3
+    assert bounded["summaries"]["world_model"]["trace_gap_count"] == 1
+    assert metrics["world_model_source"] == "full_trace"
+    assert metrics["world_model_conflict_count"] == pytest.approx(1.0)
+    assert metrics["world_model_trace_gap_rate"] == pytest.approx(1 / 3)
+    assert metrics["world_model_counts_by_adapter"] == {
+        "RuleBasedWorldModelAdapter": 1,
+        "EnsembleWorldModelAdapter": 2,
+    }
+    assert bounded_metrics["world_model_source"] == "bounded_summary"
+    assert bounded_metrics["world_model_low_agreement_count"] == pytest.approx(1.0)
+    assert bounded_metrics["world_model_traceable"] is False
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
+def test_product_trace_world_model_summary_ignores_generic_prediction_metadata():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.91,
+                metadata={
+                    "verifier": "calibrated_classifier",
+                    "prediction_metadata": {
+                        "decision_rule": "calibrated_softmax",
+                        "below_min_agreement": True,
+                        "agreement_rate": 0.2,
+                    },
+                },
+            ),
+        )
+    )
+
+    summary = trace.world_model_summary()
+
+    assert summary["total"] == 1
+    assert summary["world_model_total"] == 0
+    assert summary["trace_gap_count"] == 0
+    assert summary["low_agreement_count"] == 0
+    assert summary["counts_by_status"] == {}
+    assert summary["traceable"] is False
+
+
+def test_product_trace_context_sensitivity_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.42,
+                metadata={
+                    "context_sensitivity": {
+                        "summary": {
+                            "flagged_rate": 0.5,
+                            "max_unsupported_context_shift": 1.2,
+                            "mean_unsupported_context_shift": 0.6,
+                            "max_context_sensitivity_ratio": 3.0,
+                        },
+                        "metadata": {
+                            "paired_metadata": {"adapter": "unit-logprob"},
+                        },
+                    },
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "verifier": "context_sensitivity_sidecar",
+                    "context_sensitivity_flagged_rate": 0.0,
+                    "context_sensitivity_max_shift": 0.1,
+                    "context_sensitivity_mean_shift": 0.05,
+                    "context_sensitivity_max_ratio": 1.1,
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.8),
+        )
+    )
+
+    summary = trace.context_sensitivity_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 3
+    assert summary["context_sensitivity_total"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["flagged_result_count"] == 1
+    assert summary["flagged_result_rate"] == pytest.approx(0.5)
+    assert summary["max_flagged_rate"] == pytest.approx(0.5)
+    assert summary["max_unsupported_context_shift"] == pytest.approx(1.2)
+    assert summary["max_context_sensitivity_ratio"] == pytest.approx(3.0)
+    assert summary["counts_by_source"] == {
+        "unit-logprob": 1,
+        "context_sensitivity_sidecar": 1,
+    }
+    assert bounded["summaries"]["context_sensitivity"]["context_sensitivity_total"] == 2
+    assert metrics["context_sensitivity_source"] == "full_trace"
+    assert metrics["context_sensitivity_flagged_result_rate"] == pytest.approx(0.5)
+    assert metrics["context_sensitivity_counts_by_source"] == {
+        "unit-logprob": 1,
+        "context_sensitivity_sidecar": 1,
+    }
+    assert bounded_metrics["context_sensitivity_source"] == "bounded_summary"
+    assert bounded_metrics["context_sensitivity_max_context_sensitivity_ratio"] == pytest.approx(3.0)
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
+def test_product_trace_evidence_alignment_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.85,
+                metadata={
+                    "verifier": "evidence_alignment",
+                    "evidence_alignment": {
+                        "metadata": {"adapter": "local-search"},
+                        "summary": {
+                            "record_count": 2,
+                            "aligned_count": 1,
+                            "misaligned_count": 1,
+                            "insufficient_evidence_count": 0,
+                            "keyword_overlap_mean": 0.8,
+                            "number_recall_mean": 0.5,
+                            "entity_recall_mean": 1.0,
+                            "citation_reference_count": 1,
+                            "matched_citation_reference_count": 0,
+                            "cited_evidence_count": 0,
+                            "issue_count": 1,
+                            "counts_by_status": {"aligned": 1, "misaligned": 1},
+                            "counts_by_code": {"missing_claim_number": 1},
+                        },
+                    },
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.35,
+                metadata={
+                    "selected_verifier": "citation-search",
+                    "evidence_alignment_summary": {
+                        "record_count": 1,
+                        "aligned_count": 0,
+                        "misaligned_count": 0,
+                        "insufficient_evidence_count": 1,
+                        "issue_count": 1,
+                        "counts_by_status": {"insufficient_evidence": 1},
+                        "counts_by_code": {"low_keyword_overlap": 1},
+                    },
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.9),
+        )
+    )
+
+    summary = trace.evidence_alignment_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 3
+    assert summary["available"] is True
+    assert summary["evidence_alignment_total"] == 2
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["record_count"] == pytest.approx(3.0)
+    assert summary["alignment_rate"] == pytest.approx(1 / 3)
+    assert summary["misalignment_rate"] == pytest.approx(1 / 3)
+    assert summary["insufficient_evidence_rate"] == pytest.approx(1 / 3)
+    assert summary["citation_reference_coverage_rate"] == pytest.approx(0.0)
+    assert summary["issue_rate"] == pytest.approx(2 / 3)
+    assert summary["counts_by_source"] == {
+        "local-search": 1,
+        "citation-search": 1,
+    }
+    assert summary["counts_by_alignment_status"] == {
+        "aligned": 1,
+        "misaligned": 1,
+        "insufficient_evidence": 1,
+    }
+    assert bounded["summaries"]["evidence_alignment"]["evidence_alignment_total"] == 2
+    assert metrics["evidence_alignment_source"] == "full_trace"
+    assert metrics["evidence_alignment_misalignment_rate"] == pytest.approx(1 / 3)
+    assert metrics["evidence_alignment_counts_by_code"] == {
+        "missing_claim_number": 1,
+        "low_keyword_overlap": 1,
+    }
+    assert bounded_metrics["evidence_alignment_source"] == "bounded_summary"
+    assert bounded_metrics["evidence_alignment_issue_rate"] == pytest.approx(2 / 3)
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
+def test_product_trace_counterfactual_robustness_summary_feeds_runtime_metrics():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.77,
+                metadata={
+                    "verifier": "structured_qa",
+                    "counterfactual_verification": {
+                        "workflow": "counterfactual_verification_audit",
+                        "summary": {
+                            "record_count": 3,
+                            "passed_count": 2,
+                            "failed_count": 1,
+                            "expected_flip_count": 3,
+                            "flip_success_count": 2,
+                            "false_invariance_count": 1,
+                            "entity_probe_count": 2,
+                            "entity_candidate_count": 2,
+                            "by_probe_type": {
+                                "entity_swap": {"record_count": 2},
+                                "quantity": {"record_count": 1},
+                            },
+                            "by_entity_candidate": {
+                                "AlphaCorp": {
+                                    "record_count": 1,
+                                    "false_invariance_count": 1,
+                                    "source_kinds": {"entity_candidate": 1},
+                                },
+                                "Beta Labs": {
+                                    "record_count": 1,
+                                    "false_invariance_count": 0,
+                                    "source_kinds": {"entity_candidate": 1},
+                                },
+                            },
+                            "counts_by_entity_source_kind": {"entity_candidate": 2},
+                            "counts_by_failure_reason": {"status_did_not_flip": 1},
+                        },
+                        "metadata": {"adapter": "structured-qa-counterfactual"},
+                    },
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.91,
+                metadata={
+                    "selected_verifier": "structured_fact",
+                    "counterfactual_probe_type": "year",
+                    "counterfactual_expected_flip": True,
+                    "counterfactual_status_changed": False,
+                    "counterfactual_passed": False,
+                    "counterfactual_failure_reason": "status_did_not_flip",
+                },
+            ),
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.8),
+        )
+    )
+
+    summary = trace.counterfactual_robustness_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["total"] == 3
+    assert summary["counterfactual_result_total"] == 2
+    assert summary["counterfactual_probe_total"] == pytest.approx(4.0)
+    assert summary["coverage_rate"] == pytest.approx(2 / 3)
+    assert summary["pass_rate"] == pytest.approx(0.5)
+    assert summary["entity_probe_count"] == pytest.approx(2.0)
+    assert summary["entity_candidate_count"] == 2
+    assert summary["false_invariance_count"] == pytest.approx(2.0)
+    assert summary["false_invariance_rate"] == pytest.approx(0.5)
+    assert summary["flip_success_rate"] == pytest.approx(0.5)
+    assert summary["counts_by_source"] == {
+        "structured-qa-counterfactual": 1,
+        "structured_fact": 1,
+    }
+    assert summary["counts_by_probe_type"] == {"entity_swap": 2, "quantity": 1, "year": 1}
+    assert summary["counts_by_failure_reason"] == {"status_did_not_flip": 2}
+    assert summary["counts_by_entity_candidate"] == {"AlphaCorp": 1, "Beta Labs": 1}
+    assert summary["false_invariance_by_entity_candidate"] == {"AlphaCorp": 1, "Beta Labs": 0}
+    assert summary["counts_by_entity_source_kind"] == {"entity_candidate": 2}
+    assert bounded["summaries"]["counterfactual_robustness"]["counterfactual_result_total"] == 2
+    assert bounded["summaries"]["counterfactual_robustness"]["counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
+    assert metrics["counterfactual_robustness_source"] == "full_trace"
+    assert metrics["counterfactual_robustness_pass_rate"] == pytest.approx(0.5)
+    assert metrics["counterfactual_robustness_entity_probe_count"] == pytest.approx(2.0)
+    assert metrics["counterfactual_robustness_entity_candidate_count"] == pytest.approx(2.0)
+    assert metrics["counterfactual_robustness_counts_by_probe_type"] == {
+        "entity_swap": 2,
+        "quantity": 1,
+        "year": 1,
+    }
+    assert metrics["counterfactual_robustness_counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
+    assert metrics["counterfactual_robustness_false_invariance_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 0,
+    }
+    assert metrics["counterfactual_robustness_counts_by_entity_source_kind"] == {
+        "entity_candidate": 2
+    }
+    assert bounded_metrics["counterfactual_robustness_source"] == "bounded_summary"
+    assert bounded_metrics["counterfactual_robustness_false_invariance_rate"] == (
+        pytest.approx(0.5)
+    )
+    assert bounded_metrics["counterfactual_robustness_counts_by_entity_candidate"] == {
+        "AlphaCorp": 1,
+        "Beta Labs": 1,
+    }
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
+def test_product_trace_citation_integrity_summary_feeds_runtime_metrics():
+    catalog = (
+        CitationRecord(
+            citation_id="smith2026",
+            title="Geometry-Calibrated Conformal Abstention for Language Models",
+            authors=("Jane Smith",),
+            year=2026,
+            doi="10.1234/gcca",
+            source="unit-catalog",
+        ),
+    )
+    verifier = CitationVerifier(records=catalog)
+    claims = (
+        Claim(
+            text="The method was reported in the selective prediction literature.",
+            claim_id="c1",
+            metadata={
+                "citation": {
+                    "citation_id": "smith2026",
+                    "year": 2025,
+                    "title": "Geometry calibrated abstention",
+                },
+            },
+        ),
+        Claim(
+            text="A related result appears in [missing2026].",
+            claim_id="c2",
+        ),
+    )
+    results = tuple(verifier.verify(claim) for claim in claims)
+    trace = ProductTrace(claims=claims, verification_results=results)
+
+    summary = trace.citation_integrity_summary()
+    bounded = trace.to_bounded_dict()
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+
+    assert summary["available"] is True
+    assert summary["passed"] is False
+    assert summary["claim_count"] == 2
+    assert summary["cited_claim_count"] == 2
+    assert summary["citation_reference_count"] == 2
+    assert summary["citation_result_total"] == 2
+    assert summary["coverage_rate"] == pytest.approx(1.0)
+    assert summary["mismatch_count"] == 1
+    assert summary["unresolved_count"] == 1
+    assert summary["issue_count"] == 2
+    assert summary["trace_gap_count"] == 0
+    assert summary["counts_by_status"] == {
+        "refuted": 1,
+        "insufficient_evidence": 1,
+    }
+    assert summary["counts_by_reference_source"]["claim_metadata"] == 2
+    assert summary["counts_by_reference_source"]["claim_text.bracket"] == 2
+    assert summary["mismatch_fields"] == {"year": 1}
+    assert summary["matched_citation_count"] == 1
+    assert bounded["summaries"]["citation_integrity"]["mismatch_count"] == 1
+    assert metrics["citation_integrity_source"] == "full_trace"
+    assert metrics["citation_integrity_available"] is True
+    assert metrics["citation_integrity_passed"] is False
+    assert metrics["citation_integrity_coverage_rate"] == pytest.approx(1.0)
+    assert metrics["citation_integrity_mismatch_count"] == 1
+    assert metrics["citation_integrity_unresolved_count"] == 1
+    assert metrics["citation_integrity_counts_by_decision_rule"] == {
+        "citation_catalog_match": 2,
+    }
+    assert bounded_metrics["citation_integrity_source"] == "bounded_summary"
+    assert bounded_metrics["citation_integrity_mismatch_fields"] == {"year": 1}
+    json.dumps(summary)
+    json.dumps(bounded)
+
+
 def test_product_trace_verification_route_cost_summary_matches_benchmark_fields():
     trace = ProductTrace(
         verification_results=(
@@ -1778,9 +3203,15 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
             "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
             "max_covariance_maha_last_auroc_drop": 0.05,
+            "max_uncached_forward_seconds": None,
+            "max_recommended_runtime_seconds": 1.0,
         },
         "decision": {
             "status": "promote",
+            "readiness_status": "promote",
+            "route_status": "promote",
+            "performance_status": "promote",
+            "adapter_family_status": "promote",
             "recommended_readiness_record": "benchmark_manifest:readiness:0.8",
             "recommended_route_record": "benchmark_manifest:route:0.8",
             "recommended_performance_baseline_record": "performance_baseline:runtime:0.9",
@@ -1793,6 +3224,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_world_model_signal_workflow_report": (
                 "artifacts/world-model-signal/world-model-signal-workflow.json"
             ),
+            "context_sensitivity_workflow_status": "promote",
+            "recommended_context_sensitivity_workflow_report": (
+                "artifacts/context-sensitivity/context-sensitivity-workflow.json"
+            ),
             "pathway_intervention_workflow_status": "promote",
             "recommended_pathway_intervention_workflow_report": (
                 "artifacts/pathway-intervention/pathway-intervention-workflow.json"
@@ -1804,6 +3239,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "pre_generation_probe_comparison_status": "promote",
             "recommended_pre_generation_probe_comparison_report": (
                 "artifacts/pre-generation-probe-comparison/comparison.json"
+            ),
+            "claim_factuality_probe_comparison_status": "promote",
+            "recommended_claim_factuality_probe_comparison_report": (
+                "artifacts/claim-factuality-probe-comparison/comparison.json"
             ),
             "counterfactual_verification_status": "promote",
             "recommended_counterfactual_verification_report": (
@@ -1839,6 +3278,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "batch_size": 2,
                 "covariance_mode": "low_rank",
                 "covariance_low_rank": 8,
+            },
+            "runtime_cost": {
+                "recommended_runtime_seconds": 0.20,
+                "recommended_runtime_cost_source": "cache_only_total_seconds",
+                "uncached_forward_cost_seconds": 37.5,
+                "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+                "cache_only_total_seconds": 0.20,
             },
             "quality": {
                 "covariance_tradeoff_gate": {
@@ -1905,6 +3351,21 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "product_runtime_drift_report_path": (
                     "artifacts/runtime-drift/product-runtime-drift.json"
                 ),
+                "require_action_audit_gate": True,
+                "action_audit_gate": {
+                    "status": "promote",
+                    "gate_enabled": True,
+                    "passed": True,
+                    "error_rate": 0.0,
+                },
+                "require_action_execution_gate": True,
+                "action_execution_gate": {
+                    "status": "promote",
+                    "gate_enabled": True,
+                    "passed": True,
+                    "missing_result_rate": 0.0,
+                    "request_id_mismatch_rate": 0.0,
+                },
             },
             "world_model_signal_workflow": {
                 "report_path": "artifacts/world-model-signal/world-model-signal-workflow.json",
@@ -1918,6 +3379,25 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "trace_gap_max": 0.0,
                 "conflict_positive_count": 4,
                 "calibrated_conflict_signal_count": 1,
+                "blocking_reasons": [],
+            },
+            "context_sensitivity_workflow": {
+                "report_path": (
+                    "artifacts/context-sensitivity/context-sensitivity-workflow.json"
+                ),
+                "manifest_path": "artifacts/context-sensitivity/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:context-sensitivity-workflow:0.1",
+                "workflow": "context_sensitivity_workflow",
+                "status": "promote",
+                "paired_logprob_record_count": 6,
+                "enriched_record_count": 6,
+                "enhanced_score_signal_count": 4,
+                "max_flagged_rate": 0.25,
+                "mean_flagged_rate": 0.125,
+                "max_context_sensitivity_ratio": 1.35,
+                "manifest_verified": True,
                 "blocking_reasons": [],
             },
             "pathway_intervention_workflow": {
@@ -1985,6 +3465,37 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "redline_best_signal": "answer_token_count",
                     "redline_best_auroc": 0.61,
                     "redline_margin": 0.13,
+                },
+            },
+            "claim_factuality_probe_comparison": {
+                "report_path": "artifacts/claim-factuality-probe-comparison/comparison.json",
+                "manifest_path": (
+                    "artifacts/claim-factuality-probe-comparison/artifact-manifest.json"
+                ),
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:claim-factuality-probe-comparison:0.1",
+                "workflow": "claim_factuality_probe_workflow_comparison",
+                "status": "promote",
+                "report_status": "ready",
+                "model_count": 2,
+                "run_count": 2,
+                "dataset_count": 2,
+                "datasets": ["longfact", "truthfulqa"],
+                "redline_passed": True,
+                "redline_run_count": 2,
+                "best_run": {
+                    "name": "qwen05",
+                    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "record_count": 96,
+                    "recommended_layer": -4,
+                    "test_label_auroc": 0.84,
+                    "test_selective_accuracy": 0.91,
+                    "test_selective_coverage": 0.78,
+                    "conformal_threshold": 0.62,
+                    "redline_best_signal": "answer_negation_flag",
+                    "redline_best_auroc": 0.66,
+                    "redline_margin": 0.18,
                 },
             },
             "counterfactual_verification": {
@@ -2116,6 +3627,15 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "triple_audit_evidence_blocked_metric_count": 0,
                     "covered_fact_property_evidence_metric_count": 6,
                     "covered_fact_property_evidence_blocked_metric_count": 0,
+                    "world_model_evidence_required": True,
+                    "world_model_evidence_metric_count": 5,
+                    "world_model_evidence_blocked_metric_count": 0,
+                    "context_sensitivity_evidence_required": True,
+                    "context_sensitivity_evidence_metric_count": 6,
+                    "context_sensitivity_evidence_blocked_metric_count": 0,
+                    "counterfactual_robustness_evidence_required": True,
+                    "counterfactual_robustness_evidence_metric_count": 6,
+                    "counterfactual_robustness_evidence_blocked_metric_count": 0,
                     "promotion_contract_coverage_rate_baseline": 1.0,
                     "promotion_contract_coverage_rate_current": 1.0,
                     "promotion_contract_coverage_rate_status": "pass",
@@ -2146,6 +3666,57 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "covered_fact_recommended_route_min_false_refuted_rate_baseline": 0.98,
                     "covered_fact_recommended_route_min_false_refuted_rate_current": 0.97,
                     "covered_fact_recommended_route_min_false_refuted_rate_status": "pass",
+                    "world_model_participating_trace_rate_baseline": 1.0,
+                    "world_model_participating_trace_rate_current": 1.0,
+                    "world_model_participating_trace_rate_status": "pass",
+                    "world_model_coverage_rate_baseline": 1.0,
+                    "world_model_coverage_rate_current": 1.0,
+                    "world_model_coverage_rate_status": "pass",
+                    "world_model_conflict_rate_baseline": 0.0,
+                    "world_model_conflict_rate_current": 0.0,
+                    "world_model_conflict_rate_status": "pass",
+                    "world_model_low_agreement_rate_baseline": 0.0,
+                    "world_model_low_agreement_rate_current": 0.0,
+                    "world_model_low_agreement_rate_status": "pass",
+                    "world_model_trace_gap_rate_baseline": 0.0,
+                    "world_model_trace_gap_rate_current": 0.0,
+                    "world_model_trace_gap_rate_status": "pass",
+                    "context_sensitivity_participating_trace_rate_baseline": 1.0,
+                    "context_sensitivity_participating_trace_rate_current": 1.0,
+                    "context_sensitivity_participating_trace_rate_status": "pass",
+                    "context_sensitivity_coverage_rate_baseline": 1.0,
+                    "context_sensitivity_coverage_rate_current": 1.0,
+                    "context_sensitivity_coverage_rate_status": "pass",
+                    "context_sensitivity_flagged_result_rate_baseline": 0.0,
+                    "context_sensitivity_flagged_result_rate_current": 0.0,
+                    "context_sensitivity_flagged_result_rate_status": "pass",
+                    "context_sensitivity_trace_gap_rate_baseline": 0.0,
+                    "context_sensitivity_trace_gap_rate_current": 0.0,
+                    "context_sensitivity_trace_gap_rate_status": "pass",
+                    "context_sensitivity_max_flagged_rate_baseline": 0.0,
+                    "context_sensitivity_max_flagged_rate_current": 0.0,
+                    "context_sensitivity_max_flagged_rate_status": "pass",
+                    "context_sensitivity_max_context_sensitivity_ratio_baseline": 1.0,
+                    "context_sensitivity_max_context_sensitivity_ratio_current": 1.0,
+                    "context_sensitivity_max_context_sensitivity_ratio_status": "pass",
+                    "counterfactual_robustness_participating_trace_rate_baseline": 1.0,
+                    "counterfactual_robustness_participating_trace_rate_current": 1.0,
+                    "counterfactual_robustness_participating_trace_rate_status": "pass",
+                    "counterfactual_robustness_coverage_rate_baseline": 1.0,
+                    "counterfactual_robustness_coverage_rate_current": 1.0,
+                    "counterfactual_robustness_coverage_rate_status": "pass",
+                    "counterfactual_robustness_pass_rate_baseline": 1.0,
+                    "counterfactual_robustness_pass_rate_current": 1.0,
+                    "counterfactual_robustness_pass_rate_status": "pass",
+                    "counterfactual_robustness_flip_success_rate_baseline": 1.0,
+                    "counterfactual_robustness_flip_success_rate_current": 1.0,
+                    "counterfactual_robustness_flip_success_rate_status": "pass",
+                    "counterfactual_robustness_false_invariance_rate_baseline": 0.0,
+                    "counterfactual_robustness_false_invariance_rate_current": 0.0,
+                    "counterfactual_robustness_false_invariance_rate_status": "pass",
+                    "counterfactual_robustness_trace_gap_rate_baseline": 0.0,
+                    "counterfactual_robustness_trace_gap_rate_current": 0.0,
+                    "counterfactual_robustness_trace_gap_rate_status": "pass",
                 },
             },
             "adapter_family_matrix": {
@@ -2208,6 +3779,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "world_model_signal_workflow_manifest": (
                     "artifacts/world-model-signal/artifact-manifest.json"
                 ),
+                "context_sensitivity_workflow_manifest": (
+                    "artifacts/context-sensitivity/artifact-manifest.json"
+                ),
                 "pathway_intervention_workflow_manifest": (
                     "artifacts/pathway-intervention/artifact-manifest.json"
                 ),
@@ -2256,9 +3830,32 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     contract = ProductPromotionContract.from_json(contract_path)
     direct_policy = product_runtime_budget_policy_from_release_candidate(release_report)
     roundtrip = ProductPromotionContract.from_mapping(contract.to_dict())
+    summary = contract.to_summary_dict()
+    direct_summary = product_promotion_contract_summary(contract.to_dict())
 
     assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert contract.to_dict()["summary"] == summary
+    assert direct_summary == summary
+    assert summary["status"] == "promote"
+    assert summary["source_status"] == "promote"
+    assert summary["runtime"]["layer"] == -12
+    assert summary["runtime"]["recommended_runtime_seconds"] == 0.20
+    assert summary["verifier_route"]["route"] == "structured_state"
+    assert summary["verifier_route"]["covered_fact_property_count"] == 3
+    assert summary["gate_statuses"]["readiness"] == "promote"
+    assert summary["gate_statuses"]["performance"] == "promote"
+    assert summary["gate_statuses"]["product_runtime_drift"] == "promote"
+    assert summary["gate_statuses"]["adapter_family"] == "promote"
+    assert summary["gate_statuses"]["context_sensitivity"] == "promote"
+    assert summary["blocking_gate_count"] == 0
+    assert summary["evidence_groups"]["covered_fact_property"]["metric_count"] == 6
+    assert summary["evidence_groups"]["covered_fact_property"]["blocked_metric_count"] == 0
+    assert summary["action_gates"]["action_audit_status"] == "promote"
+    assert summary["action_gates"]["action_execution_status"] == "promote"
     assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
+    assert roundtrip.context_sensitivity_workflow == (
+        contract.context_sensitivity_workflow
+    )
     assert roundtrip.pathway_intervention_workflow == (
         contract.pathway_intervention_workflow
     )
@@ -2278,6 +3875,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.verifier_route["route"] == "structured_state"
     assert contract.verifier_route["covered_fact_properties"] == ["P36", "P37", "P38"]
     assert contract.metadata["runtime_profile"] == "balanced"
+    assert contract.metadata["max_uncached_forward_seconds"] is None
+    assert contract.metadata["max_recommended_runtime_seconds"] == 1.0
+    assert contract.metadata["recommended_runtime_seconds"] == 0.20
+    assert contract.metadata["recommended_runtime_cost_source"] == (
+        "cache_only_total_seconds"
+    )
+    assert contract.metadata["uncached_forward_cost_seconds"] == 37.5
+    assert contract.metadata["uncached_forward_cost_source"] == (
+        "uncached_forced_answer_forward_seconds"
+    )
+    assert contract.metadata["cache_only_total_seconds"] == 0.20
     assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_evidence_bundle_status"] == "promote"
@@ -2354,7 +3962,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["recommended_product_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )
-    assert contract.product_trace_replay_workflow == {
+    expected_trace_replay_workflow = {
         "report_path": "artifacts/trace-replay-workflow/product-trace-replay-workflow.json",
         "manifest_path": "artifacts/trace-replay-workflow/artifact-manifest.json",
         "source": "registry",
@@ -2364,6 +3972,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "selector_replay_report_path": "artifacts/selector/runtime-profile-selector-replay.json",
         "product_runtime_drift_report_path": "artifacts/runtime-drift/product-runtime-drift.json",
     }
+    for key, value in expected_trace_replay_workflow.items():
+        assert contract.product_trace_replay_workflow[key] == value
+    assert contract.product_trace_replay_workflow["action_audit_gate"]["status"] == "promote"
+    assert (
+        contract.product_trace_replay_workflow["action_execution_gate"]["status"]
+        == "promote"
+    )
     assert contract.metadata["product_trace_replay_workflow_status"] == "promote"
     assert contract.metadata["product_trace_replay_workflow_report"] == (
         "artifacts/trace-replay-workflow/product-trace-replay-workflow.json"
@@ -2403,6 +4018,37 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert contract.metadata["world_model_signal_workflow_conflict_positive_count"] == 4
     assert contract.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert contract.context_sensitivity_workflow == {
+        "report_path": "artifacts/context-sensitivity/context-sensitivity-workflow.json",
+        "manifest_path": "artifacts/context-sensitivity/artifact-manifest.json",
+        "source": "registry",
+        "registry": "artifacts/release-registry.json",
+        "record_key": "report:context-sensitivity-workflow:0.1",
+        "workflow": "context_sensitivity_workflow",
+        "status": "promote",
+        "paired_logprob_record_count": 6,
+        "enriched_record_count": 6,
+        "enhanced_score_signal_count": 4,
+        "max_flagged_rate": 0.25,
+        "mean_flagged_rate": 0.125,
+        "max_context_sensitivity_ratio": 1.35,
+        "manifest_verified": True,
+        "blocking_reasons": [],
+    }
+    assert contract.metadata["context_sensitivity_workflow_status"] == "promote"
+    assert contract.metadata["recommended_context_sensitivity_workflow_report"] == (
+        "artifacts/context-sensitivity/context-sensitivity-workflow.json"
+    )
+    assert contract.metadata["context_sensitivity_workflow_paired_logprob_record_count"] == 6
+    assert contract.metadata["context_sensitivity_workflow_enriched_record_count"] == 6
+    assert contract.metadata["context_sensitivity_workflow_enhanced_score_signal_count"] == 4
+    assert contract.metadata["context_sensitivity_workflow_max_flagged_rate"] == 0.25
+    assert contract.metadata["context_sensitivity_workflow_mean_flagged_rate"] == 0.125
+    assert (
+        contract.metadata["context_sensitivity_workflow_max_context_sensitivity_ratio"]
+        == 1.35
+    )
+    assert contract.metadata["context_sensitivity_workflow_manifest_verified"] is True
     assert contract.pathway_intervention_workflow == {
         "report_path": "artifacts/pathway-intervention/pathway-intervention-workflow.json",
         "manifest_path": "artifacts/pathway-intervention/artifact-manifest.json",
@@ -2476,6 +4122,33 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "answer_token_count"
     )
     assert contract.metadata["pre_generation_probe_comparison_best_redline_margin"] == 0.13
+    assert contract.claim_factuality_probe_comparison["record_key"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_status"] == "promote"
+    assert contract.metadata["recommended_claim_factuality_probe_comparison_report"] == (
+        "artifacts/claim-factuality-probe-comparison/comparison.json"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_report"] == (
+        "artifacts/claim-factuality-probe-comparison/comparison.json"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_record"] == (
+        "report:claim-factuality-probe-comparison:0.1"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_model_count"] == 2
+    assert contract.metadata["claim_factuality_probe_comparison_dataset_count"] == 2
+    assert contract.metadata["claim_factuality_probe_comparison_datasets"] == [
+        "longfact",
+        "truthfulqa",
+    ]
+    assert contract.metadata[
+        "claim_factuality_probe_comparison_best_test_selective_accuracy"
+    ] == 0.91
+    assert contract.metadata["claim_factuality_probe_comparison_best_conformal_threshold"] == 0.62
+    assert contract.metadata["claim_factuality_probe_comparison_best_redline_signal"] == (
+        "answer_negation_flag"
+    )
+    assert contract.metadata["claim_factuality_probe_comparison_best_redline_margin"] == 0.18
     assert contract.counterfactual_verification["record_key"] == (
         "report:counterfactual-verifier-audit:0.1"
     )
@@ -2588,6 +4261,35 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         ]
         == 0
     )
+    assert contract.metadata["product_runtime_drift_world_model_evidence_required"] is True
+    assert contract.metadata["product_runtime_drift_world_model_evidence_metric_count"] == 5
+    assert contract.metadata["product_runtime_drift_world_model_evidence_blocked_metric_count"] == 0
+    assert contract.metadata["product_runtime_drift_context_sensitivity_evidence_required"] is True
+    assert contract.metadata["product_runtime_drift_context_sensitivity_evidence_metric_count"] == 6
+    assert (
+        contract.metadata[
+            "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_evidence_required"
+        ]
+        is True
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_evidence_metric_count"
+        ]
+        == 6
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count"
+        ]
+        == 0
+    )
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
     assert contract.metadata["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
     assert (
@@ -2615,6 +4317,32 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "product_runtime_drift_covered_fact_recommended_route_max_false_supported_rate_current"
         ]
         == 0.02
+    )
+    assert contract.metadata["product_runtime_drift_world_model_trace_gap_rate_status"] == "pass"
+    assert contract.metadata["product_runtime_drift_world_model_conflict_rate_current"] == 0.0
+    assert (
+        contract.metadata[
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_current"
+        ]
+        == 0.0
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status"
+        ]
+        == "pass"
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_pass_rate_current"
+        ]
+        == 1.0
+    )
+    assert (
+        contract.metadata[
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_status"
+        ]
+        == "pass"
     )
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
@@ -2667,6 +4395,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     }
     assert roundtrip == contract
     assert roundtrip.control_policy_config == contract.control_policy_config
+    trace_metadata = product_promotion_contract_metadata(
+        contract,
+        source=str(contract_path),
+        budget_enabled=True,
+    )
+    assert trace_metadata["promotion_contract_recommended_runtime_seconds"] == 0.20
+    assert trace_metadata["promotion_contract_recommended_runtime_cost_source"] == (
+        "cache_only_total_seconds"
+    )
+    assert trace_metadata["promotion_contract_uncached_forward_cost_seconds"] == 37.5
+    assert trace_metadata["promotion_contract_max_recommended_runtime_seconds"] == 1.0
     json.dumps(contract.to_dict())
 
 
@@ -2727,6 +4466,17 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "release_gate_status": "promote",
             "trace_gap_max": 0.0,
         },
+        context_sensitivity_workflow={
+            "report_path": "context-sensitivity-workflow.json",
+            "record_key": "report:context-sensitivity-workflow:0.1",
+            "status": "promote",
+            "paired_logprob_record_count": 6,
+            "enriched_record_count": 6,
+            "enhanced_score_signal_count": 4,
+            "max_flagged_rate": 0.25,
+            "mean_flagged_rate": 0.125,
+            "max_context_sensitivity_ratio": 1.35,
+        },
         pathway_intervention_workflow={
             "report_path": "pathway-intervention-workflow.json",
             "manifest_path": "pathway-artifact-manifest.json",
@@ -2781,6 +4531,31 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
                 "redline_margin": 0.13,
             },
         },
+        claim_factuality_probe_comparison={
+            "report_path": "claim-factuality-probe-comparison.json",
+            "record_key": "report:claim-factuality-probe-comparison:0.1",
+            "status": "promote",
+            "report_status": "ready",
+            "model_count": 2,
+            "run_count": 2,
+            "dataset_count": 2,
+            "datasets": ["longfact", "truthfulqa"],
+            "redline_passed": True,
+            "redline_run_count": 2,
+            "best_run": {
+                "name": "qwen05",
+                "model": "Qwen/Qwen2.5-0.5B-Instruct",
+                "record_count": 96,
+                "recommended_layer": -4,
+                "test_label_auroc": 0.84,
+                "test_selective_accuracy": 0.91,
+                "test_selective_coverage": 0.78,
+                "conformal_threshold": 0.62,
+                "redline_best_signal": "answer_negation_flag",
+                "redline_best_auroc": 0.66,
+                "redline_margin": 0.18,
+            },
+        },
         counterfactual_verification={
             "report_path": "counterfactual-verification.json",
             "record_key": "report:counterfactual-verifier-audit:0.1",
@@ -2801,12 +4576,120 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "release-efficiency.json",
             "recommended_profile": "balanced",
         },
+        frontier_release_evidence={
+            "report_path": "frontier-release-evidence.json",
+            "manifest_path": "frontier-release-evidence-manifest.json",
+            "source": "registry",
+            "registry": "release-registry.json",
+            "record_key": "report:frontier-release-evidence:0.1",
+            "workflow": "frontier_release_evidence_comparison",
+            "status": "promote",
+            "report_status": "complete",
+            "decision_status": "promote",
+            "verifier_track_status": "promote",
+            "abstention_track_status": "promote",
+            "citation_batch_track_status": "promote",
+            "frontier_rerun_rollup_track_status": "promote",
+            "base_verifier_track_status": "promote",
+            "base_abstention_track_status": "blocked",
+            "base_detectability_track_status": "blocked",
+            "base_multiple_testing_track_status": "promote",
+            "frontier_rerun_rollup_promoted_tracks": [
+                "abstention",
+                "detectability",
+            ],
+            "frontier_rerun_rollup_report_count": 4,
+            "frontier_rerun_rollup_candidate_count": 4,
+            "frontier_rerun_rollup_missing_report_count": 0,
+            "frontier_rerun_rollup_invalid_report_count": 0,
+            "frontier_rerun_rollup_blocked_candidate_count": 0,
+            "frontier_rerun_rollup_promotion_ready_count": 4,
+            "citation_batch_rollup_count": 1,
+            "citation_batch_expected_batch_count": 2,
+            "citation_batch_observed_batch_count": 2,
+            "citation_batch_missing_expected_batch_count": 0,
+            "citation_batch_adapter_gate_present_count": 2,
+            "citation_batch_adapter_gate_passed_count": 2,
+            "citation_batch_adapter_gate_failed_count": 0,
+            "citation_batch_adapter_gate_status_counts": {"complete": 2},
+            "citation_batch_provenance_present_count": 2,
+            "citation_batch_provenance_passed_count": 2,
+            "citation_batch_provenance_failed_count": 0,
+            "citation_batch_provenance_status_counts": {"pass": 2},
+            "citation_batch_evidence_class_counts": {"external_candidate": 2},
+            "citation_batch_query_sweep_present_count": 2,
+            "citation_batch_query_sweep_no_passing_strategy_count": 0,
+            "citation_batch_query_sweep_best_strategy_counts": {
+                "question_answer_0p65": 2,
+            },
+            "citation_batch_query_sweep_best_passing_strategy_counts": {
+                "question_answer_0p65": 2,
+            },
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_sum": 7,
+            "citation_batch_query_sweep_best_passing_blind_refuted_count_max": 4,
+            "citation_batch_comparison_present_count": 2,
+            "citation_batch_comparison_passed_count": 2,
+            "citation_batch_comparison_failed_count": 0,
+            "citation_batch_comparison_status_counts": {"pass": 2},
+            "run_names": ["verifier-stability", "abstention-stability"],
+        },
+        unresolved_frontier_evidence_summary={
+            "report_path": "unresolved-frontier-summary.json",
+            "manifest_path": "unresolved-frontier-summary-manifest.json",
+            "source": "registry",
+            "registry": "release-registry.json",
+            "record_key": "report:unresolved-frontier-evidence-summary:0.1",
+            "workflow": "unresolved_frontier_evidence_summary",
+            "status": "promote",
+            "report_status": "promote",
+            "closure_required": True,
+            "queue_execution_smoke_required": True,
+            "next_action_count": 0,
+            "lane_statuses": {
+                "world_model_rules": "promote",
+                "frontier_queue_execution": "promote",
+            },
+            "queue_execution_smoke_status": "pass",
+            "queue_execution_smoke_count": 1,
+            "queue_execution_smoke_manifest_verified_count": 1,
+        },
         control_defaults={"max_verifier_route_attempts": 3},
         metadata={
             "selector_replay_status": "promote",
             "product_runtime_drift_covered_fact_property_evidence_required": True,
             "product_runtime_drift_covered_fact_property_evidence_metric_count": 6,
             "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_world_model_evidence_required": True,
+            "product_runtime_drift_world_model_evidence_metric_count": 5,
+            "product_runtime_drift_world_model_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_world_model_trace_gap_rate_baseline": 0.0,
+            "product_runtime_drift_world_model_trace_gap_rate_current": 0.0,
+            "product_runtime_drift_world_model_trace_gap_rate_status": "pass",
+            "product_runtime_drift_context_sensitivity_evidence_required": True,
+            "product_runtime_drift_context_sensitivity_evidence_metric_count": 6,
+            "product_runtime_drift_context_sensitivity_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_baseline": 0.0,
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_current": 0.0,
+            "product_runtime_drift_context_sensitivity_flagged_result_rate_status": "pass",
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_baseline": 1.0,
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_current": 1.0,
+            "product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status": "pass",
+            "product_runtime_drift_counterfactual_robustness_evidence_required": True,
+            "product_runtime_drift_counterfactual_robustness_evidence_metric_count": 6,
+            "product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_counterfactual_robustness_pass_rate_baseline": 1.0,
+            "product_runtime_drift_counterfactual_robustness_pass_rate_current": 1.0,
+            "product_runtime_drift_counterfactual_robustness_pass_rate_status": "pass",
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_baseline": 0.0,
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_current": 0.0,
+            "product_runtime_drift_counterfactual_robustness_false_invariance_rate_status": "pass",
+            "product_runtime_drift_metacognition_evidence_required": True,
+            "product_runtime_drift_metacognition_evidence_metric_count": 4,
+            "product_runtime_drift_metacognition_evidence_blocked_metric_count": 0,
+            "product_runtime_drift_product_trace_metacognition_pass_rate_current": 0.98,
+            "product_runtime_drift_product_trace_metacognition_pass_rate_status": "pass",
+            "product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_current": 0.02,
+            "product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_status": "pass",
             "product_runtime_drift_covered_fact_recommended_route_min_records_baseline": 16,
             "product_runtime_drift_covered_fact_recommended_route_min_records_current": 15,
             "product_runtime_drift_covered_fact_recommended_route_min_records_status": "pass",
@@ -2835,12 +4718,131 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert loaded.path == contract_path
     assert loaded.source == str(contract_path)
     assert loaded.contract.model_id == "demo-model"
+    assert loaded.contract.unresolved_frontier_evidence_summary["status"] == "promote"
     assert loaded.contract.runtime_budget_policy.max_mean_attempted_route_count == 1.1
 
     metadata = loaded.runtime_metadata(budget_enabled=True)
     assert metadata["promotion_contract_source"] == str(contract_path)
     assert metadata["promotion_contract_budget_enabled"] is True
     assert metadata["promotion_contract_model_id"] == "demo-model"
+    assert metadata["promotion_contract_promotion_summary"]["status"] == "promote"
+    assert metadata["promotion_contract_promotion_summary"]["source_status"] == "promote"
+    assert (
+        metadata["promotion_contract_promotion_summary"]["blocking_gate_count"] == 0
+    )
+    assert (
+        metadata["promotion_contract_promotion_summary"][
+            "blocked_evidence_group_count"
+        ]
+        == 0
+    )
+    assert metadata["promotion_contract_promotion_summary"]["runtime"]["layer"] == -2
+    assert (
+        metadata["promotion_contract_promotion_summary"]["verifier_route"]["route"]
+        == "structured_qa"
+    )
+    assert (
+        metadata["promotion_contract_promotion_summary"]["action_gates"][
+            "action_audit_status"
+        ]
+        == "promote"
+    )
+    assert metadata["promotion_contract_promotion_summary"]["gate_statuses"][
+        "frontier_release_evidence"
+    ] == "promote"
+    assert metadata["promotion_contract_promotion_summary"]["gate_statuses"][
+        "unresolved_frontier_evidence_summary"
+    ] == "promote"
+    assert metadata["promotion_contract_promotion_summary"]["recommended_records"][
+        "frontier_release_evidence"
+    ] == "frontier-release-evidence.json"
+    assert metadata["promotion_contract_promotion_summary"]["recommended_records"][
+        "unresolved_frontier_evidence_summary"
+    ] == "unresolved-frontier-summary.json"
+    assert metadata["promotion_contract_frontier_release_evidence"]["status"] == (
+        "promote"
+    )
+    assert metadata["promotion_contract_frontier_release_evidence_report"] == (
+        "frontier-release-evidence.json"
+    )
+    assert metadata["promotion_contract_frontier_release_evidence_manifest"] == (
+        "frontier-release-evidence-manifest.json"
+    )
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_decision_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_verifier_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_abstention_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status"
+    ] == "promote"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status"
+    ] == "blocked"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_base_detectability_track_status"
+    ] == "blocked"
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks"
+    ] == ["abstention", "detectability"]
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count"
+    ] == 4
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_missing_report_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_expected_batch_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_observed_batch_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_missing_expected_batch_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts"
+    ] == {"complete": 2}
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_passed_count"
+    ] == 2
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_best_passing_blind_refuted_count_sum"
+    ] == 7
+    assert metadata[
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary"
+    ]["status"] == "promote"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_report"
+    ] == "unresolved-frontier-summary.json"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_manifest"
+    ] == "unresolved-frontier-summary-manifest.json"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
+    assert metadata[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == 1
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {
         "route": "structured_qa",
@@ -2870,6 +4872,92 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         }
     }
     runtime_metrics = product_runtime_metrics({"metadata": metadata})
+    assert runtime_metrics["promotion_contract_promotion_summary_status"] == "promote"
+    assert runtime_metrics["promotion_contract_promotion_summary_source_status"] == (
+        "promote"
+    )
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_blocking_gate_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_blocked_evidence_group_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_runtime_layer"
+    ] == pytest.approx(-2.0)
+    assert runtime_metrics["promotion_contract_promotion_summary_route"] == (
+        "structured_qa"
+    )
+    assert runtime_metrics[
+        "promotion_contract_promotion_summary_action_audit_status"
+    ] == "promote"
+    assert runtime_metrics["promotion_contract_frontier_release_evidence_available"] is True
+    assert runtime_metrics["promotion_contract_frontier_release_evidence_status"] == (
+        "promote"
+    )
+    assert runtime_metrics["promotion_contract_frontier_release_evidence_report"] == (
+        "frontier-release-evidence.json"
+    )
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_decision_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_track_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_base_abstention_track_status"
+    ] == "blocked"
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promoted_tracks"
+    ] == ["abstention", "detectability"]
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_report_count"
+    ] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_frontier_rerun_rollup_promotion_ready_count"
+    ] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_present_count"
+    ] == pytest.approx(2.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_passed_count"
+    ] == pytest.approx(2.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_failed_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_adapter_gate_status_counts"
+    ] == {"complete": 2}
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_provenance_passed_count"
+    ] == pytest.approx(2.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_query_sweep_best_passing_blind_refuted_count_max"
+    ] == pytest.approx(4.0)
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_citation_batch_comparison_status_counts"
+    ] == {"pass": 2}
+    assert runtime_metrics[
+        "promotion_contract_frontier_release_evidence_run_count"
+    ] == pytest.approx(2.0)
+    assert (
+        runtime_metrics[
+            "promotion_contract_unresolved_frontier_evidence_summary_available"
+        ]
+        is True
+    )
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_status"
+    ] == "promote"
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_next_action_count"
+    ] == pytest.approx(0.0)
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_status"
+    ] == "pass"
+    assert runtime_metrics[
+        "promotion_contract_unresolved_frontier_evidence_summary_queue_execution_smoke_manifest_verified_count"
+    ] == pytest.approx(1.0)
     assert runtime_metrics[
         "promotion_contract_recommended_route_covered_fact_property_metric_count"
     ] == pytest.approx(1.0)
@@ -2931,6 +5019,31 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"][
         "pre_generation_probe_comparison"
     ]["best_redline_signal"] == "answer_token_count"
+    assert (
+        runtime_metrics["promotion_contract_claim_factuality_probe_comparison_available"]
+        is True
+    )
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_record"
+    ] == "report:claim-factuality-probe-comparison:0.1"
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_dataset_count"
+    ] == pytest.approx(2)
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_datasets"
+    ] == ["longfact", "truthfulqa"]
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_best_test_selective_accuracy"
+    ] == pytest.approx(0.91)
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_best_conformal_threshold"
+    ] == pytest.approx(0.62)
+    assert runtime_metrics[
+        "promotion_contract_claim_factuality_probe_comparison_best_redline_margin"
+    ] == pytest.approx(0.18)
+    assert runtime_metrics["promotion_contract_summary"][
+        "claim_factuality_probe_comparison"
+    ]["best_redline_signal"] == "answer_negation_flag"
     assert runtime_metrics["promotion_contract_counterfactual_verification_available"] is True
     assert runtime_metrics[
         "promotion_contract_counterfactual_verification_record"
@@ -2975,6 +5088,63 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
     ] == 0
     assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_evidence_metric_count"
+    ] == 5
+    assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_world_model_trace_gap_rate_status"
+    ] == "pass"
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_metric_count"
+    ] == 6
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_flagged_result_rate_current"
+    ] == 0.0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_context_sensitivity_max_context_sensitivity_ratio_status"
+    ] == "pass"
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_metric_count"
+    ] == 6
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_pass_rate_current"
+    ] == 1.0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_counterfactual_robustness_false_invariance_rate_status"
+    ] == "pass"
+    assert metadata[
+        "promotion_contract_product_runtime_drift_metacognition_evidence_required"
+    ] is True
+    assert metadata[
+        "promotion_contract_product_runtime_drift_metacognition_evidence_metric_count"
+    ] == 4
+    assert metadata[
+        "promotion_contract_product_runtime_drift_metacognition_evidence_blocked_metric_count"
+    ] == 0
+    assert metadata[
+        "promotion_contract_product_runtime_drift_product_trace_metacognition_pass_rate_current"
+    ] == 0.98
+    assert metadata[
+        "promotion_contract_product_runtime_drift_product_trace_metacognition_miscalibration_score_mean_status"
+    ] == "pass"
+    assert metadata[
         "promotion_contract_product_runtime_drift_covered_fact_recommended_route_min_records_current"
     ] == 15
     assert metadata[
@@ -2992,6 +5162,24 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
         "covered_fact_property_evidence"
     ]["covered_fact_recommended_route_min_records"]["current"] == pytest.approx(15.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "world_model_evidence_metric_count"
+    ] == pytest.approx(5.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "world_model_evidence"
+    ]["world_model_trace_gap_rate"]["status"] == "pass"
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "context_sensitivity_evidence_metric_count"
+    ] == pytest.approx(6.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "context_sensitivity_evidence"
+    ]["context_sensitivity_flagged_result_rate"]["current"] == pytest.approx(0.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "counterfactual_robustness_evidence_metric_count"
+    ] == pytest.approx(6.0)
+    assert runtime_metrics["promotion_contract_summary"]["product_runtime_drift"][
+        "counterfactual_robustness_evidence"
+    ]["counterfactual_robustness_pass_rate"]["current"] == pytest.approx(1.0)
     assert runtime_metrics["promotion_contract_product_trace_replay_available"] is True
     assert runtime_metrics["promotion_contract_product_trace_replay_workflow_report"] == (
         "trace-replay-workflow.json"
@@ -3139,6 +5327,37 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "release_gate_status": "promote",
         "trace_gap_max": 0.0,
     }
+    assert metadata["promotion_contract_context_sensitivity_workflow"] == {
+        "report_path": "context-sensitivity-workflow.json",
+        "record_key": "report:context-sensitivity-workflow:0.1",
+        "status": "promote",
+        "paired_logprob_record_count": 6,
+        "enriched_record_count": 6,
+        "enhanced_score_signal_count": 4,
+        "max_flagged_rate": 0.25,
+        "mean_flagged_rate": 0.125,
+        "max_context_sensitivity_ratio": 1.35,
+    }
+    assert (
+        metadata["promotion_contract_context_sensitivity_workflow_report"]
+        == "context-sensitivity-workflow.json"
+    )
+    assert (
+        metadata[
+            "promotion_contract_context_sensitivity_workflow_paired_logprob_record_count"
+        ]
+        == 6
+    )
+    assert (
+        metadata["promotion_contract_context_sensitivity_workflow_max_flagged_rate"]
+        == 0.25
+    )
+    assert (
+        metadata[
+            "promotion_contract_context_sensitivity_workflow_max_context_sensitivity_ratio"
+        ]
+        == 1.35
+    )
     assert metadata["promotion_contract_pathway_intervention_workflow"] == {
         "report_path": "pathway-intervention-workflow.json",
         "manifest_path": "pathway-artifact-manifest.json",
@@ -3267,6 +5486,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     world_model_report_path = world_model_dir / "workflow.json"
     world_model_manifest_path = world_model_dir / "artifact-manifest.json"
     world_model_registry_path = world_model_dir / "registry.json"
+    context_sensitivity_dir = tmp_path / "context-sensitivity"
+    context_sensitivity_dir.mkdir()
+    context_sensitivity_report_path = context_sensitivity_dir / "workflow.json"
+    context_sensitivity_manifest_path = context_sensitivity_dir / "artifact-manifest.json"
+    context_sensitivity_registry_path = context_sensitivity_dir / "registry.json"
     pathway_dir = tmp_path / "pathway-intervention"
     pathway_dir.mkdir()
     pathway_report_path = pathway_dir / "workflow.json"
@@ -3348,6 +5572,48 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         path=world_model_report_path,
         version="0.1",
         metadata={"artifact_manifest": str(world_model_manifest_path)},
+    ).save_json()
+    context_sensitivity_report_path.write_text(
+        json.dumps({
+            "workflow": "context_sensitivity_workflow",
+            "paired_logprobs": {"record_count": 6},
+            "enrichment": {"record_count": 6},
+            "enhanced_score_dump": {
+                "score_dump_summary": {
+                    "score_names": [
+                        "context_sensitivity_flagged_rate",
+                        "context_sensitivity_max_shift",
+                        "context_sensitivity_mean_shift",
+                        "context_sensitivity_max_ratio",
+                    ]
+                }
+            },
+            "signal_summary": {
+                "context_sensitivity_flagged_rate": {
+                    "max": 0.25,
+                    "mean": 0.125,
+                },
+                "context_sensitivity_max_ratio": {"max": 1.35},
+            },
+            "manifest_verification": {"passed": True},
+        }),
+        encoding="utf-8",
+    )
+    context_sensitivity_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"context_sensitivity_workflow": context_sensitivity_report_path},
+                root=context_sensitivity_dir,
+                metadata={"workflow": "context_sensitivity_workflow"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(context_sensitivity_registry_path).record_report(
+        name="context-sensitivity-workflow",
+        path=context_sensitivity_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(context_sensitivity_manifest_path)},
     ).save_json()
     pathway_report_path.write_text(
         json.dumps({
@@ -3533,6 +5799,20 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "conflict_positive_count": 4,
             "calibrated_conflict_signal_count": 1,
         },
+        context_sensitivity_workflow={
+            "report_path": "context-sensitivity/workflow.json",
+            "manifest_path": "context-sensitivity/artifact-manifest.json",
+            "registry": "context-sensitivity/registry.json",
+            "record_key": "report:context-sensitivity-workflow:0.1",
+            "status": "promote",
+            "paired_logprob_record_count": 6,
+            "enriched_record_count": 6,
+            "enhanced_score_signal_count": 4,
+            "max_flagged_rate": 0.25,
+            "mean_flagged_rate": 0.125,
+            "max_context_sensitivity_ratio": 1.35,
+            "manifest_verified": True,
+        },
         pathway_intervention_workflow={
             "report_path": "pathway-intervention/workflow.json",
             "manifest_path": "pathway-intervention/artifact-manifest.json",
@@ -3699,6 +5979,41 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification["world_model_signal_workflow_release_gate_status"] == "promote"
     assert metadata_without_verification["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert metadata_without_verification["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert metadata_without_verification["context_sensitivity_workflow_report"] == str(
+        context_sensitivity_report_path
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_manifest"] == str(
+        context_sensitivity_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "context_sensitivity_workflow_manifest_verification"
+        ]
+        is None
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_registry"] == str(
+        context_sensitivity_registry_path
+    )
+    assert (
+        metadata_without_verification["context_sensitivity_workflow_registry_key"]
+        == "report:context-sensitivity-workflow:0.1"
+    )
+    assert (
+        metadata_without_verification["context_sensitivity_workflow_registry_record"]
+        is None
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_status"] == (
+        "promote"
+    )
+    assert (
+        metadata_without_verification[
+            "context_sensitivity_workflow_paired_logprob_record_count"
+        ]
+        == 6
+    )
+    assert metadata_without_verification["context_sensitivity_workflow_max_flagged_rate"] == (
+        pytest.approx(0.25)
+    )
     assert metadata_without_verification["pathway_intervention_workflow_report"] == str(
         pathway_report_path
     )
@@ -3907,6 +6222,33 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         "world_model_signal_workflow_registry_record"
     ]["metadata"] == {"artifact_manifest": str(world_model_manifest_path)}
 
+    metadata_with_context_sensitivity_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_context_sensitivity_workflow_manifest=True,
+        include_context_sensitivity_workflow_record=True,
+    )
+    assert (
+        metadata_with_context_sensitivity_verification[
+            "context_sensitivity_workflow_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_context_sensitivity_verification[
+            "context_sensitivity_workflow_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_context_sensitivity_verification[
+            "context_sensitivity_workflow_registry_key"
+        ]
+        == "report:context-sensitivity-workflow:0.1"
+    )
+    assert metadata_with_context_sensitivity_verification[
+        "context_sensitivity_workflow_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(context_sensitivity_manifest_path)}
+
     metadata_with_pathway_verification = bundle.runtime_metadata(
         budget_enabled=True,
         verify_pathway_intervention_workflow_manifest=True,
@@ -4026,6 +6368,151 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_triple_matrix_verification[
         "triple_extraction_fixture_matrix_registry_record"
     ]["metadata"] == {"artifact_manifest": str(triple_matrix_manifest_path)}
+
+
+def test_product_runtime_evidence_bundle_exposes_evidence_handoff_manifest(tmp_path):
+    contract_path = tmp_path / "product-promotion-contract.json"
+    handoff_path = tmp_path / "product-promotion-contract-evidence-handoff.json"
+    audit_path = tmp_path / "product-promotion-contract-evidence-handoff-audit.json"
+    handoff_manifest_path = tmp_path / "evidence-handoff-artifact-manifest.json"
+
+    ProductPromotionContract(
+        model_id="demo-model",
+        source_status="promote",
+        metadata={"recommended_runtime_seconds": 0.2},
+    ).save_json(contract_path)
+    handoff_path.write_text(
+        json.dumps({
+            "workflow": "product_promotion_contract",
+            "source_contract": str(contract_path),
+            "contract": {"workflow": "product_promotion_contract"},
+            "audit": {"status": "promote"},
+        }),
+        encoding="utf-8",
+    )
+    audit_path.write_text(
+        json.dumps({
+            "workflow": "product_promotion_evidence_handoff_audit",
+            "status": "promote",
+            "summary": {
+                "blocked_group_count": 0,
+                "expected_metric_count": 38,
+                "groups": {
+                    "promotion": "promote",
+                    "pre_generation": "promote",
+                    "counterfactual": "promote",
+                    "action_gate": "promote",
+                    "triple_audit": "promote",
+                    "covered_fact_property": "promote",
+                },
+                "missing_metric_count": 0,
+                "present_metric_count": 38,
+            },
+        }),
+        encoding="utf-8",
+    )
+    handoff_manifest = build_artifact_manifest(
+        {
+            "source_contract": contract_path,
+            "product_promotion_contract_evidence_handoff": handoff_path,
+            "product_promotion_contract_evidence_handoff_audit": audit_path,
+        },
+        root=tmp_path,
+        metadata={
+            "after_missing_metric_count": 0,
+            "before_missing_metric_count": 24,
+            "filled_groups": [
+                "promotion",
+                "pre_generation",
+                "counterfactual",
+                "action_gate",
+                "triple_audit",
+                "covered_fact_property",
+            ],
+            "resolved_missing_metric_count": 24,
+            "status": "promote",
+        },
+    )
+    handoff_manifest_path.write_text(json.dumps(handoff_manifest), encoding="utf-8")
+
+    bundle = load_product_runtime_evidence_bundle(
+        default_contract_paths=(contract_path,),
+    )
+
+    assert bundle is not None
+    assert bundle.evidence_handoff_manifest_path == handoff_manifest_path
+    metadata = bundle.runtime_metadata(budget_enabled=True)
+    assert metadata["promotion_contract_evidence_handoff_manifest"] == str(
+        handoff_manifest_path
+    )
+    assert metadata["promotion_contract_evidence_handoff_contract"] == str(handoff_path)
+    assert metadata["promotion_contract_evidence_handoff_audit"] == str(audit_path)
+    assert metadata["promotion_contract_evidence_handoff_status"] == "promote"
+    assert metadata["promotion_contract_evidence_handoff_before_missing_metric_count"] == 24
+    assert metadata["promotion_contract_evidence_handoff_after_missing_metric_count"] == 0
+    assert metadata["promotion_contract_evidence_handoff_resolved_missing_metric_count"] == 24
+    assert metadata["promotion_contract_evidence_handoff_present_metric_count"] == 38
+    assert metadata["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+    assert metadata["promotion_contract_evidence_handoff_group_statuses"] == {
+        "action_gate": "promote",
+        "counterfactual": "promote",
+        "covered_fact_property": "promote",
+        "pre_generation": "promote",
+        "promotion": "promote",
+        "triple_audit": "promote",
+    }
+    assert metadata["promotion_contract_evidence_handoff_manifest_verification"] is None
+    runtime_metrics = product_runtime_metrics({"metadata": metadata})
+    assert runtime_metrics["promotion_contract_evidence_handoff_available"] is True
+    assert runtime_metrics["promotion_contract_evidence_handoff_manifest"] == str(
+        handoff_manifest_path
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_present_metric_count"] == (
+        pytest.approx(38.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_missing_metric_count"] == (
+        pytest.approx(0.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_present_metric_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_group_count"] == (
+        pytest.approx(6.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_promoted_group_count"] == (
+        pytest.approx(6.0)
+    )
+    assert runtime_metrics["promotion_contract_evidence_handoff_promoted_group_rate"] == (
+        pytest.approx(1.0)
+    )
+    handoff_summary = runtime_metrics["promotion_contract_summary"]["evidence_handoff"]
+    assert handoff_summary["status"] == "promote"
+    assert handoff_summary["manifest_verified"] is None
+    assert handoff_summary["group_statuses"]["promotion"] == "promote"
+
+    verified_metadata = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_evidence_handoff_manifest=True,
+    )
+    assert (
+        verified_metadata["promotion_contract_evidence_handoff_manifest_verification"][
+            "passed"
+        ]
+        is True
+    )
+    assert (
+        verified_metadata["promotion_contract_evidence_handoff_manifest_verification"][
+            "checked"
+        ]
+        == 3
+    )
+    verified_metrics = product_runtime_metrics({"metadata": verified_metadata})
+    assert verified_metrics[
+        "promotion_contract_evidence_handoff_manifest_verified"
+    ] is True
+    assert verified_metrics["promotion_contract_summary"]["evidence_handoff"][
+        "manifest_verified"
+    ] is True
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):

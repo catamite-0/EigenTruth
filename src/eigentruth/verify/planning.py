@@ -50,6 +50,11 @@ DEFAULT_VERIFICATION_ESCALATION_ROUTES = (
     "world_model",
 )
 DEFAULT_VERIFICATION_ESCALATION_FALLBACK_ROUTES = ("retrieval",)
+DEFAULT_VERIFICATION_ENTITY_METADATA_KEYS = (
+    "entity_candidates",
+    "named_entities",
+    "entities",
+)
 DEFAULT_VERIFICATION_UNCERTAIN_STATUSES = (
     VerificationStatus.INSUFFICIENT_EVIDENCE,
     VerificationStatus.ERROR,
@@ -75,6 +80,7 @@ DEFAULT_VERIFY_CLAIM_METADATA_KEYS = (
     "retrieval_queries",
     "route_hints",
     "routes",
+    "hidden_evidence",
 )
 DEFAULT_RETRIEVAL_FEATURE_FLAGS = (
     "has_number",
@@ -350,11 +356,20 @@ class VerificationEscalationPolicy:
     max_route_attempts: int | None = None
     max_tool_payloads: int | None = None
     max_estimated_cost_units: float | None = None
+    entity_sensitive: bool = True
+    entity_confidence_margin: float = 0.10
+    entity_metadata_keys: Sequence[str] = DEFAULT_VERIFICATION_ENTITY_METADATA_KEYS
 
     def __post_init__(self) -> None:
         min_confidence = _non_negative_float(self.min_confidence, name="min_confidence")
         if min_confidence > 1.0:
             raise ValueError("min_confidence must be in [0, 1].")
+        entity_confidence_margin = _non_negative_float(
+            self.entity_confidence_margin,
+            name="entity_confidence_margin",
+        )
+        if entity_confidence_margin > 1.0:
+            raise ValueError("entity_confidence_margin must be in [0, 1].")
         object.__setattr__(self, "min_confidence", min_confidence)
         object.__setattr__(
             self,
@@ -397,6 +412,13 @@ class VerificationEscalationPolicy:
                 name="max_estimated_cost_units",
             ),
         )
+        object.__setattr__(self, "entity_sensitive", _strict_bool(self.entity_sensitive))
+        object.__setattr__(self, "entity_confidence_margin", entity_confidence_margin)
+        object.__setattr__(
+            self,
+            "entity_metadata_keys",
+            tuple(_non_empty_strings(_as_sequence(self.entity_metadata_keys))),
+        )
         if not self.escalation_routes and not self.fallback_routes:
             raise ValueError("at least one escalation or fallback route is required.")
 
@@ -418,9 +440,19 @@ class VerificationEscalationPolicy:
             max_route_attempts=payload.get("max_route_attempts"),
             max_tool_payloads=payload.get("max_tool_payloads"),
             max_estimated_cost_units=payload.get("max_estimated_cost_units"),
+            entity_sensitive=payload.get("entity_sensitive", True),
+            entity_confidence_margin=payload.get("entity_confidence_margin", 0.10),
+            entity_metadata_keys=tuple(
+                _as_sequence(payload.get("entity_metadata_keys", DEFAULT_VERIFICATION_ENTITY_METADATA_KEYS))
+            ),
         )
 
-    def is_uncertain(self, result: VerificationResult | Mapping[str, Any]) -> tuple[bool, tuple[str, ...]]:
+    def is_uncertain(
+        self,
+        result: VerificationResult | Mapping[str, Any],
+        *,
+        claim: Claim | Mapping[str, Any] | None = None,
+    ) -> tuple[bool, tuple[str, ...]]:
         """Return whether a preliminary result should receive stronger verification."""
         result_obj = _verification_result_obj(result)
         reasons: list[str] = []
@@ -428,7 +460,24 @@ class VerificationEscalationPolicy:
             reasons.append(f"status:{result_obj.status.value}")
         if result_obj.confidence < self.min_confidence:
             reasons.append(f"confidence_below:{self.min_confidence:g}")
+        entity_candidates = _entity_candidates_for_escalation(
+            claim,
+            metadata_keys=self.entity_metadata_keys,
+        )
+        entity_threshold = min(1.0, self.min_confidence + self.entity_confidence_margin)
+        if self.entity_sensitive and entity_candidates and result_obj.confidence < entity_threshold:
+            reasons.append(f"entity_confidence_below:{entity_threshold:g}")
+            reasons.append("entity_candidates_present")
         return bool(reasons), tuple(reasons)
+
+    def entity_candidates(self, claim: Claim | Mapping[str, Any] | None) -> tuple[str, ...]:
+        """Return entity candidates considered by this escalation policy."""
+        if not self.entity_sensitive:
+            return ()
+        return _entity_candidates_for_escalation(
+            claim,
+            metadata_keys=self.entity_metadata_keys,
+        )
 
     def budget_enabled(self) -> bool:
         """Return whether the escalation plan should also apply route/cost budgets."""
@@ -461,6 +510,9 @@ class VerificationEscalationPolicy:
             "max_route_attempts": self.max_route_attempts,
             "max_tool_payloads": self.max_tool_payloads,
             "max_estimated_cost_units": self.max_estimated_cost_units,
+            "entity_sensitive": self.entity_sensitive,
+            "entity_confidence_margin": self.entity_confidence_margin,
+            "entity_metadata_keys": tuple(self.entity_metadata_keys),
             "budget_enabled": self.budget_enabled(),
         }
 
@@ -665,8 +717,10 @@ class ClaimVerificationPlanner:
         *,
         context: Mapping[str, Any] | None = None,
         budget_policy: VerificationBudgetPolicy | Mapping[str, Any] | None = None,
+        hidden_evidence: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None = None,
     ) -> ClaimVerificationPlan:
         """Return a verification plan for generated text or existing claims."""
+        del context
         claims = self.extract(claims_or_text) if isinstance(claims_or_text, str) else _coerce_claims(claims_or_text)
         if not claims:
             return ClaimVerificationPlan(
@@ -676,6 +730,7 @@ class ClaimVerificationPlanner:
             )
 
         claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(claims))
+        hidden_evidence_by_claim = _hidden_evidence_by_claim(claims, hidden_evidence)
         triggered_features: dict[str, tuple[str, ...]] = {}
         triggered_metadata: dict[str, tuple[str, ...]] = {}
         route_hints: list[VerificationRouteHint] = []
@@ -688,7 +743,10 @@ class ClaimVerificationPlanner:
 
         for index, claim in enumerate(claims):
             claim_id = claim_ids[index]
-            metadata = _claim_metadata(claim)
+            metadata = dict(_claim_metadata(claim))
+            hidden_evidence_summary = hidden_evidence_by_claim.get(claim_id)
+            if hidden_evidence_summary is not None:
+                metadata["hidden_evidence"] = hidden_evidence_summary
             features = _claim_features(metadata)
             matched_features = enabled_feature_names(features, self.verify_claim_feature_flags)
             matched_metadata = tuple(
@@ -702,7 +760,18 @@ class ClaimVerificationPlanner:
                 triggered_claim_ids.append(claim_id)
 
             routes, reasons = self._routes_for_claim(claim, claim_id=claim_id, features=features, metadata=metadata)
-            route_hints.append(VerificationRouteHint(claim_id=claim_id, routes=routes, reasons=reasons))
+            route_metadata = {}
+            if hidden_evidence_summary is not None:
+                reasons = (*reasons, "hidden_evidence:selected")
+                route_metadata["hidden_evidence"] = hidden_evidence_summary
+            route_hints.append(
+                VerificationRouteHint(
+                    claim_id=claim_id,
+                    routes=routes,
+                    reasons=reasons,
+                    metadata=route_metadata,
+                )
+            )
             retrieval_queries.extend(
                 self._retrieval_queries_for_claim(
                     claim,
@@ -1150,6 +1219,10 @@ def escalate_uncertain_verification_plan(
     candidate_claim_ids = tuple(plan_obj.verify_claim_ids) or claim_ids
     result_by_claim = _preliminary_results_by_claim(plan_obj, preliminary_results)
     hint_by_claim = {hint.claim_id: hint for hint in plan_obj.route_hints}
+    claim_by_id = {
+        _claim_id(claim, index): claim
+        for index, claim in enumerate(plan_obj.claims)
+    }
     order_index = {claim_id: index for index, claim_id in enumerate(claim_ids)}
 
     uncertain: list[tuple[str, VerificationResult, tuple[str, ...]]] = []
@@ -1157,7 +1230,7 @@ def escalate_uncertain_verification_plan(
         result = result_by_claim.get(claim_id)
         if result is None:
             continue
-        is_uncertain, reasons = policy_obj.is_uncertain(result)
+        is_uncertain, reasons = policy_obj.is_uncertain(result, claim=claim_by_id.get(claim_id))
         if is_uncertain:
             uncertain.append((claim_id, result, reasons))
 
@@ -1172,6 +1245,7 @@ def escalate_uncertain_verification_plan(
     selected_route_lists: dict[str, tuple[str, ...]] = {}
     dropped_no_route: list[str] = []
     uncertainty_reasons: dict[str, tuple[str, ...]] = {}
+    entity_candidates_by_claim: dict[str, tuple[str, ...]] = {}
     preliminary_summary: dict[str, dict[str, Any]] = {}
     for claim_id, result, reasons in selected_uncertain:
         routes = _escalation_routes_for_claim(
@@ -1181,6 +1255,9 @@ def escalate_uncertain_verification_plan(
         )
         preliminary_summary[claim_id] = _verification_result_summary(result)
         uncertainty_reasons[claim_id] = reasons
+        entity_candidates = policy_obj.entity_candidates(claim_by_id.get(claim_id))
+        if entity_candidates:
+            entity_candidates_by_claim[claim_id] = entity_candidates
         if not routes:
             dropped_no_route.append(claim_id)
             continue
@@ -1214,6 +1291,10 @@ def escalate_uncertain_verification_plan(
         "dropped_no_route_ids": tuple(dropped_no_route),
         "selected_routes": selected_routes,
         "uncertainty_reasons": uncertainty_reasons,
+        "entity_candidates": entity_candidates_by_claim,
+        "entity_sensitive_claim_ids": tuple(entity_candidates_by_claim),
+        "entity_sensitive_claim_count": len(entity_candidates_by_claim),
+        "entity_candidate_count": sum(len(items) for items in entity_candidates_by_claim.values()),
         "preliminary_results": preliminary_summary,
     }
     run_verifier = bool(selected_claim_ids)
@@ -1249,6 +1330,7 @@ def escalate_uncertain_verification_plan(
                 claim_id=claim_id,
                 routes=selected_route_lists[claim_id],
                 reasons=uncertainty_reasons.get(claim_id, ()),
+                entity_candidates=entity_candidates_by_claim.get(claim_id, ()),
                 preliminary_result=result_by_claim.get(claim_id),
             )
             for claim_id in selected_claim_ids
@@ -1412,6 +1494,35 @@ def _verification_result_summary(result: VerificationResult) -> dict[str, Any]:
     }
 
 
+def _entity_candidates_for_escalation(
+    claim: Claim | Mapping[str, Any] | None,
+    *,
+    metadata_keys: Sequence[str],
+) -> tuple[str, ...]:
+    if claim is None:
+        return ()
+    if isinstance(claim, Claim):
+        metadata = _claim_metadata(claim)
+    elif isinstance(claim, Mapping):
+        raw_metadata = claim.get("metadata", {})
+        metadata = raw_metadata if isinstance(raw_metadata, Mapping) else {}
+    else:
+        return ()
+    candidates: list[str] = []
+    for key in metadata_keys:
+        current = _metadata_path_value(metadata, key)
+        if current is None:
+            continue
+        for item in _as_sequence(current):
+            if isinstance(item, Mapping):
+                value = item.get("text", item.get("name", item.get("value")))
+            else:
+                value = item
+            if value is not None and str(value).strip():
+                _append_unique(candidates, str(value).strip())
+    return tuple(candidates)
+
+
 def _escalation_routes_for_claim(
     hint: VerificationRouteHint | None,
     *,
@@ -1437,15 +1548,21 @@ def _escalation_route_hint(
     routes: Sequence[str],
     reasons: Sequence[str],
     preliminary_result: VerificationResult | None,
+    entity_candidates: Sequence[str] = (),
 ) -> VerificationRouteHint:
     metadata = {} if hint is None else dict(hint.metadata)
-    metadata["verification_escalation"] = {
+    escalation_metadata = {
         "selected_routes": tuple(routes),
         "uncertainty_reasons": tuple(reasons),
         "preliminary_result": (
             None if preliminary_result is None else _verification_result_summary(preliminary_result)
         ),
     }
+    normalized_entities = tuple(_non_empty_strings(_as_sequence(entity_candidates)))
+    if normalized_entities:
+        escalation_metadata["entity_candidates"] = normalized_entities
+        escalation_metadata["entity_sensitive"] = True
+    metadata["verification_escalation"] = escalation_metadata
     base_reasons = () if hint is None else tuple(hint.reasons)
     return VerificationRouteHint(
         claim_id=claim_id,
@@ -1488,6 +1605,153 @@ def _escalation_retrieval_queries(
             }
         )
     return tuple(queries)
+
+
+def _hidden_evidence_by_claim(
+    claims: Sequence[Claim],
+    hidden_evidence: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
+) -> dict[str, dict[str, Any]]:
+    selected = _hidden_evidence_selected_items(hidden_evidence)
+    if not selected:
+        return {}
+    claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(claims))
+    claim_ids_by_index = {index: claim_id for index, claim_id in enumerate(claim_ids)}
+    selected_by_claim: dict[str, list[dict[str, Any]]] = {}
+    for item in selected:
+        matched_claim_ids = _hidden_evidence_matched_claim_ids(
+            item,
+            claim_ids=claim_ids,
+            claim_ids_by_index=claim_ids_by_index,
+        )
+        for claim_id in matched_claim_ids:
+            selected_by_claim.setdefault(claim_id, []).append(item)
+    return {
+        claim_id: _hidden_evidence_claim_summary(items)
+        for claim_id, items in selected_by_claim.items()
+    }
+
+
+def _hidden_evidence_selected_items(
+    hidden_evidence: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None,
+) -> tuple[dict[str, Any], ...]:
+    if hidden_evidence is None:
+        return ()
+    payload: Any = hidden_evidence
+    if hasattr(payload, "to_dict") and callable(payload.to_dict):
+        payload = payload.to_dict()
+    if isinstance(payload, Mapping):
+        raw_items = payload.get("selected", ())
+    elif isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        raw_items = payload
+    else:
+        raise ValueError("hidden_evidence must be a selection report mapping or sequence of selected items.")
+    items: list[dict[str, Any]] = []
+    for raw_item in _as_sequence(raw_items):
+        item_payload = raw_item.to_dict() if hasattr(raw_item, "to_dict") and callable(raw_item.to_dict) else raw_item
+        if not isinstance(item_payload, Mapping):
+            raise ValueError("hidden evidence selected items must be mappings.")
+        item = dict(to_jsonable(dict(item_payload)))
+        if not item.get("record_id") and item.get("record_index") is None:
+            raise ValueError("hidden evidence selected items must include record_id or record_index.")
+        items.append(item)
+    return tuple(items)
+
+
+def _hidden_evidence_matched_claim_ids(
+    item: Mapping[str, Any],
+    *,
+    claim_ids: Sequence[str],
+    claim_ids_by_index: Mapping[int, str],
+) -> tuple[str, ...]:
+    matched: list[str] = []
+    claim_id_set = set(claim_ids)
+    for value in _hidden_evidence_claim_key_values(item):
+        if value in claim_id_set:
+            _append_unique(matched, value)
+    raw_index = item.get("record_index")
+    if raw_index is not None:
+        try:
+            index = int(raw_index)
+        except (TypeError, ValueError):
+            index = -1
+        claim_id = claim_ids_by_index.get(index)
+        if claim_id is not None:
+            _append_unique(matched, claim_id)
+    return tuple(matched)
+
+
+def _hidden_evidence_claim_key_values(item: Mapping[str, Any]) -> tuple[str, ...]:
+    values: list[str] = []
+    for key in ("record_id", "claim_id", "statement_id", "id", "question_id"):
+        value = item.get(key)
+        if value is not None:
+            text = str(value).strip()
+            if text:
+                values.append(text)
+    metadata = item.get("metadata", {})
+    if isinstance(metadata, Mapping):
+        for key in ("claim_id", "record_id", "statement_id", "id", "question_id"):
+            value = metadata.get(key)
+            if value is not None:
+                text = str(value).strip()
+                if text:
+                    values.append(text)
+    return tuple(dict.fromkeys(values))
+
+
+def _hidden_evidence_claim_summary(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    evidence_refs = tuple(
+        str(item.get("evidence_ref"))
+        for item in items
+        if item.get("evidence_ref") is not None and str(item.get("evidence_ref")).strip()
+    )
+    score_names = tuple(dict.fromkeys(
+        str(item.get("score_name"))
+        for item in items
+        if item.get("score_name") is not None and str(item.get("score_name")).strip()
+    ))
+    layers = tuple(dict.fromkeys(
+        "primary" if item.get("layer") is None else str(item.get("layer"))
+        for item in items
+    ))
+    anomaly_scores = tuple(
+        _optional_non_negative_float(item.get("anomaly_score"), name="hidden_evidence.anomaly_score")
+        for item in items
+        if item.get("anomaly_score") is not None
+    )
+    valid_anomaly_scores = tuple(score for score in anomaly_scores if score is not None)
+    return {
+        "selected_count": len(items),
+        "evidence_refs": evidence_refs,
+        "score_names": score_names,
+        "layers": layers,
+        "max_anomaly_score": max(valid_anomaly_scores) if valid_anomaly_scores else None,
+        "selected": tuple(_compact_hidden_evidence_item(item) for item in items),
+    }
+
+
+def _compact_hidden_evidence_item(item: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "record_id",
+        "record_index",
+        "evidence_ref",
+        "score_name",
+        "score",
+        "direction",
+        "anomaly_score",
+        "rank",
+        "global_rank",
+        "channel_rank",
+        "channel_size",
+        "layer",
+        "source",
+        "metadata",
+    )
+    return {
+        key: to_jsonable(item[key])
+        for key in keys
+        if key in item
+    }
 
 
 def _budget_ordered_claim_ids(

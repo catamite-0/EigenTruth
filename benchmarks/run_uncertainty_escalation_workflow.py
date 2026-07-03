@@ -28,7 +28,10 @@ from eigentruth.control import (  # noqa: E402
     RiskController,
     run_verification_loop,
 )
-from eigentruth.eval import uncertainty_escalation_report  # noqa: E402
+from eigentruth.eval import (  # noqa: E402
+    uncertainty_escalation_policy_sweep,
+    uncertainty_escalation_report,
+)
 from eigentruth.json_utils import strict_json_dumps, to_jsonable  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, ArtifactVerificationContext  # noqa: E402
 from eigentruth.verify import Claim, GroundednessVerifier, VerificationEscalationPolicy  # noqa: E402
@@ -59,6 +62,11 @@ class UncertaintyEscalationWorkflowConfig:
     diagnostic_score_name: str = DEFAULT_DIAGNOSTIC_SCORE_NAME
     diagnostic_threshold: float = DEFAULT_DIAGNOSTIC_THRESHOLD
     diagnostic_value: float = DEFAULT_DIAGNOSTIC_VALUE
+    policy_sweep_min_confidence_values: Sequence[float] | None = None
+    policy_sweep_max_final_false_accept_rate: float | None = None
+    policy_sweep_min_final_selective_accuracy: float | None = None
+    policy_sweep_max_trigger_rate: float | None = None
+    policy_sweep_min_trigger_rate: float | None = None
     compact_json: bool = False
 
     def __post_init__(self) -> None:
@@ -110,6 +118,47 @@ class UncertaintyEscalationWorkflowConfig:
         object.__setattr__(self, "diagnostic_score_name", str(self.diagnostic_score_name))
         object.__setattr__(self, "diagnostic_threshold", float(self.diagnostic_threshold))
         object.__setattr__(self, "diagnostic_value", float(self.diagnostic_value))
+        if self.policy_sweep_min_confidence_values is not None:
+            object.__setattr__(
+                self,
+                "policy_sweep_min_confidence_values",
+                _normalize_unit_float_sequence(
+                    self.policy_sweep_min_confidence_values,
+                    name="policy_sweep_min_confidence_values",
+                ),
+            )
+        object.__setattr__(
+            self,
+            "policy_sweep_max_final_false_accept_rate",
+            _optional_unit_float(
+                self.policy_sweep_max_final_false_accept_rate,
+                name="policy_sweep_max_final_false_accept_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "policy_sweep_min_final_selective_accuracy",
+            _optional_unit_float(
+                self.policy_sweep_min_final_selective_accuracy,
+                name="policy_sweep_min_final_selective_accuracy",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "policy_sweep_max_trigger_rate",
+            _optional_unit_float(
+                self.policy_sweep_max_trigger_rate,
+                name="policy_sweep_max_trigger_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "policy_sweep_min_trigger_rate",
+            _optional_unit_float(
+                self.policy_sweep_min_trigger_rate,
+                name="policy_sweep_min_trigger_rate",
+            ),
+        )
 
 
 def run_uncertainty_escalation_workflow(
@@ -143,6 +192,15 @@ def run_uncertainty_escalation_workflow(
             stream.write(strict_json_dumps(row, sort_keys=True) + "\n")
 
     report = uncertainty_escalation_report(rows)
+    if config.policy_sweep_min_confidence_values is not None:
+        report["policy_sweep"] = uncertainty_escalation_policy_sweep(
+            rows,
+            min_confidence_values=config.policy_sweep_min_confidence_values,
+            max_final_false_accept_rate=config.policy_sweep_max_final_false_accept_rate,
+            min_final_selective_accuracy=config.policy_sweep_min_final_selective_accuracy,
+            max_trigger_rate=config.policy_sweep_max_trigger_rate,
+            min_trigger_rate=config.policy_sweep_min_trigger_rate,
+        )
     payload = {
         "workflow": "uncertainty_escalation_fixture_workflow",
         "schema_version": 1,
@@ -226,6 +284,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--diagnostic-score-name", default=DEFAULT_DIAGNOSTIC_SCORE_NAME)
     parser.add_argument("--diagnostic-threshold", type=float, default=DEFAULT_DIAGNOSTIC_THRESHOLD)
     parser.add_argument("--diagnostic-value", type=float, default=DEFAULT_DIAGNOSTIC_VALUE)
+    parser.add_argument(
+        "--policy-sweep-min-confidence",
+        default=None,
+        help="comma-separated min-confidence thresholds for a workflow policy sweep",
+    )
+    parser.add_argument("--policy-sweep-max-final-false-accept-rate", type=float, default=None)
+    parser.add_argument("--policy-sweep-min-final-selective-accuracy", type=float, default=None)
+    parser.add_argument("--policy-sweep-max-trigger-rate", type=float, default=None)
+    parser.add_argument("--policy-sweep-min-trigger-rate", type=float, default=None)
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args(argv)
 
@@ -247,6 +314,22 @@ def main(argv: list[str] | None = None) -> int:
             diagnostic_score_name=args.diagnostic_score_name,
             diagnostic_threshold=args.diagnostic_threshold,
             diagnostic_value=args.diagnostic_value,
+            policy_sweep_min_confidence_values=(
+                None
+                if args.policy_sweep_min_confidence is None
+                else _parse_float_list(
+                    args.policy_sweep_min_confidence,
+                    name="--policy-sweep-min-confidence",
+                )
+            ),
+            policy_sweep_max_final_false_accept_rate=(
+                args.policy_sweep_max_final_false_accept_rate
+            ),
+            policy_sweep_min_final_selective_accuracy=(
+                args.policy_sweep_min_final_selective_accuracy
+            ),
+            policy_sweep_max_trigger_rate=args.policy_sweep_max_trigger_rate,
+            policy_sweep_min_trigger_rate=args.policy_sweep_min_trigger_rate,
             compact_json=args.compact_json,
         )
     )
@@ -464,6 +547,14 @@ def _config_payload(config: UncertaintyEscalationWorkflowConfig) -> dict[str, An
         "diagnostic_score_name": config.diagnostic_score_name,
         "diagnostic_threshold": config.diagnostic_threshold,
         "diagnostic_value": config.diagnostic_value,
+        "policy_sweep": {
+            "enabled": config.policy_sweep_min_confidence_values is not None,
+            "min_confidence_values": config.policy_sweep_min_confidence_values,
+            "max_final_false_accept_rate": config.policy_sweep_max_final_false_accept_rate,
+            "min_final_selective_accuracy": config.policy_sweep_min_final_selective_accuracy,
+            "max_trigger_rate": config.policy_sweep_max_trigger_rate,
+            "min_trigger_rate": config.policy_sweep_min_trigger_rate,
+        },
         "compact_json": config.compact_json,
     }
 
@@ -497,6 +588,25 @@ def _write_artifact_manifest_and_verification(
                 "retrieval_evidence_records",
             ),
             "accepted_false_delta": _nested(report, "quality", "delta", "accepted_false"),
+            "policy_sweep_status": _nested(report, "policy_sweep", "status"),
+            "policy_sweep_recommended_min_confidence": _nested(
+                report,
+                "policy_sweep",
+                "recommended",
+                "min_confidence",
+            ),
+            "policy_sweep_recommended_trigger_rate": _nested(
+                report,
+                "policy_sweep",
+                "recommended",
+                "trigger_rate",
+            ),
+            "policy_sweep_recommended_false_accept_rate": _nested(
+                report,
+                "policy_sweep",
+                "recommended",
+                "final_false_accept_rate",
+            ),
         },
     )
     config.artifact_manifest_path.write_text(
@@ -547,9 +657,61 @@ def _record_registry(
                 "retrieval_evidence_records",
             ),
             "accepted_false_delta": _nested(report, "quality", "delta", "accepted_false"),
+            "policy_sweep_status": _nested(report, "policy_sweep", "status"),
+            "policy_sweep_recommended_min_confidence": _nested(
+                report,
+                "policy_sweep",
+                "recommended",
+                "min_confidence",
+            ),
+            "policy_sweep_recommended_trigger_rate": _nested(
+                report,
+                "policy_sweep",
+                "recommended",
+                "trigger_rate",
+            ),
+            "policy_sweep_recommended_false_accept_rate": _nested(
+                report,
+                "policy_sweep",
+                "recommended",
+                "final_false_accept_rate",
+            ),
             "compact_json": config.compact_json,
         },
     ).save_json()
+
+
+def _parse_float_list(value: str, *, name: str) -> tuple[float, ...]:
+    items = tuple(item.strip() for item in str(value).split(",") if item.strip())
+    if not items:
+        raise ValueError(f"{name} must contain at least one value.")
+    try:
+        return tuple(float(item) for item in items)
+    except ValueError as exc:
+        raise ValueError(f"{name} must contain comma-separated floats.") from exc
+
+
+def _normalize_unit_float_sequence(values: Sequence[float], *, name: str) -> tuple[float, ...]:
+    normalized = tuple(sorted({_unit_float(value, name=name) for value in values}))
+    if not normalized:
+        raise ValueError(f"{name} must contain at least one value.")
+    return normalized
+
+
+def _optional_unit_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    return _unit_float(value, name=name)
+
+
+def _unit_float(value: Any, *, name: str) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be in [0, 1].") from exc
+    if number != number or number in {float("inf"), float("-inf")} or not (0.0 <= number <= 1.0):
+        raise ValueError(f"{name} must be in [0, 1].")
+    return number
 
 
 def _nested(payload: Mapping[str, Any], *keys: str) -> Any:

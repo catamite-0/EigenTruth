@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -23,11 +24,18 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.analyze_retrieval_route_gaps import analyze_retrieval_route_gaps  # noqa: E402
 from benchmarks.audit_blind_spot_correction_routes import (  # noqa: E402
     DEFAULT_TARGET_ROUTE,
     audit_blind_spot_correction_routes,
     load_blind_spot_records,
     load_verified_records_jsonl,
+)
+from benchmarks.build_evidence_fixture import (  # noqa: E402
+    QUERY_FIELDS as EVIDENCE_QUERY_FIELDS,
+)
+from benchmarks.build_evidence_fixture import (  # noqa: E402
+    SOURCE_FAMILY_FILTERS as EVIDENCE_SOURCE_FAMILY_FILTERS,
 )
 from benchmarks.build_evidence_fixture import (  # noqa: E402
     build_evidence_fixture,
@@ -38,8 +46,19 @@ from benchmarks.eval_verifier_ensemble import build_verifier_ensemble_report  # 
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
-QUERY_FIELDS = ("answer", "question", "question_answer", "text")
+QUERY_FIELDS = (
+    "answer",
+    "question",
+    "question_answer",
+    "text",
+    "citation_question",
+    "citation_entity",
+    "triple_slot",
+)
 DEFAULT_MIN_OVERLAPS = (0.95, 0.80, 0.65, 0.50)
+DEFAULT_SOURCE_FAMILY_FILTERS = ("off",)
+_SUPPORTED_QUERY_FIELDS = set(EVIDENCE_QUERY_FIELDS)
+_SUPPORTED_SOURCE_FAMILY_FILTERS = set(EVIDENCE_SOURCE_FAMILY_FILTERS)
 
 
 def sweep_blind_spot_retrieval_queries(
@@ -47,14 +66,21 @@ def sweep_blind_spot_retrieval_queries(
     scores_path: str | Path,
     corpus_paths: Sequence[str | Path],
     blind_spots_path: str | Path,
+    source_binding_queue_path: str | Path | None = None,
+    use_precomputed_retrieval_hits: bool | None = None,
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    verified_records_dir: str | Path | None = None,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
     repeats: int = 1,
     seed: int = 0,
     verifier_min_overlap: float = 0.65,
+    enable_triple_evidence: bool = False,
+    triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     target_route: str = DEFAULT_TARGET_ROUTE,
     max_verified_false_alarm: float = 0.05,
     min_blind_refuted_rate: float = 0.50,
@@ -64,6 +90,7 @@ def sweep_blind_spot_retrieval_queries(
     """Run query-strategy sweep and return a JSON-ready report."""
     fields = _query_fields(query_fields)
     overlaps = _min_overlaps(retriever_min_overlaps)
+    family_filters = _source_family_filters(source_family_filters)
     if retrieval_limit <= 0:
         raise ValueError("retrieval_limit must be positive.")
     if repeats < 1:
@@ -81,36 +108,54 @@ def sweep_blind_spot_retrieval_queries(
     score_path = Path(scores_path)
     corpus_input_paths = tuple(Path(path) for path in corpus_paths)
     blind_path = Path(blind_spots_path)
+    source_binding_path = None if source_binding_queue_path is None else Path(source_binding_queue_path)
     dump = load_score_dump(score_path)
     documents = load_corpus(corpus_input_paths)
     blind_spots = load_blind_spot_records(blind_path)
+    source_binding_queue = None if source_binding_path is None else _load_json_object(source_binding_path)
+    resolved_use_precomputed_hits = (
+        source_binding_queue is not None
+        if use_precomputed_retrieval_hits is None
+        else bool(use_precomputed_retrieval_hits)
+    )
     corpus_provenance = _corpus_provenance(corpus_input_paths)
+    verified_records_output_dir = None if verified_records_dir is None else Path(verified_records_dir)
+    if verified_records_output_dir is not None:
+        verified_records_output_dir.mkdir(parents=True, exist_ok=True)
     strategies = []
 
     with tempfile.TemporaryDirectory(prefix="eigentruth-blind-query-sweep-") as temp_dir:
         temp_root = Path(temp_dir)
         for query_field in fields:
             for min_overlap in overlaps:
-                strategy = _evaluate_strategy(
-                    dump=dump,
-                    documents=documents,
-                    scores_path=score_path,
-                    blind_spots=blind_spots,
-                    query_field=query_field,
-                    retriever_min_overlap=min_overlap,
-                    retrieval_limit=retrieval_limit,
-                    signal=signal,
-                    alpha=alpha,
-                    repeats=repeats,
-                    seed=seed,
-                    verifier_min_overlap=verifier_min_overlap,
-                    target_route=target_route,
-                    max_verified_false_alarm=max_verified_false_alarm,
-                    min_blind_refuted_rate=min_blind_refuted_rate,
-                    temp_root=temp_root,
-                    max_examples_per_bucket=max_examples_per_bucket,
-                )
-                strategies.append(strategy)
+                for source_family_filter in family_filters:
+                    strategy = _evaluate_strategy(
+                        dump=dump,
+                        documents=documents,
+                        scores_path=score_path,
+                        blind_spots=blind_spots,
+                        source_binding_queue=source_binding_queue,
+                        use_precomputed_retrieval_hits=resolved_use_precomputed_hits,
+                        query_field=query_field,
+                        retriever_min_overlap=min_overlap,
+                        source_family_filter=source_family_filter,
+                        verified_records_dir=verified_records_output_dir,
+                        retrieval_limit=retrieval_limit,
+                        signal=signal,
+                        alpha=alpha,
+                        repeats=repeats,
+                        seed=seed,
+                        verifier_min_overlap=verifier_min_overlap,
+                        enable_triple_evidence=enable_triple_evidence,
+                        triple_min_slot_coverage=triple_min_slot_coverage,
+                        triple_refute_object_mismatch=triple_refute_object_mismatch,
+                        target_route=target_route,
+                        max_verified_false_alarm=max_verified_false_alarm,
+                        min_blind_refuted_rate=min_blind_refuted_rate,
+                        temp_root=temp_root,
+                        max_examples_per_bucket=max_examples_per_bucket,
+                    )
+                    strategies.append(strategy)
 
     baseline = _baseline_strategy(strategies)
     best = _best_strategy(strategies)
@@ -123,21 +168,29 @@ def sweep_blind_spot_retrieval_queries(
             "scores_path": str(score_path),
             "blind_spots_path": str(blind_path),
             "corpus_paths": tuple(str(path) for path in corpus_input_paths),
+            "source_binding_queue_path": None if source_binding_path is None else str(source_binding_path),
             "corpora": corpus_provenance,
         },
         "config": {
             "query_fields": tuple(fields),
             "retriever_min_overlaps": tuple(overlaps),
+            "source_family_filters": tuple(family_filters),
             "retrieval_limit": int(retrieval_limit),
             "signal": signal,
             "alpha": alpha,
             "repeats": int(repeats),
             "seed": int(seed),
             "verifier_min_overlap": float(verifier_min_overlap),
+            "enable_triple_evidence": bool(enable_triple_evidence),
+            "triple_min_slot_coverage": float(triple_min_slot_coverage),
+            "triple_refute_object_mismatch": bool(triple_refute_object_mismatch),
             "target_route": target_route,
             "max_verified_false_alarm": max_verified_false_alarm,
             "min_blind_refuted_rate": min_blind_refuted_rate,
             "max_examples_per_bucket": int(max_examples_per_bucket),
+            "source_binding_enabled": source_binding_path is not None,
+            "use_precomputed_retrieval_hits": resolved_use_precomputed_hits,
+            "verified_records_dir": None if verified_records_output_dir is None else str(verified_records_output_dir),
         },
         "summary": {
             "strategy_count": len(strategies),
@@ -165,14 +218,21 @@ def run(
     corpus_paths: Sequence[str | Path],
     blind_spots_path: str | Path,
     output_path: str | Path,
+    source_binding_queue_path: str | Path | None = None,
+    use_precomputed_retrieval_hits: bool | None = None,
     query_fields: Sequence[str] = QUERY_FIELDS,
     retriever_min_overlaps: Sequence[float] = DEFAULT_MIN_OVERLAPS,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    verified_records_dir: str | Path | None = None,
     retrieval_limit: int = 3,
     signal: str = "truth_proj",
     alpha: float = 0.10,
     repeats: int = 1,
     seed: int = 0,
     verifier_min_overlap: float = 0.65,
+    enable_triple_evidence: bool = False,
+    triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     target_route: str = DEFAULT_TARGET_ROUTE,
     max_verified_false_alarm: float = 0.05,
     min_blind_refuted_rate: float = 0.50,
@@ -191,14 +251,21 @@ def run(
         scores_path=scores_path,
         corpus_paths=corpus_paths,
         blind_spots_path=blind_spots_path,
+        source_binding_queue_path=source_binding_queue_path,
+        use_precomputed_retrieval_hits=use_precomputed_retrieval_hits,
         query_fields=query_fields,
         retriever_min_overlaps=retriever_min_overlaps,
+        source_family_filters=source_family_filters,
+        verified_records_dir=verified_records_dir,
         retrieval_limit=retrieval_limit,
         signal=signal,
         alpha=alpha,
         repeats=repeats,
         seed=seed,
         verifier_min_overlap=verifier_min_overlap,
+        enable_triple_evidence=enable_triple_evidence,
+        triple_min_slot_coverage=triple_min_slot_coverage,
+        triple_refute_object_mismatch=triple_refute_object_mismatch,
         target_route=target_route,
         max_verified_false_alarm=max_verified_false_alarm,
         min_blind_refuted_rate=min_blind_refuted_rate,
@@ -216,6 +283,8 @@ def run(
                 "blind_spot_query_sweep": output,
                 "scores": Path(scores_path),
                 "blind_spots": Path(blind_spots_path),
+                "source_binding_queue": None if source_binding_queue_path is None else Path(source_binding_queue_path),
+                "verified_records_dir": None if verified_records_dir is None else Path(verified_records_dir),
                 **{f"corpus_{index}": Path(path) for index, path in enumerate(corpus_paths)},
             },
             root=manifest_path.parent,
@@ -231,6 +300,7 @@ def run(
                     "summary",
                     "best_passing_blind_refuted_count",
                 ),
+                "verified_records_dir": None if verified_records_dir is None else str(verified_records_dir),
             },
         )
         _write_json(manifest_path, manifest, compact=compact_json)
@@ -252,6 +322,7 @@ def run(
                     "summary",
                     "best_passing_blind_refuted_count",
                 ),
+                "verified_records_dir": None if verified_records_dir is None else str(verified_records_dir),
                 "artifact_manifest": None if artifact_manifest_path is None else str(artifact_manifest_path),
                 **dict(metadata or {}),
             },
@@ -265,21 +336,32 @@ def _evaluate_strategy(
     documents: Sequence[Any],
     scores_path: Path,
     blind_spots: Sequence[Mapping[str, Any]],
+    source_binding_queue: Mapping[str, Any] | None,
+    use_precomputed_retrieval_hits: bool,
     query_field: str,
     retriever_min_overlap: float,
+    source_family_filter: str,
+    verified_records_dir: Path | None,
     retrieval_limit: int,
     signal: str,
     alpha: float,
     repeats: int,
     seed: int,
     verifier_min_overlap: float,
+    enable_triple_evidence: bool,
+    triple_min_slot_coverage: float,
+    triple_refute_object_mismatch: bool,
     target_route: str,
     max_verified_false_alarm: float,
     min_blind_refuted_rate: float,
     temp_root: Path,
     max_examples_per_bucket: int,
 ) -> dict[str, Any]:
-    key = _strategy_key_from_values(query_field, retriever_min_overlap)
+    key = _strategy_key_from_values(
+        query_field,
+        retriever_min_overlap,
+        source_family_filter=source_family_filter,
+    )
     fixture = build_evidence_fixture(
         dump,
         documents,
@@ -287,6 +369,9 @@ def _evaluate_strategy(
         retrieval_limit=int(retrieval_limit),
         query_field=query_field,
         include_label_metadata=False,
+        source_family_filter=source_family_filter,
+        source_binding_queue=source_binding_queue,
+        use_precomputed_retrieval_hits=bool(use_precomputed_retrieval_hits),
     )
     claims_path = temp_root / f"{key}-claims.json"
     verified_records_path = temp_root / f"{key}-verified-records.jsonl"
@@ -301,15 +386,27 @@ def _evaluate_strategy(
         verifier_min_overlap=float(verifier_min_overlap),
         retriever_min_overlap=float(retriever_min_overlap),
         retrieval_limit=int(retrieval_limit),
+        enable_triple_evidence=bool(enable_triple_evidence),
+        triple_min_slot_coverage=float(triple_min_slot_coverage),
+        triple_refute_object_mismatch=bool(triple_refute_object_mismatch),
         verified_records_path=verified_records_path,
     )
     run = verifier_report["runs"][0]
     alpha_payload = run["alphas"][str(float(alpha))]
     verified_rows = load_verified_records_jsonl(verified_records_path)
+    durable_verified_records_path = _copy_verified_records_sidecar(
+        verified_records_path,
+        strategy_key=key,
+        verified_records_dir=verified_records_dir,
+    )
     blind_audit = audit_blind_spot_correction_routes(
         blind_spots,
         verified_rows,
         target_route=target_route,
+        max_examples_per_bucket=max_examples_per_bucket,
+    )
+    gap_analysis = analyze_retrieval_route_gaps(
+        verified_rows,
         max_examples_per_bucket=max_examples_per_bucket,
     )
     blind_summary = dict(blind_audit["summary"])
@@ -326,6 +423,14 @@ def _evaluate_strategy(
         "key": key,
         "query_field": query_field,
         "retriever_min_overlap": float(retriever_min_overlap),
+        "source_family_filter": source_family_filter,
+        "paths": {
+            "verified_records_jsonl": (
+                None
+                if durable_verified_records_path is None
+                else str(durable_verified_records_path)
+            ),
+        },
         "retrieval": dict(fixture["summary"]),
         "verification": {
             "internal": _nested(alpha_payload, "internal", default={}),
@@ -334,6 +439,7 @@ def _evaluate_strategy(
         "target_route_summary": route_summary,
         "target_route_quality": route_quality,
         "blind_spot": blind_summary,
+        "gap_analysis": _compact_gap_analysis(gap_analysis),
         "examples": blind_audit.get("examples", {}),
         "gate": {
             "pass": bool(gate_pass),
@@ -343,6 +449,20 @@ def _evaluate_strategy(
             "blind_refuted_rate": blind_refuted_rate,
         },
     }
+
+
+def _copy_verified_records_sidecar(
+    source_path: Path,
+    *,
+    strategy_key: str,
+    verified_records_dir: Path | None,
+) -> Path | None:
+    if verified_records_dir is None:
+        return None
+    output = verified_records_dir / f"{_safe_filename(strategy_key)}-verified-records.jsonl"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source_path, output)
+    return output
 
 
 def _selected_route_summary(run: Mapping[str, Any], target_route: str) -> dict[str, Any]:
@@ -361,6 +481,16 @@ def _selected_route_summary(run: Mapping[str, Any], target_route: str) -> dict[s
         "p95_duration_seconds",
     )
     return {key: route.get(key) for key in keys if key in route}
+
+
+def _compact_gap_analysis(report: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "summary": dict(_nested(report, "summary", default={})),
+        "gap_buckets": dict(_nested(report, "gap_buckets", default={})),
+        "top_gap_tokens": tuple(_nested(report, "top_gap_tokens", default=())),
+        "top_hit_sources": tuple(_nested(report, "top_hit_sources", default=())),
+        "hit_property_counts": dict(_nested(report, "hit_property_counts", default={})),
+    }
 
 
 def _selected_route_quality(run: Mapping[str, Any], target_route: str) -> dict[str, Any]:
@@ -399,18 +529,38 @@ def _best_strategy(strategies: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]
 
 def _baseline_strategy(strategies: Sequence[Mapping[str, Any]]) -> Mapping[str, Any] | None:
     for item in strategies:
-        if item.get("query_field") == "answer" and float(item.get("retriever_min_overlap", -1.0)) == 0.95:
+        if (
+            item.get("query_field") == "answer"
+            and item.get("source_family_filter", "off") == "off"
+            and float(item.get("retriever_min_overlap", -1.0)) == 0.95
+        ):
             return item
     return None
 
 
 def _strategy_key(strategy: Mapping[str, Any]) -> str:
-    return _strategy_key_from_values(str(strategy["query_field"]), float(strategy["retriever_min_overlap"]))
+    return _strategy_key_from_values(
+        str(strategy["query_field"]),
+        float(strategy["retriever_min_overlap"]),
+        source_family_filter=str(strategy.get("source_family_filter", "off")),
+    )
 
 
-def _strategy_key_from_values(query_field: str, min_overlap: float) -> str:
+def _strategy_key_from_values(
+    query_field: str,
+    min_overlap: float,
+    *,
+    source_family_filter: str = "off",
+) -> str:
     overlap = str(float(min_overlap)).replace(".", "p")
-    return f"{query_field}_overlap_{overlap}"
+    key = f"{query_field}_overlap_{overlap}"
+    if source_family_filter != "off":
+        key = f"{key}_sf_{source_family_filter}"
+    return key
+
+
+def _safe_filename(value: str) -> str:
+    return "".join(char if char.isalnum() or char in {"-", "_", "."} else "_" for char in value)
 
 
 def _corpus_provenance(paths: Sequence[Path]) -> tuple[dict[str, Any], ...]:
@@ -443,9 +593,12 @@ def _query_fields(values: Sequence[str]) -> tuple[str, ...]:
     fields = tuple(dict.fromkeys(str(value).strip() for value in values if str(value).strip()))
     if not fields:
         raise ValueError("query_fields must not be empty.")
-    invalid = tuple(field for field in fields if field not in QUERY_FIELDS)
+    invalid = tuple(field for field in fields if field not in _SUPPORTED_QUERY_FIELDS)
     if invalid:
-        raise ValueError(f"query_fields contains unsupported values: {', '.join(invalid)}.")
+        raise ValueError(
+            "query_fields contains unsupported values: "
+            f"{', '.join(invalid)}. Supported values: {', '.join(EVIDENCE_QUERY_FIELDS)}."
+        )
     return fields
 
 
@@ -456,6 +609,19 @@ def _min_overlaps(values: Sequence[float]) -> tuple[float, ...]:
     if any(not (0.0 <= value <= 1.0) for value in overlaps):
         raise ValueError("retriever_min_overlaps must be in [0, 1].")
     return overlaps
+
+
+def _source_family_filters(values: Sequence[str]) -> tuple[str, ...]:
+    modes = tuple(dict.fromkeys(str(value).strip().casefold() for value in values if str(value).strip()))
+    if not modes:
+        raise ValueError("source_family_filters must not be empty.")
+    invalid = tuple(mode for mode in modes if mode not in _SUPPORTED_SOURCE_FAMILY_FILTERS)
+    if invalid:
+        raise ValueError(
+            "source_family_filters contains unsupported values: "
+            f"{', '.join(invalid)}. Supported values: {', '.join(EVIDENCE_SOURCE_FAMILY_FILTERS)}."
+        )
+    return modes
 
 
 def _parse_csv(value: str | None, *, default: Sequence[str]) -> tuple[str, ...]:
@@ -531,14 +697,30 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--scores", required=True, help="statement-bearing score dump JSON or JSONL manifest")
     parser.add_argument("--corpus", action="append", required=True, help="local JSON/JSONL/text corpus path")
     parser.add_argument("--blind-spots", required=True, help="detectability blind-spot report JSON")
+    parser.add_argument("--source-binding-queue", default=None,
+                        help="optional evidence queue JSON used to bind retrieval to matching source requests")
+    precomputed_group = parser.add_mutually_exclusive_group()
+    precomputed_group.add_argument("--use-precomputed-retrieval-hits", dest="use_precomputed_retrieval_hits",
+                                   action="store_true", default=None,
+                                   help="treat fixture retrieval documents as already retrieved by the query strategy")
+    precomputed_group.add_argument("--no-use-precomputed-retrieval-hits", dest="use_precomputed_retrieval_hits",
+                                   action="store_false",
+                                   help="force verifier ensemble to re-retrieve from fixture documents")
     parser.add_argument("--query-fields", default=",".join(QUERY_FIELDS))
     parser.add_argument("--retriever-min-overlaps", default=",".join(str(value) for value in DEFAULT_MIN_OVERLAPS))
+    parser.add_argument("--source-family-filters", default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
+                        help="comma-separated source-family evidence filters to sweep: off,planned,planned_rerank")
+    parser.add_argument("--verified-records-dir", default=None,
+                        help="optional directory to save per-strategy verified-records JSONL sidecars")
     parser.add_argument("--retrieval-limit", type=int, default=3)
     parser.add_argument("--signal", default="truth_proj")
     parser.add_argument("--alpha", type=float, default=0.10)
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
+    parser.add_argument("--enable-triple-evidence", action="store_true")
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0)
+    parser.add_argument("--triple-refute-object-mismatch", action="store_true")
     parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
     parser.add_argument("--max-verified-false-alarm", type=float, default=0.05)
     parser.add_argument("--min-blind-refuted-rate", type=float, default=0.50)
@@ -556,14 +738,23 @@ def main(argv: Sequence[str] | None = None) -> None:
         corpus_paths=tuple(args.corpus),
         blind_spots_path=args.blind_spots,
         output_path=args.json,
+        source_binding_queue_path=args.source_binding_queue,
+        use_precomputed_retrieval_hits=args.use_precomputed_retrieval_hits,
         query_fields=_parse_csv(args.query_fields, default=QUERY_FIELDS),
         retriever_min_overlaps=_parse_float_csv(args.retriever_min_overlaps, default=DEFAULT_MIN_OVERLAPS),
+        source_family_filters=_source_family_filters(
+            _parse_csv(args.source_family_filters, default=DEFAULT_SOURCE_FAMILY_FILTERS)
+        ),
+        verified_records_dir=args.verified_records_dir,
         retrieval_limit=args.retrieval_limit,
         signal=args.signal,
         alpha=args.alpha,
         repeats=args.repeats,
         seed=args.seed,
         verifier_min_overlap=args.verifier_min_overlap,
+        enable_triple_evidence=bool(args.enable_triple_evidence),
+        triple_min_slot_coverage=float(args.triple_min_slot_coverage),
+        triple_refute_object_mismatch=bool(args.triple_refute_object_mismatch),
         target_route=args.target_route,
         max_verified_false_alarm=args.max_verified_false_alarm,
         min_blind_refuted_rate=args.min_blind_refuted_rate,

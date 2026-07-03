@@ -329,6 +329,40 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_evidence_gap_plan(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record an evidence-gap planning artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="evidence_gap_plan",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_product_promotion_evidence_audit(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a ProductPromotionContract evidence-handoff audit."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_promotion_evidence_audit",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def add(self, record: RegistryRecord) -> "ArtifactRegistry":
         """Add or replace a record with the same registry key."""
         records = [existing for existing in self.records if existing.key() != record.key()]

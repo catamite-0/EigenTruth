@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "adapter_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-adapter-report.json",
+      "sha256": "a3c3985609382f55defc36db3be7b2b5ebade23e25fdd50e07bb2c4fbf9dc71a",
+      "size_bytes": 1304
+    },
+    "adapter_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-requests.jsonl",
+      "sha256": "ab3fb8d4b5a8adf0d637a4bd6b17ec6ccc3cf641b5fad9a3048154cdb49e12ae",
+      "size_bytes": 346447
+    },
+    "adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-citation-search-results.jsonl",
+      "sha256": "b3024481d1af542eb8a33569f8adf113e6004900dfa4ed0242ba709e375fabde",
+      "size_bytes": 1156922
+    },
+    "source_catalog_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+      "sha256": "ccab73bcb869741b2f0a98a8b41ca7a24e1c138b8e5b6bcc36c83b464516fa9d",
+      "size_bytes": 261438
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "model": "smollm2-l80",
+    "request_count": 260,
+    "request_with_results_count": 244,
+    "result_count": 720,
+    "source": "frontier-v4",
+    "source_document_count": 322,
+    "source_workflow": "source_family_citation_search_workflow",
+    "workflow": "source_family_citation_search_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

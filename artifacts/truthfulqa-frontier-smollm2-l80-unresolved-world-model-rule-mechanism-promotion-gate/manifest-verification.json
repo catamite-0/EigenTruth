@@ -1,0 +1,7 @@
+{
+  "checked": 7,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

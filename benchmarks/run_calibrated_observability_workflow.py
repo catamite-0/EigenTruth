@@ -149,6 +149,9 @@ class CalibratedObservabilityWorkflowConfig:
     repeats: int = 20
     seed: int = 0
     artifact_alpha: float = 0.10
+    multiple_testing_signals: Sequence[str] = ()
+    multiple_testing_alpha: float | None = None
+    multiple_testing_method: str = "by"
     best_by: str = "auroc"
     python_executable: str = sys.executable
     clean: bool = False
@@ -174,6 +177,11 @@ class CalibratedObservabilityWorkflowConfig:
         object.__setattr__(self, "layer", int(self.layer))
         object.__setattr__(self, "sweep_layers", tuple(int(layer) for layer in self.sweep_layers))
         object.__setattr__(self, "signals", tuple(str(signal) for signal in self.signals if str(signal)))
+        object.__setattr__(
+            self,
+            "multiple_testing_signals",
+            tuple(str(signal) for signal in self.multiple_testing_signals if str(signal)),
+        )
         object.__setattr__(self, "batch_size", int(self.batch_size))
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "covariance_mode", str(self.covariance_mode))
@@ -192,6 +200,9 @@ class CalibratedObservabilityWorkflowConfig:
         object.__setattr__(self, "repeats", int(self.repeats))
         object.__setattr__(self, "seed", int(self.seed))
         object.__setattr__(self, "artifact_alpha", float(self.artifact_alpha))
+        if self.multiple_testing_alpha is not None:
+            object.__setattr__(self, "multiple_testing_alpha", float(self.multiple_testing_alpha))
+        object.__setattr__(self, "multiple_testing_method", str(self.multiple_testing_method))
         if self.runtime_preset not in RUNTIME_PRESETS:
             raise ValueError(f"runtime_preset must be one of: {', '.join(RUNTIME_PRESETS)}.")
         if self.registry_path is not None and (not self.name or not self.version):
@@ -202,6 +213,10 @@ class CalibratedObservabilityWorkflowConfig:
             raise ValueError("best_by must be one of: auroc, detection.")
         if self.direction not in {None, "higher", "lower"}:
             raise ValueError("direction must be one of: higher, lower.")
+        if self.multiple_testing_alpha is not None and not 0.0 < self.multiple_testing_alpha < 1.0:
+            raise ValueError("multiple_testing_alpha must be in (0, 1).")
+        if self.multiple_testing_method not in {"by", "bh", "bonferroni"}:
+            raise ValueError("multiple_testing_method must be one of: by, bh, bonferroni.")
         if self.sweep_band_strategy is not None:
             object.__setattr__(self, "sweep_band_strategy", str(self.sweep_band_strategy))
         if self.sweep_band_run is not None:
@@ -302,6 +317,26 @@ class CalibratedObservabilityWorkflowConfig:
     def best_calibration_path(self) -> Path:
         """Return the best calibration artifact path."""
         return self.output_dir / "best-calibration.json"
+
+    @property
+    def multiple_testing_enabled(self) -> bool:
+        """Return whether the workflow should export multi-signal conformal gate artifacts."""
+        return bool(self.multiple_testing_signals)
+
+    @property
+    def resolved_multiple_testing_alpha(self) -> float:
+        """Return the configured multiple-testing false-alarm budget."""
+        return self.artifact_alpha if self.multiple_testing_alpha is None else self.multiple_testing_alpha
+
+    @property
+    def multiple_testing_report_path(self) -> Path:
+        """Return the multiple-testing conformal report path."""
+        return self.output_dir / "multiple-testing-report.json"
+
+    @property
+    def multiple_testing_calibration_path(self) -> Path:
+        """Return the runtime multiple-testing calibration artifact path."""
+        return self.output_dir / "multiple-testing-calibration.json"
 
     @property
     def conformal_artifact_manifest_path(self) -> Path:
@@ -508,6 +543,15 @@ def _conformal_command(config: CalibratedObservabilityWorkflowConfig) -> list[st
         command.extend(["--signals", ",".join(config.signals)])
     if config.direction is not None:
         command.extend(["--direction", config.direction])
+    if config.multiple_testing_enabled:
+        command.extend(["--multiple-testing-signals", ",".join(config.multiple_testing_signals)])
+        command.extend(["--multiple-testing-alpha", str(config.resolved_multiple_testing_alpha)])
+        command.extend(["--multiple-testing-method", config.multiple_testing_method])
+        command.extend(["--save-multiple-testing-report", str(config.multiple_testing_report_path)])
+        command.extend([
+            "--save-multiple-testing-calibration",
+            str(config.multiple_testing_calibration_path),
+        ])
     return command
 
 
@@ -540,11 +584,33 @@ def _conformal_summary(payload: Mapping[str, Any] | None) -> dict[str, Any] | No
         return None
     sweep_report = payload.get("sweep_report")
     best = sweep_report.get("best") if isinstance(sweep_report, Mapping) else None
+    multiple_testing = _multiple_testing_summary(payload)
     return {
         "verdict": payload.get("verdict"),
         "signal": dict(payload.get("config") or {}).get("signal"),
         "direction": dict(payload.get("config") or {}).get("direction"),
         "best": dict(best) if isinstance(best, Mapping) else None,
+        "multiple_testing": multiple_testing,
+    }
+
+
+def _multiple_testing_summary(payload: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if payload is None:
+        return None
+    report = payload.get("multiple_testing_report")
+    if not isinstance(report, Mapping):
+        return None
+    raw_config = report.get("config")
+    config = dict(raw_config) if isinstance(raw_config, Mapping) else {}
+    return {
+        "signals": tuple(config.get("signals", ())),
+        "directions": dict(config.get("directions", {})),
+        "alpha": config.get("alpha"),
+        "method": config.get("method"),
+        "pass": bool(report.get("pass", False)),
+        "false_alarm": report.get("false_alarm"),
+        "coverage": report.get("coverage"),
+        "detection": report.get("detection"),
     }
 
 
@@ -558,6 +624,12 @@ def _evidence_bundle_summary(
     status = str(report.get("status"))
     conformal = dict(report.get("conformal") or {})
     verdict = conformal.get("verdict")
+    multiple_testing = conformal.get("multiple_testing")
+    multiple_testing_passed = (
+        bool(multiple_testing.get("pass"))
+        if isinstance(multiple_testing, Mapping)
+        else None
+    )
     manifest_verification = report.get("conformal_manifest_verification")
     manifest_passed = (
         bool(manifest_verification.get("passed"))
@@ -570,6 +642,7 @@ def _evidence_bundle_summary(
         and verdict == "ACCEPT"
         and manifest_passed is True
         and missing_count == 0
+        and (not config.multiple_testing_enabled or multiple_testing_passed is True)
     )
     score_dump_metadata = _conformal_score_dump_metadata(conformal_payload)
     score_dump_summary = dict(score_dump_metadata.get("summary") or {})
@@ -620,12 +693,39 @@ def _evidence_bundle_summary(
             "best_auroc": best.get("auroc"),
             "best_false_alarm": best.get("false_alarm"),
             "best_detection": best.get("detection"),
+            "multiple_testing": {
+                "enabled": config.multiple_testing_enabled,
+                "signals": tuple(config.multiple_testing_signals),
+                "alpha": config.resolved_multiple_testing_alpha,
+                "method": config.multiple_testing_method,
+                "pass": multiple_testing_passed,
+                "false_alarm": (
+                    multiple_testing.get("false_alarm")
+                    if isinstance(multiple_testing, Mapping)
+                    else None
+                ),
+                "detection": (
+                    multiple_testing.get("detection")
+                    if isinstance(multiple_testing, Mapping)
+                    else None
+                ),
+            },
         },
         "artifacts": {
             "summary": dict(artifact_manifest_summary),
             "artifact_manifest": str(config.artifact_manifest_path),
             "conformal_artifact_manifest": str(config.conformal_artifact_manifest_path),
             "best_calibration": str(config.best_calibration_path),
+            "multiple_testing_report": (
+                str(config.multiple_testing_report_path)
+                if config.multiple_testing_enabled
+                else None
+            ),
+            "multiple_testing_calibration": (
+                str(config.multiple_testing_calibration_path)
+                if config.multiple_testing_enabled
+                else None
+            ),
             "conformal_manifest_passed": manifest_passed,
             "conformal_manifest_checked": (
                 manifest_verification.get("checked")
@@ -650,7 +750,7 @@ def _conformal_score_dump_metadata(payload: Mapping[str, Any] | None) -> dict[st
     return dict(metadata) if isinstance(metadata, Mapping) else {}
 
 
-def _paths_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, str]:
+def _paths_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, str | None]:
     return {
         "score_dump": str(config.resolved_scores_path),
         "truthfulqa_report": str(config.truthfulqa_report_path),
@@ -658,6 +758,12 @@ def _paths_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, s
         "conformal_report": str(config.conformal_report_path),
         "sweep_report": str(config.sweep_report_path),
         "best_calibration": str(config.best_calibration_path),
+        "multiple_testing_report": (
+            None if not config.multiple_testing_enabled else str(config.multiple_testing_report_path)
+        ),
+        "multiple_testing_calibration": (
+            None if not config.multiple_testing_enabled else str(config.multiple_testing_calibration_path)
+        ),
         "conformal_artifact_manifest": str(config.conformal_artifact_manifest_path),
         "workflow_report": str(config.resolved_report_path),
         "artifact_manifest": str(config.artifact_manifest_path),
@@ -707,6 +813,9 @@ def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, 
         "repeats": config.repeats,
         "seed": config.seed,
         "artifact_alpha": config.artifact_alpha,
+        "multiple_testing_signals": tuple(config.multiple_testing_signals),
+        "multiple_testing_alpha": config.resolved_multiple_testing_alpha,
+        "multiple_testing_method": config.multiple_testing_method,
         "best_by": config.best_by,
         "dry_run": config.dry_run,
     }
@@ -726,6 +835,9 @@ def _artifact_paths(
         "best_calibration": config.best_calibration_path,
         "conformal_artifact_manifest": config.conformal_artifact_manifest_path,
     }
+    if config.multiple_testing_enabled:
+        artifacts["multiple_testing_report"] = config.multiple_testing_report_path
+        artifacts["multiple_testing_calibration"] = config.multiple_testing_calibration_path
     if config.statement_encoding_cache is not None and not config.cache_only:
         artifacts["statement_encoding_cache"] = config.statement_encoding_cache
     if config.layer_stats_cache is not None:
@@ -775,6 +887,11 @@ def _write_artifact_manifest(
             "score_dump_reused": dict(report.get("execution") or {}).get("score_dump_reused"),
             "dump_scores_format": config.dump_scores_format,
             "artifact_alpha": config.artifact_alpha,
+            "multiple_testing_enabled": config.multiple_testing_enabled,
+            "multiple_testing_signals": tuple(config.multiple_testing_signals),
+            "multiple_testing_alpha": config.resolved_multiple_testing_alpha,
+            "multiple_testing_method": config.multiple_testing_method,
+            "multiple_testing_pass": _nested(report, "conformal", "multiple_testing", "pass"),
             "best_by": config.best_by,
             "cache_only": config.cache_only,
             "sweep_layers_source": _json_ready_mapping(config.sweep_layers_source),
@@ -810,6 +927,18 @@ def _record_registry(
             "best_layer": _nested(report, "conformal", "best", "layer"),
             "evidence_bundle_status": _nested(report, "evidence_bundle", "status"),
             "evidence_bundle_release_ready": _nested(report, "evidence_bundle", "release_ready"),
+            "multiple_testing_enabled": config.multiple_testing_enabled,
+            "multiple_testing_pass": _nested(report, "conformal", "multiple_testing", "pass"),
+            "multiple_testing_report": (
+                str(config.multiple_testing_report_path)
+                if config.multiple_testing_enabled
+                else None
+            ),
+            "multiple_testing_calibration": (
+                str(config.multiple_testing_calibration_path)
+                if config.multiple_testing_enabled
+                else None
+            ),
             "artifact_json_cache": _nested(report, "artifact_cache", "artifact_json_cache"),
             "artifact_fingerprint_cache_entries": _nested(
                 report,
@@ -1086,6 +1215,9 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
         repeats=_arg_or_preset(args, preset_defaults, "repeats", 20),
         seed=_arg_or_preset(args, preset_defaults, "seed", 0),
         artifact_alpha=_arg_or_preset(args, preset_defaults, "artifact_alpha", 0.10),
+        multiple_testing_signals=_parse_str_tuple(args.multiple_testing_signals),
+        multiple_testing_alpha=args.multiple_testing_alpha,
+        multiple_testing_method=args.multiple_testing_method,
         best_by=_arg_or_preset(args, preset_defaults, "best_by", "auroc"),
         python_executable=args.python,
         clean=args.clean,
@@ -1216,6 +1348,26 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--repeats", type=int, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--artifact-alpha", type=float, default=None)
+    parser.add_argument(
+        "--multiple-testing-signals",
+        default=None,
+        help=(
+            "optional comma-list for a multi-signal conformal gate; when set the workflow saves "
+            "a report and runtime calibration artifact"
+        ),
+    )
+    parser.add_argument(
+        "--multiple-testing-alpha",
+        type=float,
+        default=None,
+        help="optional false-alarm budget for --multiple-testing-signals; defaults to --artifact-alpha",
+    )
+    parser.add_argument(
+        "--multiple-testing-method",
+        choices=("by", "bh", "bonferroni"),
+        default="by",
+        help="multiple-testing correction for --multiple-testing-signals",
+    )
     parser.add_argument("--best-by", choices=("auroc", "detection"), default=None)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--clean", action="store_true")

@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "rule_authoring_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-authoring-adapter.json",
+      "sha256": "c39577186f5852a161294f264fe9edff89bccc185554a99c5d7156d4326542b5",
+      "size_bytes": 2303
+    },
+    "rule_input_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-input-requests.jsonl",
+      "sha256": "04ad9ab025659d83e47f7af67e7ea2702ffc034c9ac7c02197d2201018ee0234",
+      "size_bytes": 14513
+    },
+    "rule_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "world-model-rule-results.jsonl",
+      "sha256": "0859c4eb69ac29c17eacaba58c6ed3a0391fa51d5e5fec9a7dc095e8c2189df9",
+      "size_bytes": 33191
+    },
+    "rule_stubs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-blind-spot-evidence-queue-v1/adapter-requests.jsonl",
+      "sha256": "8d356c4713c412cbcb9fc2bd0448766f61503a503e8ee1e65ddaba44d4603ad8",
+      "size_bytes": 338621
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "executed_count": 0,
+    "input_request_count": 26,
+    "model": "smollm2-l80",
+    "needs_input_count": 26,
+    "source": "frontier-v4",
+    "status": "needs_inputs",
+    "stub_count": 26,
+    "workflow": "world_model_rule_authoring_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

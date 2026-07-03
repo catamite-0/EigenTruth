@@ -1,0 +1,142 @@
+{
+  "description": "Default regex patterns for generated KG-core triple extraction templates. Use with regex_rule_based or composite extractors.",
+  "pattern_type": "triple_extraction_regex_patterns",
+  "patterns": [
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+      "predicate": "capital_of",
+      "source": "capital_has_at_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^The official language spoken in (?P<subject>.+?) is (?P<object>.+)$",
+      "predicate": "official_language_of",
+      "source": "official_language_spoken_in_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<object>.+?) is (?P<subject>.+?)(?:'s|\\u2019s) currency$",
+      "predicate": "currency_of",
+      "source": "currency_possessive_inverse_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?) is headquartered in (?P<object>.+)$",
+      "predicate": "headquarters_location_of",
+      "source": "headquarters_headquartered_in_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^The headquarters of (?P<subject>.+?) (?:are|is) in (?P<object>.+)$",
+      "predicate": "headquarters_location_of",
+      "source": "headquarters_of_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?)(?:'s|\\u2019s) headquarters (?:are|is) in (?P<object>.+)$",
+      "predicate": "headquarters_location_of",
+      "source": "headquarters_possessive_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<object>.+?) is the headquarters location of (?P<subject>.+)$",
+      "predicate": "headquarters_location_of",
+      "source": "headquarters_object_first_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<object>.+?) manufactures (?P<subject>.+)$",
+      "predicate": "manufacturer_of",
+      "source": "manufacturer_object_first_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?) is manufactured by (?P<object>.+)$",
+      "predicate": "manufacturer_of",
+      "source": "manufacturer_subject_first_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?) is made by (?P<object>.+)$",
+      "predicate": "manufacturer_of",
+      "source": "manufacturer_made_by_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?)(?:'s|\\u2019s) manufacturer is (?P<object>.+)$",
+      "predicate": "manufacturer_of",
+      "source": "manufacturer_possessive_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?) was founded in (?P<object>.+)$",
+      "predicate": "inception_of",
+      "source": "inception_founded_in_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^The inception date of (?P<subject>.+?) is (?P<object>.+)$",
+      "predicate": "inception_of",
+      "source": "inception_date_subject_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<subject>.+?)(?:'s|\\u2019s) inception date is (?P<object>.+)$",
+      "predicate": "inception_of",
+      "source": "inception_possessive_template"
+    },
+    {
+      "metadata": {
+        "builder": "build_triple_extraction_fixture",
+        "template_family": "kg_core"
+      },
+      "pattern": "^(?P<object>.+?) is the inception date of (?P<subject>.+)$",
+      "predicate": "inception_of",
+      "source": "inception_object_first_template"
+    }
+  ],
+  "schema_version": 1
+}

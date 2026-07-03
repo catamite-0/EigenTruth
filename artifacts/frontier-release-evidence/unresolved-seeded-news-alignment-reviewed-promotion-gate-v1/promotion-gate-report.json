@@ -1,0 +1,825 @@
+{
+  "approved_source_documents": {
+    "corpus_type": "alignment_review_approved_source_documents",
+    "description": "Approved alignment fact-review source documents. These are inputs for source-family structured QA corpus construction, not a broad route promotion by themselves.",
+    "documents": [
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+          "alignment_source_document_id": "alignment-approved:1",
+          "confidence": 0.871818,
+          "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+          "provider": "wikidata",
+          "review_id": "review:f824d0d0b4337e82",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q1860:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "English",
+          "value": "West Germanic language"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
+        "title": "Reviewed alignment fact: English description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:2856711d0b1d5e20",
+          "alignment_source_document_id": "alignment-approved:2",
+          "confidence": 0.893846,
+          "evidence_span": "According to Wikidata entity metadata, Hispanic and Latino Americans is described as ethnic group in the United States with Hispanic or Latin American ancestry.",
+          "provider": "wikidata",
+          "review_id": "review:8e4918253be0ea54",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q58669:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "Hispanic and Latino Americans",
+          "value": "ethnic group in the United States with Hispanic or Latin American ancestry"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q58669:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, Hispanic and Latino Americans is described as ethnic group in the United States with Hispanic or Latin American ancestry.",
+        "title": "Reviewed alignment fact: Hispanic and Latino Americans description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:651e67499b5e11e2",
+          "alignment_source_document_id": "alignment-approved:3",
+          "confidence": 0.99,
+          "evidence_span": "According to Wikidata entity metadata, Elvis Presley is described as American singer and actor (1935\u20131977).",
+          "provider": "wikidata",
+          "review_id": "review:61ad9a681c71ef45",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q303:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "Elvis Presley",
+          "value": "American singer and actor (1935\u20131977)"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q303:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, Elvis Presley is described as American singer and actor (1935\u20131977).",
+        "title": "Reviewed alignment fact: Elvis Presley description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:fb7bed121ee133c6",
+          "alignment_source_document_id": "alignment-approved:4",
+          "confidence": 0.89,
+          "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+          "provider": "wikidata",
+          "review_id": "review:b30d352e34d8b3e7",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q10294:P527:Q125727758",
+          "source_family": "reference",
+          "statement_property": "P527",
+          "statement_property_label": "has part",
+          "subject": "poverty",
+          "value": "Poverty in Islam"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q10294:P527:Q125727758",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+        "title": "Reviewed alignment fact: poverty has part"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:0c0c4aa95b3a8fae",
+          "alignment_source_document_id": "alignment-approved:5",
+          "confidence": 0.962727,
+          "evidence_span": "According to Wikidata structured data, artificial intelligence has instance of type of technology.",
+          "provider": "wikidata",
+          "review_id": "review:ad85a81b56a13367",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q11660:P31:Q112057532",
+          "source_family": "reference",
+          "statement_property": "P31",
+          "statement_property_label": "instance of",
+          "subject": "artificial intelligence",
+          "value": "type of technology"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q11660:P31:Q112057532",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, artificial intelligence has instance of type of technology.",
+        "title": "Reviewed alignment fact: artificial intelligence instance of"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:048a582348764d1e",
+          "alignment_source_document_id": "alignment-approved:6",
+          "confidence": 0.962727,
+          "evidence_span": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+          "provider": "wikidata",
+          "review_id": "review:127ba68c0b9c936a",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q11660:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "artificial intelligence",
+          "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q11660:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+        "title": "Reviewed alignment fact: artificial intelligence description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:30f3674524bb5a41",
+          "alignment_source_document_id": "alignment-approved:7",
+          "confidence": 0.99,
+          "evidence_span": "According to Wikidata structured data, Red Bull has official website https://www.redbull.com/it-it/energydrink.",
+          "provider": "wikidata",
+          "review_id": "review:2d640e955f9c87b0",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q51482:P856:5782e46194d5",
+          "source_family": "reference",
+          "statement_property": "P856",
+          "statement_property_label": "official website",
+          "subject": "Red Bull",
+          "value": "https://www.redbull.com/it-it/energydrink"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q51482:P856:5782e46194d5",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, Red Bull has official website https://www.redbull.com/it-it/energydrink.",
+        "title": "Reviewed alignment fact: Red Bull official website"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:68c343a15fbd1507",
+          "alignment_source_document_id": "alignment-approved:8",
+          "confidence": 0.94,
+          "evidence_span": "According to Wikidata entity metadata, Jennifer Aniston is described as American actress (born 1969).",
+          "provider": "wikidata",
+          "review_id": "review:49d7cb396034b270",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q32522:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "Jennifer Aniston",
+          "value": "American actress (born 1969)"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q32522:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, Jennifer Aniston is described as American actress (born 1969).",
+        "title": "Reviewed alignment fact: Jennifer Aniston description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:ab73969401a0525e",
+          "alignment_source_document_id": "alignment-approved:9",
+          "confidence": 0.904286,
+          "evidence_span": "According to Wikidata structured data, French has country France.",
+          "provider": "wikidata",
+          "review_id": "review:774e8b5d650dbbaf",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q150:P17:Q142",
+          "source_family": "reference",
+          "statement_property": "P17",
+          "statement_property_label": "country",
+          "subject": "French",
+          "value": "France"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q150:P17:Q142",
+        "source_family": "reference",
+        "text": "According to Wikidata structured data, French has country France.",
+        "title": "Reviewed alignment fact: French country"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:40a36acc3abd6416",
+          "alignment_source_document_id": "alignment-approved:10",
+          "confidence": 0.904286,
+          "evidence_span": "According to Wikidata entity metadata, East Coast hip-hop is described as regional subgenre of hip-hop music that originated in New York City during the 1970s.",
+          "provider": "wikidata",
+          "review_id": "review:e437e0f4048aba3c",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q876171:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "East Coast hip-hop",
+          "value": "regional subgenre of hip-hop music that originated in New York City during the 1970s"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q876171:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, East Coast hip-hop is described as regional subgenre of hip-hop music that originated in New York City during the 1970s.",
+        "title": "Reviewed alignment fact: East Coast hip-hop description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:6ee8468ce47c1905",
+          "alignment_source_document_id": "alignment-approved:11",
+          "confidence": 0.856667,
+          "evidence_span": "According to Wikidata entity metadata, Ireland is described as sovereign state in Northwestern Europe.",
+          "provider": "wikidata",
+          "review_id": "review:562d4d1e0c39ff9b",
+          "review_status": "approved",
+          "reviewed_at": "2026-06-30T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q27:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "Ireland",
+          "value": "sovereign state in Northwestern Europe"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q27:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, Ireland is described as sovereign state in Northwestern Europe.",
+        "title": "Reviewed alignment fact: Ireland description"
+      }
+    ],
+    "label_usage": {
+      "labels_copied_to_document_metadata": false,
+      "labels_used_for_documents": false,
+      "model_answers_copied_to_document_metadata": false,
+      "request_ids_copied_to_document_metadata": false,
+      "target_ids_copied_to_document_metadata": false
+    },
+    "schema_version": 1,
+    "source": {
+      "builder": "alignment_fact_review_promotion_gate",
+      "review_corpus_type": "alignment_structured_fact_review_corpus"
+    },
+    "status": "ready",
+    "summary": {
+      "approved_source_document_count": 11,
+      "by_property": {
+        "P17": 1,
+        "P31": 1,
+        "P527": 1,
+        "P856": 1,
+        "description": 7
+      },
+      "by_provider": {
+        "wikidata": 11
+      },
+      "by_source_family": {
+        "reference": 11
+      },
+      "needs_more_evidence_count": 0,
+      "pending_review_count": 0,
+      "rejected_count": 0,
+      "review_decision_count": 11,
+      "review_document_count": 11,
+      "skip_counts": {
+        "approved": 11,
+        "duplicate_review_decision": 0,
+        "invalid_review_decision": 0,
+        "missing_candidate_id": 0,
+        "missing_reviewer": 0,
+        "needs_more_evidence": 0,
+        "pending_review": 0,
+        "rejected": 0,
+        "reserved_review_metadata": 0,
+        "unknown_candidate_id": 0,
+        "unsupported_evidence_source": 0
+      }
+    }
+  },
+  "label_usage": {
+    "labels_copied_to_outputs": false,
+    "labels_used_for_gate": false,
+    "model_answers_copied_to_source_documents": false,
+    "request_ids_copied_to_source_documents": false,
+    "target_ids_copied_to_source_documents": false
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "paths": {
+    "approved_source_documents": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/approved-source-documents.json",
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/artifact-manifest.json",
+    "records_jsonl": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/promotion-gate-records.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/promotion-gate-report.json",
+    "review_corpus": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json",
+    "review_decision_template": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1/review-decision-template.jsonl",
+    "review_decisions": "artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1/review-decisions.jsonl"
+  },
+  "records": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q1860:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:f824d0d0b4337e82",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:1",
+      "subject": "English",
+      "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:2856711d0b1d5e20",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q58669:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:8e4918253be0ea54",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:2",
+      "subject": "Hispanic and Latino Americans",
+      "value": "ethnic group in the United States with Hispanic or Latin American ancestry"
+    },
+    {
+      "alignment_candidate_id": "fact:651e67499b5e11e2",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q303:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:61ad9a681c71ef45",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:3",
+      "subject": "Elvis Presley",
+      "value": "American singer and actor (1935\u20131977)"
+    },
+    {
+      "alignment_candidate_id": "fact:fb7bed121ee133c6",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "property_hint": "has_part:P527",
+      "record_type": "review_document",
+      "review_id": "review:b30d352e34d8b3e7",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:4",
+      "subject": "poverty",
+      "value": "Poverty in Islam"
+    },
+    {
+      "alignment_candidate_id": "fact:0c0c4aa95b3a8fae",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q11660:P31:Q112057532",
+      "property_hint": "instance_of:P31",
+      "record_type": "review_document",
+      "review_id": "review:ad85a81b56a13367",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:5",
+      "subject": "artificial intelligence",
+      "value": "type of technology"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q11660:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:127ba68c0b9c936a",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:6",
+      "subject": "artificial intelligence",
+      "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "alignment_candidate_id": "fact:30f3674524bb5a41",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q51482:P856:5782e46194d5",
+      "property_hint": "official_website:P856",
+      "record_type": "review_document",
+      "review_id": "review:2d640e955f9c87b0",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:7",
+      "subject": "Red Bull",
+      "value": "https://www.redbull.com/it-it/energydrink"
+    },
+    {
+      "alignment_candidate_id": "fact:68c343a15fbd1507",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q32522:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:49d7cb396034b270",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:8",
+      "subject": "Jennifer Aniston",
+      "value": "American actress (born 1969)"
+    },
+    {
+      "alignment_candidate_id": "fact:ab73969401a0525e",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q150:P17:Q142",
+      "property_hint": "country:P17",
+      "record_type": "review_document",
+      "review_id": "review:774e8b5d650dbbaf",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:9",
+      "subject": "French",
+      "value": "France"
+    },
+    {
+      "alignment_candidate_id": "fact:40a36acc3abd6416",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q876171:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:e437e0f4048aba3c",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:10",
+      "subject": "East Coast hip-hop",
+      "value": "regional subgenre of hip-hop music that originated in New York City during the 1970s"
+    },
+    {
+      "alignment_candidate_id": "fact:6ee8468ce47c1905",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q27:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:562d4d1e0c39ff9b",
+      "reviewed_at": "2026-06-30T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:11",
+      "subject": "Ireland",
+      "value": "sovereign state in Northwestern Europe"
+    }
+  ],
+  "review_template": [
+    {
+      "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.871818,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q1860:description",
+      "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 1,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "English",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:2856711d0b1d5e20",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.893846,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q58669:description",
+      "evidence_span": "According to Wikidata entity metadata, Hispanic and Latino Americans is described as ethnic group in the United States with Hispanic or Latin American ancestry.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 2,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Hispanic and Latino Americans",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "ethnic group in the United States with Hispanic or Latin American ancestry"
+    },
+    {
+      "alignment_candidate_id": "fact:651e67499b5e11e2",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.99,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q303:description",
+      "evidence_span": "According to Wikidata entity metadata, Elvis Presley is described as American singer and actor (1935\u20131977).",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 3,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Elvis Presley",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "American singer and actor (1935\u20131977)"
+    },
+    {
+      "alignment_candidate_id": "fact:fb7bed121ee133c6",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.89,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q10294:P527:Q125727758",
+      "evidence_span": "According to Wikidata structured data, poverty has has part(s) Poverty in Islam.",
+      "notes": "",
+      "property_hint": "has_part:P527",
+      "property_label": "has part",
+      "review_document_index": 4,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "poverty",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "Poverty in Islam"
+    },
+    {
+      "alignment_candidate_id": "fact:0c0c4aa95b3a8fae",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.962727,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q11660:P31:Q112057532",
+      "evidence_span": "According to Wikidata structured data, artificial intelligence has instance of type of technology.",
+      "notes": "",
+      "property_hint": "instance_of:P31",
+      "property_label": "instance of",
+      "review_document_index": 5,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "artificial intelligence",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "type of technology"
+    },
+    {
+      "alignment_candidate_id": "fact:048a582348764d1e",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.962727,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q11660:description",
+      "evidence_span": "According to Wikidata entity metadata, artificial intelligence is described as field that develops and studies software enabling machines to exhibit intelligent behavior.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 6,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "artificial intelligence",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "alignment_candidate_id": "fact:30f3674524bb5a41",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.99,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q51482:P856:5782e46194d5",
+      "evidence_span": "According to Wikidata structured data, Red Bull has official website https://www.redbull.com/it-it/energydrink.",
+      "notes": "",
+      "property_hint": "official_website:P856",
+      "property_label": "official website",
+      "review_document_index": 7,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Red Bull",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "https://www.redbull.com/it-it/energydrink"
+    },
+    {
+      "alignment_candidate_id": "fact:68c343a15fbd1507",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.94,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q32522:description",
+      "evidence_span": "According to Wikidata entity metadata, Jennifer Aniston is described as American actress (born 1969).",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 8,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Jennifer Aniston",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "American actress (born 1969)"
+    },
+    {
+      "alignment_candidate_id": "fact:ab73969401a0525e",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.904286,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q150:P17:Q142",
+      "evidence_span": "According to Wikidata structured data, French has country France.",
+      "notes": "",
+      "property_hint": "country:P17",
+      "property_label": "country",
+      "review_document_index": 9,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "French",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "France"
+    },
+    {
+      "alignment_candidate_id": "fact:40a36acc3abd6416",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.904286,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q876171:description",
+      "evidence_span": "According to Wikidata entity metadata, East Coast hip-hop is described as regional subgenre of hip-hop music that originated in New York City during the 1970s.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 10,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "East Coast hip-hop",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "regional subgenre of hip-hop music that originated in New York City during the 1970s"
+    },
+    {
+      "alignment_candidate_id": "fact:6ee8468ce47c1905",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.856667,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q27:description",
+      "evidence_span": "According to Wikidata entity metadata, Ireland is described as sovereign state in Northwestern Europe.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 11,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Ireland",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "sovereign state in Northwestern Europe"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Requires explicit review approval before alignment fact-review rows can become structured source documents. This gate does not promote verifier evidence or open-domain coverage.",
+  "source": {
+    "review_corpus_status": "ready_for_review",
+    "review_corpus_type": "alignment_structured_fact_review_corpus"
+  },
+  "status": "ready_for_structured_qa",
+  "summary": {
+    "approved_source_document_count": 11,
+    "by_property": {
+      "P17": 1,
+      "P31": 1,
+      "P527": 1,
+      "P856": 1,
+      "description": 7
+    },
+    "by_provider": {
+      "wikidata": 11
+    },
+    "by_source_family": {
+      "reference": 11
+    },
+    "needs_more_evidence_count": 0,
+    "pending_review_count": 0,
+    "rejected_count": 0,
+    "review_decision_count": 11,
+    "review_document_count": 11,
+    "skip_counts": {
+      "approved": 11,
+      "duplicate_review_decision": 0,
+      "invalid_review_decision": 0,
+      "missing_candidate_id": 0,
+      "missing_reviewer": 0,
+      "needs_more_evidence": 0,
+      "pending_review": 0,
+      "rejected": 0,
+      "reserved_review_metadata": 0,
+      "unknown_candidate_id": 0,
+      "unsupported_evidence_source": 0
+    }
+  },
+  "workflow": "alignment_fact_review_promotion_gate"
+}

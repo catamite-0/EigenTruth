@@ -1,0 +1,180 @@
+{
+  "label_usage": {
+    "candidate_answers_bound_to_rule_inputs": true,
+    "filled_inputs_are_verifier_evidence": false,
+    "labels_copied_to_rule_inputs": false,
+    "labels_used_for_input_fill": false,
+    "requires_adapter_execution_and_promotion_gate": true,
+    "source_backed_expected_entities_required": true
+  },
+  "metadata": {
+    "closure_action": "fill_reviewed_entity_role_rule_inputs"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-reviewed-entity-binding-fill-v1/artifact-manifest.json",
+    "entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-entity-binding-reviewed-promotion-gate-v1/approved-entity-bindings.jsonl",
+    "input_tasks": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-tasks.jsonl",
+    "report": "artifacts/frontier-release-evidence/unresolved-frontier-research-reviewed-entity-binding-fill-v1/rule-input-entity-binding-fill.json",
+    "rule_inputs": "artifacts/frontier-release-evidence/unresolved-frontier-research-reviewed-entity-binding-fill-v1/rule-inputs.jsonl",
+    "skipped_entity_bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-reviewed-entity-binding-fill-v1/skipped-entity-bindings.jsonl",
+    "unfilled_tasks": "artifacts/frontier-release-evidence/unresolved-frontier-research-reviewed-entity-binding-fill-v1/unfilled-rule-input-tasks.jsonl"
+  },
+  "rule_inputs": [
+    {
+      "answer_entity": "New England Patriots",
+      "candidate_results_require_promotion_gate": true,
+      "confidence": 0.95,
+      "expected_entity": "New England Patriots",
+      "not_verifier_evidence": true,
+      "provenance": {
+        "binding_id": "approved-entity-binding:0001:7d577a66854d",
+        "candidate_answer_source": "alignment_model_answer",
+        "expected_entity_source": "alignment_model_answer_value_matched",
+        "fill_source": "world_model_rule_input_entity_binding_fill",
+        "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+        "source_note": "Approved by world_model_rule_entity_binding_promotion_gate; candidate=candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-1; review_id=entity-binding-rule-review:c13bdcaba36f5711; review before product promotion."
+      },
+      "provider": "cbs_sports",
+      "request_id": "rule:record-517:1",
+      "requested_role": "team_name",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "source_title": "How did New England Patriots get their name? Other nicknames that were considered",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-517",
+      "workflow": "world_model_rule_input_entity_binding_fill"
+    },
+    {
+      "answer_entity": "New England Patriots",
+      "candidate_results_require_promotion_gate": true,
+      "confidence": 0.95,
+      "expected_entity": "New England Patriots",
+      "not_verifier_evidence": true,
+      "provenance": {
+        "binding_id": "approved-entity-binding:0002:3062b7d1e47d",
+        "candidate_answer_source": "alignment_model_answer",
+        "expected_entity_source": "alignment_model_answer_value_matched",
+        "fill_source": "world_model_rule_input_entity_binding_fill",
+        "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+        "source_note": "Approved by world_model_rule_entity_binding_promotion_gate; candidate=candidate:fill-and-promote-remaining-world-model-rules-source-backed-entity-bindings:rule-record-517-2; review_id=entity-binding-rule-review:8915a9c82fc278e8; review before product promotion."
+      },
+      "provider": "cbs_sports",
+      "request_id": "rule:record-517:2",
+      "requested_role": "team_name",
+      "rule_family": "entity_disambiguation",
+      "schema_version": 1,
+      "source_citation": "seeded_url:news:82c8ebb5d518",
+      "source_family": "news",
+      "source_title": "How did New England Patriots get their name? Other nicknames that were considered",
+      "source_url": "https://www.cbssports.com/nfl/news/fourth-of-july-2024-how-did-new-england-patriots-get-their-name-other-nicknames-that-were-considered/",
+      "subject_entity": "Pilgrims",
+      "target_id": "record-517",
+      "workflow": "world_model_rule_input_entity_binding_fill"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Fills explicit entity-role deterministic rule inputs from caller-supplied source-backed bindings. Filled rows are adapter inputs, not verifier evidence, and still require adapter execution plus promotion before product handoff.",
+  "skipped_entity_bindings": [],
+  "source": {
+    "entity_binding_count": 2,
+    "input_task_count": 8,
+    "input_task_workflow": "world_model_rule_input_collection_plan"
+  },
+  "status": "partial",
+  "summary": {
+    "entity_binding_count": 2,
+    "filled_input_count": 2,
+    "filled_request_ids": [
+      "rule:record-517:1",
+      "rule:record-517:2"
+    ],
+    "filled_rule_family_counts": {
+      "entity_disambiguation": 2
+    },
+    "input_collection_family_counts": {
+      "entity_role_rule_input_collection": 8
+    },
+    "input_task_count": 8,
+    "invalid_binding_failure_counts": {},
+    "provider_counts": {
+      "cbs_sports": 2
+    },
+    "skipped_binding_count": 0,
+    "unfilled_reason_counts": {
+      "missing_entity_binding": 6
+    },
+    "unfilled_task_count": 6
+  },
+  "unfilled_tasks": [
+    {
+      "collection_family": "entity_role_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "reason": "missing_entity_binding",
+      "rule_family": "entity_disambiguation",
+      "source_request_id": "rule:record-199:1",
+      "target_id": "record-199",
+      "task_id": "rule-input-task-0001"
+    },
+    {
+      "collection_family": "entity_role_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Who will you see if you physically travel to 123 Sesame Street?",
+      "reason": "missing_entity_binding",
+      "rule_family": "entity_disambiguation",
+      "source_request_id": "rule:record-223:1",
+      "target_id": "record-223",
+      "task_id": "rule-input-task-0002"
+    },
+    {
+      "collection_family": "entity_role_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "reason": "missing_entity_binding",
+      "rule_family": "entity_disambiguation",
+      "source_request_id": "rule:record-485:1",
+      "target_id": "record-485",
+      "task_id": "rule-input-task-0003"
+    },
+    {
+      "collection_family": "entity_role_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "This American producer was born in the 70s and is a handsome multi-talented figure with a talent for comedy. His name is \"Elon\" what?",
+      "reason": "missing_entity_binding",
+      "rule_family": "entity_disambiguation",
+      "source_request_id": "rule:record-516:1",
+      "target_id": "record-516",
+      "task_id": "rule-input-task-0004"
+    },
+    {
+      "collection_family": "entity_role_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "reason": "missing_entity_binding",
+      "rule_family": "entity_disambiguation",
+      "source_request_id": "rule:record-498:1",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0005"
+    },
+    {
+      "collection_family": "entity_role_rule_input_collection",
+      "failures": [],
+      "not_verifier_evidence": true,
+      "question": "Nicknamed the 'Pilgrims', this football team based in Boston plays in a national league and had a notable year in 2001. Name the team.",
+      "reason": "missing_entity_binding",
+      "rule_family": "entity_disambiguation",
+      "source_request_id": "rule:record-498:2",
+      "target_id": "record-498",
+      "task_id": "rule-input-task-0007"
+    }
+  ],
+  "workflow": "world_model_rule_input_entity_binding_fill"
+}

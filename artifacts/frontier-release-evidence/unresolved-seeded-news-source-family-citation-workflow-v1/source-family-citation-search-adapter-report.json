@@ -1,0 +1,82 @@
+{
+  "config": {
+    "default_source_family": "reference",
+    "diversify_source_families": true,
+    "max_query_variants": 3,
+    "max_results": 3,
+    "min_text_overlap": 0.05
+  },
+  "input_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "source_workflow": "source_family_citation_search_workflow"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+  "schema_version": 1,
+  "source_catalog_paths": [
+    "artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1/official-site-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-gdelt-news-catalog-v1/gdelt-news-catalog.jsonl",
+    "artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1/seeded-news-catalog.jsonl"
+  ],
+  "summary": {
+    "catalog_provider_counts": {
+      "apnews": 7,
+      "cbs_sports": 1,
+      "cdc": 2,
+      "gdelt": 5,
+      "new_england_patriots": 1,
+      "nfl": 1,
+      "nist": 1,
+      "nist_usno": 1,
+      "noaa_nws": 1,
+      "noaa_psl": 1,
+      "openalex": 145,
+      "sante_publique_france": 1,
+      "source_family_catalog": 322,
+      "spacex": 1,
+      "tesla": 1,
+      "un_population_division": 1,
+      "usda_ers": 2,
+      "who": 1,
+      "worldbank": 218
+    },
+    "catalog_source_family_counts": {
+      "news": 13,
+      "official": 16,
+      "official_statistics": 217,
+      "reference": 322,
+      "scholarly": 145
+    },
+    "request_count": 260,
+    "request_error_count": 0,
+    "request_with_results_count": 260,
+    "result_count": 780,
+    "result_provider_counts": {
+      "apnews": 52,
+      "cbs_sports": 36,
+      "cdc": 24,
+      "gdelt": 12,
+      "nfl": 8,
+      "nist_usno": 16,
+      "openalex": 280,
+      "source_family_catalog": 236,
+      "un_population_division": 4,
+      "usda_ers": 27,
+      "who": 12,
+      "worldbank": 73
+    },
+    "result_source_family_counts": {
+      "news": 100,
+      "official": 91,
+      "official_statistics": 73,
+      "reference": 236,
+      "scholarly": 280
+    },
+    "source_document_count": 713
+  },
+  "workflow": "source_family_citation_search_adapter"
+}

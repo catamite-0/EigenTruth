@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-evidence-collection-corpus.json",
+      "sha256": "f2376672e3f1cee20a8f5f88dc92ec0b494276e50966b5bce9c2e683bb9cf580",
+      "size_bytes": 1525558
+    },
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-evidence-expansion-v1/evidence-expansion-plan.json",
+      "sha256": "99b0359db3e170c221630cdf80710db2f1dd8ca45650aaf561d524e4c1ba16cf",
+      "size_bytes": 452509
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "citation_request_count": 260,
+    "runner": "build_blind_spot_evidence_collection_corpus",
+    "status": "ready_for_collection",
+    "target_count": 89,
+    "total_request_count": 1283,
+    "wikidata_request_count": 950
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

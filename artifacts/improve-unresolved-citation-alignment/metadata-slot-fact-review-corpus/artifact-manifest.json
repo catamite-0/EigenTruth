@@ -1,0 +1,53 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-corpus.json",
+      "sha256": "fa7bd47caae2bf96f447513d2317dee05fe225454ed1bbe3f4568ed44ac854a6",
+      "size_bytes": 12975
+    },
+    "alignment_fact_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-records.jsonl",
+      "sha256": "2ec7ef3c7042849898ab120d007d39ded6572daed0e3c9e0a574d10d7bcb7e6d",
+      "size_bytes": 13037
+    },
+    "alignment_fact_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "alignment-fact-review-report.json",
+      "sha256": "9b786cc2cd469040147e878f4382dbfd28e2b3247826920d3fdf8c5b86b821c9",
+      "size_bytes": 2025
+    },
+    "structured_fact_candidates": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../metadata-slot-alignment-audit/structured-fact-candidates.jsonl",
+      "sha256": "14e9371e05325cd7bf316accf87417373c3104ea30deff22a1e0fa2b26d5f5cf",
+      "size_bytes": 18283
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "alignment_structured_fact_review_corpus",
+    "document_count": 8,
+    "input_candidate_count": 22,
+    "source_workflow": "metadata_slot_fact_extraction",
+    "status": "ready_for_review",
+    "unique_candidate_count": 22,
+    "workflow": "alignment_fact_review_corpus_builder"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

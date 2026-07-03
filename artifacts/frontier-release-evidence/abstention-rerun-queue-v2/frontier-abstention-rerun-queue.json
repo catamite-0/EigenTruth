@@ -1,0 +1,190 @@
+{
+  "config": {
+    "direction": null,
+    "profiles": [
+      "gate_budget_sweep"
+    ],
+    "python_executable": "python",
+    "scores": [],
+    "seeds": "0,1,2,3,4,5,6,7,8,9",
+    "signal_groups": [
+      "all"
+    ]
+  },
+  "entries": [
+    {
+      "command": [
+        "python",
+        "benchmarks/eval_abstention_stability.py",
+        "--scores",
+        "qwen05-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.json",
+        "--signals",
+        "truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty",
+        "--alpha",
+        "0.2",
+        "--best-by",
+        "conditional_correctness_lower_bound",
+        "--seeds",
+        "0,1,2,3,4,5,6,7,8,9",
+        "--min-abstention-conditional-correctness-lower-bound",
+        "0.8",
+        "--max-abstention-rate",
+        "0.5",
+        "--json",
+        "artifacts/frontier-release-evidence/abstention-rerun-queue-v2/reruns/qwen05-l80/gate_budget_sweep/all/abstention-stability-report.json",
+        "--artifact-manifest",
+        "artifacts/frontier-release-evidence/abstention-rerun-queue-v2/reruns/qwen05-l80/gate_budget_sweep/all/artifact-manifest.json",
+        "--enforce-abstention-budget",
+        "--abstention-budget-target-rates",
+        "0.35,0.4,0.45,0.48,0.5",
+        "--prefer-release-gate-passing"
+      ],
+      "command_kind": "abstention_stability_experiment",
+      "command_status": "ready",
+      "derived_signal_config": {},
+      "dry_run_command": null,
+      "missing_inputs": [],
+      "profile": "gate_budget_sweep",
+      "profile_config": {
+        "abstention_budget_target_rate": null,
+        "abstention_budget_target_rates": [
+          0.35,
+          0.4,
+          0.45,
+          0.48,
+          0.5
+        ],
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "enforce_abstention_budget": true,
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "prefer_release_gate_passing": true,
+        "profile": "gate_budget_sweep",
+        "promotion_eligible": true
+      },
+      "run": "qwen05-l80",
+      "signal_group": "all",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "verifier_refuted",
+        "verifier_refute_confidence",
+        "verifier_not_supported",
+        "verifier_uncertainty"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.839901243645186,
+        "empirical_abstention_rate_mean": 0.48201438848920863,
+        "recommended_score_name_counts": {
+          "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]": 10
+        },
+        "release_gate_block_seed_count": 3,
+        "release_gate_pass_seed_count": 7,
+        "stable_recommended_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.8710677005240686,
+        "supervised_feasibility_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+        "supervised_feasibility_target_passed": true
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v1/local-retrieval-fusion-abstention-stability-alpha-0p2-budgeted-target-0p48.json",
+      "source_workflow": "frontier_release_evidence_comparison"
+    },
+    {
+      "command": [
+        "python",
+        "benchmarks/eval_abstention_stability.py",
+        "--scores",
+        "smollm2-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.json",
+        "--signals",
+        "truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty",
+        "--alpha",
+        "0.2",
+        "--best-by",
+        "conditional_correctness_lower_bound",
+        "--seeds",
+        "0,1,2,3,4,5,6,7,8,9",
+        "--min-abstention-conditional-correctness-lower-bound",
+        "0.8",
+        "--max-abstention-rate",
+        "0.5",
+        "--json",
+        "artifacts/frontier-release-evidence/abstention-rerun-queue-v2/reruns/smollm2-l80/gate_budget_sweep/all/abstention-stability-report.json",
+        "--artifact-manifest",
+        "artifacts/frontier-release-evidence/abstention-rerun-queue-v2/reruns/smollm2-l80/gate_budget_sweep/all/artifact-manifest.json",
+        "--enforce-abstention-budget",
+        "--abstention-budget-target-rates",
+        "0.35,0.4,0.45,0.48,0.5",
+        "--prefer-release-gate-passing"
+      ],
+      "command_kind": "abstention_stability_experiment",
+      "command_status": "ready",
+      "derived_signal_config": {},
+      "dry_run_command": null,
+      "missing_inputs": [],
+      "profile": "gate_budget_sweep",
+      "profile_config": {
+        "abstention_budget_target_rate": null,
+        "abstention_budget_target_rates": [
+          0.35,
+          0.4,
+          0.45,
+          0.48,
+          0.5
+        ],
+        "alpha": 0.2,
+        "best_by": "conditional_correctness_lower_bound",
+        "enforce_abstention_budget": true,
+        "max_abstention_rate": 0.5,
+        "min_conditional_correctness_lower_bound": 0.8,
+        "prefer_release_gate_passing": true,
+        "profile": "gate_budget_sweep",
+        "promotion_eligible": true
+      },
+      "run": "smollm2-l80",
+      "signal_group": "all",
+      "signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "verifier_refuted",
+        "verifier_refute_confidence",
+        "verifier_not_supported",
+        "verifier_uncertainty"
+      ],
+      "source_metrics": {
+        "conditional_correctness_lower_bound_mean": 0.8372126302611946,
+        "empirical_abstention_rate_mean": 0.48525179856115114,
+        "recommended_score_name_counts": {
+          "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]": 10
+        },
+        "release_gate_block_seed_count": 5,
+        "release_gate_pass_seed_count": 5,
+        "stable_recommended_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+        "supervised_feasibility_conditional_correctness_lower_bound": 0.867497750931757,
+        "supervised_feasibility_score_name": "geometry_uncertainty_fusion:noisy_or[geometry=mean_rank:truth_proj+subspace_resid+eigenscore;uncertainty=mean_rank:verifier_refuted+verifier_refute_confidence+verifier_not_supported]",
+        "supervised_feasibility_target_passed": true
+      },
+      "source_report": "/home/z/projects/active/EigenTruth/artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v1/local-retrieval-fusion-abstention-stability-alpha-0p2-budgeted-target-0p48.json",
+      "source_workflow": "frontier_release_evidence_comparison"
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/abstention-rerun-queue-v2/artifact-manifest.json",
+    "rerun_queue": "artifacts/frontier-release-evidence/abstention-rerun-queue-v2/frontier-abstention-rerun-queue.json",
+    "source_abstention_report": "/home/z/projects/active/EigenTruth/artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v1/local-retrieval-fusion-abstention-stability-alpha-0p2-budgeted-target-0p48.json"
+  },
+  "schema_version": 1,
+  "source": "artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v3.json",
+  "status": "ready",
+  "summary": {
+    "blocked_run_count": 2,
+    "command_count": 2,
+    "entry_count": 2,
+    "missing_command_count": 0,
+    "profile_count": 1,
+    "promotion_eligible_command_count": 2,
+    "signal_group_count": 1
+  },
+  "workflow": "frontier_abstention_evidence_rerun_queue"
+}

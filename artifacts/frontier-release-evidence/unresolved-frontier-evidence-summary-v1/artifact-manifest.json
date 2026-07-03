@@ -1,0 +1,304 @@
+{
+  "artifacts": {
+    "citation_workflow_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json",
+      "sha256": "d854247157220cf6a4cc1ed85cee65a94bf98c8dbc99464d91111c44d5bbbdf9",
+      "size_bytes": 7657
+    },
+    "citation_workflow_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/improve-unresolved-citation-alignment/unresolved-citation-alignment-workflow-report.json",
+      "sha256": "11161222fba1c6e6c4fc7b5ea5c1967aa1e2fe6ee22953c13b2ea0e59df9e339",
+      "size_bytes": 18030
+    },
+    "citation_workflow_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-1/workflow-report.json",
+      "sha256": "5b7411431fe6bb57bad7c81526d353666bd34cd460575e46f6f2935b6fd21e6c",
+      "size_bytes": 31013
+    },
+    "citation_workflow_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-2/workflow-report.json",
+      "sha256": "03e85cf66adc4f32a33911eedc08ba8c45cf96f8a828d2a46fbb918145792036",
+      "size_bytes": 30979
+    },
+    "citation_workflow_5": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-3/workflow-report.json",
+      "sha256": "03d734b9b347e3306f5065bfe29716224b873e26fd5875a822bfc587f3b5a209",
+      "size_bytes": 30991
+    },
+    "covered_fact_mapping_audit_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json",
+      "sha256": "68b5ae764f70b4ab3b2a6959c8f3cd58e321922efc742c0c65db6492400cb368",
+      "size_bytes": 203668
+    },
+    "covered_fact_retrieval_qa_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-qa-report.json",
+      "sha256": "bc5a9d633ee03b094347edb3de4623b3a8223fea8bfd6a5a080984ccb84e5543",
+      "size_bytes": 1545
+    },
+    "covered_fact_retrieval_query_sweep_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa/covered-fact-retrieval-structured-qa-query-sweep.json",
+      "sha256": "83a800fd3e1dbddc631016327336846e2b3b96fc8afe0c3a4cfa9611afd7a25a",
+      "size_bytes": 42019
+    },
+    "covered_fact_route_summary_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/metadata-slot-covered-fact-route/structured-qa-route-summary.json",
+      "sha256": "afb51ef7748d19c194455e0aa17a395bee17be8bc0d6d08bc5ed9c05a2e22c48",
+      "size_bytes": 6738
+    },
+    "frontier_bound_command_run_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json",
+      "sha256": "c6d65987ee8d4a78f60e820a7f033834689875832cf78c49147e168c03dc963d",
+      "size_bytes": 23936
+    },
+    "frontier_command_binding_review_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/command-binding-review/frontier-command-binding-review.json",
+      "sha256": "435e20c193758b98a310b9e313177e7ecd5ee4eb5b149a564b7490dbc0511192",
+      "size_bytes": 28456
+    },
+    "frontier_queue_execution_smoke_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execution-smoke-v1/frontier-queue-execution-smoke.json",
+      "sha256": "2ca6daa739d64758d08d00b7d9164bac47f2655a6f1016d77e80f20fc34a4856",
+      "size_bytes": 2209
+    },
+    "frontier_queue_execution_smoke_manifest_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execution-smoke-v1/artifact-manifest.json",
+      "sha256": "e997a22a3077bb5b6d1a48fc369a06dc728886950da9300dc9ff8ded73b93c6c",
+      "size_bytes": 7418
+    },
+    "mechanism_handoff_bundle": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
+      "sha256": "e9b6d1ec7a8fa0eaf7bd99bad688177901c1d33dda03022878fecb4593c76d75",
+      "size_bytes": 7016
+    },
+    "requeued_rule_input_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
+      "sha256": "c32e757d27e79df6fe5b9d64fdf4cccc5f75fe4b0d7b62475ea475c40ef86892",
+      "size_bytes": 32364
+    },
+    "rule_input_audit_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-input-plan-audit-v1/world-model-rule-input-plan-audit.json",
+      "sha256": "40c076a77d1c0b49757e00015e4c74166714d6c63d88ea266520fb9a58cd9c20",
+      "size_bytes": 38339
+    },
+    "rule_input_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json",
+      "sha256": "5d8284a7253a0c1b51d0fa010403e875d6086d1610081b5e43cf6917aae06259",
+      "size_bytes": 96462
+    },
+    "rule_promotion_report_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "693881e4ec7ef742c02e27c12e26c0ee7ee71b9cabb5a078e560bcd4ae615a83",
+      "size_bytes": 5029
+    },
+    "rule_promotion_report_2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "bf07d87e43b937c43c7dd7ffe63ef48f806f1d38e68683de141475f01ac3142d",
+      "size_bytes": 10147
+    },
+    "rule_promotion_report_3": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "b39592b07744c1b10e9b52af6e58b1b043db836951da281ddbf597554ede82e3",
+      "size_bytes": 10234
+    },
+    "rule_promotion_report_4": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json",
+      "sha256": "411ef676f2d43fd36b4aaef3a7c1f68e8c54d6a0e4e84ea4d5a9eb5f8a6f0058",
+      "size_bytes": 13905
+    },
+    "rule_promotion_report_5": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/numeric-rule-promotion-report.json",
+      "sha256": "007bfba4e2c762d317ea0c942c7362b14825e23591d0f44500a4eb7f37abb8f6",
+      "size_bytes": 18449
+    },
+    "rule_promotion_report_6": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-command-plan-v1/frontier-research-queue-commands/fill-and-promote-remaining-world-model-rules/temporal-rule-promotion-report.json",
+      "sha256": "e777126b2aae2c7b501e3e7278810c151d4da69503e23c66fb65192acb8e768f",
+      "size_bytes": 14956
+    },
+    "rule_stub_requeue_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-world-model-rule-stub-requeue-v1/world-model-rule-stub-requeue.json",
+      "sha256": "6ea01a04dd9cf8955739044fbffc10767039f8ed20b26885776c264f6ef379ed",
+      "size_bytes": 22667
+    },
+    "semantic_gap_review_workflow_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/retrieval-semantic-gap-review-workflow.json",
+      "sha256": "2f80c9ccc73fa077181eeeddaaf7cce0622ea29477383a86cee197421a8a6a54",
+      "size_bytes": 7863
+    },
+    "source_family_coverage_audit_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json",
+      "sha256": "c48c062f69898b4d8121e3138f2869adc8e3f6013d85a95be276ffded6361b90",
+      "size_bytes": 23079
+    },
+    "unresolved_frontier_evidence_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "unresolved-frontier-evidence-summary.json",
+      "sha256": "9c4ce97e5c06fae4f7c2073e3272988af575b6830cd99628d612cbe380939065",
+      "size_bytes": 41258
+    },
+    "unresolved_queue": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json",
+      "sha256": "e85115ee3af91ab77fb4ad43b5fe795dfd1eed6f6411f70a9b924c3716166d38",
+      "size_bytes": 548499
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 120,
+    "citation_query_sweep_failure_reason_counts": {
+      "blind_refuted_rate_below_min": 120,
+      "verified_false_alarm_above_max": 120
+    },
+    "citation_query_sweep_no_hit_strategy_count": 0,
+    "citation_query_sweep_recommended_next_action_counts": {
+      "improve_claim_intent_alignment_or_query_construction": 6,
+      "tighten_false_alarm_calibration": 6
+    },
+    "citation_query_sweep_target_route_not_selected_strategy_count": 0,
+    "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
+    "citation_status": "blocked",
+    "closure_action": "expand_scoped_covered_fact_alignment",
+    "frontier_bound_command_run_count": 1,
+    "frontier_bound_command_succeeded_count": 3,
+    "frontier_command_binding_count": 0,
+    "frontier_command_binding_review_count": 1,
+    "frontier_input_binding_audit_count": 0,
+    "frontier_queue_execution_smoke_count": 1,
+    "frontier_queue_execution_smoke_manifest_verified_count": 1,
+    "frontier_queue_execution_smoke_status": "pass",
+    "frontier_queue_execution_status": "promote",
+    "frontier_ready_seed_input_audit_count": 0,
+    "frontier_ready_seed_input_count": 0,
+    "model": "smollm2-l80",
+    "next_action_count": 1,
+    "semantic_gap_review_approved_source_document_count": 7,
+    "semantic_gap_review_best_answer_entity_collision_count": 5,
+    "semantic_gap_review_best_answer_value_supported_count": 4,
+    "semantic_gap_review_best_candidate_fact_coverage_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_blind_refuted_count": 16,
+    "semantic_gap_review_best_covered_fact_retrieval_verified_false_alarm": 0.088,
+    "semantic_gap_review_best_no_joined_fact_count": 41,
+    "semantic_gap_review_best_records_with_joined_facts": 48,
+    "semantic_gap_review_coverage_gap_count": 66,
+    "semantic_gap_review_coverage_rate": 0.25,
+    "semantic_gap_review_covered_fact_mapping_audit_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_qa_document_count": 41,
+    "semantic_gap_review_covered_fact_retrieval_qa_report_count": 1,
+    "semantic_gap_review_covered_fact_retrieval_query_sweep_count": 1,
+    "semantic_gap_review_covered_fact_route_fallback_n_records": 0,
+    "semantic_gap_review_covered_fact_route_identity_n_records": 22,
+    "semantic_gap_review_covered_fact_route_n_records": 22,
+    "semantic_gap_review_promoted_covered_fact_route_count": 2,
+    "semantic_gap_review_promoted_workflow_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_count": 1,
+    "semantic_gap_review_standalone_covered_fact_route_source_document_count": 4,
+    "semantic_gap_review_standalone_promoted_covered_fact_route_count": 1,
+    "semantic_gap_review_status": "promote",
+    "semantic_gap_review_workflow_count": 1,
+    "semantic_gap_scope": "covered_fact_alignment_expansion",
+    "source": "frontier-v4",
+    "source_family_acquisition_status": "covered",
+    "status": "needs_evidence",
+    "unresolved_target_count": 88,
+    "workflow": "unresolved_frontier_evidence_summary",
+    "world_model_rule_audit_adjusted_remaining_task_count": 0,
+    "world_model_rule_audit_requeue_suggestion_count": 8,
+    "world_model_rule_combined_rule_input_count": 0,
+    "world_model_rule_combined_unfilled_task_count": 0,
+    "world_model_rule_input_fill_adapter_ready": false,
+    "world_model_rule_input_fill_rollup_status": null,
+    "world_model_rule_remaining_task_count": 8,
+    "world_model_rule_requeue_outstanding_count": 0,
+    "world_model_rule_status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 28,
+    "directory_count": 0,
+    "file_count": 28,
+    "missing_count": 0
+  }
+}

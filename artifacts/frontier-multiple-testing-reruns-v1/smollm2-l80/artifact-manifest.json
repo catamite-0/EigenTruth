@@ -1,0 +1,117 @@
+{
+  "artifacts": {
+    "cells.smollm2-l80.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/artifact-manifest.json",
+      "sha256": "d33e08dbb5d77b725e7c125a831d26cc607390ff3062cd8e537ff8b831dc891d",
+      "size_bytes": 4041
+    },
+    "cells.smollm2-l80.detectability_taxonomy_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/detectability-taxonomy-report.json",
+      "sha256": "d4acd8d350cbaeba986376adf10592924e4c4acd416042f9e02a5ee647104cb6",
+      "size_bytes": 12718
+    },
+    "cells.smollm2-l80.multiple_testing_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/multiple-testing-calibration.json",
+      "sha256": "a931f4d7716b0f8896dadc7c6d36cb3b655f23e9a9a90dac72c43a6dbcad2d33",
+      "size_bytes": 36381
+    },
+    "cells.smollm2-l80.multiple_testing_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/multiple-testing-report.json",
+      "sha256": "ffe9b09bf791189d7baf32bf18512923c63f7a38c657da0bd9b5c25d38d884b0",
+      "size_bytes": 13952
+    },
+    "cells.smollm2-l80.score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json",
+      "sha256": "2fb7b3e3d31bf01bc4df035891208055ae1bda08ecb2c0e6396e86b866f609dc",
+      "size_bytes": 3248
+    },
+    "cells.smollm2-l80.workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/calibrated-observability-workflow.json",
+      "sha256": "c0a5b23543c9e473c9ae9ccba1cc9a6b80dd51f0515c9b6e7c16784a9418e128",
+      "size_bytes": 12388
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "63eeee01460dad3d10a22a47863297227f6284a8056bfba9ffaec59fb13fa9dc",
+      "size_bytes": 14896
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-frontier-workflow.json",
+      "sha256": "46b21d59f64cf6db2db2e74f2c790254940d2c2f7795e83236ed65034f5f1ce0",
+      "size_bytes": 8375
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "detectability_confidence_direction": "lower",
+    "detectability_confidence_signal": "nll_answer",
+    "detectability_consistency_direction": "lower",
+    "detectability_consistency_signal": "eigenscore",
+    "dry_run": false,
+    "ensemble_methods": [
+      "max_rank",
+      "mean_rank"
+    ],
+    "models": [
+      "smollm2"
+    ],
+    "multiple_testing_all_pass": true,
+    "multiple_testing_alpha": 0.1,
+    "multiple_testing_enabled": true,
+    "multiple_testing_method": "by",
+    "multiple_testing_signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "runner": "run_truthfulqa_frontier_workflow",
+    "scales": [
+      "l80"
+    ],
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "status": "complete",
+    "sweep_band_expand_radius": 0,
+    "sweep_band_scales": [],
+    "sweep_band_target_layer": null,
+    "sweep_layers_from_band_report": null
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

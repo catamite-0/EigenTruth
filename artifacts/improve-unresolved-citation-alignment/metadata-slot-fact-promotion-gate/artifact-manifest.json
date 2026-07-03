@@ -1,0 +1,69 @@
+{
+  "artifacts": {
+    "alignment_fact_review_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../metadata-slot-fact-review-corpus/alignment-fact-review-corpus.json",
+      "sha256": "fa7bd47caae2bf96f447513d2317dee05fe225454ed1bbe3f4568ed44ac854a6",
+      "size_bytes": 12975
+    },
+    "alignment_fact_review_promotion_gate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-report.json",
+      "sha256": "9183425f6965dbe2c90c713282f6d29ab74ffb3f6e9e036fb3dc112a366dcdac",
+      "size_bytes": 21966
+    },
+    "approved_source_documents": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "approved-source-documents.json",
+      "sha256": "5acbd7c7e3325adaff1c85b8fbd73302080e8654b4d6e3927f2af00ed0798b28",
+      "size_bytes": 7533
+    },
+    "promotion_gate_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "promotion-gate-records.jsonl",
+      "sha256": "54d807710215e2886ac4aa486994dcc876ebefdee217c6d784703b6d216bc62c",
+      "size_bytes": 3751
+    },
+    "review_decision_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "review-decision-template.jsonl",
+      "sha256": "88844594d0d6ac74b938f8687028a11bd1ba0d8940b69428dad5fc141524106a",
+      "size_bytes": 5671
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../metadata-slot-fact-rule-review/review-decisions.jsonl",
+      "sha256": "ef5c5c8bfef203f3bde8462e10c38c836445d6628f1609d205ec38014b868576",
+      "size_bytes": 2208
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "approved_source_document_count": 4,
+    "pending_review_count": 0,
+    "promotes_verifier_evidence": false,
+    "review_document_count": 8,
+    "source_workflow": "metadata_slot_fact_extraction",
+    "status": "ready_for_structured_qa",
+    "workflow": "alignment_fact_review_promotion_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

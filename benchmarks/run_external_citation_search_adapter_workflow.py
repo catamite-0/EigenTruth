@@ -36,7 +36,14 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
 from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     run as run_citation_search_handoff,
 )
+from benchmarks.run_citation_search_evidence_workflow import (  # noqa: E402
+    _parse_csv_strings,
+)
 from benchmarks.run_citation_search_evidence_workflow import run as run_citation_search_evidence  # noqa: E402
+from benchmarks.sweep_blind_spot_retrieval_queries import (  # noqa: E402
+    DEFAULT_SOURCE_FAMILY_FILTERS,
+    DEFAULT_TARGET_ROUTE,
+)
 from eigentruth.json_utils import strict_json_dumps  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -59,6 +66,7 @@ def run_external_citation_search_adapter_workflow(
     registry_path: str | Path | None = None,
     name: str | None = None,
     version: str | None = None,
+    batch_ids: Sequence[str] = (),
     query_mode: str = "question",
     max_requests: int | None = None,
     max_results_per_request: int | None = None,
@@ -66,6 +74,10 @@ def run_external_citation_search_adapter_workflow(
     corpus_name: str = DEFAULT_CORPUS_NAME,
     source_kind: str = DEFAULT_SOURCE_KIND,
     command_timeout_seconds: float | None = None,
+    target_route: str = DEFAULT_TARGET_ROUTE,
+    source_family_filters: Sequence[str] = DEFAULT_SOURCE_FAMILY_FILTERS,
+    query_sweep_verified_records_dir: str | Path | None = None,
+    min_adapter_request_coverage: float = 1.0,
     evidence_metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
     fail_on_blocked: bool = False,
@@ -73,6 +85,8 @@ def run_external_citation_search_adapter_workflow(
     """Run an external search command and gate the returned evidence."""
     if registry_path is not None and (not name or not version):
         raise ValueError("registry_path requires name and version.")
+    if not (0.0 <= float(min_adapter_request_coverage) <= 1.0):
+        raise ValueError("min_adapter_request_coverage must be between 0 and 1.")
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     request_jsonl = Path(request_jsonl_path or output / "external-citation-search-requests.jsonl")
@@ -89,6 +103,7 @@ def run_external_citation_search_adapter_workflow(
         request_jsonl_path=request_jsonl,
         source_jsonl_path=preflight_dir / "citation-search-source-docs.jsonl",
         artifact_manifest_path=preflight_dir / "artifact-manifest.json",
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
@@ -117,12 +132,17 @@ def run_external_citation_search_adapter_workflow(
         blind_spots_path=blind_spots_path,
         controlled_sweep_paths=controlled_sweep_paths,
         output_dir=evidence_dir,
+        batch_ids=batch_ids,
         query_mode=query_mode,
         max_requests=max_requests,
         max_results_per_request=max_results_per_request,
         max_alternate_queries=max_alternate_queries,
         corpus_name=corpus_name,
         source_kind=source_kind,
+        target_route=target_route,
+        source_family_filters=source_family_filters,
+        query_sweep_verified_records_dir=query_sweep_verified_records_dir,
+        min_adapter_request_coverage=min_adapter_request_coverage,
         metadata={**dict(evidence_metadata or {}), "source_workflow": WORKFLOW},
         compact_json=compact_json,
     )
@@ -143,6 +163,7 @@ def run_external_citation_search_adapter_workflow(
             "controlled_sweeps": tuple(str(path) for path in controlled_sweep_paths),
         },
         "config": {
+            "batch_ids": tuple(str(item) for item in batch_ids),
             "query_mode": query_mode,
             "max_requests": max_requests,
             "max_results_per_request": max_results_per_request,
@@ -150,6 +171,12 @@ def run_external_citation_search_adapter_workflow(
             "corpus_name": corpus_name,
             "source_kind": source_kind,
             "command_timeout_seconds": command_timeout_seconds,
+            "target_route": target_route,
+            "source_family_filters": tuple(str(item) for item in source_family_filters),
+            "query_sweep_verified_records_dir": (
+                None if query_sweep_verified_records_dir is None else str(query_sweep_verified_records_dir)
+            ),
+            "min_adapter_request_coverage": float(min_adapter_request_coverage),
         },
         "paths": {
             "requests": str(request_jsonl),
@@ -191,7 +218,17 @@ def run_external_citation_search_adapter_workflow(
             "status": payload["status"],
             "gate_passed": gate["passed"],
             "promotion_ready": gate["promotion_ready"],
+            "target_route": target_route,
+            "source_family_filters": tuple(str(item) for item in source_family_filters),
+            "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
+            "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
             "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
+            "adapter_result_request_coverage": payload["evidence_summary"].get(
+                "adapter_result_request_coverage"
+            ),
+            "adapter_result_missing_request_count": payload["evidence_summary"].get(
+                "adapter_result_missing_request_count"
+            ),
             "source_document_count": payload["evidence_summary"].get("source_document_count"),
             "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
             **dict(evidence_metadata or {}),
@@ -209,7 +246,17 @@ def run_external_citation_search_adapter_workflow(
                 "status": payload["status"],
                 "gate_passed": gate["passed"],
                 "promotion_ready": gate["promotion_ready"],
+                "target_route": target_route,
+                "source_family_filters": tuple(str(item) for item in source_family_filters),
+                "selected_batch_count": payload["request_summary"].get("selected_batch_count"),
+                "selected_batch_ids": payload["request_summary"].get("selected_batch_ids"),
                 "adapter_request_count": payload["request_summary"].get("adapter_request_count"),
+                "adapter_result_request_coverage": payload["evidence_summary"].get(
+                    "adapter_result_request_coverage"
+                ),
+                "adapter_result_missing_request_count": payload["evidence_summary"].get(
+                    "adapter_result_missing_request_count"
+                ),
                 "source_document_count": payload["evidence_summary"].get("source_document_count"),
                 "corpus_document_count": payload["evidence_summary"].get("corpus_document_count"),
                 "artifact_manifest": str(manifest_path),
@@ -331,6 +378,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
+    parser.add_argument(
+        "--batch-id",
+        action="append",
+        default=[],
+        help="Execution batch id from the unresolved queue to pass into request handoff and evidence gating.",
+    )
     parser.add_argument("--query-mode", choices=QUERY_MODES, default="question")
     parser.add_argument("--max-requests", type=int, default=None)
     parser.add_argument("--max-results-per-request", type=int, default=None)
@@ -338,6 +391,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--corpus-name", default=DEFAULT_CORPUS_NAME)
     parser.add_argument("--source-kind", default=DEFAULT_SOURCE_KIND)
     parser.add_argument("--command-timeout-seconds", type=float, default=None)
+    parser.add_argument("--target-route", default=DEFAULT_TARGET_ROUTE)
+    parser.add_argument(
+        "--source-family-filters",
+        default=",".join(DEFAULT_SOURCE_FAMILY_FILTERS),
+        help="Comma-separated source-family filters for query sweep evidence: off, planned, planned_rerank.",
+    )
+    parser.add_argument(
+        "--query-sweep-verified-records-dir",
+        default=None,
+        help="Optional directory to save per-strategy query sweep verified-records JSONL sidecars.",
+    )
+    parser.add_argument("--min-adapter-request-coverage", type=float, default=1.0)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--fail-on-blocked", action="store_true")
@@ -356,6 +421,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         registry_path=args.registry,
         name=args.name,
         version=args.version,
+        batch_ids=tuple(args.batch_id or ()),
         query_mode=args.query_mode,
         max_requests=args.max_requests,
         max_results_per_request=args.max_results_per_request,
@@ -363,6 +429,14 @@ def main(argv: Sequence[str] | None = None) -> None:
         corpus_name=args.corpus_name,
         source_kind=args.source_kind,
         command_timeout_seconds=args.command_timeout_seconds,
+        target_route=args.target_route,
+        source_family_filters=_parse_csv_strings(
+            args.source_family_filters,
+            choices=("off", "planned", "planned_rerank"),
+            name="source_family_filters",
+        ),
+        query_sweep_verified_records_dir=args.query_sweep_verified_records_dir,
+        min_adapter_request_coverage=args.min_adapter_request_coverage,
         evidence_metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
         fail_on_blocked=bool(args.fail_on_blocked),

@@ -1,0 +1,150 @@
+{
+  "candidates": [
+    {
+      "blocking_reasons": [],
+      "candidate_status": "promotion_ready",
+      "cell": "qwen05-l80",
+      "expected_report_path": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/truthfulqa-frontier-workflow.json",
+      "metrics": {
+        "cell": "qwen05-l80",
+        "cell_calibration": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/multiple-testing-calibration.json",
+        "cell_detection": 0.07826797385620918,
+        "cell_false_alarm": 0.03760000000000001,
+        "cell_found": true,
+        "cell_report": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/qwen05-l80/multiple-testing-report.json",
+        "cell_status": "passed",
+        "gate_all_pass": true,
+        "gate_cell_count": 1,
+        "gate_enabled": true,
+        "gate_fail_count": 0,
+        "gate_failed_cells": [],
+        "gate_pass_count": 1,
+        "gate_reported_cell_count": 1,
+        "gate_unknown_cells": [],
+        "gate_unknown_count": 0
+      },
+      "observed_report_path": "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/truthfulqa-frontier-workflow.json",
+      "promotion_ready": true,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "truthfulqa_frontier_workflow",
+      "run": "truthfulqa-frontier-workflow",
+      "source_calibration": null,
+      "source_detection": null,
+      "source_false_alarm": null,
+      "source_report": null,
+      "source_status": "missing_gate",
+      "workflow_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/truthfulqa-frontier-workflow.json"
+    },
+    {
+      "blocking_reasons": [],
+      "candidate_status": "promotion_ready",
+      "cell": "smollm2-l80",
+      "expected_report_path": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/truthfulqa-frontier-workflow.json",
+      "metrics": {
+        "cell": "smollm2-l80",
+        "cell_calibration": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/smollm2-l80/multiple-testing-calibration.json",
+        "cell_detection": 0.08300653594771243,
+        "cell_false_alarm": 0.03840000000000001,
+        "cell_found": true,
+        "cell_report": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/smollm2-l80/multiple-testing-report.json",
+        "cell_status": "passed",
+        "gate_all_pass": true,
+        "gate_cell_count": 1,
+        "gate_enabled": true,
+        "gate_fail_count": 0,
+        "gate_failed_cells": [],
+        "gate_pass_count": 1,
+        "gate_reported_cell_count": 1,
+        "gate_unknown_cells": [],
+        "gate_unknown_count": 0
+      },
+      "observed_report_path": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/truthfulqa-frontier-workflow.json",
+      "promotion_ready": true,
+      "report_source": "expected_path",
+      "report_status": "complete",
+      "report_workflow": "truthfulqa_frontier_workflow",
+      "run": "truthfulqa-frontier-workflow",
+      "source_calibration": null,
+      "source_detection": null,
+      "source_false_alarm": null,
+      "source_report": null,
+      "source_status": "missing_gate",
+      "workflow_report": "/home/z/projects/active/EigenTruth/artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/truthfulqa-frontier-workflow.json"
+    }
+  ],
+  "config": {
+    "require_all_reports": true
+  },
+  "gate": {
+    "blocking_reasons": [],
+    "passed": true,
+    "promotion_ready": true,
+    "require_all_reports": true
+  },
+  "metadata": {
+    "source": "v6-missing-gate"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-multiple-testing-rerun-rollup-v1/artifact-manifest.json",
+    "report": "artifacts/frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json"
+  },
+  "recommended_candidate": {
+    "blocking_reasons": [],
+    "candidate_status": "promotion_ready",
+    "cell": "smollm2-l80",
+    "expected_report_path": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/truthfulqa-frontier-workflow.json",
+    "metrics": {
+      "cell": "smollm2-l80",
+      "cell_calibration": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/smollm2-l80/multiple-testing-calibration.json",
+      "cell_detection": 0.08300653594771243,
+      "cell_false_alarm": 0.03840000000000001,
+      "cell_found": true,
+      "cell_report": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/smollm2-l80/multiple-testing-report.json",
+      "cell_status": "passed",
+      "gate_all_pass": true,
+      "gate_cell_count": 1,
+      "gate_enabled": true,
+      "gate_fail_count": 0,
+      "gate_failed_cells": [],
+      "gate_pass_count": 1,
+      "gate_reported_cell_count": 1,
+      "gate_unknown_cells": [],
+      "gate_unknown_count": 0
+    },
+    "observed_report_path": "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/truthfulqa-frontier-workflow.json",
+    "promotion_ready": true,
+    "run": "truthfulqa-frontier-workflow"
+  },
+  "schema_version": 1,
+  "source": {
+    "explicit_reports": [],
+    "observed_reports": [
+      "artifacts/frontier-multiple-testing-reruns-v1/qwen05-l80/truthfulqa-frontier-workflow.json",
+      "artifacts/frontier-multiple-testing-reruns-v1/smollm2-l80/truthfulqa-frontier-workflow.json"
+    ],
+    "queue": "artifacts/frontier-multiple-testing-rerun-queue-v1/rerun-queue.json",
+    "queue_workflow": "frontier_multiple_testing_rerun_queue"
+  },
+  "status": "promote",
+  "summary": {
+    "blocked_candidate_count": 0,
+    "candidate_count": 2,
+    "cells": [
+      "qwen05-l80",
+      "smollm2-l80"
+    ],
+    "expected_entry_count": 2,
+    "invalid_report_count": 0,
+    "missing_report_count": 0,
+    "observed_report_count": 2,
+    "promotion_ready_count": 2,
+    "queue_entry_count": 2,
+    "queue_status": "ready",
+    "queue_workflow": "frontier_multiple_testing_rerun_queue",
+    "runs": [
+      "truthfulqa-frontier-workflow"
+    ]
+  },
+  "workflow": "frontier_multiple_testing_rerun_rollup"
+}

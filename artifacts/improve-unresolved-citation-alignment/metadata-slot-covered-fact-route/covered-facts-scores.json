@@ -1,0 +1,396 @@
+{
+  "config": {
+    "label_semantics": {
+      "0": "known Wikidata QA answer",
+      "1": "answer mismatches known Wikidata QA answer(s) for the same question"
+    },
+    "layer": -1,
+    "model": "wikidata-covered-facts",
+    "signal": "truth_proj",
+    "source": {
+      "corpus_type": "source_family_structured_qa_external_evidence",
+      "provider": null,
+      "templates": null
+    },
+    "statement_style": "qa",
+    "workflow": "wikidata_structured_qa_route_workflow"
+  },
+  "labels": [
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+  ],
+  "scores": {
+    "truth_proj": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "statements": [
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+        "alignment_source_document_id": "alignment-approved:1",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "label_generation": "wikidata_known_answer",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:f824d0d0b4337e82",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "English"
+          ],
+          "value": [
+            "West Germanic language"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "text": "What does Wikidata list as the description for English? West Germanic language"
+    },
+    {
+      "answer": "citizens and nationals of the United States of America",
+      "metadata": {
+        "alignment_candidate_id": "fact:e34e0641dd9ca8d8",
+        "alignment_source_document_id": "alignment-approved:1",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "false_answer_source": "wikidata:Q846570:description",
+        "false_answer_statement_property": "description",
+        "label_generation": "wikidata_known_answer_mismatch",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:f824d0d0b4337e82",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "English"
+          ],
+          "value": [
+            "West Germanic language"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the description for English?",
+      "text": "What does Wikidata list as the description for English? citizens and nationals of the United States of America"
+    },
+    {
+      "answer": "citizens and nationals of the United States of America",
+      "metadata": {
+        "alignment_candidate_id": "fact:7efecb96df3cdbac",
+        "alignment_source_document_id": "alignment-approved:2",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "label_generation": "wikidata_known_answer",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:5213651e1f2bb3df",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "Americans"
+          ],
+          "value": [
+            "citizens and nationals of the United States of America"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the description for Americans?",
+      "text": "What does Wikidata list as the description for Americans? citizens and nationals of the United States of America"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:7efecb96df3cdbac",
+        "alignment_source_document_id": "alignment-approved:2",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "false_answer_source": "wikidata:Q1860:description",
+        "false_answer_statement_property": "description",
+        "label_generation": "wikidata_known_answer_mismatch",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:5213651e1f2bb3df",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "Americans"
+          ],
+          "value": [
+            "citizens and nationals of the United States of America"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the description for Americans?",
+      "text": "What does Wikidata list as the description for Americans? West Germanic language"
+    },
+    {
+      "answer": "field that develops and studies software enabling machines to exhibit intelligent behavior",
+      "metadata": {
+        "alignment_candidate_id": "fact:048a582348764d1e",
+        "alignment_source_document_id": "alignment-approved:3",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "label_generation": "wikidata_known_answer",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:127ba68c0b9c936a",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q11660:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "artificial intelligence"
+          ],
+          "value": [
+            "field that develops and studies software enabling machines to exhibit intelligent behavior"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the description for artificial intelligence?",
+      "text": "What does Wikidata list as the description for artificial intelligence? field that develops and studies software enabling machines to exhibit intelligent behavior"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:048a582348764d1e",
+        "alignment_source_document_id": "alignment-approved:3",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "false_answer_source": "wikidata:Q1860:description",
+        "false_answer_statement_property": "description",
+        "label_generation": "wikidata_known_answer_mismatch",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:127ba68c0b9c936a",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "description",
+        "statement_property_label": "description",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "description"
+          ],
+          "statement_property_label": [
+            "description"
+          ],
+          "subject": [
+            "artificial intelligence"
+          ],
+          "value": [
+            "field that develops and studies software enabling machines to exhibit intelligent behavior"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the description for artificial intelligence?",
+      "text": "What does Wikidata list as the description for artificial intelligence? West Germanic language"
+    },
+    {
+      "answer": "North Africa",
+      "metadata": {
+        "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+        "alignment_source_document_id": "alignment-approved:4",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "label_generation": "wikidata_known_answer",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:493c95339ac7ce47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q15:P527:Q27381",
+        "source_family": "reference",
+        "statement_property": "P527",
+        "statement_property_label": "has part",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "P527"
+          ],
+          "statement_property_label": [
+            "has part(s)"
+          ],
+          "subject": [
+            "Africa"
+          ],
+          "value": [
+            "North Africa"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the has part for Africa?",
+      "text": "What does Wikidata list as the has part for Africa? North Africa"
+    },
+    {
+      "answer": "West Germanic language",
+      "metadata": {
+        "alignment_candidate_id": "fact:c27fa5a3cccfea92",
+        "alignment_source_document_id": "alignment-approved:4",
+        "answer_field": null,
+        "claim_template_id": "qa",
+        "country": null,
+        "country_qid": null,
+        "false_answer_source": "wikidata:Q1860:description",
+        "false_answer_statement_property": "description",
+        "label_generation": "wikidata_known_answer_mismatch",
+        "provider": "wikidata",
+        "question_template": null,
+        "review_id": "review:493c95339ac7ce47",
+        "review_status": "approved",
+        "reviewed_at": "2026-07-03T00:00:00+00:00",
+        "reviewer": "rule_based_alignment_fact_reviewer_v1",
+        "source": "wikidata:Q1860:description",
+        "source_family": "reference",
+        "statement_property": "P527",
+        "statement_property_label": "has part",
+        "statement_style": "qa",
+        "structured_evidence_slots": {
+          "statement_property": [
+            "P527"
+          ],
+          "statement_property_label": [
+            "has part(s)"
+          ],
+          "subject": [
+            "Africa"
+          ],
+          "value": [
+            "North Africa"
+          ]
+        },
+        "value_qid": null
+      },
+      "question": "What does Wikidata list as the has part for Africa?",
+      "text": "What does Wikidata list as the has part for Africa? West Germanic language"
+    }
+  ],
+  "summary": {
+    "by_property": {
+      "P527": {
+        "n_false": 1,
+        "n_records": 2,
+        "n_source_documents": 1,
+        "n_true": 1,
+        "statement_property": "P527",
+        "statement_property_label": "has part"
+      },
+      "description": {
+        "n_false": 3,
+        "n_records": 6,
+        "n_source_documents": 3,
+        "n_true": 3,
+        "statement_property": "description",
+        "statement_property_label": "description"
+      }
+    },
+    "n_false": 4,
+    "n_records": 8,
+    "n_skipped_false_answer": 0,
+    "n_source_documents": 4,
+    "n_true": 4,
+    "property_count": 2
+  }
+}

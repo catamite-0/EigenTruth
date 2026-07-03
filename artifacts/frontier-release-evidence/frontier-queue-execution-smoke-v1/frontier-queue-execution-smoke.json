@@ -1,0 +1,33 @@
+{
+  "label_usage": {
+    "artifacts_are_verifier_evidence": false,
+    "executes_child_commands": false,
+    "labels_used": false,
+    "model_answers_used": false
+  },
+  "paths": {
+    "approved_bindings": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/command-binding-review/frontier-queue-execute-approved-bindings.json",
+    "approved_bound_command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-approved-bound-command-plan.json",
+    "artifact_manifest": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json",
+    "binding_scaffold": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-binding-scaffold.json",
+    "bound_command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-bound-command-plan.json",
+    "command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-command-plan.json",
+    "dry_run_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-dry-run.json",
+    "review_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/command-binding-review/frontier-command-binding-review.json",
+    "staged_bindings": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-staged-bindings.json",
+    "unresolved_summary": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/unresolved-frontier-summary.json"
+  },
+  "schema_version": 1,
+  "scope": "Synthetic no-model fixture for frontier queue command execution. It validates command-plan staging, review gating, and dry-run execution without executing child frontier workflows or creating verifier evidence.",
+  "status": "pass",
+  "summary": {
+    "approved_ready_entry_count": 1,
+    "binding_not_reviewed_count": 0,
+    "bound_ready_entry_count": 1,
+    "dry_run_count": 2,
+    "remaining_placeholder_count": 0,
+    "review_approved_entry_count": 1,
+    "staged_upstream_output_count": 1
+  },
+  "workflow": "frontier_queue_execution_smoke"
+}

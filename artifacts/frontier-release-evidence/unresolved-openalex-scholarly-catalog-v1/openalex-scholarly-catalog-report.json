@@ -1,0 +1,66 @@
+{
+  "config": {
+    "api_base_url": "https://api.openalex.org/works",
+    "include_abstracts": true,
+    "max_query_variants": 4,
+    "max_tasks": null,
+    "min_delay_seconds": 0.1,
+    "rows_per_query": 3,
+    "select_fields": [
+      "id",
+      "doi",
+      "display_name",
+      "publication_year",
+      "publication_date",
+      "type",
+      "cited_by_count",
+      "authorships",
+      "primary_location",
+      "abstract_inverted_index",
+      "open_access",
+      "concepts",
+      "keywords",
+      "relevance_score"
+    ],
+    "source_family": "scholarly",
+    "timeout_seconds": 30.0,
+    "uses_api_key": false
+  },
+  "errors": [],
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1/openalex-scholarly-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-official-site-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "error_count": 0,
+    "openalex_type_counts": {
+      "article": 90,
+      "book": 11,
+      "book-chapter": 2,
+      "dissertation": 3,
+      "editorial": 1,
+      "preprint": 4,
+      "review": 34
+    },
+    "provider_counts": {
+      "openalex": 145
+    },
+    "query_count": 84,
+    "skipped_duplicate_count": 99,
+    "source_document_count": 145,
+    "source_family_counts": {
+      "scholarly": 145
+    },
+    "task_count": 21,
+    "task_source_family_counts": {
+      "scholarly": 21
+    }
+  },
+  "workflow": "openalex_source_family_catalog_adapter"
+}

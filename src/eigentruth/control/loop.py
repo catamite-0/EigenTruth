@@ -6,6 +6,11 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
+from eigentruth.control.acquisition import (
+    EvidenceAcquisitionAction,
+    EvidenceAcquisitionDecision,
+    EvidenceAcquisitionPolicy,
+)
 from eigentruth.control.actions import (
     ActionExecutionStatus,
     ActionExecutorRegistry,
@@ -92,6 +97,7 @@ class VerificationLoopResult:
     claim_verification_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None
     uncertainty_escalation_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None
     verification_stage_decision: VerificationStageDecision | Mapping[str, Any] | None = None
+    evidence_acquisition_decision: EvidenceAcquisitionDecision | Mapping[str, Any] | None = None
     initial_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
     final_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
 
@@ -119,6 +125,9 @@ class VerificationLoopResult:
             "claim_verification_plan": _claim_verification_plan_to_dict(self.claim_verification_plan),
             "uncertainty_escalation_plan": _claim_verification_plan_to_dict(self.uncertainty_escalation_plan),
             "verification_stage_decision": _stage_decision_to_dict(self.verification_stage_decision),
+            "evidence_acquisition_decision": _evidence_acquisition_decision_to_dict(
+                self.evidence_acquisition_decision
+            ),
             "initial_coherence_report": _coherence_report_to_dict(self.initial_coherence_report),
             "final_coherence_report": _coherence_report_to_dict(self.final_coherence_report),
         }
@@ -187,6 +196,7 @@ def run_verification_loop(
     metadata: Mapping[str, Any] | None = None,
     stage_policy: StagedVerificationPolicy | None = None,
     escalation_policy: VerificationEscalationPolicy | Mapping[str, Any] | None = None,
+    evidence_acquisition_policy: EvidenceAcquisitionPolicy | Mapping[str, Any] | None = None,
     profile_runtime: bool = True,
     claim_dependencies: Sequence[ClaimDependency | Mapping[str, Any]] | None = None,
     enforce_claim_coherence: bool = False,
@@ -209,6 +219,8 @@ def run_verification_loop(
     initial_verification_scope = "all"
     initial_coherence_report: ClaimCoherenceReport | None = None
     final_coherence_report: ClaimCoherenceReport | None = None
+    acquisition_policy_obj = _evidence_acquisition_policy_obj(evidence_acquisition_policy)
+    evidence_acquisition_decision: EvidenceAcquisitionDecision | None = None
     coherence_enabled = bool(enforce_claim_coherence or claim_dependencies is not None)
     if stage_policy is None:
         phase_started_at = _start_runtime_phase(profile_runtime)
@@ -360,10 +372,43 @@ def run_verification_loop(
         if uncertainty_escalation_plan.run_verifier:
             claim_verification_plan = uncertainty_escalation_plan
 
+    if acquisition_policy_obj is not None:
+        phase_started_at = _start_runtime_phase(profile_runtime)
+        evidence_acquisition_decision = acquisition_policy_obj.decide(
+            initial_decision,
+            verification_results=action_planning_results,
+            verification_plan=claim_verification_plan,
+            acquisition_round=_acquisition_round_from_context(base_context),
+        )
+        claim_verification_plan = acquisition_policy_obj.apply_to_plan(
+            claim_verification_plan,
+            evidence_acquisition_decision,
+        )
+        initial_decision = _apply_evidence_acquisition_decision(
+            initial_decision,
+            evidence_acquisition_decision,
+        )
+        _record_runtime_phase(
+            runtime_phases,
+            "evidence_acquisition_decision",
+            phase_started_at,
+            metadata={
+                "action": evidence_acquisition_decision.action.value,
+                "control_action": evidence_acquisition_decision.control_action.value,
+                "budget_exhausted": evidence_acquisition_decision.budget_exhausted,
+                "selected_retrieval_query_count": len(
+                    evidence_acquisition_decision.selected_retrieval_queries
+                ),
+            },
+        )
+
     phase_started_at = _start_runtime_phase(profile_runtime)
     policy = correction_policy or (
         PlanAwareCorrectionPolicy()
-        if uncertainty_escalation_plan is not None and uncertainty_escalation_plan.run_verifier
+        if (
+            (uncertainty_escalation_plan is not None and uncertainty_escalation_plan.run_verifier)
+            or evidence_acquisition_decision is not None
+        )
         else DefaultCorrectionPolicy()
     )
     action_planning_context = {**base_context, "verification_plan": claim_verification_plan}
@@ -508,6 +553,16 @@ def run_verification_loop(
                 if uncertainty_escalation_plan is not None
                 else ()
             ),
+            *(
+                (
+                    TraceEvent(
+                        "evidence_acquisition_decision",
+                        evidence_acquisition_decision.to_dict(),
+                    ),
+                )
+                if evidence_acquisition_decision is not None
+                else ()
+            ),
             TraceEvent(
                 "claim_verification_plan",
                 {
@@ -578,6 +633,12 @@ def run_verification_loop(
                 "route_count": len(uncertainty_escalation_plan.route_hints),
                 "retrieval_query_count": len(uncertainty_escalation_plan.retrieval_queries),
             },
+            "evidence_acquisition": None
+            if acquisition_policy_obj is None or evidence_acquisition_decision is None
+            else {
+                "policy": acquisition_policy_obj.to_dict(),
+                "decision": evidence_acquisition_decision.to_dict(),
+            },
             "claim_coherence": None if not coherence_enabled else _claim_coherence_metadata(
                 initial_coherence_report,
                 final_coherence_report,
@@ -598,6 +659,7 @@ def run_verification_loop(
         claim_verification_plan=claim_verification_plan,
         uncertainty_escalation_plan=uncertainty_escalation_plan,
         verification_stage_decision=stage_decision,
+        evidence_acquisition_decision=evidence_acquisition_decision,
         initial_coherence_report=initial_coherence_report,
         final_coherence_report=final_coherence_report,
     )
@@ -1013,6 +1075,56 @@ def _stage_decision_to_dict(
     if isinstance(decision, VerificationStageDecision):
         return decision.to_dict()
     return dict(_jsonable(decision))
+
+
+def _evidence_acquisition_decision_to_dict(
+    decision: EvidenceAcquisitionDecision | Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if decision is None:
+        return None
+    if isinstance(decision, EvidenceAcquisitionDecision):
+        return decision.to_dict()
+    return dict(_jsonable(decision))
+
+
+def _evidence_acquisition_policy_obj(
+    policy: EvidenceAcquisitionPolicy | Mapping[str, Any] | None,
+) -> EvidenceAcquisitionPolicy | None:
+    if policy is None:
+        return None
+    if isinstance(policy, EvidenceAcquisitionPolicy):
+        return policy
+    if isinstance(policy, Mapping):
+        return EvidenceAcquisitionPolicy.from_mapping(policy)
+    raise ValueError("evidence_acquisition_policy must be an EvidenceAcquisitionPolicy, mapping, or None.")
+
+
+def _acquisition_round_from_context(context: Mapping[str, Any]) -> int:
+    raw = context.get("acquisition_round", context.get("evidence_acquisition_round", 0))
+    if isinstance(raw, bool):
+        raise ValueError("acquisition_round must be a non-negative integer.")
+    value = int(raw)
+    if value < 0:
+        raise ValueError("acquisition_round must be a non-negative integer.")
+    return value
+
+
+def _apply_evidence_acquisition_decision(
+    decision: RiskDecision,
+    acquisition: EvidenceAcquisitionDecision,
+) -> RiskDecision:
+    if acquisition.action is EvidenceAcquisitionAction.ANSWER:
+        return decision
+    confidence = max(decision.confidence, 0.75)
+    diagnostics = dict(decision.diagnostics)
+    diagnostics["evidence_acquisition"] = acquisition.to_dict()
+    return RiskDecision(
+        action=acquisition.control_action,
+        risk_level=acquisition.risk_level,
+        confidence=confidence,
+        reason=f"{decision.reason}; evidence acquisition: {acquisition.reason}",
+        diagnostics=diagnostics,
+    )
 
 
 def _claim_verification_plan_to_dict(

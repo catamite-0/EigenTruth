@@ -28,6 +28,39 @@ python benchmarks/eval_counterfactual_verification.py \
 
 For small local fixtures, `--verifier in_memory` can derive exact-match statuses
 from each probe's expected status fields, or consume `--in-memory-facts`.
+For covered-fact route evidence, `--verifier structured_qa` can replay
+supported/refuted verified-record pairs against a structured QA corpus and turn
+same-question answer mismatches into counterfactual probes:
+
+```bash
+python benchmarks/eval_counterfactual_verification.py \
+  --verified-records artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/verified-records.jsonl \
+  --verifier structured_qa \
+  --fact-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/source-family-structured-qa-corpus.json \
+  --json artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
+  --artifact-manifest artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --register-name smollm2-product-counterfactual-structured-qa-audit \
+  --register-version 0.1
+```
+
+Some checkouts do not include the historical source-family route artifacts. The
+current frontier checkout can reproduce the same gate shape from the blind-spot
+Wikidata structured-QA route:
+
+```bash
+python benchmarks/eval_counterfactual_verification.py \
+  --verified-records artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/verified-records.jsonl \
+  --verifier structured_qa \
+  --fact-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/wikidata-blind-spot-qa-corpus.json \
+  --json artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/counterfactual-verification-report.json \
+  --artifact-manifest artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --register-name smollm2-product-counterfactual-blind-spot-wikidata-structured-qa-audit \
+  --register-version 0.1 \
+  --compact-json
+```
+
 When only extracted claims are available, the benchmark can generate bounded
 counterfactual probes from claim metadata, entity replacements, numbers, years,
 and negation:
@@ -49,6 +82,37 @@ The resulting report can be used as a release gate through
 same flag on `run_release_candidate_registry_workflow.py`; registry-backed runs
 can pass `--counterfactual-verification-registry` and
 `--counterfactual-verification-key`.
+
+## `build_counterfactual_probe_handoff.py`
+
+Compiles `counterfactual_probe` rows from a blind-spot collection corpus,
+unresolved queue report, or adapter-request JSONL into three non-evidence
+handoff files: `counterfactual-claims.jsonl`, generated
+`counterfactual-probe-records.jsonl`, and
+`pending-counterfactual-probe-requests.jsonl` for rows that need an external or
+human generator. The generated probe records are directly consumable by
+`eval_counterfactual_verification.py --records`, but they remain audit fixtures
+until a verifier report and release gate pass.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-counterfactual-probe-handoff
+
+python benchmarks/build_counterfactual_probe_handoff.py \
+  --collection-corpus artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus/blind-spot-evidence-collection-corpus.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-counterfactual-probe-handoff \
+  --version 0.1
+```
+
+On the current SmolLM2 L80 collection corpus, a local smoke run sees `29`
+counterfactual requests and auto-generates `27` probe records
+(`21` entity swaps, `3` quantity probes, and `3` negation probes), leaving `2`
+requests in the pending-generation sidecar. The command is intentionally a
+handoff bridge: it does not verify the probes or claim route-quality evidence.
+It may use a model answer to form the claim text being probed, but written
+claim/probe metadata and pending rows strip reserved label fields,
+`model_answer` / `answer`, and record-index style adapter-linkage fields.
 
 ## `eval_truthfulqa.py`
 
@@ -585,7 +649,12 @@ Trains and evaluates the torch-only pre-generation soft-target attention probe f
 local token-level hidden-state records. This is the benchmark-side handoff for
 frontier soft-target attention probing: it consumes saved prompt hidden states and
 empirical error-rate targets, then writes train/test risk metrics and optionally saves
-an `AttentionSoftTargetProbeArtifact`.
+an `AttentionSoftTargetProbeArtifact`. At product runtime,
+`LearnedPreGenerationRiskEstimate.from_probe(...)` can score one prompt from a
+saved probe artifact and pass the JSON-ready estimate to
+`select_pre_generation_profile(..., learned_risk=...)`; the estimate is recorded
+by default and only changes the selected runtime profile when
+`PreGenerationRiskPolicy(route_on_learned_risk=True)` is set.
 
 ```bash
 python benchmarks/eval_pre_generation_probe.py \
@@ -771,6 +840,13 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal mah
   --min-abstention-conditional-correctness-lower-bound 0.8 \
   --max-abstention-rate 0.5
 
+# Replay a finite alpha budget across a session/batch-style score sequence:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal maha_last \
+  --sequential-alpha 0.1 \
+  --sequential-schedule harmonic \
+  --save-sequential-report artifacts/gpt2-sequential-conformal.json \
+  --save-sequential-calibration artifacts/gpt2-sequential-calibration.json
+
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,first_token_entropy,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
@@ -803,6 +879,38 @@ retained participation region on correct responses, then reports empirical
 participation/abstention, selective accuracy, correct-retention, and conservative
 conditional-correctness lower bounds. This is for answer participation control and
 does not change the base E1 conformal verdict.
+For budgeted answer/acquire/abstain policies, use
+`eigentruth.calibration.EvidenceAcquisitionConformalCalibrator` on labeled
+post-policy records rather than reusing a pre-acquisition threshold. It compares
+the naive pre-score abstention report against the post-acquisition policy report
+and saves the post-policy threshold as a standard `CalibrationArtifact`, matching
+the evidence-acquisition control loop without adding a model or network
+dependency. Saved product traces can be converted into those rows with
+`evidence_acquisition_record_from_trace` or
+`evidence_acquisition_records_from_trace_feedback`, so feedback-labeled
+answer/acquire/abstain runs can be recalibrated offline against the complete
+policy score distribution. The corresponding workflow script is
+`calibrate_evidence_acquisition_from_traces.py`: it reads saved `ProductTrace`
+JSON/JSONL and optional `ProductFeedbackRecord` JSONL labels, emits extracted
+records when requested, writes an `EvidenceAcquisitionCalibrationReport`, saves
+the post-policy `CalibrationArtifact`, and can fingerprint/register the result.
+For held-out or subsequently collected feedback, `audit_evidence_acquisition_risk`
+can replay the deployed threshold over labeled post-policy records and alpha-spend
+finite prefix checks, producing a JSON-ready monitor report that fails closed when
+the accepted-error upper bound exceeds the target error rate. For continuously
+arriving feedback, `audit_evidence_acquisition_anytime_risk` adds a dependency-free
+mixture e-process monitor over accepted-error Bernoulli outcomes; it alarms when
+the mixture e-value crosses `1 / monitor_alpha` without recalibrating on the same
+feedback stream. Library callers can persist
+`EvidenceAcquisitionAnytimeRiskMonitorState` and update it one feedback record at
+a time; the trace workflow can emit full monitor reports directly with
+`--risk-target-error-rate`; `--risk-monitor-mode prefix` preserves the finite
+prefix default, while `--risk-monitor-mode anytime` or `both` adds the anytime
+report. Use `--risk-monitor-json`, `--anytime-risk-monitor-json`,
+`--risk-monitor-alpha`, `--risk-monitor-schedule`, repeatable
+`--risk-monitor-checkpoint`, and repeatable `--risk-monitor-bet-fraction` to
+control outputs. Any failed monitor sets the workflow status to `blocked` and is
+included in the artifact manifest and local registry metadata.
 When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
 the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
 (or `--signals` when no abstention list is provided). The default ranking metric is
@@ -814,6 +922,23 @@ the script evaluates the selected report or comparison recommendation as a
 fail-closed promotion gate. It requires both
 `--min-abstention-conditional-correctness-lower-bound` and
 `--max-abstention-rate`; a failing gate sets the main payload verdict to `REJECT`.
+When `--save-sequential-report` or `--include-sequential-report` is set, the
+script emits a sequential conformal replay report. It uses a seeded split of
+true rows for calibration, replays the remaining true rows plus false rows in
+score-dump order, and spends one finite alpha budget with `linear`, `harmonic`,
+or `geometric` scheduling. This is a session/batch audit sidecar: it does not
+change the base E1 verdict. `--save-sequential-calibration` stores the same
+normal-score calibration distribution and alpha-spending schedule as a reusable
+`SequentialConformalArtifact` for runtime sequence scoring. Product integrations
+can pass that artifact to `RiskController(..., sequential_gate=...)` and call
+`decide_sequence(...)`; per-request `decide(...)` remains stateless. The
+no-model product demo can replay the artifact with
+`examples/calibrated_control_demo.py --sequential-gate ... --diagnostics-sequence
+'[...]'`, and `run_product_runtime_baseline.py` can aggregate those
+`risk_decision_sequence` traces as decision/gate summaries without treating
+them as ordinary runtime-timed ProductTrace payloads. If a runtime budget policy
+is configured for such traces, the baseline fails closed with
+`unsupported_trace_format` instead of inventing missing phase timings.
 When `--adaptive-feature` is provided, `eval_conformal.py` loads the feature from
 a selected primary score, JSON dump extra array, JSONL manifest extra, or JSONL
 per-record extra, then writes an `adaptive_conformal_report` whose adjusted score
@@ -861,8 +986,8 @@ from JSONL scores, it reuses the preloaded layer/score view for both the base
 conformal report and the sweep.
 When `--artifact-manifest` is provided, the conformal report gains
 `artifact_manifest_summary` and `paths.artifact_manifest`; the manifest
-fingerprints the input score dump plus generated conformal, sweep, and
-calibration artifacts for later verification or registry promotion.
+fingerprints the input score dump plus generated conformal, sweep, sequential,
+and calibration artifacts for later verification or registry promotion.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
@@ -1174,6 +1299,79 @@ budget. This is an upper-bound diagnostic only (`promotion_eligible=false`), not
 a runtime calibration artifact. JSONL inputs load only the requested abstention
 candidate columns.
 
+For verifier-enhanced score dumps, the same replay can evaluate calibrated
+fusion candidates without writing fused columns back into the dump. Rank fusion
+uses the current seed's correct calibration split as the normal reference;
+geometry/uncertainty fusion first rank-calibrates each group, then combines the
+two group scores:
+
+```bash
+python benchmarks/eval_abstention_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.json \
+  --signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty \
+  --rank-fusion-signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty \
+  --rank-fusion-methods max_rank,mean_rank,noisy_or_rank \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_refute_confidence,verifier_not_supported \
+  --geometry-method mean_rank \
+  --uncertainty-method mean_rank \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --alpha 0.2 \
+  --enforce-abstention-budget \
+  --abstention-budget-target-rate 0.48 \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --json artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v1/local-retrieval-fusion-abstention-stability-alpha-0p2-budgeted-target-0p48.json
+```
+
+`--enforce-abstention-budget` keeps the conformal threshold but also applies a
+seed-calibration split score quantile so the candidate targets a bounded total
+abstention rate before held-out evaluation. The release gate is still evaluated
+against `--max-abstention-rate`; `--abstention-budget-target-rate` is an
+optional safety margin for the threshold policy. The fixed-budget
+local-retrieval fusion artifact
+(`frontier-release-evidence-verifier-fusion-abstention-v3`) stabilizes on
+`geometry_uncertainty_fusion:noisy_or` and clears mean
+conditional-correctness/abstention gates, but remains blocked by strict 10/10
+seed pass-rate: qwen05-l80 passes 7/10 seeds and smollm2-l80 passes 5/10. The
+gate-budget sweep rollup in
+`artifacts/frontier-release-evidence/abstention-rerun-rollup-v3/frontier-abstention-rerun-rollup.json`
+then promotes the same two l80 runs under explicit budget-profile evidence.
+
+When fixed budget targets are unstable, pass
+`--abstention-budget-target-rates` to evaluate an explicit profile sweep. Each
+budget target becomes a separate candidate name, for example
+`...@budget=0.49`. Add `--prefer-release-gate-passing` when the benchmark should
+rank candidates that satisfy the configured correctness and abstention release
+gate ahead of higher-correctness candidates that exceed the abstention budget:
+
+```bash
+python benchmarks/eval_abstention_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/qwen-l80-enhanced-scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/smollm2-l80-enhanced-scores.manifest.json \
+  --signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_uncertainty \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_refute_confidence,verifier_not_supported \
+  --geometry-method mean_rank \
+  --uncertainty-method mean_rank \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --alpha 0.2 \
+  --enforce-abstention-budget \
+  --abstention-budget-target-rates 0.43,0.45,0.46,0.47,0.48,0.49,0.5,0.51,0.52,0.54 \
+  --prefer-release-gate-passing \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --json artifacts/frontier-release-evidence/verifier-fusion-abstention-stability-v2/local-retrieval-fusion-abstention-stability-alpha-0p2-budget-target-sweep.json
+```
+
+The checked-in budget-target sweep release artifact
+`artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v4.json`
+promotes all frontier tracks: both qwen05-l80 and smollm2-l80 pass 10/10
+abstention seeds with the same geometry/verifier `noisy_or` fusion family, while
+the multiple-testing and detectability tracks are also cleared through verified
+rerun rollups. The selected budget target varies by seed and remains visible in
+each recommended candidate name, so this evidence should be treated as an
+explicit profile-sweep policy rather than a hidden fixed threshold.
+
 ## `compare_frontier_release_evidence.py`
 
 Combines frontier stability reports into one fail-closed release verdict without
@@ -1181,7 +1379,21 @@ rerunning models, verifiers, or retrieval. It treats staged verifier stability
 and abstention-gate stability as separate required tracks, and can optionally
 gate a DECK-style detectability taxonomy track. The release candidate blocks if
 any provided track misses its configured seed-rate, metric, or blind-spot
-threshold.
+threshold. It can also consume citation/source-family batch evidence rollups:
+when a `--citation-batch-rollup-report` is supplied, every expected batch must
+be observed exactly once, child evidence gates must be promotion-ready, and
+child manifests must have passed inside the rollup. Source-family child
+adapter-gate present/pass/fail counts and status distributions are preserved in
+the release report and registry metadata when the rollup exposes them. Completed frontier rerun
+rollups can be supplied with repeatable `--frontier-rerun-rollup-report`; each
+rollup must be `status=promote`, `gate.passed=true`, `gate.promotion_ready=true`,
+and include an artifact manifest before it can clear a previously blocked
+release-evidence track.
+Add `--require-input-manifests` for release/audit runs that should fail closed
+unless every input report declares an artifact manifest and that manifest
+verifies against the current local files. The report records per-input
+`artifact_manifest_verification` summaries plus aggregate `input_manifest_*`
+counters for registry and handoff audits.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
@@ -1189,9 +1401,15 @@ OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
 python benchmarks/compare_frontier_release_evidence.py \
   --verifier-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json \
   --abstention-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json \
+  --frontier-workflow-report artifacts/truthfulqa-frontier-qwen-smollm2-l80/truthfulqa-frontier-workflow.json \
   --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/qwen05-l80/detectability-taxonomy-report.json \
   --detectability-taxonomy-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/detectability-taxonomy-report.json \
+  --citation-batch-rollup-report artifacts/truthfulqa-frontier-smollm2-l80-citation-batch-rollup/citation-batch-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-multiple-testing-rerun-rollup-v1/frontier-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/detectability-taxonomy-rerun-rollup-v2/frontier-detectability-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup-v3/frontier-abstention-rerun-rollup.json \
   --max-detectability-entrenched-false-rate 0.25 \
+  --require-input-manifests \
   --json "$OUT/frontier-release-evidence.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --verification-report "$OUT/manifest-verification.json" \
@@ -1200,10 +1418,45 @@ python benchmarks/compare_frontier_release_evidence.py \
   --version 0.1
 ```
 
-The current l80 evidence promotes the verifier-stability track but blocks the
-abstention-stability track, so the combined release verdict is blocked. This is
-the expected posture until participation-gate evidence clears the conservative
-conditional-correctness lower-bound gate.
+The current checked-in l80 release evidence promotes the verifier-stability
+track directly and promotes the multiple-testing, detectability, and abstention
+tracks through verified rerun rollups. The combined verdict in
+`artifacts/frontier-release-evidence/frontier-release-evidence-verifier-fusion-abstention-v4.json`
+is therefore `promote`, with base-track blocked statuses preserved separately
+for auditability.
+When `--frontier-workflow-report` is supplied, the comparator also gates the
+frontier workflow's family-wise multiple-testing evidence. Summary counts alone
+are not sufficient: the report must include a `multiple_testing_gate.cells` list
+whose length and pass/fail/unknown counts match `cell_count`, and each cell must
+carry both report and calibration artifact paths. This keeps release promotion
+from accepting a top-level `all_pass` summary that cannot be traced back to
+per-cell conformal artifacts.
+When `--citation-batch-rollup-report` is supplied, the comparator adds a
+`citation_batch_track_status` to the release decision and records expected,
+observed, missing, duplicate, and unexpected batch counts in the release report,
+registry metadata, and artifact manifest, along with child adapter-gate
+present/pass/fail counts and status distributions when available. The same
+release summary carries child provenance pass/fail counts, evidence-class
+counts, query-sweep strategy distributions, no-passing-strategy counts, and
+controlled-vs-external comparison pass/fail counts so product handoff/runtime
+baselines can keep the blocked citation lane diagnosable. A rollup with missing
+expected batches, duplicate batches, unsupported child workflows, failed child
+gates, or failed child-manifest verification blocks the frontier release verdict.
+When `--frontier-rerun-rollup-report` is supplied, the comparator records a
+`frontier_rerun_rollup_track_status` and fingerprints the rollup report plus
+its manifest. This is the intended handoff path for
+`rollup_frontier_stability_evidence_reruns.py`,
+`rollup_frontier_abstention_evidence_reruns.py`,
+`rollup_frontier_detectability_evidence_reruns.py`, and
+`rollup_frontier_multiple_testing_reruns.py`; blocked, empty, or
+manifest-less rerun rollups fail closed.
+Product runtime baselines also aggregate that citation-batch track from
+promotion-contract trace metadata; `compare_product_runtime_baselines.py` can
+gate the track promote rate, require a rollup count, and fail closed on missing,
+duplicate, or unexpected citation/source-family batches so release evidence
+cannot silently disappear after handoff. Adapter-gate counts remain visible in
+the promotion-contract frontier-release metadata without changing older handoff
+metric-count contracts.
 When `--detectability-taxonomy-report` is supplied, each run must have a matching
 taxonomy report. The default blind-spot gate blocks if more than 25% of false
 records fall into the `entrenched` cell, because that cell is repeatable and
@@ -1295,7 +1548,33 @@ to relax the detectability release blocker.
 Sweeps local retrieval query fields and overlap thresholds over the same
 blind-spot set. This is useful after a route audit shows a coverage gap: it
 separates query-construction failures from verifier failures while preserving
-the corpus provenance warning.
+the corpus provenance warning. Each strategy now also embeds a compact
+`gap_analysis` payload from `analyze_retrieval_route_gaps.py`, so blocked
+reports distinguish `no_retrieval_hits`, `false_negative`,
+`low_overlap_after_retrieval`, `false_positive`, and successful
+`false_refuted` / `true_supported` buckets without rerunning a separate sidecar.
+When local corpora include `source_family` metadata, add
+`--source-family-filters off,planned,planned_rerank` to compare the default
+retrieval order with hard source-family filtering and compatible-source
+reranking. `planned` drops hits whose source family does not match the citation
+query plan; `planned_rerank` expands the candidate pool, deduplicates repeated
+sources, puts higher-priority compatible families first, boosts structured
+metadata slot matches such as World Bank `country_name`/`indicator_name`, and
+retains incompatible hits as fallback evidence.
+When the corpus was produced from a citation/search queue, pass
+`--source-binding-queue` to bind each score row back to source documents whose
+metadata carries the same `source_queue_request_sha256`. Source-bound sweeps
+use the fixture's already-selected retrieval hits by default, avoiding a second
+claim-text retrieval pass that can discard valid citation snippets with low
+lexical overlap against the generated answer. Override this only for diagnostic
+comparisons with `--no-use-precomputed-retrieval-hits`.
+Use `--enable-triple-evidence --triple-refute-object-mismatch` with
+`--target-route retrieval_triple_evidence` when the sweep should measure linked
+subject-predicate-object evidence rather than lexical retrieval groundedness.
+Include `triple_slot` in `--query-fields` to generate answer-omitting
+subject/predicate queries from extracted claim triples, for example
+`capital of France` instead of a query containing the generated answer
+`Berlin`.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep
@@ -1304,18 +1583,27 @@ python benchmarks/sweep_blind_spot_retrieval_queries.py \
   --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
   --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
-  --query-fields answer,question,question_answer,text \
+  --query-fields answer,question,question_answer,text,triple_slot \
   --retriever-min-overlaps 0.95,0.8,0.65,0.5 \
+  --source-family-filters off \
   --retrieval-limit 3 \
   --signal truth_proj \
   --alpha 0.1 \
   --verifier-min-overlap 0.65 \
+  --verified-records-dir "$OUT/verified-records" \
   --json "$OUT/blind-spot-query-sweep.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
   --name truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep \
   --version 0.1
 ```
+
+When a sweep is intended to feed the semantic-gap lane, add
+`--verified-records-dir`. The sweep saves one
+`<strategy>-verified-records.jsonl` sidecar per strategy and records each path
+under `strategies[].paths.verified_records_jsonl`; those sidecars are the direct
+inputs for `build_retrieval_semantic_gap_handoff.py` and
+`run_retrieval_semantic_gap_review_workflow.py`.
 
 The registered SmolLM2 sweep
 (`report:truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep:0.1`) evaluates
@@ -1388,7 +1676,10 @@ Turns blocked blind-spot coverage into an external evidence collection plan. It
 does not fetch new data and does not promote a route. Instead, it maps each
 blind spot to likely evidence families: structured-fact properties,
 structured-QA/citation retrieval, counterfactual probes, and world-model or
-calculator checks.
+calculator checks. When `--query-sweep` points at a report with embedded
+`gap_analysis`, the planner also emits gap-informed alignment actions such as
+claim-evidence alignment, source-document fact extraction, query refinement,
+and negative-control audits.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan
@@ -1396,6 +1687,7 @@ OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-expansion-plan
 python benchmarks/plan_blind_spot_evidence_expansion.py \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
   --provenance-comparison artifacts/truthfulqa-frontier-smollm2-l80-query-sweep-provenance-comparison/query-sweep-provenance-comparison.json \
+  --query-sweep artifacts/frontier-release-evidence/unresolved-seeded-news-query-sweep-gap-analysis-v1/blind-spot-query-sweep-gap-analysis.json \
   --json "$OUT/blind-spot-evidence-expansion-plan.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
@@ -1412,12 +1704,36 @@ world-model/calculator tasks for `21`. This is the concrete worklist for
 expanding external/structured coverage after the provenance comparison blocked
 controlled-only query evidence.
 
+The frontier v4 release evidence also includes a refreshed SmolLM2 expansion
+artifact at
+`artifacts/frontier-release-evidence/blind-spot-evidence-expansion-v1/evidence-expansion-plan.json`.
+It is generated from the detectability rerun queue's `89` entrenched false
+records and records the same next-step profile: `65` high-priority targets,
+`80` structured-fact routes, `65` structured-QA routes, `63` citation-retrieval
+routes, `41` counterfactual probe tasks, and `21` world-model/calculator tasks.
+The planner filters generic single-token entity candidates such as `Son`,
+`American`, and `Nothing` before writing collection targets, so downstream
+Wikidata/search tasks receive cleaner entity seeds while retaining useful
+question-keyword phrases.
+
+The gap-informed frontier v4 alignment plan at
+`artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-expansion-plan-v1/evidence-expansion-plan.json`
+consumes the seeded-news query-sweep gap report directly. It keeps status
+`needs_evidence_collection`, covers all `89` blind spots, and records
+`best_strategy=question_overlap_0p65`, `best_passing_strategy=null`,
+`dominant_gap_bucket=no_retrieval_hits`, `301/306` false records still missed,
+and only `45/556` verification records using retrieval. The generated worklist
+therefore adds `claim_evidence_alignment`, `query_refinement`,
+`source_document_fact_extraction`, and `negative_control_alignment_audit` to
+all `89` targets before another verifier sweep.
+
 ## `build_blind_spot_evidence_collection_corpus.py`
 
 Compiles an evidence expansion plan into source-discovery request batches. This
 output is intentionally not verifier evidence: it is the executable queue for
 Wikidata/entity-property lookup, external citation retrieval, counterfactual
-probe generation, and deterministic world-model/calculator rule authoring.
+probe generation, deterministic world-model/calculator rule authoring, and
+gap-informed claim-evidence alignment audits.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-evidence-collection-corpus
@@ -1439,6 +1755,169 @@ world-model/calculator-rule authoring requests. It keeps the first collection
 pass focused on the targets most likely to unlock structured fact or citation
 coverage before rerunning `sweep_blind_spot_retrieval_queries.py` and
 `compare_blind_spot_query_sweeps.py`.
+
+The frontier v4 corpus at
+`artifacts/frontier-release-evidence/blind-spot-evidence-collection-corpus-v1/blind-spot-evidence-collection-corpus.json`
+is the full follow-on queue for the v4 expansion plan. It covers all `89`
+targets and emits `1283` collection requests: `950` Wikidata/entity-property
+requests, `260` citation requests, `47` counterfactual probes, and `26`
+world-model/calculator-rule authoring requests. Its manifest verification
+passes and the registry records it as
+`report:smollm2-l80-blind-spot-evidence-collection-corpus:0.1`.
+
+The corresponding gap-informed alignment corpus at
+`artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json`
+adds an `alignment_audit` request bucket. It covers all `89` targets and emits
+`1372` total requests: `950` Wikidata/entity-property, `260` citation, `47`
+counterfactual, `26` world-model/calculator, and `89` alignment-audit
+requests. The alignment requests remain `alignment_audit_only`; they are inputs
+for extracting subject/property/value/evidence-span triples, not verifier
+evidence.
+
+## `audit_blind_spot_alignment_requests.py`
+
+Audits `alignment_audit` requests against an external evidence corpus and emits
+review-only subject/property/value/evidence-span candidates. This is the first
+execution step after a query-sweep gap analysis says source acquisition is
+complete but route quality is still blocked. The output remains non-evidence:
+candidate facts are `structured_fact_review_only` until a later structured-fact
+or world-model route validates them.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1
+
+python benchmarks/audit_blind_spot_alignment_requests.py \
+  --collection-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-collection-corpus-v1/evidence-collection-corpus.json \
+  --evidence-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-audit \
+  --version 0.1
+```
+
+The registered v4 audit has status `ready_for_fact_review`: all `89` alignment
+requests find candidate source hits, `30/89` requests reach
+`candidate_fact_ready`, and the run emits `30` deduplicated review-only fact
+candidates. The audit now derives candidate subjects from evidence spans when a
+structured subject/property pattern is visible, while keeping the requested
+entity as audit provenance. The main remaining blocker is
+`property_only_alignment` (`46` requests), followed by `subject_only_alignment`
+(`6`) and `subject_property_aligned_no_value` (`6`). This says the next lift is
+subject/entity binding and value extraction from broad source documents, not
+more generic source-family acquisition.
+
+## `build_alignment_fact_review_corpus.py`
+
+Deduplicates `structured_fact_review_only` candidates from the alignment audit,
+applies fail-closed subject/value/property checks, and emits a review-only
+structured QA corpus. The output is deliberately scoped as a fact-review input:
+it strips request ids, target ids, labels, and model answers from corpus
+metadata, records accepted/skipped decisions in a sidecar JSONL, and does not
+promote a verifier route.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1
+
+python benchmarks/build_alignment_fact_review_corpus.py \
+  --candidates artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/structured-fact-candidates.jsonl \
+  --output "$OUT/alignment-fact-review-corpus.json" \
+  --report-json "$OUT/alignment-fact-review-report.json" \
+  --records-jsonl "$OUT/alignment-fact-review-records.jsonl" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-fact-review-corpus \
+  --version 0.1
+```
+
+The registered v4 review corpus accepts `11/30` candidates after upstream
+deduplication and quality gates. The dominant skip reasons are duplicate
+candidates (`14`) and subject/evidence-span mismatch (`5`). This keeps the next
+loop precise: the eleven rows can be manually or route-specifically reviewed,
+while the skipped rows point back to subject binding and value extraction
+improvements.
+
+## `promote_alignment_fact_review_corpus.py`
+
+Gates the review-only alignment fact corpus before any structured-fact
+promotion. Without explicit review decisions, it writes a decision template and
+keeps the run at `needs_review`. With approved decisions, it materializes
+source-family style structured source documents that can be passed to
+`build_source_family_qa_corpus.py` and then audited by the covered-facts
+structured QA route. The gate does not promote verifier evidence by itself.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-review-promotion-gate-v1
+
+python benchmarks/promote_alignment_fact_review_corpus.py \
+  --review-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-review-promotion-gate \
+  --version 0.1
+```
+
+The registered v4 gate currently has status `needs_review`: it sees all `11`
+review-corpus rows, writes `11` pending decision-template rows, and emits `0`
+approved source documents. This is the intended fail-closed state until a
+review decision JSONL supplies `approved`, `rejected`, or
+`needs_more_evidence` for each `alignment_candidate_id`.
+
+## `review_alignment_fact_review_corpus.py`
+
+Runs a deterministic route-specific review over the alignment fact-review
+corpus. The rule reviewer approves only rows whose Wikidata evidence source and
+evidence span close a subject/property/value loop; non-Wikidata or unclosed rows
+remain `needs_more_evidence`. Its decisions are ordinary review-decision JSONL
+for `promote_alignment_fact_review_corpus.py`, so the promotion gate still
+requires explicit reviewer provenance.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1
+
+python benchmarks/review_alignment_fact_review_corpus.py \
+  --review-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-seeded-news-alignment-rule-review \
+  --version 0.1 \
+  --reviewed-at 2026-06-30T00:00:00Z
+```
+
+The registered v4 rule review approves all `11/11` review-corpus rows because
+they are closed Wikidata subject/property/value spans. Re-running the promotion
+gate with `--review-decisions` produces `11` approved source docs and status
+`ready_for_structured_qa`; building a source-family QA corpus from those docs
+keeps all `11` facts. The covered-facts structured QA route then promotes on
+`22` balanced true/false records with decision accuracy `1.0`, true-supported
+rate `1.0`, false-refuted rate `1.0`, and false-supported rate `0.0`. This is
+covered-fact evidence for the reviewed rows only, not broad blind-spot recall.
+
+```bash
+REVIEW=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-rule-review-v1
+GATE=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-promotion-gate-v1
+QA=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-source-family-qa-v1
+ROUTE=artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-reviewed-structured-qa-route-v1
+
+python benchmarks/promote_alignment_fact_review_corpus.py \
+  --review-corpus artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-fact-review-corpus-v1/alignment-fact-review-corpus.json \
+  --review-decisions "$REVIEW/review-decisions.jsonl" \
+  --output-dir "$GATE" \
+  --artifact-manifest "$GATE/artifact-manifest.json"
+
+python benchmarks/build_source_family_qa_corpus.py \
+  --source "$GATE/approved-source-documents.json" \
+  --output "$QA/source-family-qa-corpus.json" \
+  --report-json "$QA/source-family-qa-report.json" \
+  --artifact-manifest "$QA/artifact-manifest.json"
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$QA/source-family-qa-corpus.json" \
+  --output-dir "$ROUTE" \
+  --score-name smollm2-l80-frontier-v4-alignment-reviewed-covered-facts
+```
 
 ## `fetch_blind_spot_wikidata_evidence.py`
 
@@ -1471,6 +1950,33 @@ is therefore: source collection works, lexical retrieval is still the wrong
 coverage lever, and the next pass should turn documented Wikidata claims into
 structured-fact/QA route corpora.
 
+The frontier v4 full-queue fetch lives at
+`artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/`. It
+deduplicates the full collection corpus into `672` Wikidata requests, resolves
+`75` entities, and writes `322` CC0 source documents. The companion external
+retrieval corpus contains all `322` documents with source, timestamp, and URL
+metadata, and the provenance audit passes as `external_candidate`: `0` claim-id
+links, `0` row links, `0` label metadata documents, and exact answer-copy rate
+`0.065`. The audit keeps a warning for copied answer text, so this artifact is
+approved as external source material, not as proof that the route now covers the
+blind spots.
+
+The matching v4 structured replay lives at
+`artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/`.
+`build_wikidata_qa_corpus.py --auto-template-from-source` turns all `322`
+source docs into structured QA facts over `12` properties, and
+`run_wikidata_structured_qa_route_workflow.py --route structured_qa` promotes on
+`644` balanced true/false covered-fact rows with decision accuracy `1.0`,
+true-supported rate `1.0`, false-refuted rate `1.0`, and false-supported rate
+`0.0`. The downstream covered-fact mapping improves joined blind spots from the
+older `37/89` run to `48/89` and conservative candidates from `10/89` to
+`16/89`, but the explicit question/property gate still keeps only `1/89`
+deployable correction candidate. The product handoff therefore promotes exactly
+one abstain trace for the Tesla founder slot while preserving the broader
+conclusion: full-queue Wikidata improves fact coverage, but most remaining
+blind spots need citation, richer property, time-series, or world-model
+evidence rather than a relaxed KG gate.
+
 ## `audit_blind_spot_covered_fact_mapping.py`
 
 Joins blind-spot records to target-specific Wikidata source docs and structured
@@ -1497,13 +2003,14 @@ python benchmarks/audit_blind_spot_covered_fact_mapping.py \
   --version 0.1
 ```
 
-The current SmolLM2 l80 run observes joined Wikidata facts for `37/89` blind
-spots, but only `10/89` are conservative correction candidates. Another `5`
-records have evidence values that support the model answer, `6` show answer
-entity collision risk, and `52` have no joined facts. This makes the next
-frontier step concrete: add explicit question/property claim mapping for the
-candidate set and route the remaining records to citation retrieval or
-world-model evidence collection.
+The original SmolLM2 l80 run observes joined Wikidata facts for `37/89` blind
+spots, but only `10/89` are conservative correction candidates. The v4 full
+queue replay observes joined facts for `48/89`, with `16/89` conservative
+candidates, `4` answer-supported rows, `5` answer-entity collision rows, and
+`41` rows with no joined facts. This makes the next frontier step concrete: add
+better claim/property collection for the candidate set and route the remaining
+records to citation retrieval, numerical/time-series sources, or world-model
+evidence collection.
 
 ## `map_blind_spot_question_properties.py`
 
@@ -1530,6 +2037,13 @@ The current SmolLM2 l80 run narrows the `10/89` covered-fact candidates to
 Wikidata `P112` with Martin Eberhard and Marc Tarpenning as covered facts.
 Another `7` records are generic fact-only joins. This turns the Wikidata path
 into a precise property gate while making the remaining gap explicit.
+
+The v4 full-queue replay narrows `16/89` conservative candidates to the same
+`1/89` explicit correction candidate. It records `6` generic fact-only rows,
+`4` answer-supported rows, `2` answer-entity collision rows, and `41` rows with
+no joined facts. The unchanged deployable count is intentional: the added facts
+mostly broaden entity/background coverage, not explicit question-property
+support for the model's false answers.
 
 ## `build_question_property_correction_handoff.py`
 
@@ -1562,9 +2076,14 @@ blind-spot mapping to product control trace.
 Builds the next adapter execution queue after explicit question/property
 corrections have been handled. It filters out records already covered by a
 mapped correction gate and emits JSON/JSONL requests for citation/search
-adapters plus deterministic world-model or calculator rule authoring. The
-output is deliberately marked as source-discovery/rule-authoring work, not
-verifier evidence.
+adapters, deterministic world-model or calculator rule authoring, and
+counterfactual probe generation when those requests are present in the
+collection corpus. The output is deliberately marked as
+source-discovery/probe-generation/rule-authoring work, not verifier evidence.
+New queue runs also write `execution-batches.jsonl`, grouped by request type
+with `--max-requests-per-batch`, so citation/search, counterfactual-probe, and
+world-model rule passes can be scheduled without re-reading the full request
+JSONL.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue
@@ -1575,6 +2094,7 @@ python benchmarks/build_unresolved_blind_spot_evidence_queue.py \
   --question-property-mapping artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-question-property-mapping/blind-spot-question-property-mapping.json \
   --covered-fact-mapping artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-covered-fact-mapping/blind-spot-covered-fact-mapping.json \
   --output-dir "$OUT" \
+  --max-requests-per-batch 50 \
   --registry artifacts/local-release-registry.json \
   --name truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue \
   --version 0.1
@@ -1586,8 +2106,438 @@ has status `ready_for_adapter_execution`: it starts from the `65`
 high-priority collection targets, removes the `1` resolved Tesla/P112 property
 slot, and emits `182` adapter requests over `46` unresolved targets. The queue
 contains `176` external citation/search requests and `6` world-model or
-calculator rule-authoring requests; `20` queued targets have no joined facts and
-`7` have only generic fact joins. Its manifest verifies recursively.
+calculator rule-authoring requests; refreshed runs include available
+`counterfactual_probe` rows by default and surface their counts in report,
+manifest, and registry metadata. With the default batch size, the registered
+request set materializes as `5` execution batches. `20` queued targets have
+no joined facts and `7` have only generic fact joins. Its manifest verifies
+recursively. The counterfactual branch can be lowered with
+`build_counterfactual_probe_handoff.py` before running
+`eval_counterfactual_verification.py --records`; rows that cannot be generated
+heuristically stay in a pending-generation JSONL rather than becoming silent
+pseudo-evidence.
+
+The frontier v4 full-queue replay writes its queue to
+`artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/`.
+It starts from all `89` collection targets, removes the single resolved
+Tesla/P112 property slot, and emits `332` adapter/rule requests for `88`
+unresolved targets: `260` external citation/search requests, `46`
+counterfactual-probe rows, and `26` world-model/calculator-rule rows. The
+evidence-status split preserves the stricter question/property gate outcome:
+`41` no-joined-fact targets, `20` unmapped-low-relevance targets, `15`
+subject-only/unsupported-property targets, `6` generic-fact-only targets, `4`
+answer-supported targets, and `2` answer-entity-collision targets. This queue is
+still non-evidence; it is the execution contract for the next source and
+rule-input collection pass.
+
+The matching v4 citation/search handoff lives at
+`artifacts/frontier-release-evidence/unresolved-citation-search-handoff-v1/`.
+It uses `--query-mode claim_entity`, removes `194` disallowed model-answer
+phrases from query planning, and writes `260` sanitized external-adapter
+requests with no `record_index`, `target_id`, `model_answer`, or label fields.
+The source-family plan flags `52` official-preferred requests, `20`
+freshness-required requests, and `4` official-statistics-preferred requests; it
+does not contain source documents until a real adapter returns results.
+
+The v4 unresolved citation lane has also been replayed through the local
+source-family workflow with the cached Wikidata source docs:
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-catalog artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl \
+  --scores artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OUT" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-wikidata-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-diversify-source-families \
+  --target-route retrieval_groundedness \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+This produces `720` Wikidata-backed adapter result documents for `244/260`
+requests and passes the provenance gate as `external_candidate`: `0` claim-id
+links, `0` row links, `0` label metadata documents, and exact answer-copy rate
+`0.111`. It still blocks route promotion because the best external query sweep
+refutes `0/89` entrenched blind spots, no external strategy passes, and the
+controlled-to-external comparison keeps a `1.0` generalization gap. Treat this
+as negative evidence for broad lexical citation retrieval over the current
+Wikidata catalog, not as a failed pipeline run.
+
+The follow-up v4 source-family coverage audit turns that negative result into a
+catalog collection queue:
+
+```bash
+COVERAGE=artifacts/frontier-release-evidence/unresolved-source-family-coverage-audit-v1
+PLAN=artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1
+
+python benchmarks/audit_source_family_coverage.py \
+  --requests artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl \
+  --adapter-results artifacts/frontier-release-evidence/unresolved-wikidata-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl \
+  --json "$COVERAGE/source-family-coverage-audit.json" \
+  --acquisition-plan-jsonl "$COVERAGE/source-family-acquisition-plan.jsonl" \
+  --artifact-manifest "$COVERAGE/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-source-family-coverage-audit \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/plan_source_family_catalog_collection.py \
+  --acquisition-plan "$COVERAGE/source-family-acquisition-plan.jsonl" \
+  --tasks-jsonl "$PLAN/source-family-catalog-collection-tasks.jsonl" \
+  --report-json "$PLAN/source-family-catalog-collection-plan.json" \
+  --artifact-manifest "$PLAN/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-source-family-catalog-collection-plan \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The audit sees `192/260` requests missing non-fallback target families. The
+missing family split is `scholarly=156`, `official=52`, `news=20`, and
+`official_statistics=4`; no official-preferred or freshness-required request
+received a matching official/fresh result from the cached Wikidata catalog. The
+collection planner deduplicates `232` family gaps into `34` non-evidence tasks:
+`21` scholarly, `8` official, `4` news, and `1` official-statistics task, with
+provider hints for OpenAlex/Crossref, official-site search, GDELT/news, and
+World Bank/UN-style statistics collection. This is the concrete next execution
+queue for claim-specific source acquisition.
+
+The v4 official-statistics lane is now filled with the World Bank adapter and
+replayed through the same fail-closed gates:
+
+```bash
+WB=artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1
+WB_WORKFLOW=artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1
+
+python benchmarks/run_worldbank_source_family_catalog_adapter.py \
+  --tasks artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl \
+  --output "$WB/worldbank-official-statistics-catalog.jsonl" \
+  --report-json "$WB/worldbank-official-statistics-catalog-report.json" \
+  --artifact-manifest "$WB/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-official-statistics-catalog \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-catalog artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl \
+  --source-catalog "$WB/worldbank-official-statistics-catalog.jsonl" \
+  --scores artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$WB_WORKFLOW" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-diversify-source-families \
+  --target-route retrieval_groundedness \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The catalog writes `217` country-level `SP.POP.TOTL` documents with `0` errors.
+The combined workflow sees `539` catalog docs, returns `728` adapter results,
+and includes `204` World Bank `official_statistics` result rows. Provenance
+still passes, but route promotion remains blocked: the external query sweep
+still refutes `0/89` blind spots and the controlled-vs-external comparison is
+blocked. The follow-up coverage audit confirms the narrow win: all `4`
+`official_statistics` gaps are covered, while remaining family gaps drop from
+`232` to `228` and replan to `33` tasks (`21` scholarly, `8` official, `4`
+news). The coverage audit now reports both total official/fresh result counts
+and preferred/required satisfied counts separately, so broad World Bank matches
+cannot be mistaken for official-source coverage on unrelated requests.
+
+The same World Bank source-family results can be converted into covered facts:
+
+```bash
+QA=artifacts/frontier-release-evidence/unresolved-worldbank-source-family-structured-qa-corpus-v1
+QA_ROUTE=artifacts/frontier-release-evidence/unresolved-worldbank-source-family-structured-qa-route-v1
+
+python benchmarks/build_source_family_qa_corpus.py \
+  --source "$WB_WORKFLOW/source-family-citation-search-results.jsonl" \
+  --output "$QA/source-family-structured-qa-corpus.json" \
+  --report-json "$QA/source-family-structured-qa-corpus-report.json" \
+  --artifact-manifest "$QA/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-source-family-structured-qa-corpus \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$QA/source-family-structured-qa-corpus.json" \
+  --output-dir "$QA_ROUTE" \
+  --score-name smollm2-l80-frontier-v4-worldbank-covered-facts \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-worldbank-source-family-structured-qa-route \
+  --version 0.1 \
+  --alpha 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The builder reads `728` adapter result documents, finds `204` World Bank
+structured candidates, and deduplicates them to `12` label-free QA facts. The
+covered-facts route promotes on `24` balanced true/mismatch rows with decision
+accuracy `1.0`, true-supported rate `1.0`, false-refuted rate `1.0`, and
+false-supported rate `0.0`. This is exact covered-fact quality for population
+statistics only; broad blind-spot recall still depends on mapping product
+claims to those facts or filling the remaining official/scholarly/news lanes.
+
+The v4 official-site lane fills the remaining `official` collection tasks with
+label-free URL seeds and replays the same fail-closed source-family workflow:
+
+```bash
+OFFICIAL=artifacts/frontier-release-evidence/unresolved-official-site-catalog-v1
+OFFICIAL_WORKFLOW=artifacts/frontier-release-evidence/unresolved-official-site-source-family-citation-workflow-v1
+OFFICIAL_COVERAGE=artifacts/frontier-release-evidence/unresolved-official-site-source-family-coverage-audit-v1
+OFFICIAL_PLAN=artifacts/frontier-release-evidence/unresolved-official-site-source-family-catalog-collection-plan-v1
+
+python benchmarks/run_official_site_source_family_catalog_adapter.py \
+  --tasks artifacts/frontier-release-evidence/unresolved-worldbank-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl \
+  --seeds "$OFFICIAL/official-site-url-seeds.jsonl" \
+  --output "$OFFICIAL/official-site-catalog.jsonl" \
+  --report-json "$OFFICIAL/official-site-catalog-report.json" \
+  --artifact-manifest "$OFFICIAL/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-catalog \
+  --version 0.1 \
+  --max-text-chars 6000 \
+  --timeout-seconds 30 \
+  --min-delay-seconds 0.25 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-catalog artifacts/frontier-release-evidence/blind-spot-wikidata-evidence-v1/wikidata-source-docs.jsonl \
+  --source-catalog artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog "$OFFICIAL/official-site-catalog.jsonl" \
+  --scores artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability/smollm2-l80/scores.manifest.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OFFICIAL_WORKFLOW" \
+  --workflow-report "$OFFICIAL_WORKFLOW/source-family-citation-search-workflow.json" \
+  --artifact-manifest "$OFFICIAL_WORKFLOW/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-diversify-source-families \
+  --target-route retrieval_groundedness \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/audit_source_family_coverage.py \
+  --requests "$OFFICIAL_WORKFLOW/source-family-citation-search-requests.jsonl" \
+  --adapter-results "$OFFICIAL_WORKFLOW/source-family-citation-search-results.jsonl" \
+  --json "$OFFICIAL_COVERAGE/source-family-coverage-audit.json" \
+  --acquisition-plan-jsonl "$OFFICIAL_COVERAGE/source-family-acquisition-plan.jsonl" \
+  --artifact-manifest "$OFFICIAL_COVERAGE/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-source-family-coverage-audit \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+
+python benchmarks/plan_source_family_catalog_collection.py \
+  --acquisition-plan "$OFFICIAL_COVERAGE/source-family-acquisition-plan.jsonl" \
+  --tasks-jsonl "$OFFICIAL_PLAN/source-family-catalog-collection-tasks.jsonl" \
+  --report-json "$OFFICIAL_PLAN/source-family-catalog-collection-plan.json" \
+  --artifact-manifest "$OFFICIAL_PLAN/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-official-site-source-family-catalog-collection-plan \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+The official adapter consumes `16` URL seeds across USDA ERS, Tesla, SpaceX,
+WHO, Sante publique France, Patriots/NFL, UN, World Bank, NOAA/NWS, CDC, NIST,
+and time.gov. It writes `16` official catalog docs, fetches `14` pages, and
+keeps `2` seed-fallback rows for blocked/failed official pages. Replaying
+Wikidata + World Bank + official-site catalogs produces `555` catalog docs and
+`732` adapter results, including `204` `official` and `196`
+`official_statistics` rows. Provenance still passes, but route promotion remains
+blocked because the external query sweep refutes `0/89` blind spots. The
+coverage audit records the source-acquisition win: all `52/52`
+official-preferred requests now have an official result, all `20/20`
+freshness-required requests have a fresh result, remaining missing families are
+only `scholarly=156` and `news=20`, and the next collection plan shrinks to
+`25` tasks (`21` scholarly, `4` news).
+
+The follow-up v4 source-family closure runs OpenAlex over those `21` scholarly
+tasks, then records both the live GDELT state and a deterministic seeded-news
+fallback for the final `4` news tasks. OpenAlex writes `145` scholarly docs from
+`84` query variants with `0` request errors. Replaying Wikidata + World Bank +
+official-site + OpenAlex gives `700` catalog docs and `780` adapter results,
+covering all `156/156` scholarly target-family requests while leaving only
+`news=20` missing. The GDELT live run writes `5` news docs but records `7`
+rate-limit errors, so the seeded-news run uses `8` label-free AP/CBS URL seeds
+with `--no-fetch`, writes `8` `source_family=news` fallback docs, and verifies
+its manifest. The final replay with all six catalogs (`713` source docs)
+returns `780` adapter results with result families `news=100`, `official=91`,
+`official_statistics=73`, `reference=236`, and `scholarly=280`. The coverage
+audit is now `covered`: `news=20/20`, `official=52/52`,
+`official_statistics=4/4`, `reference=68/68`, and `scholarly=156/156`, with an
+empty acquisition plan. This closes source acquisition for the v4 unresolved
+lane, but the route gate intentionally remains blocked: provenance passes, the
+best external query strategy refutes only `1/89` blind spots, no external
+strategy passes, and controlled-vs-external comparison is still blocked.
+
+The registered v4 closure artifacts are:
+
+- `artifacts/frontier-release-evidence/unresolved-openalex-scholarly-catalog-v1`
+- `artifacts/frontier-release-evidence/unresolved-openalex-source-family-citation-workflow-v1`
+- `artifacts/frontier-release-evidence/unresolved-openalex-source-family-coverage-audit-v1`
+- `artifacts/frontier-release-evidence/unresolved-gdelt-news-catalog-v1`
+- `artifacts/frontier-release-evidence/unresolved-seeded-news-catalog-v1`
+- `artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1`
+- `artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1`
+
+## `build_unresolved_world_model_rule_stubs.py`
+
+Bridges the world-model/calculator branch of the unresolved queue into the
+rule-authoring stub contract consumed by
+`run_world_model_rule_authoring_adapter.py`. The bridge is intentionally
+one-way and non-evidence: it filters only `world_model_or_calculator_rule`
+requests, normalizes `temporal_freshness` into `temporal_consistency`, drops
+labels/model answers/row indices/target ranks, and writes manifest-backed JSON
+plus `world-model-rule-stubs.jsonl`.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs
+
+python benchmarks/build_unresolved_world_model_rule_stubs.py \
+  --queue-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stubs \
+  --version 0.1
+```
+
+The current registered bridge is `ready_for_rule_authoring`: it consumes the
+`182`-request unresolved queue, extracts all `6` world-model/calculator rule
+requests, emits `6` sanitized stubs, and reports `0` skipped rule requests. The
+family split is `5` numeric/calculator contracts plus `1` temporal-consistency
+contract; reserved source fields are counted in the report but not copied into
+the stubs.
+
+Run the existing deterministic adapter and typed input planner over those
+stubs:
+
+```bash
+RULE_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-authoring-adapter
+RULE_INPUT_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$OUT/world-model-rule-stubs.jsonl" \
+  --output-dir "$RULE_ADAPTER" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-authoring-adapter \
+  --version 0.1
+
+python benchmarks/build_world_model_rule_input_collection_plan.py \
+  --input-requests "$RULE_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --output-dir "$RULE_INPUT_PLAN" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan \
+  --version 0.1
+```
+
+That follow-up chain is `needs_inputs` then `ready_for_input_collection`: all
+`6` stubs become explicit input requests, then `6` typed tasks in `2` batches
+(`5` numeric, `1` temporal snapshot). No rule candidate is executed or promoted
+until explicit inputs and a later promotion gate are supplied.
+
+The frontier v4 rule path can now skip the separate bridge and feed the mixed
+`adapter-requests.jsonl` directly into
+`run_world_model_rule_authoring_adapter.py`; the adapter filters
+`world_model_or_calculator_rule` rows and uses `source_request_id` as the stable
+request id. The v4 run at
+`artifacts/frontier-release-evidence/unresolved-world-model-rule-authoring-adapter-v1/`
+filters `26` rule stubs out of `332` mixed requests, normalizes
+`temporal_freshness` and `causal_or_procedural_consistency` into executable
+families, and produces `26` typed input requests with `0` executed rules. The
+follow-up plan at
+`artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/`
+groups them into `3` batches: `12` numeric/calculator tasks, `5` temporal
+snapshot tasks, and `9` mechanism tasks. Every task remains non-evidence until
+explicit values and source citations are supplied.
+
+Audit the typed tasks before collecting values:
+
+```bash
+RULE_INPUT_AUDIT=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit
+
+python benchmarks/audit_world_model_rule_input_plan.py \
+  --input-tasks "$RULE_INPUT_PLAN/rule-input-tasks.jsonl" \
+  --output-dir "$RULE_INPUT_AUDIT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-input-plan-audit \
+  --version 0.1
+```
+
+The registered audit is `needs_requeue`: it keeps the temporal task and the
+population numeric task actionable, but flags `4` apparent family/question
+mismatches where person/place questions were routed into the numeric calculator
+lane. It emits `4` non-evidence requeue suggestions from
+`quantity_or_arithmetic` to `entity_disambiguation`, and also records that all
+`5` numeric tasks need explicit candidate-claim binding before execution. This
+prevents the rule lane from blindly filling numeric inputs for entity questions.
+
+Apply the requeue suggestions back to sanitized stubs and rebuild the typed
+entity-role collection plan:
+
+```bash
+RULE_STUB_REQUEUE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
+RULE_REQUEUED_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter
+RULE_REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
+
+python benchmarks/requeue_world_model_rule_stubs_from_audit.py \
+  --rule-stubs "$OUT/world-model-rule-stubs.jsonl" \
+  --requeue-suggestions "$RULE_INPUT_AUDIT/rule-input-requeue-suggestions.jsonl" \
+  --output-dir "$RULE_STUB_REQUEUE" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue \
+  --version 0.1
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$RULE_STUB_REQUEUE/requeued-world-model-rule-stubs.jsonl" \
+  --output-dir "$RULE_REQUEUED_ADAPTER" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-authoring-adapter \
+  --version 0.1
+
+python benchmarks/build_world_model_rule_input_collection_plan.py \
+  --input-requests "$RULE_REQUEUED_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --output-dir "$RULE_REQUEUED_PLAN" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan \
+  --version 0.1
+```
+
+The requeue chain is `ready_for_rule_authoring -> needs_inputs ->
+ready_for_input_collection`: `4/4` audit suggestions become
+`entity_disambiguation` stubs, the adapter emits `4` entity-role input
+requests, and the rebuilt plan groups `4` tasks into one
+`entity_role_rule_input_collection` batch with `subject_entity`,
+`answer_entity`, `requested_role`, `expected_entity`, and `source_citation`
+fields. These rows are still not verifier evidence; they are corrected work
+items for later source-backed filling and promotion.
 
 ## `build_citation_search_adapter_handoff.py`
 
@@ -1602,7 +2552,9 @@ variants from the question, and writes safe `alternate_queries` for adapters
 that support fallback search. If an external adapter later writes JSONL results
 keyed by `request_id`, the same workflow can normalize those results into
 source documents plus an `external_evidence_candidate` retrieval corpus for
-provenance audit.
+provenance audit. The return-side summary records expected, matched, and
+missing adapter request ids, so partial external-search runs remain visible
+before any route-quality gate is considered.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff
@@ -1613,6 +2565,19 @@ python benchmarks/build_citation_search_adapter_handoff.py \
   --registry artifacts/local-release-registry.json \
   --name truthfulqa-frontier-smollm2-l80-citation-search-adapter-handoff \
   --version 0.1
+```
+
+For large queues, pass one or more `--batch-id` values from the unresolved
+queue's `execution-batches.jsonl` to emit only that batch's citation/search
+requests. Non-citation batches select zero citation requests instead of falling
+back to the full queue, so world-model rule-authoring batches stay on their own
+executor path.
+
+```bash
+python benchmarks/build_citation_search_adapter_handoff.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --batch-id unresolved-evidence-batch-0001 \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-citation-search-batch-0001
 ```
 
 The current registered handoff
@@ -1661,6 +2626,36 @@ python benchmarks/build_citation_search_adapter_handoff.py \
   --version 0.1
 ```
 
+## `audit_citation_search_result_bindings.py`
+
+Audits citation/search result documents before they become retrieval-corpus
+candidates. The audit consumes the sanitized request JSONL and handoff-produced
+source-document JSONL, binds each document through the queue fingerprint, then
+checks claim/request alignment without labels, score rows, target ids, record
+ids, or model answers. It keeps only documents whose text and safe metadata
+match the request intent, for example founder evidence for "who founded"
+questions or numeric evidence for quantity/rate questions. Retrieval-only
+`retrieval_index_text` is not treated as evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-binding-audit
+
+python benchmarks/audit_citation_search_result_bindings.py \
+  --requests artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow/citation-search-adapter-requests.jsonl \
+  --source-documents artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow/citation-search-source-docs.jsonl \
+  --json "$OUT/citation-search-binding-audit.json" \
+  --bound-source-documents-jsonl "$OUT/citation-search-bound-source-docs.jsonl" \
+  --bound-corpus-json "$OUT/citation-search-bound-corpus.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-citation-binding-audit \
+  --version 0.1
+```
+
+The output corpus is still `external_evidence_candidate` material. It only
+proves claim-specific source binding and must still pass provenance, blind-spot
+query sweep, and controlled-vs-external gates before release use.
+
 ## `run_citation_search_evidence_workflow.py`
 
 Runs the next gate after an external citation/search adapter has returned local
@@ -1668,13 +2663,18 @@ JSONL results. It reuses the citation-search handoff ingestion, then runs
 `audit_retrieval_corpus_provenance.py`, `sweep_blind_spot_retrieval_queries.py`,
 and, when controlled sweep reports are supplied, `compare_blind_spot_query_sweeps.py`.
 The workflow is fail-closed: returned snippets can pass provenance while still
-being blocked by the blind-spot query sweep or controlled-vs-external comparison.
+being blocked by adapter request coverage, the blind-spot query sweep, or
+controlled-vs-external comparison. By default `--min-adapter-request-coverage`
+is `1.0`, so every selected citation/search request must produce at least one
+normalized source document unless the threshold is explicitly relaxed for a
+diagnostic replay.
 
 ```bash
 OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow
 
 python benchmarks/run_citation_search_evidence_workflow.py \
   --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --batch-id unresolved-evidence-batch-0001 \
   --adapter-results path/to/external-search-results.jsonl \
   --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
   --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
@@ -1686,7 +2686,58 @@ python benchmarks/run_citation_search_evidence_workflow.py \
 ```
 
 This command does not fetch network content. Adapter results remain local input,
-and promotion requires both provenance and route-quality gates to pass.
+and promotion requires both provenance and route-quality gates to pass. The
+optional `--batch-id` values are forwarded into the citation/search handoff, so
+the downstream query sweep automatically binds source documents back to the
+queue report and consumes those source-bound fixture hits as precomputed
+retrieval evidence.
+Use `--audit-source-bindings` to insert
+`audit_citation_search_result_bindings.py` before provenance and query-sweep
+evaluation. When enabled, the workflow keeps the raw handoff corpus for audit
+traceability but runs provenance and sweep over
+`citation-search-bound-corpus.json`, the filtered claim-bound corpus.
+Large evidence queues can be normalized, audited, and swept batch by batch while
+preserving the same manifest and registry gates.
+Use `--source-family-filters off,planned_rerank` for diagnostic sweeps that
+compare raw retrieval against source-family-aware reranking; the default remains
+`off` so existing gates do not silently change behavior.
+Use `--query-sweep-verified-records-dir "$OUT/query-sweep-verified-records"`
+when a blocked evidence workflow should feed semantic-gap review without
+rerunning the verifier ensemble.
+Blocked query sweeps also write `query_sweep_failure_reason_counts`,
+`query_sweep_best_observed_*`, and `query_sweep_recommended_next_actions` into
+the workflow summary. These fields split failures into no retrieval hits,
+target-route selection gaps, blind-spot refute coverage misses, and verified
+false-alarm violations; they are diagnostics for the next queue pass, not new
+promotion evidence.
+
+## `build_source_family_catalog.py`
+
+Normalizes local source documents into the catalog schema consumed by
+`run_source_family_citation_search_adapter.py`. This is useful when an evidence
+collector stores provenance such as `provider`, `url`, timestamps, or source
+family hints inside `metadata`; the builder lifts safe fields to top-level
+catalog fields and rejects reserved label/model-answer metadata before the
+catalog can enter a citation/search workflow.
+
+```bash
+python benchmarks/build_source_family_catalog.py \
+  --source artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-evidence/wikidata-source-docs.jsonl \
+  --output artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --report-json artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog-report.json \
+  --artifact-manifest artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog \
+  --version 0.1 \
+  --provider-source-family wikidata=reference \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=wikidata_cached_docs
+```
+
+The registered Wikidata catalog artifact converts `292/292` cached
+target-specific source docs into adapter catalog rows, keeps provider
+`wikidata`, timestamps all rows, assigns `reference` source family, and verifies
+its manifest. It is a catalog handoff, not a route-quality claim.
 
 ## `run_source_family_citation_search_adapter.py`
 
@@ -1695,6 +2746,15 @@ request JSONL plus one or more local source catalogs. It ranks catalog documents
 by lexical overlap, `source_family_plan` compatibility, official-source
 preference, and freshness hints, then writes the same adapter-result JSONL
 schema accepted by `run_external_citation_search_adapter_workflow.py`.
+When multiple source families are available, `--diversify-source-families`
+selects one high-scoring document per non-fallback preferred family before
+filling the remaining top-k slots. This keeps stronger evidence families such
+as `official`, `official_statistics`, `scholarly`, and `news` from being
+crowded out by fallback `reference` / `encyclopedic` results.
+The adapter report now carries `status` plus a request-coverage gate; by default
+`--min-request-coverage 1.0` records partial or empty catalog runs as
+non-passing adapter evidence even though the command can still write results for
+inspection.
 
 ```bash
 python benchmarks/run_source_family_citation_search_adapter.py \
@@ -1705,7 +2765,8 @@ python benchmarks/run_source_family_citation_search_adapter.py \
   --artifact-manifest artifacts/source-family-citation-search-adapter-smoke/artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name source-family-citation-search-adapter-smoke \
-  --version 0.1
+  --version 0.1 \
+  --diversify-source-families
 ```
 
 The registered smoke artifact
@@ -1714,7 +2775,1808 @@ not claim TruthfulQA evidence. It proves the command boundary and manifest path:
 `2` sanitized requests, `3` local catalog docs, `2/2` requests with results,
 `4` total result rows, no reserved-field leakage, and a passing artifact
 manifest. Real use should pass the generated result JSONL into
-`run_citation_search_evidence_workflow.py` before any route promotion.
+`run_citation_search_evidence_workflow.py` or the one-command source-family
+workflow below before any route promotion.
+
+## `run_source_family_citation_search_workflow.py`
+
+Runs the local source-family citation/search path end to end without a network
+call. The workflow builds sanitized request JSONL from the unresolved queue,
+ranks caller-supplied source catalogs with
+`run_source_family_citation_search_adapter.py`, then runs the standard
+provenance, blind-spot query-sweep, and optional controlled-vs-external gates.
+Use `--adapter-diversify-source-families` when combining heterogeneous source
+catalogs so the adapter preserves source-family coverage in top-k results.
+The outer workflow also records the adapter gate separately from the evidence
+gate and defaults `--min-adapter-request-coverage 1.0`; a partial adapter run
+blocks promotion even if a downstream report is otherwise present.
+
+```bash
+OUT=artifacts/source-family-citation-search-workflow-smoke
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue "$OUT/unresolved-evidence-queue.json" \
+  --batch-id unresolved-evidence-batch-0001 \
+  --source-catalog "$OUT/source-family-catalog.jsonl" \
+  --scores "$OUT/scores.json" \
+  --blind-spots "$OUT/blind-spots.json" \
+  --controlled-sweep "$OUT/controlled-query-sweep.json" \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name source-family-citation-search-workflow-smoke \
+  --version 0.1 \
+  --query-fields question_answer \
+  --source-family-filters off \
+  --adapter-diversify-source-families \
+  --retriever-min-overlaps 0.5 \
+  --retrieval-limit 2 \
+  --alpha 0.2 \
+  --max-verified-false-alarm 0.0 \
+  --min-blind-refuted-rate 1.0 \
+  --min-controlled-blind-refuted-rate 1.0 \
+  --min-external-blind-refuted-rate 1.0 \
+  --max-controlled-verified-false-alarm 0.0 \
+  --max-external-verified-false-alarm 0.0 \
+  --metadata suite=source_family_workflow_smoke \
+  --metadata evidence=synthetic_smoke
+```
+
+The registered smoke artifact
+`report:source-family-citation-search-workflow-smoke:0.1` is synthetic and
+intentionally `blocked`: it consumes `2` unresolved citation requests, ranks `2`
+local catalog docs into `2` adapter results, passes provenance, but does not
+pass the blind-spot query-sweep or controlled-vs-external gates. This proves the
+end-to-end local catalog wiring and manifest chain without promoting weak
+source-family evidence.
+
+For large unresolved queues, pass one or more `--batch-id` values from
+`execution-batches.jsonl`. The workflow forwards those ids into both request
+handoff and evidence gating, while the local source-family adapter simply ranks
+the resulting smaller request JSONL.
+Use `--source-family-filters planned_rerank` in diagnostic reruns when you want
+the evidence sweep to prefer source families requested by the unresolved queue
+without dropping incompatible hits. Use `planned` only for stricter experiments
+that should discard incompatible source families and fail closed if that loses
+coverage.
+
+The first real cached-source run uses the target-specific Wikidata catalog:
+
+```bash
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --batch-id unresolved-evidence-batch-0001 \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --adapter-min-text-overlap 0.03 \
+  --query-fields question_answer \
+  --retriever-min-overlaps 0.5 \
+  --metadata evidence=wikidata_cached_source_family_catalog
+```
+
+That run consumes all `176` unresolved citation requests, returns results for
+`160/176`, produces `480` Wikidata-backed adapter result documents, and passes
+provenance. It remains `blocked`: the external query sweep refutes `0/89`
+entrenched blind spots and the controlled-vs-external comparison keeps a `1.0`
+generalization gap. Treat this as real negative evidence for generic Wikidata
+reference matching, and as a prompt to collect more targeted official/source-
+specific catalogs rather than tuning lexical overlap further.
+
+## `rollup_citation_search_batch_evidence.py`
+
+After running citation/source-family evidence workflows by batch, roll their
+reports back into one release-auditable summary. The rollup can read the
+unresolved queue's `execution_batches` and verify that every expected
+`external_citation` batch has a child report. It also verifies each child
+workflow's artifact manifest before marking the rollup as passed or promotion
+ready. Use `--max-workers` to read and verify many child reports with bounded
+parallelism; the default remains `1` for deterministic low-overhead local
+smokes.
+When a child source-family workflow exposes `adapter_gate`, the rollup preserves
+adapter coverage/status counts and blocks with `child_adapter_gate` if that
+adapter gate failed, so partial catalog runs remain visible at release-evidence
+level. It also aggregates child evidence summaries for provenance status,
+evidence class, best query-sweep strategies, passing-strategy blind-spot
+refutation counts, and controlled-vs-external comparison status so the release
+evidence report can explain whether citation/search is blocked by source
+provenance, lexical alignment, or comparison failure.
+When child workflows expose query-sweep failure diagnostics, the rollup also
+aggregates failure-reason counts and recommended next-action counts across
+batches. This keeps unresolved citation/search work actionable without relaxing
+the child gate or comparison gate.
+
+```bash
+python benchmarks/rollup_citation_search_batch_evidence.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --batch-report artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-0001/source-family-citation-search-workflow.json \
+  --batch-report artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-0002/source-family-citation-search-workflow.json \
+  --json artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-rollup/citation-search-batch-rollup.json \
+  --artifact-manifest artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-rollup/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-batch-rollup \
+  --version 0.1 \
+  --max-workers 4
+```
+
+Use `--expected-batch-id` to roll up a planned subset, or
+`--expected-request-type any` when citation and rule-authoring batch reports
+should be checked together. Missing, duplicate, unexpected, unsupported, or
+manifest-failing child reports block the rollup, as do explicit failed child
+adapter gates.
+
+## `run_citation_batch_rollup_worker_sweep.py`
+
+Replays the same citation/source-family batch rollup under several bounded
+worker counts, measures end-to-end wall-clock time, and recommends the fastest
+passing or promotion-ready setting. This is intended for local tuning after the
+batch reports already exist; it does not rerun search, retrieval, or model
+work.
+
+```bash
+python benchmarks/run_citation_batch_rollup_worker_sweep.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --batch-report artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-0001/source-family-citation-search-workflow.json \
+  --batch-report artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-0002/source-family-citation-search-workflow.json \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-source-family-batch-rollup-worker-sweep \
+  --workers 1,2,4 \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-batch-rollup-worker-sweep \
+  --version 0.1
+```
+
+The sweep writes `citation-batch-rollup-worker-sweep.json`, per-worker child
+rollup reports under `workers_<N>/`, a top-level artifact manifest, and an
+optional `report:*:*` registry record containing the recommended worker count.
+
+## `audit_source_family_coverage.py`
+
+Audits whether source-family adapter results actually cover the non-fallback
+families requested by each sanitized `source_family_plan`. It treats
+`reference` and `encyclopedic` as fallback families by default, reports missing
+official/statistical/scholarly/news/domain-specific coverage, and emits a
+follow-up JSONL acquisition plan. The acquisition plan is explicitly marked as
+`not_verifier_evidence`; it is only a source-catalog collection target.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit
+
+python benchmarks/audit_source_family_coverage.py \
+  --requests artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/source-family-citation-search-requests.jsonl \
+  --adapter-results artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-citation-workflow/source-family-citation-search-results.jsonl \
+  --json "$OUT/source-family-coverage-audit.json" \
+  --acquisition-plan-jsonl "$OUT/source-family-acquisition-plan.jsonl" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=wikidata_cached_source_family_catalog
+```
+
+The registered Wikidata audit has status `needs_catalog_expansion`: all
+`176/176` source-family requests still miss their non-fallback target family.
+The current adapter result families are `reference=480`, while missing targets
+are `scholarly=156`, `official=36`, `official_statistics=4`, and `news=4`.
+Official-source-preferred requests are `36`, and `0` have an official result.
+This turns the blocked workflow into an executable next catalog-acquisition
+queue without weakening the provenance or route-quality gates.
+
+## `plan_source_family_catalog_collection.py`
+
+Deduplicates the coverage audit's acquisition JSONL into provider-specific
+collection tasks. Each task carries one missing source family, a compact set of
+query variants, provider hints, covered request ids, queue fingerprints, and
+`not_verifier_evidence=true`. It is the input contract for future OpenAlex,
+Crossref, official-site, statistics API, news, or domain-specific catalog
+adapters; it is not a source document catalog and cannot promote a verifier
+route by itself.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan
+
+python benchmarks/plan_source_family_catalog_collection.py \
+  --acquisition-plan artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-coverage-audit/source-family-acquisition-plan.jsonl \
+  --tasks-jsonl "$OUT/source-family-catalog-collection-tasks.jsonl" \
+  --report-json "$OUT/source-family-catalog-collection-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=wikidata_source_family_coverage_audit
+```
+
+The registered SmolLM2 plan compresses `176` acquisition rows and `200` missing
+family gaps into `28` collection tasks: `scholarly=21`, `official=5`,
+`official_statistics=1`, and `news=1`. The deduplication ratio is `7.14`, and
+the tasks retain all `176` source-queue fingerprints while keeping reserved
+label/model-answer fields out of the boundary. This is the next executable
+handoff before filling real source catalogs and rerunning
+`run_source_family_citation_search_workflow.py`.
+
+The collection plan can also feed the generic command-plan/scaffold/bind chain
+without executing the provider adapters yet:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source "$OUT/source-family-catalog-collection-plan.json" \
+  --json "$OUT/source-family-catalog-adapter-command-plan.json"
+```
+
+When the source workflow is `source_family_catalog_collection_plan`, the
+planner emits reviewable Crossref/OpenAlex commands for `scholarly`, World Bank
+for `official_statistics`, GDELT plus seeded-URL fallback for `news`,
+official-site commands for `official`, and seeded URL commands for
+`domain_specific`. Output catalog paths, reports, manifests, registry keys, and
+seed URL sidecars remain placeholders for the existing scaffold/bind/review
+steps.
+
+## `build_citation_binding_source_family_tasks.py`
+
+Bridges `plan_citation_binding_evidence_collection.py` output into the same
+`source_family_catalog_collection_plan` task schema used by the provider
+adapters. It consumes the plan JSON and its optional
+`paths.collection_requests` JSONL sidecar, emits only source-collectable
+official/statistical/scholarly/news/domain-specific tasks, and keeps
+review-only lanes plus unsupported families such as `reference` out of adapter
+execution. The output remains `not_verifier_evidence=true`; it is collection
+work, not promoted evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-binding-source-family-tasks
+
+python benchmarks/build_citation_binding_source_family_tasks.py \
+  --collection-plan artifacts/truthfulqa-frontier-smollm2-l80-source-family-citation-workflow/citation-search-binding-evidence-collection-plan.json \
+  --report-json "$OUT/source-family-catalog-collection-plan.json" \
+  --tasks-jsonl "$OUT/source-family-catalog-collection-tasks.jsonl" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-citation-binding-source-family-tasks \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=citation_binding_evidence_collection_plan
+```
+
+The resulting report can be fed directly to
+`plan_frontier_research_queue_commands.py` like any other source-family
+collection plan. The command planner also accepts the original
+`citation_binding_evidence_collection_plan` report and emits a chained
+`build_citation_binding_source_family_tasks.py` command followed by provider
+adapter templates; `stage_frontier_research_queue_binding_suggestions.py
+--stage-upstream-outputs` can carry the generated `--tasks-jsonl` sidecar into
+the adapters' `--tasks` placeholders while leaving seed URLs and other
+source-backed inputs under review.
+
+## `run_crossref_source_family_catalog_adapter.py`
+
+Executes the scholarly slice of the source-family collection plan through the
+Crossref REST `/works` endpoint. The adapter uses `query.bibliographic` over
+collection-task query variants, emits adapter-ready source-family catalog JSONL,
+deduplicates by DOI or stable title/container fingerprints, and keeps label,
+record id, target id, and model-answer fields out of the catalog boundary.
+Abstracts are excluded by default so the artifact is a compact bibliographic
+catalog, not a high-volume text corpus.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog
+
+python benchmarks/run_crossref_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/crossref-scholarly-catalog.jsonl" \
+  --report-json "$OUT/crossref-scholarly-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog \
+  --version 0.1 \
+  --max-query-variants 2 \
+  --rows-per-query 2 \
+  --min-delay-seconds 0.2 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_catalog_collection_plan
+```
+
+The registered Crossref catalog consumes the `21` scholarly collection tasks,
+runs `42` query variants, writes `48` deduplicated scholarly catalog documents,
+and records `0` request errors. The resulting catalog can be combined with the
+cached Wikidata reference catalog and passed back through the fail-closed
+source-family workflow:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow
+
+python benchmarks/run_source_family_citation_search_workflow.py \
+  --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --blind-spots artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --controlled-sweep artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-query-sweep/blind-spot-query-sweep.json \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-crossref-source-family-citation-workflow \
+  --version 0.1 \
+  --query-mode claim_entity \
+  --max-alternate-queries 3 \
+  --adapter-max-results 3 \
+  --adapter-max-query-variants 3 \
+  --adapter-min-text-overlap 0.03 \
+  --query-fields question_answer \
+  --retriever-min-overlaps 0.5 \
+  --retrieval-limit 3 \
+  --alpha 0.1 \
+  --max-verified-false-alarm 0.05 \
+  --min-blind-refuted-rate 0.5 \
+  --min-controlled-blind-refuted-rate 0.5 \
+  --min-external-blind-refuted-rate 0.5 \
+  --max-controlled-verified-false-alarm 0.05 \
+  --max-external-verified-false-alarm 0.05 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=wikidata_reference_plus_crossref_scholarly_catalog
+```
+
+The combined registered workflow has `340` source catalog documents
+(`292` Wikidata reference plus `48` Crossref scholarly), returns `528` adapter
+results for `176/176` requests, and includes `164` Crossref scholarly result
+rows. Provenance passes, but route promotion remains blocked because no blind
+spot query strategy passes the configured gates and the controlled-vs-external
+comparison is still blocked. This is useful partial evidence: the scholarly
+catalog slot is filled and auditable, but broad Crossref bibliographic matching
+is not enough to promote the correction route.
+
+## `run_openalex_source_family_catalog_adapter.py`
+
+Executes the scholarly slice of a source-family collection plan through the
+OpenAlex `/works?search=` endpoint. The adapter uses only stdlib HTTP/JSON,
+supports optional `--api-key`, `--mailto`, and `--include-abstracts`, sanitizes
+OpenAlex wildcard characters in broad question-like queries, reconstructs
+OpenAlex inverted-index abstracts when requested, and emits adapter-ready
+`source_family=scholarly` catalog rows without request ids, labels, row ids,
+target ids, or model answers.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog
+
+python benchmarks/run_openalex_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-official-site-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/openalex-scholarly-catalog.jsonl" \
+  --report-json "$OUT/openalex-scholarly-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog \
+  --version 0.1 \
+  --max-query-variants 8 \
+  --rows-per-query 3 \
+  --min-delay-seconds 0.2 \
+  --timeout-seconds 30 \
+  --include-abstracts \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=official_site_source_family_catalog_collection_plan
+```
+
+The registered OpenAlex run consumes `5` scholarly tasks from the official-site
+coverage audit, runs `40` query variants, writes `52` deduplicated scholarly
+catalog docs with reconstructed abstracts, and records `0` request errors.
+Adding OpenAlex to the existing Wikidata, Crossref, reduced Crossref, World
+Bank, and official-site catalogs still leaves route promotion blocked, as
+expected, but improves source-family coverage. With
+`--adapter-diversify-source-families`, the workflow returns `528` adapter rows,
+balances result families (`official=168`, `official_statistics=12`,
+`reference=160`, `scholarly=188`), and the coverage audit reduces missing
+target rows from `28` to `4`. The only remaining source-family gap is the
+rate-limited or replacement `news` task for recent food-affordability claims.
+
+## `run_worldbank_source_family_catalog_adapter.py`
+
+Executes official-statistics collection tasks through the World Bank Indicators
+API. The default indicator is `SP.POP.TOTL` (`Population, total`), using
+`mrnev=1` to fetch the most recent non-empty country values. Country metadata is
+queried separately so aggregate regions can be filtered out by default. Output
+rows remain adapter-ready source-family catalog documents, not verifier
+evidence, and they do not copy label, target id, row id, model-answer, or
+request-id fields into the emitted catalog documents.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog
+
+python benchmarks/run_worldbank_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/worldbank-official-statistics-catalog.jsonl" \
+  --report-json "$OUT/worldbank-official-statistics-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog \
+  --version 0.1 \
+  --indicator SP.POP.TOTL \
+  --per-page 300 \
+  --mrnev 1 \
+  --min-delay-seconds 0.2 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_catalog_collection_plan
+```
+
+The registered World Bank catalog consumes the single `official_statistics`
+collection task, fetches `217` country-level population documents, skips `44`
+aggregate rows and `4` rows without country metadata, and records `0` request
+errors. When the catalog is combined with Wikidata reference and Crossref
+scholarly catalogs, the source-family workflow sees `557` source documents,
+returns `528` adapter results for `176/176` requests, and includes `12`
+World Bank `official_statistics` result rows. It still blocks route promotion
+because the query-sweep and controlled-vs-external gates do not pass.
+
+Running `audit_source_family_coverage.py` on that combined workflow records the
+useful coverage improvement: `official_statistics` is covered for `4/4`
+requests and `scholarly` is covered for `100/156`, reducing missing target rows
+from `176` to `84`. The remaining acquisition plan compresses to `12` tasks:
+`official=5`, `scholarly=6`, and `news=1`.
+
+## `run_gdelt_source_family_catalog_adapter.py`
+
+Executes the news slice of a source-family collection plan through the GDELT
+DOC 2.0 API. The adapter emits `source_family=news` catalog rows with safe
+provider, URL, title, language, domain, and timestamp metadata, and rejects
+label, record id, target id, and model-answer metadata at the task boundary.
+Request coverage may remain on the non-evidence task report, but request ids are
+not copied into catalog documents. A live API rate-limit is treated as a
+fail-closed empty catalog report, not as evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-gdelt-news-catalog
+
+python benchmarks/run_gdelt_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/gdelt-news-catalog.jsonl" \
+  --report-json "$OUT/gdelt-news-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-gdelt-news-catalog \
+  --version 0.1 \
+  --max-query-variants 2 \
+  --max-records 5 \
+  --min-delay-seconds 6 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=worldbank_source_family_catalog_collection_plan
+```
+
+The registered live run consumed the single `news` collection task, attempted
+`2` query variants, and wrote an `empty` report with `0` documents and `2`
+request errors because the public GDELT endpoint returned rate-limit failures in
+this environment. The manifest verifies and the adapter boundary is tested, but
+this artifact is only a rate-limit/run-status record.
+
+## `run_seeded_url_source_family_catalog_adapter.py`
+
+Fetches or seed-falls-back URL-seeded source-family pages for collection tasks.
+The adapter is dependency-free and generic across source families; the current
+registered use is the remaining `news` lane after GDELT failed closed. Seed rows
+must be label-free and request-id-free, and emitted source docs keep only safe
+task provenance, URL, provider, title, short text, timestamp, and source-family
+metadata.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog
+
+python benchmarks/run_seeded_url_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-openalex-diverse-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --seeds "$OUT/seeded-news-url-seeds.jsonl" \
+  --output "$OUT/seeded-news-catalog.jsonl" \
+  --report-json "$OUT/seeded-news-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-seeded-news-catalog \
+  --version 0.1 \
+  --source-family news \
+  --provider seeded_news \
+  --no-fetch \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=openalex_diverse_source_family_catalog_collection_plan
+```
+
+The registered seeded-news run consumes the final `news=1` collection task, uses
+`4` AP/PBS URL seeds with short paraphrase fallback text, writes `4`
+`source_family=news` docs, records `0` errors, and verifies its manifest. Adding
+that catalog to the Wikidata, Crossref, reduced Crossref, World Bank,
+official-site, and OpenAlex catalogs gives `691` catalog docs and `528` adapter
+results. Route promotion still blocks on the blind-spot query sweep and
+controlled-vs-external comparison, but the source-family coverage audit is now
+`covered`: `official=36/36`, `official_statistics=4/4`, `scholarly=156/156`,
+and `news=4/4`, with an empty acquisition plan.
+
+The source-family and external citation workflows accept `--target-route` and
+pass it into the query sweep. Use this when the returned verifier records select
+`retrieval_groundedness` rather than `retrieval_structured_qa`; otherwise a real
+refutation can be counted under `any_route_refuted` but missed by the target
+route gate. The seeded-news same-route replay is intentionally still blocked:
+`retrieval_groundedness` refutes `7/89` external blind spots, the matching
+controlled groundedness sweep refutes `1/89`, and external verified false alarm
+is `0.136` against the `0.05` gate. Treat it as diagnostic evidence, not a
+route-promotion artifact.
+
+## `build_covered_fact_retrieval_qa_corpus.py`
+
+Builds a target-specific structured QA diagnostic corpus from covered-fact
+mapping audit rows. Unlike general source-family QA corpora, this command
+reuses the original blind-spot question and substitutes candidate covered-fact
+answers, so it measures correction potential only. It must not be treated as
+broad citation evidence.
+
+Use `--require-question-intent` for frontier/citation-lane diagnostics. The
+gate keeps only facts whose property/value type matches the source question
+intent, for example a `founder` fact for a "who founded" question or numeric
+statistics for a quantity question. It rejects subject-only facts such as
+`Americans instance of nationality` for a passport-rate question, which reduces
+false refutation pressure before any route-promotion gate.
+
+```bash
+OUT=artifacts/improve-unresolved-citation-alignment/diagnostic-covered-fact-retrieval-qa-intent-gated
+
+python benchmarks/build_covered_fact_retrieval_qa_corpus.py \
+  --mapping-audit artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/blind-spot-covered-fact-mapping.json \
+  --json "$OUT/covered-fact-retrieval-qa-corpus.json" \
+  --report-json "$OUT/covered-fact-retrieval-qa-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --route-name covered_fact_retrieval_structured_qa_intent_gated \
+  --require-question-intent \
+  --metadata diagnostic=question_intent_gate
+```
+
+## `build_source_family_qa_corpus.py`
+
+Builds a conservative structured QA corpus from source-family catalog or adapter
+results. The builder only materializes facts already present as structured
+metadata, currently Wikidata `subject/property/value` rows and World Bank
+`country/indicator/year/value` rows. Free-form news pages, scholarly records,
+official pages, and generic web text remain source documents and are not
+promoted into verifier facts by this command.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus
+
+python benchmarks/build_source_family_qa_corpus.py \
+  --source artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-groundedness-source-family-citation-workflow/source-family-citation-search-results.jsonl \
+  --output "$OUT/source-family-structured-qa-corpus.json" \
+  --report-json "$OUT/source-family-structured-qa-corpus-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata evidence=seeded_news_source_family_groundedness
+```
+
+The current artifact reads `528` source-family adapter result documents and
+finds `164` structured-metadata candidates. It writes `18` label-free structured
+QA records: `16` from Wikidata/reference metadata and `2` from World Bank
+official-statistics metadata. It skips `364` unsupported provider rows and
+`146` duplicate structured facts; reserved label/model-answer/request metadata
+is rejected rather than copied into document metadata. This is a covered-fact
+candidate corpus for the structured QA route, not evidence that the blocked
+lexical groundedness route should be promoted.
+
+## `run_source_family_structured_qa_route_workflow.py`
+
+Runs the covered-facts route-quality audit for a source-family structured QA
+corpus. It creates a balanced score dump with known answers and mismatched
+answers, verifies those rows through `QuestionAnswerVerifier`, writes a
+verified-records JSONL sidecar, and reports provider, source-family, and
+fact-group quality metrics. The artifact is scoped to facts already present in
+the structured corpus.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus.json \
+  --output-dir "$OUT" \
+  --score-name source-family-covered-facts-smollm2-l80 \
+  --alpha 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_corpus
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current route audit promotes only the covered-facts route: `18` structured
+QA facts become `36` balanced true/mismatch records, `structured_qa` selects all
+`36`, supports all `18` true rows, refutes all `18` mismatched rows, and records
+decision accuracy `1.0` with false-supported rate `0.0`. Provider slices are
+`wikidata=32` records and `worldbank=4` records; source-family slices are
+`reference=32` and `official_statistics=4`; the manifest verifies `5/5`
+artifacts. This is route-quality evidence for exact covered facts, not proof
+that any remaining SmolLM2 blind spot maps to those facts or that open-domain
+lexical groundedness should promote.
+
+## `audit_source_family_structured_qa_claim_mapping.py`
+
+Audits whether blind spots, score-dump statements, or product claims can be
+conservatively mapped into a source-family structured QA corpus before creating
+any correction handoff. The mapper requires covered-fact subject coverage plus
+property/indicator intent evidence, separates model answers that are already
+supported by the covered fact, and keeps subject-only, intent-only, weak-overlap,
+and no-fact rows as coverage gaps.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping
+
+python benchmarks/audit_source_family_structured_qa_claim_mapping.py \
+  --claims artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-corpus/source-family-structured-qa-corpus.json \
+  --route-summary artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-route/structured-qa-route-summary.json \
+  --json "$OUT/source-family-structured-qa-claim-mapping.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_corpus
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current SmolLM2 l80 audit is intentionally blocked: the promoted
+covered-facts route is available, but the `18` source-family structured QA facts
+map to `0/89` entrenched blind spots under the conservative subject/intent gate.
+The report records `55` no-candidate rows, `11` subject-only rows, `12`
+intent-only rows, `8` weak-overlap rows, and `3` answer-entity collisions. This
+is a useful negative result: source-family route quality is real, but the next
+work must expand claim-specific structured facts, citation evidence, or
+world-model/calculator rules before any blind-spot correction handoff can use
+this corpus.
+
+## `plan_source_family_structured_qa_fact_expansion.py`
+
+Converts a blocked source-family structured QA claim-mapping report into
+claim-specific collection tasks. The output is a non-evidence plan: it preserves
+the mapping gaps, proposes structured-fact properties, citation queries,
+entity-resolution targets, and world-model/calculator-rule requests, but it does
+not fetch sources or promote any correction route.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan
+
+python benchmarks/plan_source_family_structured_qa_fact_expansion.py \
+  --claim-mapping artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-mapping/source-family-structured-qa-claim-mapping.json \
+  --json "$OUT/source-family-structured-qa-fact-expansion-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_claim_mapping
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current SmolLM2 l80 plan is `ready_for_collection` and keeps all `89`
+claim-mapping gaps as targets: `55` missing subject+intent, `11` missing
+property/indicator, `12` missing subject/entity resolution, `8` citation-before
+promotion gaps, and `3` answer-entity collisions. It emits `89` structured fact
+requests, `70` entity-resolution requests, `66` external citation requests,
+`26` world-model/calculator-rule requests, and `14` fact-disambiguation tasks.
+Labels are not used for collection planning, tasks are not verifier evidence,
+and the manifest verifies `2/2` files.
+
+## `build_source_family_structured_qa_fact_collection_corpus.py`
+
+Compiles the fact-expansion plan into request buckets and JSONL sidecars that
+source-family fact adapters, citation/search adapters, entity-resolution tools,
+disambiguation audits, and world-model/calculator rule authors can consume. The
+compiler keeps the plan non-evidence and removes labels/model answers from the
+request boundary.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-corpus
+
+python benchmarks/build_source_family_structured_qa_fact_collection_corpus.py \
+  --plan artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-expansion-plan/source-family-structured-qa-fact-expansion-plan.json \
+  --output-dir "$OUT" \
+  --json "$OUT/fact-collection-corpus.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_fact_expansion_plan
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current SmolLM2 l80 collection corpus is `ready_for_collection` with `89`
+targets and `806` request rows: `356` source-family structured-fact requests,
+`210` entity-resolution requests, `198` citation requests, `14`
+fact-disambiguation requests, and `28` world-model/calculator-rule requests. It
+also writes `764` source-discovery document rows for local collection tooling.
+The request JSONL sidecars contain no `label`, `answer`, or `model_answer`
+fields; the manifest verifies `8/8` files.
+
+## `run_source_family_structured_qa_fact_collection_workflow.py`
+
+Executes the structured QA fact-collection corpus against local source-family
+catalogs. It normalizes structured-fact, entity-resolution, citation, and
+fact-disambiguation requests into the existing local source-family catalog
+ranker, writes one combined adapter-result JSONL, rebuilds a conservative
+structured QA candidate corpus from matched structured metadata, and preserves
+world-model/calculator tasks as rule-authoring stubs. The output is still a
+candidate evidence bundle; route quality and claim mapping must be rerun before
+any correction handoff.
+
+Source-backed requests are gated by request-result coverage before the workflow
+can become `ready_for_fact_mapping`: by default `--min-request-result-coverage`
+is `1.0`, so any request with no adapter result leaves the report `blocked` and
+records `request_without_results_ids`. Lower the threshold only for explicit
+debugging runs.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow
+
+python benchmarks/run_source_family_structured_qa_fact_collection_workflow.py \
+  --collection-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-corpus/fact-collection-corpus.json \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --output-dir "$OUT" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_fact_collection_corpus \
+  --compact-json
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --json "$OUT/manifest-verification.json"
+```
+
+The registered SmolLM2 l80 workflow is `ready_for_fact_mapping`: `778`
+source-backed requests all return local catalog results (`2334` candidate
+result rows over `622` catalog documents), `28` world-model/calculator rule
+stubs are preserved, and the rebuilt structured QA corpus contains `70`
+candidate facts. Candidate result providers include Wikidata/reference,
+World Bank official statistics, Crossref/OpenAlex scholarly rows, and official
+site rows; no reserved `label`, `answer`, or `model_answer` fields appear in
+adapter requests or result source-document metadata, and the manifest verifies
+`21/21` files.
+
+The resulting candidate corpus was rerun through the covered-fact route and
+claim-mapping gates:
+
+```bash
+ROUTE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$OUT/source-family-structured-qa-corpus.json" \
+  --output-dir "$ROUTE" \
+  --score-name source-family-fact-collection-covered-facts-smollm2-l80 \
+  --alpha 0.1 \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --compact-json
+
+MAP=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping
+
+python benchmarks/audit_source_family_structured_qa_claim_mapping.py \
+  --claims artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus "$OUT/source-family-structured-qa-corpus.json" \
+  --route-summary "$ROUTE/structured-qa-route-summary.json" \
+  --json "$MAP/source-family-structured-qa-fact-collection-claim-mapping.json" \
+  --artifact-manifest "$MAP/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --compact-json
+```
+
+The route audit promotes on `140` balanced covered-fact rows. The claim-mapping
+audit improves the previous `0/89` coverage to `1/89` mapped correction
+candidate: the Tesla founder blind spot maps to Wikidata `P112` founder
+evidence for Martin Eberhard. The result remains `observed`, not a broad route
+promotion; the remaining records are `13` answer-entity collisions, `28`
+subject-only gaps, `2` intent-only gaps, `7` weak-overlap rows, and `38`
+no-candidate rows.
+
+`run_source_family_structured_qa_claim_correction_workflow.py` is the
+one-command wrapper for the same covered-fact correction loop once a promoted
+source-family structured-QA route summary and QA corpus already exist. It runs
+claim mapping, gap triage, and correction handoff, writes child manifests plus a
+top-level workflow manifest, and leaves weak or no-fact rows in triage. It does
+not collect new evidence, lower mapping thresholds, or treat adapter results as
+verifier evidence. Add `--enable-triple-audit` when the correction handoff
+should immediately feed the trace-level triple-audit enrichment gate; if that
+optional child gate runs and fails to promote, the workflow fails closed.
+Promotion-contract evidence handoff records the accepted triple-audit source,
+report path, workflow, and status in contract metadata so runtime baselines can
+aggregate where the four trace-level triple-audit fields came from.
+
+```bash
+WORKFLOW=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-correction-workflow
+
+python benchmarks/run_source_family_structured_qa_claim_correction_workflow.py \
+  --claims artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-workflow/source-family-structured-qa-corpus.json \
+  --route-summary artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
+  --output-dir "$WORKFLOW" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-claim-correction-workflow \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --enable-triple-audit \
+  --compact-json
+```
+
+Pass `--fact-expansion-plan`, `--fact-collection-corpus`, and
+`--fact-collection-workflow` when the gap-triage child report should carry
+post-collection provenance alongside the correction handoff.
+
+`build_source_family_structured_qa_correction_handoff.py` converts only those
+mapped QA candidates into target-specific ProductTrace-visible corrections. It
+fail-closes unless the upstream source-family structured-QA route was promoted;
+the output corpus is correction evidence for the mapped original question, not
+a general retrieval corpus.
+
+```bash
+HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff
+
+python benchmarks/build_source_family_structured_qa_correction_handoff.py \
+  --claim-mapping "$MAP/source-family-structured-qa-fact-collection-claim-mapping.json" \
+  --output-dir "$HANDOFF" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff \
+  --version 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_fact_collection_workflow \
+  --compact-json
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$HANDOFF/artifact-manifest.json" \
+  --json "$HANDOFF/manifest-verification.json"
+```
+
+The registered handoff promotes exactly `1` trace: the target-specific
+structured-QA corpus maps "Who first started Tesla Motors?" to Martin Eberhard,
+the verifier refutes the generated answer "Elon Musk founded Tesla.", the risk
+decision is `high/abstain`, and the executor registry records a dry-run abstain
+action result. Its manifest verifies `5/5` files and no `label` or
+`model_answer` fields are written into the correction artifact.
+
+The post-correction replay starts from the remaining source-family structured
+QA mapping gaps and reruns the same non-evidence collection, route audit, and
+claim-mapping gates with the expanded local catalogs:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-fact-expansion-plan
+
+python benchmarks/plan_source_family_structured_qa_fact_expansion.py \
+  --claim-mapping artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-claim-mapping/source-family-structured-qa-fact-collection-claim-mapping.json \
+  --json "$OUT/source-family-structured-qa-post-correction-fact-expansion-plan.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_fact_collection_claim_mapping
+
+CORPUS=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-fact-collection-corpus
+
+python benchmarks/build_source_family_structured_qa_fact_collection_corpus.py \
+  --plan "$OUT/source-family-structured-qa-post-correction-fact-expansion-plan.json" \
+  --output-dir "$CORPUS" \
+  --json "$CORPUS/fact-collection-corpus.json" \
+  --artifact-manifest "$CORPUS/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_post_correction_fact_expansion_plan
+
+WORKFLOW=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-fact-collection-workflow
+
+python benchmarks/run_source_family_structured_qa_fact_collection_workflow.py \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --output-dir "$WORKFLOW" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=source_family_structured_qa_post_correction_fact_collection_corpus
+
+ROUTE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-route
+
+python benchmarks/run_source_family_structured_qa_route_workflow.py \
+  --qa-corpus "$WORKFLOW/source-family-structured-qa-corpus.json" \
+  --output-dir "$ROUTE" \
+  --score-name source-family-post-correction-covered-facts-smollm2-l80 \
+  --alpha 0.1 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_fact_collection_workflow
+
+MAP=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-claim-mapping
+
+python benchmarks/audit_source_family_structured_qa_claim_mapping.py \
+  --claims "$MAP/unresolved-claims.json" \
+  --qa-corpus "$WORKFLOW/source-family-structured-qa-corpus.json" \
+  --route-summary "$ROUTE/structured-qa-route-summary.json" \
+  --json "$MAP/source-family-structured-qa-post-correction-claim-mapping.json" \
+  --artifact-manifest "$MAP/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_fact_collection_workflow
+```
+
+`$MAP/unresolved-claims.json` is the committed internal audit sidecar derived
+from the post-correction plan targets. It keeps the candidate answer needed for
+claim mapping, but it is not copied into adapter requests and carries no labels.
+
+The registered post-correction plan is `ready_for_collection` over `88` targets
+after skipping one already resolved source-family mapping decision. It emits
+`764` request rows and `352` structured-fact requests. The local workflow
+returns `2178` candidate results, rebuilds `66` structured QA documents, and
+preserves `38` world-model/calculator rule stubs; all manifests verify and the
+adapter request boundary still has no `label`, `answer`, or `model_answer`
+fields. The follow-up route promotes on `132` balanced covered-fact rows, but
+the claim-mapping gate finds no new mapped correction handoff candidates:
+`0/88` mapped, `1/88` answer-supported, `12` answer-entity collisions, `21`
+subject-only gaps, `3` intent-only gaps, `9` weak-overlap rows, and `42`
+no-candidate rows. The next executable work is richer property/indicator
+collection plus citation or world-model rule authoring for those remaining
+gaps, not lowering the mapping gate.
+
+Use the gap triage workflow to turn that post-correction mapping into explicit
+next-action lanes:
+
+```bash
+TRIAGE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-gap-triage
+
+python benchmarks/triage_source_family_structured_qa_gaps.py \
+  --claim-mapping "$MAP/source-family-structured-qa-post-correction-claim-mapping.json" \
+  --fact-expansion-plan "$OUT/source-family-structured-qa-post-correction-fact-expansion-plan.json" \
+  --fact-collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --fact-collection-workflow "$WORKFLOW/fact-collection-workflow.json" \
+  --output-dir "$TRIAGE" \
+  --json "$TRIAGE/gap-triage.json" \
+  --target-jsonl "$TRIAGE/triage-targets.jsonl" \
+  --artifact-manifest "$TRIAGE/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_fact_collection_workflow
+```
+
+The registered triage is `needs_collection`: `0` handoff-ready targets, `1`
+answer-support audit target, and `88` rows blocked from correction handoff.
+Available request counts are preserved by lane (`352` structured-fact, `174`
+citation, `159` entity-resolution, `41` disambiguation, and `38`
+world-model/calculator-rule requests), so the next adapter/rule-authoring pass
+can prioritize the exact failure mode instead of replaying the whole queue
+blindly. New triage artifacts also expose `primary_closure_route`,
+`closure_routes`, and `source_gap_type_counts`, making the next evidence
+producer explicit (`entity_disambiguation`, `property_or_indicator_collection`,
+`citation_evidence_collection`, `entity_resolution`,
+`world_model_rule_authoring`, or broader source-family coverage).
+
+To turn those lanes into executable adapter/rule batches:
+
+```bash
+QUEUE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-execution-queue
+
+python benchmarks/build_source_family_structured_qa_lane_execution_queue.py \
+  --triage "$TRIAGE/gap-triage.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --output-dir "$QUEUE" \
+  --report-json "$QUEUE/lane-execution-queue.json" \
+  --target-jsonl "$QUEUE/lane-targets.jsonl" \
+  --request-jsonl "$QUEUE/adapter-requests.jsonl" \
+  --batch-jsonl "$QUEUE/execution-batches.jsonl" \
+  --artifact-manifest "$QUEUE/artifact-manifest.json" \
+  --max-requests-per-batch 50 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_gap_triage
+```
+
+The queue is `ready_for_adapter_execution` with `87` collection targets, `752`
+adapter/rule requests, and `29` lane-aware batches. It intentionally excludes
+the `1` audit-only row and keeps answer/model-answer fields out of adapter
+requests; adapter requests and batches retain `closure_route`,
+`primary_closure_route`, `source_gap_type`, and `evidence_gap_type`, so batches
+stay separated by unresolved evidence family instead of only by lane/request
+type. The first batch is `answer_collision_audit` disambiguation.
+
+Build an executable rerun plan before launching batches. The planner preserves
+rule-only batches as runnable without catalogs and marks source-backed batches
+as `missing_inputs` when catalog or prerequisite paths are absent. Rerun entries
+also preserve or infer `closure_route` and `source_gap_type`, allowing an
+operator or automation to execute only citation, entity, property, or
+world-model-rule closure batches:
+
+```bash
+RERUNS=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-reruns
+
+python benchmarks/plan_source_family_structured_qa_lane_reruns.py \
+  --lane-queue "$QUEUE/lane-execution-queue.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --output-dir "$RERUNS/batches" \
+  --json "$RERUNS/lane-rerun-queue.json" \
+  --artifact-manifest "$RERUNS/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_execution_queue \
+  --compact-json
+```
+
+The resulting `source_family_structured_qa_lane_rerun_queue` can also be passed
+to the generic frontier command-plan handoff:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source "$RERUNS/lane-rerun-queue.json" \
+  --json "$RERUNS/frontier-command-plan.json" \
+  --artifact-manifest "$RERUNS/frontier-command-plan-manifest.json"
+```
+
+That keeps lane-batch execution under the same scaffold/bind/review/run control
+plane used by unresolved frontier summaries and source-family catalog
+collection plans.
+
+Replay the first disambiguation batch through the local source-family catalogs:
+
+```bash
+BATCH=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batch-0001-disambiguation
+
+python benchmarks/run_source_family_structured_qa_lane_batch_workflow.py \
+  --lane-queue "$QUEUE/lane-execution-queue.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-wikidata-source-family-catalog/source-family-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-worldbank-official-statistics-catalog/worldbank-official-statistics-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-crossref-scholarly-catalog/crossref-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog/official-site-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-openalex-scholarly-catalog/openalex-scholarly-catalog.jsonl \
+  --source-catalog artifacts/truthfulqa-frontier-smollm2-l80-seeded-news-catalog/seeded-news-catalog.jsonl \
+  --batch-id sfqa-lane-batch-0001 \
+  --output-dir "$BATCH" \
+  --json "$BATCH/lane-batch-workflow.json" \
+  --batch-collection-corpus "$BATCH/lane-batch-collection-corpus.json" \
+  --artifact-manifest "$BATCH/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_execution_queue
+```
+
+The batch replay is `ready_for_fact_mapping`: `12` disambiguation requests over
+`12` answer-collision targets return `36` candidate results and rebuild `9`
+structured QA facts. The covered-fact route over those `9` facts promotes on
+`18` balanced true/mismatch rows with decision accuracy `1.0`, but the follow-up
+claim-mapping audit remains blocked (`0/88` covered matches and `0/88` mapped
+correction candidates). This is a clean negative result: the first
+disambiguation batch improves covered-fact quality but does not yet align to the
+unresolved claim intents, so the next pass should run the adjacent
+structured-fact/entity/citation/rule batches rather than lowering thresholds.
+
+The adjacent source-backed lanes and the full source-backed queue have now been
+replayed with the same manifest boundary. Batches `0003`-`0005` run `120`
+source-backed requests over the same `12` answer-collision targets, return `360`
+candidate results, and rebuild `39` structured QA documents. The full
+source-backed queue (`24` non-rule batches) runs `715` requests over `87`
+targets, returns `2145` candidate results, and rebuilds `63` structured QA
+documents. Both covered-fact route audits promote (`78` and `126` balanced
+records respectively), but both claim-mapping audits remain blocked with `0/88`
+covered matches and `0/88` mapped correction candidates. This establishes the
+current local-catalog coverage ceiling: the source-backed facts are internally
+verifiable but still do not answer the unresolved TruthfulQA claim intents.
+Lane batch reports now inherit the same default 100% request-result coverage
+gate from the child fact-collection workflow, so a partially matched
+source-backed batch stays `blocked` and lists the missing request ids instead of
+silently advancing to downstream mapping.
+
+Rule-only batches are now executable as non-evidence rule-authoring artifacts:
+
+```bash
+RULE=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-lane-batches-rule-authoring-all
+
+python benchmarks/run_source_family_structured_qa_lane_batch_workflow.py \
+  --lane-queue "$QUEUE/lane-execution-queue.json" \
+  --collection-corpus "$CORPUS/fact-collection-corpus.json" \
+  --batch-id sfqa-lane-batch-0002 \
+  --batch-id sfqa-lane-batch-0007 \
+  --batch-id sfqa-lane-batch-0011 \
+  --batch-id sfqa-lane-batch-0015 \
+  --batch-id sfqa-lane-batch-0027 \
+  --output-dir "$RULE" \
+  --json "$RULE/lane-batch-workflow.json" \
+  --batch-collection-corpus "$RULE/lane-batch-collection-corpus.json" \
+  --artifact-manifest "$RULE/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_execution_queue
+```
+
+That registered run is `ready_for_rule_authoring`: `5` rule batches cover `34`
+targets and emit `37` `world_model_or_calculator_rule` stubs, with no child
+source-catalog adapter execution and no verifier-evidence claim. The next
+implementation step is a deterministic calculator/world-model executor for
+those stubs, not another source-backed catalog replay.
+
+Run the deterministic rule-authoring adapter over those stubs:
+
+```bash
+RULE_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-post-correction-rule-authoring-adapter
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$RULE/world-model-rule-stubs.jsonl" \
+  --output-dir "$RULE_ADAPTER" \
+  --json "$RULE_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --rule-results-jsonl "$RULE_ADAPTER/world-model-rule-results.jsonl" \
+  --input-requests-jsonl "$RULE_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --artifact-manifest "$RULE_ADAPTER/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_lane_batches_rule_authoring_all
+```
+
+The registered adapter run is `needs_inputs`: all `37` stubs become explicit
+input requests and none are executed without a separate rule-input file. The
+request split is `12` calculator checks, `12` entity-role disambiguation checks,
+`9` causal/procedural world-model checks, and `4` temporal-consistency checks.
+This gives the next pass a concrete input-collection contract while preserving
+the rule-stub boundary: no answer/model-answer/label fields are copied, and no
+rule result is promoted as verifier evidence.
+The adapter also enforces source-stub result coverage: the intended input is
+the sanitized `world-model-rule-stubs.jsonl`; mixed unresolved queues or other
+files that contain non-rule rows remain `blocked` and report
+`skipped_source_stub_ids` rather than silently executing a partial subset.
+
+Compile those requests into typed input-collection batches before execution:
+
+```bash
+RULE_INPUT_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-input-collection-plan
+
+python benchmarks/build_world_model_rule_input_collection_plan.py \
+  --input-requests "$RULE_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --output-dir "$RULE_INPUT_PLAN" \
+  --json "$RULE_INPUT_PLAN/rule-input-collection-plan.json" \
+  --input-tasks-jsonl "$RULE_INPUT_PLAN/rule-input-tasks.jsonl" \
+  --batches-jsonl "$RULE_INPUT_PLAN/rule-input-execution-batches.jsonl" \
+  --artifact-manifest "$RULE_INPUT_PLAN/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_post_correction_rule_authoring_adapter
+```
+
+The registered input plan is `ready_for_input_collection`: `37` rule-input
+tasks are grouped into `4` typed batches (`12` entity-role, `12` numeric, `9`
+mechanism, and `4` temporal snapshot tasks). The plan expands the executable
+contract with fields the deterministic adapter actually needs, including
+`expected_entity`, `calculation.expression`, `calculation.expected`,
+`mechanism_status`, and a `source_citation` requirement for every task, while
+still treating every row as non-evidence.
+
+Fill the subset that already has promoted correction-handoff provenance, then
+replay the deterministic adapter with those explicit inputs:
+
+```bash
+RULE_INPUT_FILL=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-input-correction-handoff-fill
+RULE_FILLED_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-authoring-adapter-correction-filled
+
+python benchmarks/fill_world_model_rule_inputs_from_correction_handoff.py \
+  --input-tasks "$RULE_INPUT_PLAN/rule-input-tasks.jsonl" \
+  --correction-handoff artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/source-family-structured-qa-correction-handoff.json \
+  --qa-corpus artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/source-family-structured-qa-correction-corpus.json \
+  --product-traces artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/product-traces.jsonl \
+  --output-dir "$RULE_INPUT_FILL" \
+  --json "$RULE_INPUT_FILL/rule-input-correction-handoff-fill.json" \
+  --rule-inputs-jsonl "$RULE_INPUT_FILL/rule-inputs.jsonl" \
+  --unfilled-tasks-jsonl "$RULE_INPUT_FILL/unfilled-rule-input-tasks.jsonl" \
+  --artifact-manifest "$RULE_INPUT_FILL/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=source_family_structured_qa_correction_handoff
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$RULE/world-model-rule-stubs.jsonl" \
+  --rule-inputs "$RULE_INPUT_FILL/rule-inputs.jsonl" \
+  --output-dir "$RULE_FILLED_ADAPTER" \
+  --json "$RULE_FILLED_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --rule-results-jsonl "$RULE_FILLED_ADAPTER/world-model-rule-results.jsonl" \
+  --input-requests-jsonl "$RULE_FILLED_ADAPTER/world-model-rule-input-requests.jsonl" \
+  --artifact-manifest "$RULE_FILLED_ADAPTER/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=world_model_rule_input_correction_handoff_fill
+```
+
+The registered fill is `partial`: `1/37` typed tasks are filled from the
+promoted Tesla founder correction handoff, binding ProductTrace answer entity
+`Elon Musk` against the source-backed expected entity `Martin Eberhard`. The
+filled adapter replay executes `1/37` stubs and produces one candidate
+`refuted` entity-role result with `source_citation=wikidata:Q478214:P112:Q1903673`.
+The remaining `36` tasks stay as explicit input requests, and the candidate
+result still requires a promotion gate before any product correction handoff.
+
+Promotion-gate the deterministic rule candidate before any downstream handoff:
+
+```bash
+RULE_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-promotion-gate
+
+python benchmarks/promote_world_model_rule_candidates.py \
+  --rule-results "$RULE_FILLED_ADAPTER/world-model-rule-results.jsonl" \
+  --rule-inputs "$RULE_INPUT_FILL/rule-inputs.jsonl" \
+  --adapter-report "$RULE_FILLED_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --output-dir "$RULE_PROMOTION" \
+  --json "$RULE_PROMOTION/world-model-rule-candidate-promotion-gate.json" \
+  --promoted-jsonl "$RULE_PROMOTION/promoted-rule-candidates.jsonl" \
+  --blocked-jsonl "$RULE_PROMOTION/blocked-rule-candidates.jsonl" \
+  --pending-jsonl "$RULE_PROMOTION/pending-rule-inputs.jsonl" \
+  --artifact-manifest "$RULE_PROMOTION/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=world_model_rule_authoring_adapter_correction_filled
+```
+
+The registered promotion gate is `promote`: `1` source-backed entity-role
+candidate passes with `0` blocked candidates and `36` pending input rows. The
+gate checks that the candidate is executed, promotable, high-confidence, still
+marked as candidate-only, backed by explicit rule inputs, and carries the same
+source citation in both the input and adapter evidence. When an adapter report
+is supplied, the gate also fails closed on blocked/empty adapter status or
+stub-result coverage below `1.0`, so a partial adapter execution cannot promote
+its surviving candidate subset.
+
+Build the ProductTrace-visible handoff from promoted rule candidates:
+
+```bash
+RULE_HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-world-model-rule-candidate-handoff
+
+python benchmarks/build_world_model_rule_candidate_handoff.py \
+  --promotion-gate "$RULE_PROMOTION/world-model-rule-candidate-promotion-gate.json" \
+  --promoted-candidates "$RULE_PROMOTION/promoted-rule-candidates.jsonl" \
+  --output-dir "$RULE_HANDOFF" \
+  --json "$RULE_HANDOFF/world-model-rule-candidate-handoff.json" \
+  --trace-jsonl "$RULE_HANDOFF/product-traces.jsonl" \
+  --action-results-jsonl "$RULE_HANDOFF/action-results.jsonl" \
+  --artifact-manifest "$RULE_HANDOFF/artifact-manifest.json" \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata evidence=world_model_rule_candidate_promotion_gate
+```
+
+The registered handoff is `promote`: the single promoted Tesla founder rule
+candidate becomes one ProductTrace row, the promoted deterministic rule result
+refutes the Elon Musk answer through `world_model_rule_candidate`, the risk
+decision is `high/abstain`, and the action executor records a dry-run abstain
+result. The handoff remains target-specific and source-citation backed; pending
+rule-input rows remain non-evidence work items.
+
+The audited unresolved-rule requeue can now fill all eight entity-role inputs
+from explicit source-backed bindings and pass the same adapter/promotion gate.
+The external/official citation path keeps source discovery, review, fill, and
+promotion as separate boundaries:
+
+```bash
+REQUEUED_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-input-plan
+REQUEUED_STUBS=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-stub-requeue
+ENTITY_BINDING_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-plan
+ENTITY_BINDING_LOCAL_CITATION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-citation-collection
+ENTITY_WIKI_HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-wikipedia-handoff
+ENTITY_OFFICIAL_HANDOFF=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-official-handoff
+ENTITY_BINDING_CITATION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-external-official-citation-collection
+ENTITY_BINDING_REVIEW=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-external-official-review
+ENTITY_BINDING_GATE=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-entity-binding-external-official-gate
+ENTITY_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-fill
+ENTITY_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-adapter
+ENTITY_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-requeued-entity-binding-promotion-gate
+
+python benchmarks/plan_world_model_rule_entity_bindings.py \
+  --entity-bindings artifacts/frontier-release-evidence/unresolved-frontier-research-input-binding-scaffold-v1/source-backed-entity-bindings.jsonl \
+  --alignment-records artifacts/frontier-release-evidence/unresolved-seeded-news-alignment-audit-v1/alignment-records.jsonl \
+  --output-dir "$ENTITY_BINDING_PLAN"
+
+python benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py \
+  --entity-binding-plan "$ENTITY_BINDING_PLAN/entity-binding-plan.json" \
+  --citation-corpus artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json \
+  --output-dir "$ENTITY_BINDING_LOCAL_CITATION"
+
+python benchmarks/build_world_model_rule_entity_binding_citation_handoff.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --output-dir "$ENTITY_WIKI_HANDOFF" \
+  --max-results-per-request 3
+
+python benchmarks/run_wikipedia_citation_search_adapter.py \
+  --input "$ENTITY_WIKI_HANDOFF/entity-binding-citation-search-requests.jsonl" \
+  --output "$ENTITY_WIKI_HANDOFF/wikipedia-citation-search-results.jsonl" \
+  --max-results 3 \
+  --max-query-variants 4 \
+  --workers 2 \
+  --min-delay-seconds 0.75 \
+  --retries 4
+
+python benchmarks/build_world_model_rule_entity_binding_citation_handoff.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --adapter-results "$ENTITY_WIKI_HANDOFF/wikipedia-citation-search-results.jsonl" \
+  --output-dir "$ENTITY_WIKI_HANDOFF" \
+  --max-results-per-request 3
+
+python benchmarks/build_world_model_rule_entity_binding_citation_handoff.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --output-dir "$ENTITY_OFFICIAL_HANDOFF" \
+  --source-family official
+
+jq -c 'select((.query // "") | test("^Elon "; "i")) |
+  {task_id, url:"https://www.elongold.com/bio",
+   provider:"elongold_official_site",
+   source:"seeded_url:official:elongold-bio",
+   seed_key:"elongold-official-bio",
+   title:"BIO - Elon Gold",
+   matched_query:.query,
+   description:"Official Elon Gold biography page."}' \
+  "$ENTITY_OFFICIAL_HANDOFF/entity-binding-source-family-collection-tasks.jsonl" \
+  > "$ENTITY_OFFICIAL_HANDOFF/official-url-seeds.jsonl"
+
+python benchmarks/run_seeded_url_source_family_catalog_adapter.py \
+  --tasks "$ENTITY_OFFICIAL_HANDOFF/entity-binding-source-family-collection-tasks.jsonl" \
+  --seeds "$ENTITY_OFFICIAL_HANDOFF/official-url-seeds.jsonl" \
+  --output "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog.jsonl" \
+  --report-json "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog-report.json" \
+  --artifact-manifest "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog-manifest.json" \
+  --source-family official \
+  --provider seeded_url_official
+
+python benchmarks/collect_world_model_rule_entity_bindings_from_citation_corpus.py \
+  --entity-binding-plan "$ENTITY_BINDING_LOCAL_CITATION/entity-binding-plan.json" \
+  --citation-corpus "$ENTITY_WIKI_HANDOFF/entity-binding-citation-source-docs.jsonl" \
+  --citation-corpus "$ENTITY_OFFICIAL_HANDOFF/official-source-catalog.jsonl" \
+  --output-dir "$ENTITY_BINDING_CITATION"
+
+python benchmarks/review_world_model_rule_entity_binding_candidates.py \
+  --entity-binding-plan "$ENTITY_BINDING_CITATION/entity-binding-plan.json" \
+  --output-dir "$ENTITY_BINDING_REVIEW"
+
+python benchmarks/promote_world_model_rule_entity_binding_candidates.py \
+  --entity-binding-plan "$ENTITY_BINDING_CITATION/entity-binding-plan.json" \
+  --review-decisions "$ENTITY_BINDING_REVIEW/review-decisions.jsonl" \
+  --output-dir "$ENTITY_BINDING_GATE"
+
+python benchmarks/fill_world_model_rule_inputs_from_entity_bindings.py \
+  --input-tasks "$REQUEUED_PLAN/rule-input-tasks.jsonl" \
+  --entity-bindings "$ENTITY_BINDING_GATE/approved-entity-bindings.jsonl" \
+  --output-dir "$ENTITY_FILL"
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$REQUEUED_STUBS/requeued-world-model-rule-stubs.jsonl" \
+  --rule-inputs "$ENTITY_FILL/rule-inputs.jsonl" \
+  --output-dir "$ENTITY_ADAPTER"
+
+python benchmarks/promote_world_model_rule_candidates.py \
+  --rule-results "$ENTITY_ADAPTER/world-model-rule-results.jsonl" \
+  --rule-inputs "$ENTITY_FILL/rule-inputs.jsonl" \
+  --adapter-report "$ENTITY_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --output-dir "$ENTITY_PROMOTION"
+```
+
+The registered requeued entity-binding chain is `filled -> observed -> promote`:
+`8/8` source-backed entity-role tasks are filled, `8/8` adapter stubs execute,
+and the promotion gate promotes all eight with `0` blocked and `0` pending. The
+source inputs remain non-evidence adapter inputs until the entity-binding review
+and promotion gates verify matching source citations in the deterministic
+candidate evidence.
+
+The entity-binding planner can use source-alignment records to draft
+`candidate-entity-bindings.jsonl`, but these rows stay `needs_review` and
+`not_verifier_evidence=true`. The citation-corpus collector can enrich draft
+candidates with source-backed expected entities from already-materialized local
+citation corpora, but it still does not approve or execute anything. The rule
+reviewer can produce explicit `approved` or `needs_more_evidence` decisions
+from conservative source/text closure checks, including refutation candidates
+where `answer_entity` and `expected_entity` differ. The promotion gate writes a
+review-decision template and only materializes `approved-entity-bindings.jsonl`
+after explicit approved review decisions; only that approved sidecar should be
+passed to the fill command.
+
+The current `frontier-release-evidence` external/official entity-binding run
+records that reviewed boundary explicitly. Wikipedia citation search covers the
+two Boston United candidates, the official Elon Gold URL seed covers the two Elon
+Gold candidates, and
+`unresolved-frontier-research-entity-binding-external-official-citation-collection-v1`
+raises ready-for-review candidates to `8/8` with `enriched=4`. Its rule review
+approves `8/8`; the reviewed entity-binding promotion gate materializes `8`
+approved sidecar rows; the fill/adapter/rule-promotion chain ends at `filled=8`,
+`executed=8`, `promoted=8`, `blocked=0`, and `pending=0`.
+
+The unresolved numeric/calculator lane now has the same explicit fill boundary.
+It can accept an optional source-backed subject-binding sidecar to resolve only
+`ambiguous_subject` rows; without that sidecar it fail-closes when the subject is
+still ambiguous:
+
+```bash
+NUMERIC_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill
+
+python benchmarks/fill_world_model_rule_inputs_from_numeric_bindings.py \
+  --input-tasks "$NUMERIC_FILL/record-190-numeric-rule-input-task.jsonl" \
+  --numeric-bindings "$NUMERIC_FILL/source-backed-numeric-bindings.jsonl" \
+  --output-dir "$NUMERIC_FILL" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-binding-fill \
+  --version 0.1
+```
+
+When an approved sidecar exists, pass
+`--subject-bindings "$NUMERIC_FILL/source-backed-subject-bindings.jsonl"`.
+When a blocked fill report needs such a sidecar, generate the non-evidence
+collection worklist first:
+
+```bash
+python benchmarks/plan_world_model_rule_numeric_subject_bindings.py \
+  --fill-report "$NUMERIC_FILL/rule-input-numeric-binding-fill.json" \
+  --numeric-bindings "$NUMERIC_FILL/source-backed-numeric-bindings.jsonl" \
+  --output-dir "$NUMERIC_FILL/subject-binding-plan" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-numeric-subject-binding-plan \
+  --version 0.1
+```
+
+The registered numeric-binding fill artifact remains `blocked`: `0/1` numeric
+tasks are filled, the single `record-190` population task remains unfilled, and
+the failure reasons are `binding_requires_review` plus `missing_subject_entity`.
+The supplied binding records a source-backed World Bank population value for the
+United States, but the original question only says "the country"; the fill script
+therefore refuses to turn that source value into a calculator input without an
+explicit reviewed subject binding. Focused tests now cover both positive paths:
+a valid source/candidate numeric binding executes through the calculator adapter
+and promotes once `source_citation` appears in deterministic candidate evidence,
+the subject-binding planner turns that blocked report into a source-context
+worklist, and an approved subject-binding sidecar can resolve
+`ambiguous_subject` without allowing conflicting subjects.
+
+The unresolved temporal lane now has a source-backed timestamp fill boundary
+before the minimal source-timestamp consistency adapter and promotion gate:
+
+```bash
+TEMPORAL_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-fill
+TEMPORAL_PLAN=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-plan
+TEMPORAL_ADAPTER=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter
+TEMPORAL_PROMOTION=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate
+
+python benchmarks/plan_world_model_rule_temporal_bindings.py \
+  --fill-report "$TEMPORAL_FILL/rule-input-temporal-binding-fill.json" \
+  --temporal-bindings "$TEMPORAL_FILL/source-backed-temporal-bindings.jsonl" \
+  --output-dir "$TEMPORAL_PLAN" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-plan \
+  --version 0.1
+
+python benchmarks/fill_world_model_rule_inputs_from_temporal_bindings.py \
+  --input-tasks "$TEMPORAL_FILL/record-326-temporal-rule-input-task.jsonl" \
+  --temporal-bindings "$TEMPORAL_FILL/source-backed-temporal-bindings.jsonl" \
+  --output-dir "$TEMPORAL_FILL" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-binding-fill \
+  --version 0.1
+
+python benchmarks/run_world_model_rule_authoring_adapter.py \
+  --rule-stubs "$TEMPORAL_ADAPTER/record-326-temporal-rule-stub.jsonl" \
+  --rule-inputs "$TEMPORAL_FILL/rule-inputs.jsonl" \
+  --output-dir "$TEMPORAL_ADAPTER" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-adapter \
+  --version 0.1
+
+python benchmarks/promote_world_model_rule_candidates.py \
+  --rule-results "$TEMPORAL_ADAPTER/world-model-rule-results.jsonl" \
+  --rule-inputs "$TEMPORAL_FILL/rule-inputs.jsonl" \
+  --adapter-report "$TEMPORAL_ADAPTER/world-model-rule-authoring-adapter.json" \
+  --output-dir "$TEMPORAL_PROMOTION" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-temporal-promotion-gate \
+  --version 0.1
+```
+
+When the fill report blocks on missing, invalid, incomplete, or unreviewed
+timestamp metadata, `plan_world_model_rule_temporal_bindings.py` turns the
+blocked rows into non-evidence `temporal_binding_collection` requests. The fill
+step remains intentionally narrow: it requires explicit `claim_time`,
+`source_time`, `retrieved_at`, `source_citation`, a ready review status, and
+`not_verifier_evidence=true`, then leaves the filled row as an adapter input.
+The registered temporal replay remains `observed -> promote`: `1/1` temporal
+stub executes as `supported`, and the promotion gate promotes the single
+`record-326` candidate with `0` blocked and `0` pending. This proves only the
+timestamp/freshness/order contract and manifest-backed promotion wiring; it does
+not prove the food-affordability content itself. Content truth still requires
+citation or structured evidence handoff before ProductTrace or release gates
+should act on the claim.
+
+The causal/procedural lane now has the same conservative execution boundary for
+mechanism-style claims. When a separate rule-input file supplies `mechanism`,
+`precondition`, and `source_citation`, the adapter executes a
+`mechanism_consistency` candidate. Promotion still requires an explicit
+`mechanism_status` (`supported`, `refuted`, or `insufficient_evidence`); missing
+status returns `insufficient_evidence` and blocks promotion. This keeps the
+adapter aligned with fact-level/tool-verification research without turning an
+LLM-as-judge or source lookup into a mandatory dependency. The first real
+source-backed TruthfulQA mechanism artifacts now cover two question families:
+`record-10` and the Africa poverty trend records
+`record-133`/`record-165`/`record-274`/`record-299`; a final mixed-status
+artifact covers Bill Gates high-school records `record-27`/`record-134` and UFO
+extraterrestrial-premise records `record-212`/`record-224`. All nine
+causal/procedural rows now have citation-backed mechanism bindings.
+
+Mechanism inputs now also have a source-backed fill boundary:
+
+```bash
+MECHANISM_FILL=artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill
+
+python benchmarks/fill_world_model_rule_inputs_from_mechanism_bindings.py \
+  --input-tasks "$MECHANISM_FILL/source-backed-mechanism-rule-input-tasks.jsonl" \
+  --mechanism-bindings "$MECHANISM_FILL/source-backed-mechanism-bindings.jsonl" \
+  --output-dir "$MECHANISM_FILL" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-binding-fill \
+  --version 0.1
+```
+
+This fill script is intentionally stricter than the adapter shell: it blocks
+missing source citations, unreviewed bindings, and missing or invalid
+`mechanism_status` values before adapter execution. Focused tests cover a
+supported mechanism that fills, executes, and promotes, plus an invalid binding
+that blocks.
+
+For local rebuilds of the frontier audit mechanism lane, the canonical shortcut
+is the source workflow below. It materializes the three source-backed mechanism
+input groups, then runs `binding-fill -> adapter -> promotion-gate ->
+ProductTrace handoff` for all nine causal/procedural rows:
+
+```bash
+python benchmarks/run_frontier_mechanism_handoff_source_workflow.py \
+  --output-root artifacts \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-mechanism-handoff-source-workflow \
+  --version 0.1 \
+  --metadata source=frontier_mechanism_handoff_rebuild
+```
+
+The registered `record-10` diamond mechanism chain is
+`filled -> observed -> promote -> handoff`: the fill script consumes a
+source-backed WTAMU/GIA mechanism binding, the adapter observes one supported
+`mechanism_consistency` candidate, the promotion gate promotes `1/1`, and
+`build_world_model_rule_candidate_handoff.py` writes one ProductTrace with
+`accept/low` plus a dry-run accept action. All four manifests verify. This
+proves the mechanism lane can enter ProductTrace for one cited mechanism; it
+does not claim broad causal/procedural coverage.
+
+The registered Africa poverty mechanism chain applies a World Bank-backed
+rate/headcount mechanism to four repeated TruthfulQA records
+(`record-133`, `record-165`, `record-274`, and `record-299`). The source-backed
+binding states that poverty rates can decline while the number of poor people
+rises when population growth outpaces the rate decline. The chain is also
+`filled -> observed -> promote -> handoff`: `4/4` inputs fill, `4/4`
+`mechanism_consistency` candidates execute as supported, the promotion gate
+promotes `4/4`, and the handoff writes four ProductTrace rows with `accept/low`
+plus dry-run accept actions. All four manifests verify. Combined with the
+diamond row, the registered mechanism lane now covers `5/9` causal/procedural
+input tasks across two source-backed mechanism families.
+
+The final remaining mechanism chain fills the Bill Gates and UFO rows. The Bill
+Gates bindings use Academy of Achievement plus Gates Foundation/Lakeside
+biographical evidence and promote as `supported`; the UFO bindings use NASA UAP
+FAQ/report and AARO historical-report evidence and promote as `refuted` because
+the question's premise asserts an established extraterrestrial truth. The chain
+is `filled -> observed -> promote -> handoff`: `4/4` inputs fill, `2` supported
+and `2` refuted `mechanism_consistency` candidates execute and promote, and the
+handoff writes two `accept/low` and two `abstain/high` dry-run ProductTrace
+actions. All four manifests verify. The registered mechanism lane now covers
+`9/9` causal/procedural input tasks across four source-backed mechanism
+families.
+
+Those three promoted mechanism handoffs can now be bundled as one release-gate
+artifact:
+
+```bash
+python benchmarks/build_mechanism_handoff_evidence_bundle.py \
+  --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-candidate-handoff/world-model-rule-candidate-handoff.json \
+  --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-candidate-handoff/world-model-rule-candidate-handoff.json \
+  --handoff artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-candidate-handoff/world-model-rule-candidate-handoff.json \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle \
+  --registry artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/registry.json \
+  --name truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle \
+  --version 0.1 \
+  --expected-target-count 9 \
+  --min-trace-count 9 \
+  --min-supported-count 7 \
+  --min-refuted-count 2
+```
+
+The current bundle promotes with `9/9` target coverage, `7` supported and `2`
+refuted traces, `7` accept and `2` abstain actions, four source-family buckets,
+and recursive verification of the three child handoff manifests. It can be
+passed to release candidate comparison with `--mechanism-handoff-evidence-bundle`
+or by registry key; `frontier_audit` defaults to
+`report:truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle:0.1`.
+
+## `summarize_unresolved_frontier_evidence.py`
+
+Aggregates the unresolved frontier lanes into one read-only closure summary. It
+does not run adapters, promote verifier evidence, or close a release gate; it
+combines queue counts, citation/source-family gate status, source acquisition
+coverage, reviewed semantic-gap covered-fact route status,
+frontier queue command-binding review/run status, world-model
+rule-input/fill-rollup/promotion status, mechanism handoff coverage, and the
+next concrete actions. The citation lane also carries blocked query-sweep failure counts,
+recommended remediation actions, and best-observed strategy diagnostics forward
+into the summary/action metadata. It can also ingest a no-model
+`frontier_queue_execution_smoke.py`
+report as a control-plane health signal; the smoke manifest is verified
+recursively and recorded in the summary manifest, but it does not replace
+real command-binding review or executed bound-command evidence.
+When an `--input-fill-result-rollup` is supplied, adapter-ready rule inputs are
+reported in the world-model lane and the summary emits a next action for
+`run_frontier_research_queue_rule_adapter_promotion_workflow.py` if no
+promotion report has consumed them yet; the rollup remains non-evidence.
+
+```bash
+OUT=artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1
+
+python benchmarks/summarize_unresolved_frontier_evidence.py \
+  --unresolved-queue artifacts/frontier-release-evidence/unresolved-blind-spot-evidence-queue-v1/unresolved-evidence-queue.json \
+  --source-family-coverage-audit artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-coverage-audit-v1/source-family-coverage-audit.json \
+  --citation-workflow artifacts/frontier-release-evidence/unresolved-seeded-news-source-family-citation-workflow-v1/source-family-citation-search-workflow.json \
+  --semantic-gap-review-workflow artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1/retrieval-semantic-gap-review-workflow.json \
+  --frontier-command-binding-review artifacts/frontier-release-evidence/frontier-command-binding-review-v1/frontier-command-binding-review.json \
+  --frontier-bound-command-run artifacts/frontier-release-evidence/frontier-bound-command-run-v1/frontier-bound-command-run-report.json \
+  --frontier-queue-execution-smoke artifacts/frontier-queue-execution-smoke/frontier-queue-execution-smoke.json \
+  --rule-input-plan artifacts/frontier-release-evidence/unresolved-world-model-rule-input-collection-plan-v1/rule-input-collection-plan.json \
+  --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-africa-poverty-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --rule-promotion-report artifacts/truthfulqa-frontier-smollm2-l80-unresolved-world-model-rule-mechanism-remaining-promotion-gate/world-model-rule-candidate-promotion-gate.json \
+  --rule-promotion-report artifacts/frontier-release-evidence/unresolved-frontier-research-external-official-entity-binding-rule-promotion-v1/world-model-rule-candidate-promotion-gate.json \
+  --mechanism-handoff-bundle artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json \
+  --json "$OUT/unresolved-frontier-evidence-summary.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-frontier-evidence-summary \
+  --version 0.1 \
+  --metadata source=frontier-v4 \
+  --metadata model=smollm2-l80
+```
+
+For the current frontier-v4 unresolved lane, the expected summary is
+`needs_evidence`: source-family acquisition is covered, citation evidence remains
+blocked because external query alignment still does not promote, and world-model
+rules are partial because promoted rule evidence now closes the `9/9`
+causal/procedural tasks plus the `8/8` external/official entity-disambiguation
+requeue. The broader `26`-task rule-input plan still has `17` raw remaining
+numeric/temporal rows, but the audit-adjusted actionable remainder is now `9`
+tasks: `6` quantity/arithmetic and `3` temporal-consistency rows that still need
+explicit source-backed inputs.
+
+When a semantic-gap review workflow is supplied, the summary records the
+reviewed source-document count, generated source-family QA count, covered-fact
+route record count, and best covered-fact route metrics. A promoted semantic-gap
+lane means only that the reviewed source-backed facts passed their scoped
+covered-fact route audit. It can suppress the generic citation-alignment next
+action for those reviewed facts, but it is not broad recall evidence and does
+not by itself close source-family, citation, or world-model lanes. If that
+promoted scoped route covers only part of the unresolved target queue, the
+summary emits `expand_scoped_covered_fact_alignment` with coverage gap/rate
+metadata so the next plan expands source-backed alignment instead of restarting
+broad citation tuning.
+
+The same summary can feed the generic frontier command-plan handoff:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source "$OUT/unresolved-frontier-evidence-summary.json" \
+  --json "$OUT/unresolved-frontier-command-plan.json" \
+  --artifact-manifest "$OUT/unresolved-frontier-command-plan-manifest.json" \
+  --registry artifacts/frontier-release-evidence/frontier-route-registry.json \
+  --name smollm2-l80-frontier-v4-unresolved-frontier-command-plan \
+  --version 0.1
+```
+
+For unresolved summaries, the planner synthesizes reviewable command templates
+for semantic-gap covered-fact route completion or scoped alignment expansion,
+citation query-mode replays,
+numeric/temporal world-model rule fill/adapter/promotion chains, and frontier
+queue command-binding review, approved re-bind, execution, or repair re-run
+steps. Citation templates use query-sweep diagnostics to lower retrieval
+overlap where no hits were found, try alternate target routes where route
+selection failed, tighten verifier overlap where false alarms dominate, and add
+source-family coverage audit/collection commands when corpus expansion is the
+recommended next action. The templates keep output paths, registry keys, and source-backed
+binding sidecars as `...` placeholders, so the follow-up scaffold/bind/run
+steps still require review before anything executes.
+`expand_scoped_covered_fact_alignment` reuses
+`run_retrieval_semantic_gap_review_workflow.py --run-covered-fact-route` and
+stamps `closure_action=expand_scoped_covered_fact_alignment` into the command
+metadata for traceability.
+The same planner also accepts `source_family_catalog_collection_plan` reports
+and lowers ready collection-task families into provider-specific catalog
+adapter command templates, keeping URL seeds and output artifacts review-bound.
+It also accepts `source_family_structured_qa_lane_rerun_queue` reports from
+`plan_source_family_structured_qa_lane_reruns.py`, turning lane-batch commands
+into reviewable frontier command-plan entries before local execution.
+Command-plan, bindings, approved-bindings, review-decision, and bound-plan
+files are treated as local control-plane artifacts by
+`plan_frontier_research_queue_input_collection.py` and can be staged with
+`bind_frontier_research_queue_artifact_inputs.py` after explicit non-evidence
+review.
+
+The same reduced 12-task queue was also replayed through Crossref with a wider
+scholarly budget:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog
+
+python benchmarks/run_crossref_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-worldbank-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --output "$OUT/crossref-reduced-scholarly-catalog.jsonl" \
+  --report-json "$OUT/crossref-reduced-scholarly-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-crossref-reduced-scholarly-catalog \
+  --version 0.1 \
+  --max-query-variants 8 \
+  --rows-per-query 5 \
+  --min-delay-seconds 0.2 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=worldbank_source_family_catalog_collection_plan
+```
+
+That reduced Crossref pass consumes `6` scholarly tasks, runs `48` query
+variants, writes `69` deduplicated scholarly catalog documents, and records `0`
+request errors. Rerunning the source-family workflow with Wikidata reference,
+the original Crossref catalog, World Bank official statistics, and this reduced
+Crossref catalog keeps the route blocked, but improves source-family coverage:
+the workflow sees `626` catalog docs, returns `528` adapter rows, and the
+coverage audit drops missing target rows from `84` to `44`. Covered target
+families are now `official_statistics=4` and `scholarly=140`; remaining missing
+targets are `official=36`, `scholarly=16`, and `news=4`. The next collection
+plan is down to `9` tasks: `official=5`, `scholarly=3`, and `news=1`.
+
+## `run_official_site_source_family_catalog_adapter.py`
+
+Fetches URL-seeded official pages for `source_family=official` collection tasks.
+This is deliberately not a web-search adapter: the URL seed file is the
+auditable handoff from human review, a search provider, or a later source
+discovery system. The adapter fetches HTML when possible, falls back to seed
+title/text when a site blocks automated access, emits adapter-ready official
+catalog rows, and keeps request ids, labels, target ids, row ids, and model
+answers out of source documents.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-official-site-catalog
+
+python benchmarks/run_official_site_source_family_catalog_adapter.py \
+  --tasks artifacts/truthfulqa-frontier-smollm2-l80-reduced-source-family-catalog-collection-plan/source-family-catalog-collection-tasks.jsonl \
+  --seeds "$OUT/official-site-url-seeds.jsonl" \
+  --output "$OUT/official-site-catalog.jsonl" \
+  --report-json "$OUT/official-site-catalog-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-official-site-catalog \
+  --version 0.1 \
+  --max-text-chars 6000 \
+  --timeout-seconds 30 \
+  --min-delay-seconds 0.5 \
+  --metadata suite=truthfulqa_frontier_smollm2_l80 \
+  --metadata source=reduced_source_family_catalog_collection_plan
+```
+
+The registered official-site run consumes the `5` remaining official collection
+tasks with `9` URL seeds across USDA ERS, Tesla, WHO, World Bank, and NOAA. It
+writes `9` official catalog docs, successfully fetches `7` pages, and records
+`2` Tesla access-denied errors while retaining seed-title fallback rows. The
+manifest verifies and catalog/source-doc reserved-field scans are clean.
+
+Adding this official-site catalog to the Wikidata, Crossref, reduced Crossref,
+and World Bank catalogs still leaves route promotion blocked, but it improves
+source-family coverage: the workflow has `635` catalog docs, returns `528`
+adapter rows, and the coverage audit reduces missing target rows from `44` to
+`28`. Covered target families are now `official=32`, `official_statistics=4`,
+and `scholarly=128`; remaining missing targets are `official=4`,
+`scholarly=28`, and `news=4`. The next acquisition plan compresses to `7`
+tasks: `scholarly=5`, `official=1`, and `news=1`.
+
+The follow-up OpenAlex plus source-family-diverse rerank pass supersedes that
+queue for scholarly/official coverage, and the seeded-news pass closes the final
+source-family queue: all requested non-fallback source families are now covered,
+while route promotion remains fail-closed behind query-sweep/comparison gates.
 
 ## `run_wikipedia_citation_search_adapter.py`
 
@@ -1767,6 +4629,7 @@ OUT=artifacts/truthfulqa-frontier-smollm2-l80-claim-entity-wikipedia-citation-se
 
 python benchmarks/run_external_citation_search_adapter_workflow.py \
   --queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --batch-id unresolved-evidence-batch-0001 \
   --query-mode claim_entity \
   --max-alternate-queries 3 \
   --search-command "python benchmarks/run_wikipedia_citation_search_adapter.py --input {input} --output {output} --max-results 3 --max-query-variants 3 --workers 1 --min-delay-seconds 1 --retries 4" \
@@ -1783,7 +4646,14 @@ The command must include both `{input}` and `{output}` placeholders. `{input}`
 receives the sanitized adapter-request JSONL; `{output}` is the result JSONL
 path the adapter must write. Returned snippets still have to pass provenance,
 blind-spot query, and controlled-vs-external gates before any route decision is
-promoted.
+promoted. Passing `--batch-id` keeps the preflight request JSONL and downstream
+evidence gate aligned to the same unresolved evidence batch, which is the
+preferred path for long-running external search jobs. The wrapper forwards
+`--min-adapter-request-coverage` and `--source-family-filters` into the evidence
+workflow and records missing request counts in the workflow manifest/registry
+metadata. Keep `--source-family-filters off` for stable release gates; use
+`planned_rerank` in diagnostic adapter reruns when you need source-family-aware
+ordering without changing the external search command contract.
 
 ## `eval_verifier_ensemble.py`
 
@@ -1816,6 +4686,11 @@ use `--triple-min-slot-coverage` to relax or tighten the per-slot evidence
 coverage threshold. Triple audit metadata records each slot's expected value,
 matched and missing tokens, source/evidence label, plus claim-level slot
 coverage summaries for release review.
+Add `--triple-refute-object-mismatch` for frontier audits where linked evidence
+covering the same subject and predicate should refute a different object slot,
+for example when retrieval says the capital of France is Paris but the claim
+answers Berlin. The flag is opt-in so production-style monitor-first runs keep
+the older insufficient-evidence behavior by default.
 Each run validates inputs through `eigentruth.eval.ScoreDump` or selected score
 views and records a `score_dump` summary plus SHA-256 fingerprint, so
 verifier-cache and route promotion evidence can be tied back to the exact score
@@ -1872,6 +4747,13 @@ optional `diagnostics`. The workflow keeps diagnostics low by default, so
 decision changes mostly reflect the cheap verifier -> retrieval -> final
 verifier path.
 
+When claims carry extractor metadata such as `entity_candidates`,
+`VerificationEscalationPolicy` can also treat entity-bearing medium-confidence
+results as uncertainty-escalation candidates. The report records
+`entity_sensitive_records`, `entity_sensitive_claim_total`, and
+`entity_candidate_total` so entity-level verification pressure can be separated
+from ordinary low-confidence escalation.
+
 The committed fixture in `artifacts/uncertainty-escalation-fixture-workflow/`
 contains four records. All four low-confidence preliminary results trigger
 escalation and retrieve evidence; the two false claims move from `accept` to
@@ -1888,11 +4770,27 @@ python benchmarks/eval_uncertainty_escalation.py \
   --json artifacts/uncertainty-escalation-report.json
 ```
 
+To tune the "verify when uncertain" threshold from the same recorded stronger
+verifier outcomes, add a policy sweep. Each candidate threshold simulates
+keeping the initial decision for records above the threshold and using the
+recorded final decision for records below it:
+
+```bash
+python benchmarks/eval_uncertainty_escalation.py \
+  --results artifacts/uncertainty-escalation-workflow/verification-loop-results.jsonl \
+  --label-key label \
+  --sweep-min-confidence 0.5,0.6,0.65,0.7,0.75,0.8 \
+  --sweep-max-final-false-accept-rate 0.0 \
+  --sweep-max-trigger-rate 0.75 \
+  --json artifacts/uncertainty-escalation-policy-sweep-report.json
+```
+
 Rows may be raw loop-result payloads or wrappers such as
 `{"label": 0, "result": {...}}`. Labels are optional; when present, `0` means
 true/normal and `1` means false/anomalous. The report includes escalation trigger
 rates, selected route counts, retrieval request/success/evidence rates, decision
-transitions, and label-conditioned false-accept/selective-accuracy deltas.
+transitions, label-conditioned false-accept/selective-accuracy deltas, and
+optional `policy_sweep.recommended` metadata for the best passing threshold.
 
 ## `eval_verifier_stability.py`
 
@@ -2327,9 +5225,74 @@ python benchmarks/eval_verifier_ensemble.py \
   --scores tiny=artifacts/tiny_scores_with_samples.json \
   --claims artifacts/tiny_selfcheck_claims.json \
   --signal truth_proj \
+  --enable-fact-selfcheck \
+  --fact-selfcheck-early-stop \
   --selfcheck-early-stop \
   --json artifacts/tiny_selfcheck_verifier_ensemble_report.json
 ```
+
+`--enable-fact-selfcheck` runs `FactSelfConsistencyVerifier` before the
+sentence-overlap selfcheck fallback. It uses the same sampled-response fixture
+boundary, works best when records or samples carry `claim_triples` / `triples`
+metadata, and reports the opt-in `fact_selfcheck_verifier` block plus
+`fact_self_consistency` route metrics. Unsupported or unextractable fact
+triples remain `not_applicable` / `insufficient_evidence` and fall through to
+the existing sentence-level route. `--fact-selfcheck-early-stop` stops judging
+additional sample triples once the final claim-level threshold outcome is fixed,
+and the report records `early_stopped_records`, processed/skipped samples, and
+per-triple processed support/refute rates. Verified-record sidecars from this path can
+also be passed to `build_verifier_signal_score_dump.py`, which emits
+`fact_selfcheck_support_rate`, `fact_selfcheck_refute_rate`,
+`fact_selfcheck_disagreement`, `fact_selfcheck_insufficient`,
+`fact_selfcheck_not_applicable`, and `fact_selfcheck_uncovered_rate` columns.
+Verified-record sidecars can also carry a `perturbation_consistency` report for
+answer-preserving prompt variants; the converter emits
+`perturbation_conflict_rate`, `perturbation_high_confidence_conflict_rate`,
+`perturbation_missing_rate`, `perturbation_failed`, and
+`perturbation_not_applicable` columns for CHOKE-style calibration experiments.
+Verified-record sidecars can also carry an `evidence_alignment` report from
+`EvidenceAlignmentVerifier` or `audit_evidence_alignment(...)`; the converter
+emits `evidence_alignment_failed`, `evidence_alignment_insufficient`,
+`evidence_alignment_keyword_gap`, `evidence_alignment_number_gap`,
+`evidence_alignment_entity_gap`, `evidence_alignment_citation_gap`, and
+`evidence_alignment_issue_rate` columns. These are local claim/evidence slot
+checks for citation/search alignment, not semantic entailment proof.
+When those reports are produced by an external citation/search adapter,
+`enrich_evidence_alignment_sidecar.py` can join JSON or JSONL evidence records
+back onto the verified-record sidecar by `run + record_index` or `claim_id`,
+then write `EvidenceAlignmentVerifier` results in the sidecar schema consumed by
+the score-dump converter. Evidence records may be grouped records with
+`evidence` / `hits` / `source_documents`, or individual hit records carrying the
+same join keys in top-level fields or metadata.
+`run_verifier_signal_fusion_workflow.py --enable-fact-selfcheck` now runs that
+same bridge end to end: generated selfcheck fixtures preserve statement-level
+`claim_triples` / `triples`, external sample records may provide sample-level
+`triples`, and the enhanced score dump/fusion report includes the
+`fact_selfcheck_*` signals without loading a model.
+
+```bash
+python benchmarks/run_verifier_signal_fusion_workflow.py \
+  --scores tiny=artifacts/tiny_scores_with_triples.manifest.json \
+  --samples artifacts/tiny_sampled_fact_triples.json \
+  --output-dir artifacts/tiny_fact_selfcheck_signal_fusion \
+  --enable-fact-selfcheck \
+  --fact-selfcheck-min-samples 2 \
+  --fact-selfcheck-early-stop \
+  --fact-selfcheck-gate \
+  --keep-signals truth_proj,subspace_resid,eigenscore \
+  --fusion-signals truth_proj,subspace_resid,eigenscore,fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals fact_selfcheck_refute_rate,fact_selfcheck_uncovered_rate,fact_selfcheck_disagreement \
+  --alphas 0.05,0.1,0.2
+```
+
+`--fact-selfcheck-gate` is a promotion gate, not a verifier requirement. It
+adds `fact_selfcheck_evidence_gate` to the workflow report and manifest
+metadata, blocking promotion when fact-level samples have too few executed
+records, too few supported/refuted decisions, too many `not_applicable` rows,
+or too little claim/sample triple coverage. Leave it off for exploratory
+debugging runs; turn it on when the artifact is meant to support a release or
+baseline comparison.
 
 When the question is whether sampled responses are useful as calibrated
 diagnostic signals by themselves, `build_selfcheck_signal_score_dump.py` skips
@@ -2678,6 +5641,7 @@ python benchmarks/run_adapter_promotion_registry_workflow.py \
   --max-mean-duration-seconds 0.05 \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
+  --require-cache-key-mode qa_verifier=semantic \
   --json artifacts/qwen05_adapter_promotion_registry_workflow.json \
   --fail-on-blocked
 ```
@@ -2708,6 +5672,7 @@ python benchmarks/compare_route_baselines.py \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
   --min-verifier-trace-cache-hit-rate 0.9 \
+  --require-cache-key-mode qa_verifier=semantic \
   --require-non-oracle-evidence \
   --require-retrieval-provenance-filter \
   --required-retrieval-source-prefix external: \
@@ -2730,6 +5695,9 @@ quality/cost ordering. Optional runtime-budget flags read
 `runtime_total_seconds`, `runtime_n_retrieval_hits`, claims-cache metadata, and
 verifier-trace-cache metadata from the route manifest or registry record; when a
 threshold is configured, missing or non-finite evidence blocks that baseline.
+`--require-cache-key-mode verifier=mode` checks recorded route-comparison,
+manifest, or registry metadata and blocks old or mismatched baselines when a
+release expects a specific `semantic` or `exact` verifier cache-key mode.
 Use `--require-retrieval-provenance-filter` when a retrieval route should prove
 that untrusted hits were gated before verifier handoff. Optional
 `--required-retrieval-source-prefix`, `--required-retrieval-metadata`, and
@@ -3021,6 +5989,10 @@ or promotion workflows; it reloads the already registered manifests through
 `compare_readiness_baselines.py` and `compare_route_baselines.py`, then emits the
 deployable runtime flags, verifier route, quality summary, runtime cost, and
 route cost in one report.
+Optional context-sensitivity evidence can be supplied with
+`--context-sensitivity-workflow` or `--context-sensitivity-workflow-key`; the
+gate verifies the workflow manifest and requires paired logprob, enriched
+sidecar, and enhanced score-dump evidence.
 
 ```bash
 python benchmarks/compare_release_candidates.py \
@@ -3034,6 +6006,7 @@ python benchmarks/compare_release_candidates.py \
   --feedback-policy-min-matched-feedback-count 20 \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
+  --context-sensitivity-workflow-key report:<context-sensitivity-workflow-name>:<version> \
   --uncertainty-escalation-workflow-key report:<uncertainty-escalation-workflow-name>:<version> \
   --min-uncertainty-escalation-records 4 \
   --min-uncertainty-escalation-trigger-rate 0.50 \
@@ -3042,6 +6015,7 @@ python benchmarks/compare_release_candidates.py \
   --max-uncertainty-escalation-false-accept-delta 0.0 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
+  --mechanism-handoff-evidence-bundle artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -3142,11 +6116,22 @@ rate, and false-accept-rate delta; a threshold of `0.0` for
 false accepts worse.
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
-defaults `--require-product-runtime-drift-promotion-evidence`,
+defaults `--max-recommended-runtime-seconds 1.0`, leaving the older
+`--max-uncached-forward-seconds` cold-start gate opt-in for callers that want it,
+and defaults `--require-product-runtime-drift-promotion-evidence`,
 `--require-product-runtime-drift-pre-generation-evidence`,
+`--require-product-runtime-drift-claim-factuality-evidence`,
+`--require-product-runtime-drift-counterfactual-evidence`,
 `--require-product-runtime-drift-triple-audit-evidence`,
 `--require-product-runtime-drift-covered-fact-property-evidence`,
 `--require-product-runtime-drift-action-gate-evidence`,
+  `--require-product-runtime-drift-trajectory-audit-evidence`,
+  `--require-product-runtime-drift-metacognition-evidence`,
+  `--require-product-runtime-drift-evidence-handoff-evidence`,
+  `--require-product-runtime-drift-world-model-evidence`,
+  `--require-product-runtime-drift-context-sensitivity-evidence`,
+  `--require-product-runtime-drift-frontier-release-evidence`,
+  `--require-frontier-release-input-manifests`,
 `--require-product-trace-action-audit-gate`, and
 `--require-product-trace-action-execution-gate`; it also defaults to the
 registered covered-facts external-evidence handoff, registered triple-extraction
@@ -3156,9 +6141,23 @@ or `--triple-extraction-fixture-matrix` file inputs suppress the corresponding
 default registry keys. Strict local releases therefore fail closed when runtime
 drift lacks promotion-contract, triple-extraction fixture-matrix,
 trace-level triple-audit, recommended-route covered-fact property/action-gate
-evidence, the product-trace replay workflow lacks promoted
-action-audit/action-execution child gates, or registered frontier evidence
-handoffs are absent.
+evidence, trajectory-audit evidence, promotion-contract evidence-handoff
+coverage/manifest/metric-gap evidence, trace-level world-model
+participation/coverage/conflict/low-agreement/trace-gap evidence,
+trace-level metacognition coverage/pass-rate/overconfidence/miscalibration evidence,
+trace-level context-sensitivity participation/coverage/flagged-rate/trace-gap
+and max-ratio evidence, frontier release-evidence status/decision/track rates
+plus citation-batch and rerun-rollup counts, frontier release-evidence input
+manifest verification, promoted product-trace replay action-audit/action-execution
+child gates, or registered frontier evidence handoffs.
+Trajectory-audit runtime evidence now also carries cascading-evidence propagation
+signals: `trajectory_audit_cascade_count` increments when failed upstream
+retrieval/tool actions or empty retrieval results are later treated as support
+for claims or final answered traces.
+Outside the `frontier_audit` profile, add
+`--require-product-runtime-drift-claim-factuality-evidence` when a release must
+prove that claim factuality probe comparison evidence survived the
+product-runtime handoff.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -3224,12 +6223,31 @@ manifest, requires `status=promote`, and carries baseline/current paths plus
 blocked-metric counts into the release candidate. This connects captured product
 traffic replay back into the same release gate as model, route, and selector
 evidence. Add `--require-product-runtime-drift-pre-generation-evidence` when the
-release must also require pre-generation probe comparison coverage,
-manifest-verification, model/run breadth, redline pass-rate, AUROC, and
+release must also require pre-generation risk telemetry
+(risk coverage, learned-risk coverage/routing/probability, and audit-profile
+rate) plus probe comparison coverage, manifest-verification, model/run breadth,
+redline pass-rate, AUROC, and redline-margin metrics from that drift report. Add
+`--require-product-runtime-drift-claim-factuality-evidence` when the release must
+also require claim factuality probe comparison coverage, manifest-verification,
+model/run breadth, redline pass-rate, AUROC, selective accuracy/coverage, and
 redline-margin metrics from that drift report. Add
 `--require-product-runtime-drift-triple-audit-evidence` when the release must
 also require trace-level triple coverage, audited-claim coverage, audit
 pass-rate, and slot coverage metrics from that drift report.
+Add `--require-product-runtime-drift-world-model-evidence` when the release
+must also require trace-level world-model participation, coverage, conflict,
+low-agreement, and trace-gap metrics from that drift report.
+Add `--require-product-runtime-drift-metacognition-evidence` when the release
+must also require trace-level metacognition coverage, pass-rate,
+overconfident-risk, and miscalibration metrics from that drift report.
+Add `--require-product-runtime-drift-frontier-release-evidence` when the release
+must also require frontier release-evidence status/decision/track rates,
+citation-batch rollup counts, and rerun-rollup track/candidate counts from that
+drift report.
+Add `--require-frontier-release-input-manifests` when the final candidate must
+also prove that its source frontier release-evidence report was generated with
+`--require-input-manifests` and that all referenced input manifests still verify
+against local files. The `frontier_audit` profile enables this gate by default.
 Add `--release-efficiency-report` when the final candidate must also prove that
 the product runtime profile sweep has a promoted efficiency handoff. The gate
 verifies the release-efficiency manifest, requires `workflow=release_efficiency_report`
@@ -3328,30 +6346,49 @@ Use `--release-policy-profile` with the registry workflow to reuse the same
 named defaults while registering the promoted manifest. `strict_structured_fact`
 enables the structured-fact robustness requirement, requires both configured
 canonical/paraphrase route keys, applies the baseline candidate quality gates,
-and adds stricter route/required-route quality thresholds for covered-fact
-release evidence, including fail-closed per-property count and support/refutation
-quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
+and separates ordinary required-route thresholds from the stricter
+structured-fact robustness thresholds. Ordinary required routes keep
+route-quality/provenance/stress gates; canonical/paraphrase `structured_fact`
+routes carry the stricter selected-count and fail-closed per-property
+support/refutation quality gates over route summary `property_metrics`.
+`frontier_audit` adds the same structured-fact defaults and
 also defaults `adapter_family_profile=strict_audit`,
 `require_product_runtime_drift_promotion_evidence=true`,
 `require_product_runtime_drift_pre_generation_evidence=true`,
+`require_product_runtime_drift_claim_factuality_evidence=true`,
 `require_product_runtime_drift_counterfactual_evidence=true`,
 `require_product_runtime_drift_triple_audit_evidence=true`,
 `require_product_runtime_drift_covered_fact_property_evidence=true`,
 `require_product_runtime_drift_action_gate_evidence=true`,
+`require_product_runtime_drift_trajectory_audit_evidence=true`,
+`require_product_runtime_drift_evidence_handoff_evidence=true`,
+`require_product_runtime_drift_world_model_evidence=true`,
+`require_product_runtime_drift_context_sensitivity_evidence=true`,
+`require_unresolved_frontier_evidence_closure=true`,
+`require_frontier_queue_execution_smoke=true`,
 `require_product_trace_action_audit_gate=true`, and
 `require_product_trace_action_execution_gate=true`, plus the registered
 covered-facts external-evidence handoff, registered triple-extraction fixture
 matrix, and external-prediction triple-extraction minima unless explicit file
 paths are supplied. The release must carry the strict adapter-family matrix,
 rule-based state-transition world-model evidence, promotion-backed runtime-drift
-evidence, pre-generation runtime-drift evidence, counterfactual verifier-audit
-runtime-drift evidence, trace-level triple-audit
+evidence, pre-generation risk-telemetry/probe-comparison runtime-drift
+evidence, claim factuality probe-comparison runtime-drift evidence,
+counterfactual verifier-audit runtime-drift evidence, trace-level triple-audit
 evidence, recommended-route covered-fact property/action-gate drift evidence,
-registered frontier evidence handoffs, and
+trajectory-audit runtime-drift evidence, trace-level metacognition runtime-drift
+evidence, trace-level world-model runtime-drift evidence, trace-level
+context-sensitivity runtime-drift evidence, registered
+frontier evidence handoffs, and
 promoted product-trace action-audit/action-execution child gates unless
 explicitly overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
+Release candidates can explicitly add
+`--require-product-runtime-drift-world-model-action-gate-evidence` when the
+runtime-drift report must carry world-model guarded-action coverage, pass/block,
+and postcondition failure evidence. This flag is optional release hardening and
+is not currently part of the `frontier_audit` default profile.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
 readiness and performance-baseline covariance tradeoff gates. Add
 `--fingerprint-cache` for repeated local release checks so recursive manifest
@@ -3367,6 +6404,444 @@ time hashing independent artifacts; the setting is passed through compare-time
 manifest gates, release-manifest build verification, and promotion verification.
 The default is `1`, so existing release checks remain serial unless explicitly
 configured.
+
+When a release candidate blocks, build a root-cause-aware next-evidence plan
+instead of manually scanning the comparison JSON:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-audit-release-candidate-v4/frontier-audit-comparison.json \
+  --json artifacts/frontier-audit-release-candidate-v4/evidence-gap-plan.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-evidence-gap-plan \
+  --version 0.1
+```
+
+The planner accepts either a `compare_release_candidates.py` report or a
+`run_release_candidate_registry_workflow.py` payload. It writes
+`workflow=evidence_gap_plan` with blocker-level gaps, missing metric names,
+root-cause/research-axis tags, and prioritized next actions. The output is a
+planning artifact only; it does not satisfy a release gate or promote verifier
+evidence.
+
+For product-runtime drift blockers, the same pass can also emit a runtime-drift
+completion plan. This derived artifact collects each relevant action's command
+templates, required inputs, missing metrics, closure outputs, and scripts into a
+single reviewable JSON file. Entries stay `needs_inputs` while templates still
+contain placeholders, so the artifact is useful for handoff and batching but
+does not claim any runtime evidence:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-audit-release-candidate-v4/frontier-audit-comparison.json \
+  --json artifacts/frontier-audit-release-candidate-v4/evidence-gap-plan.json \
+  --runtime-drift-completion-json artifacts/frontier-audit-release-candidate-v4/runtime-drift-completion-plan.json \
+  --runtime-drift-completion-artifact-manifest artifacts/frontier-audit-release-candidate-v4/runtime-drift-completion-manifest.json \
+  --runtime-drift-completion-output-dir artifacts/frontier-audit-runtime-drift-completion \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-evidence-gap-plan \
+  --version 0.1 \
+  --runtime-drift-completion-name frontier-audit-runtime-drift-completion \
+  --runtime-drift-completion-version 0.1
+```
+
+The saved gap plan records the derived runtime-drift completion path under
+`derived_artifacts.runtime_drift_evidence_completion_plan`. Use that plan to
+bind concrete trace, promotion-contract, child-report, and baseline paths before
+running the underlying product-trace replay/runtime-baseline workflows. The
+binding step is explicit and still does not execute commands:
+
+```bash
+python benchmarks/bind_runtime_drift_completion_plan.py \
+  --completion-plan artifacts/frontier-audit-release-candidate-v4/runtime-drift-completion-plan.json \
+  --bindings artifacts/frontier-audit-release-candidate-v4/runtime-drift-bindings.json \
+  --json artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-commands.json \
+  --artifact-manifest artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-commands-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-runtime-drift-bound-commands \
+  --version 0.1
+```
+
+The bindings sidecar may provide top-level `inputs` shared by actions and
+per-action `command_template_values` to replace each `...` placeholder in order,
+or explicit `bound_commands` for a reviewed command override. The output is
+`ready` only when all required inputs are present and no command placeholders
+remain.
+
+Once the bound plan is ready, `run_runtime_drift_bound_command_plan.py` turns it
+into an auditable run report. By default it is a dry-run: commands are parsed,
+Python benchmark scripts are normalized to the configured interpreter, expected
+outputs are summarized, and optional manifest/registry records are written, but
+no runtime evidence is generated until a reviewed caller adds `--execute`. When
+commands do execute, the run report checks each planned output path after
+successful commands and blocks the report if an expected child artifact was not
+materialized. For reviewed independent entries, add
+`--workers N --continue-on-failure` to execute several runtime-drift evidence
+tasks concurrently while preserving per-entry command order:
+
+```bash
+python benchmarks/run_runtime_drift_bound_command_plan.py \
+  --bound-command-plan artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-commands.json \
+  --json artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-command-run.json \
+  --artifact-manifest artifacts/frontier-audit-release-candidate-v4/runtime-drift-bound-command-run-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-audit-runtime-drift-bound-command-run \
+  --version 0.1
+```
+
+If the same source includes frontier multiple-testing blocked cells and points
+back to the originating `truthfulqa_frontier_workflow` report, the gap planner
+can also emit the executable per-cell rerun queue in the same pass:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --multiple-testing-rerun-json artifacts/frontier-release-evidence/multiple-testing-rerun-queue.json \
+  --multiple-testing-rerun-artifact-manifest artifacts/frontier-release-evidence/multiple-testing-rerun-queue-manifest.json \
+  --multiple-testing-rerun-output-dir artifacts/frontier-multiple-testing-reruns \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --multiple-testing-rerun-name frontier-multiple-testing-reruns \
+  --multiple-testing-rerun-version 0.1
+```
+
+The saved gap plan records the derived queue path, status, blocked-cell count,
+and command count under `derived_artifacts`. The queue itself remains a separate
+reviewable artifact with command arrays and dry-run variants, so expensive
+frontier reruns stay opt-in.
+
+The same gap-planner bridge can emit a citation/source-family batch rerun queue
+when the frontier release is blocked by missing, duplicate, or unexpected
+citation evidence batches:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --citation-batch-rerun-json artifacts/frontier-release-evidence/citation-batch-rerun-queue.json \
+  --citation-batch-rerun-artifact-manifest artifacts/frontier-release-evidence/citation-batch-rerun-queue-manifest.json \
+  --citation-batch-rerun-output-dir artifacts/frontier-citation-batch-reruns \
+  --citation-batch-queue artifacts/truthfulqa-frontier-smollm2-l80-unresolved-blind-spot-evidence-queue/unresolved-evidence-queue.json \
+  --citation-batch-scores artifacts/truthfulqa-frontier-smollm2-l80-score-dump.jsonl \
+  --citation-batch-blind-spots artifacts/truthfulqa-frontier-smollm2-l80-entrenched-blind-spots/rows.jsonl \
+  --citation-batch-source-catalog artifacts/source-family-catalogs/official-catalog.jsonl \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --citation-batch-rerun-name frontier-citation-batch-reruns \
+  --citation-batch-rerun-version 0.1
+```
+
+`benchmarks/plan_citation_batch_evidence_reruns.py` can also be called directly.
+It accepts a frontier release report, an evidence-gap plan, or a
+`citation_search_batch_evidence_rollup` report. Queue entries are marked
+`ready` only when enough paths are supplied to build a
+`run_source_family_citation_search_workflow.py` or
+`run_external_citation_search_adapter_workflow.py` command; otherwise they remain
+reviewable `missing_inputs` rows.
+
+The gap planner can also emit a verifier/abstention stability rerun queue when
+the frontier release blocks on either stability track:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --stability-rerun-json artifacts/frontier-release-evidence/stability-rerun-queue.json \
+  --stability-rerun-artifact-manifest artifacts/frontier-release-evidence/stability-rerun-queue-manifest.json \
+  --stability-rerun-output-dir artifacts/frontier-stability-reruns \
+  --stability-scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --stability-scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --stability-seeds 0,1,2,3,4,5,6,7,8,9 \
+  --verifier-qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --stability-rerun-name frontier-stability-reruns \
+  --stability-rerun-version 0.1
+```
+
+`benchmarks/plan_frontier_stability_evidence_reruns.py` can also be called
+directly. It accepts a frontier release report, an evidence-gap plan, or an
+existing `verifier_stability` / `abstention_stability` report. When an existing
+stability report is reachable from comparator inputs, the planner inherits its
+score dumps and config; otherwise pass `--scores`, `--verifier-signal`, and
+`--abstention-signals` explicitly. Queue entries remain `missing_inputs` until
+enough data is present to build the post-hoc stability command.
+
+After the generated verifier/abstention stability commands finish, roll the
+completed child reports back into release evidence:
+
+```bash
+python benchmarks/rollup_frontier_stability_evidence_reruns.py \
+  --queue artifacts/frontier-release-evidence/stability-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/stability-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/stability-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-stability-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+The rollup reads each ready queue entry's expected `--json` child report,
+accepts additional completed reports via repeatable `--report`, and reapplies
+the release thresholds from `compare_frontier_release_evidence.py`. The output
+promotes only when every queued verifier/abstention stability track has a valid
+child report and every run in those reports satisfies its stability gate.
+
+For releases specifically blocked by abstention participation quality, emit an
+experiment matrix rather than a single stability rerun. The abstention planner
+builds one `eval_abstention_stability.py` command per blocked run, profile, and
+signal group. This is intended to refresh the supervised feasibility frontier
+and compare candidate participation-gate settings before changing runtime
+defaults:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --abstention-rerun-json artifacts/frontier-release-evidence/abstention-rerun-queue.json \
+  --abstention-rerun-artifact-manifest artifacts/frontier-release-evidence/abstention-rerun-queue-manifest.json \
+  --abstention-rerun-output-dir artifacts/frontier-abstention-reruns \
+  --abstention-profiles baseline,alpha_0p05,alpha_0p2,selective_accuracy,retention \
+  --abstention-signal-groups recommended,all,geometry,uncertainty \
+  --abstention-seeds 0,1,2,3,4,5,6,7,8,9 \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --abstention-rerun-name frontier-abstention-reruns \
+  --abstention-rerun-version 0.1
+```
+
+`benchmarks/plan_frontier_abstention_evidence_reruns.py` can also be called
+directly with a frontier release report, evidence-gap plan, or
+`abstention_stability` report. If the original abstention report is reachable,
+it inherits run score dumps, seeds, release thresholds, and recommended signals;
+otherwise pass `--scores`, `--profiles`, and `--signal-groups` explicitly.
+
+After running the generated `eval_abstention_stability.py` commands, roll the
+completed reports back into release evidence. By default the rollup can consume
+whatever reports are present; add `--require-all-reports` for a strict
+fail-closed release check:
+
+```bash
+python benchmarks/rollup_frontier_abstention_evidence_reruns.py \
+  --queue artifacts/frontier-release-evidence/abstention-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/abstention-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/abstention-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-abstention-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+The rollup reads each queue entry's expected `--json` output path, accepts
+additional completed reports via repeatable `--report`, ranks candidates by
+conservative conditional correctness, seed pass rate, and abstention cost, then
+emits `status=promote` only when a promotion-eligible profile satisfies the
+configured correctness, abstention-rate, and seed-stability thresholds.
+When child `eval_abstention_stability.py` reports include `candidate_gate_summary`,
+the rollup also carries `candidate_gate_diagnostics` per candidate and in the
+top-level summary. These fields separate "no candidate can pass" from
+"the recommended candidate missed another passing candidate" without changing
+the release gate verdict.
+
+For releases blocked by the detectability-taxonomy track, the same planner can
+emit row-level blind-spot audit commands from the comparator's
+`--detectability-taxonomy-report` inputs:
+
+```bash
+python benchmarks/plan_release_evidence_gaps.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/evidence-gap-plan.json \
+  --detectability-rerun-json artifacts/frontier-release-evidence/detectability-rerun-queue.json \
+  --detectability-rerun-artifact-manifest artifacts/frontier-release-evidence/detectability-rerun-queue-manifest.json \
+  --detectability-rerun-output-dir artifacts/frontier-detectability-reruns \
+  --registry artifacts/release-registry.json \
+  --name frontier-release-evidence-gap-plan \
+  --version 0.1 \
+  --detectability-rerun-name frontier-detectability-reruns \
+  --detectability-rerun-version 0.1
+```
+
+`benchmarks/plan_frontier_detectability_evidence_reruns.py` can also be called
+directly. If a reachable `detectability_taxonomy` report exists, queue entries
+run `analyze_detectability_blind_spots.py` for the configured cell, defaulting
+to false `entrenched` rows. If no taxonomy report is available, pass
+`--scores`, `--consistency-signal`, and `--confidence-signal` to emit
+`eval_detectability_taxonomy.py` rerun commands instead.
+
+When a reachable taxonomy report exists but the blocked gate should be retested
+under alternate DECK axes, add score dumps plus `--include-taxonomy-reruns` and
+one or more `--detectability-taxonomy-pair consistency:confidence` values. Pair
+directions default to the healthy direction implied by `DEFAULT_SCORE_DIRECTIONS`
+and can be overridden as `consistency:confidence:consistency_direction:confidence_direction`.
+For example, `--detectability-taxonomy-pair disp_hse:nll_answer` appends a
+semantic-dispersion consistency axis with answer-NLL confidence while preserving
+the blind-spot audit entry.
+
+After the detectability queue has produced child reports, roll them up before
+feeding the evidence back into release review:
+
+```bash
+python benchmarks/rollup_frontier_detectability_evidence_reruns.py \
+  --queue artifacts/frontier-release-evidence/detectability-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/detectability-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/detectability-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-detectability-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+Taxonomy rerun children can emit `status=promote` when
+`entrenched_false_rate <= --max-entrenched-false-rate`. Blind-spot analysis
+children instead emit `status=complete` with `audit_ready=true`: they document
+which rows need source-family, retrieval, or world-model evidence expansion, but
+they do not by themselves satisfy the release detectability gate.
+
+For frontier release reports blocked by the family-wise multiple-testing gate,
+build a per-cell rerun queue from the comparator or gap-plan output:
+
+```bash
+python benchmarks/plan_frontier_multiple_testing_reruns.py \
+  --source artifacts/frontier-release-evidence/report.json \
+  --json artifacts/frontier-release-evidence/multiple-testing-rerun-queue.json \
+  --artifact-manifest artifacts/frontier-release-evidence/multiple-testing-rerun-queue-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-multiple-testing-reruns \
+  --version 0.1 \
+  --output-dir artifacts/frontier-multiple-testing-reruns
+```
+
+When the original `truthfulqa_frontier_workflow` report is reachable from the
+release comparator inputs, queue entries include single-cell
+`run_truthfulqa_frontier_workflow.py` command arrays plus dry-run variants. The
+queue manifest fingerprints both the source report and generated queue so the
+planning step can be reviewed before any expensive rerun starts.
+
+After the child frontier workflow reruns finish, roll the queue back into
+release evidence:
+
+```bash
+python benchmarks/rollup_frontier_multiple_testing_reruns.py \
+  --queue artifacts/frontier-release-evidence/multiple-testing-rerun-queue.json \
+  --json artifacts/frontier-release-evidence/multiple-testing-rerun-rollup.json \
+  --artifact-manifest artifacts/frontier-release-evidence/multiple-testing-rerun-rollup-manifest.json \
+  --registry artifacts/release-registry.json \
+  --name frontier-multiple-testing-rerun-rollup \
+  --version 0.1 \
+  --require-all-reports
+```
+
+The rollup checks each completed child report's top-level
+`multiple_testing_gate.all_pass` summary and the queued cell entry under
+`multiple_testing_gate.cells`. A candidate promotes only when the family-wise
+gate passes, the queued cell passes, and that cell records both report and
+calibration artifact paths.
+
+Feed promoted rerun rollups back into the final release-evidence comparison
+with repeatable `--frontier-rerun-rollup-report` arguments:
+
+```bash
+python benchmarks/compare_frontier_release_evidence.py \
+  --verifier-stability-report artifacts/frontier/verifier-stability-report.json \
+  --abstention-stability-report artifacts/frontier/abstention-stability-report.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/stability-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/abstention-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/detectability-rerun-rollup.json \
+  --frontier-rerun-rollup-report artifacts/frontier-release-evidence/multiple-testing-rerun-rollup.json \
+  --json artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json
+```
+
+Before rerunning product-runtime drift gates, audit the deployable promotion
+contract for the exact evidence handoff fields expected by `frontier_audit`:
+
+```bash
+python benchmarks/audit_product_promotion_contract_evidence.py \
+  --contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
+  --json artifacts/smollm2_product_promotion_contract_v1_6/evidence-handoff-audit.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
+  --version 0.1
+```
+
+The audit writes `workflow=product_promotion_evidence_handoff_audit` with the
+same promotion, pre-generation, counterfactual, triple-audit, covered-fact,
+claim-factuality, action-gate, and frontier-release evidence metric names used by release drift
+blockers. Its default group set is kept compatible with existing promotion
+contracts; stricter runs can explicitly pass `--required-groups` entries such as
+`claim_factuality`, `claim_risk_localization`, `fact_selfcheck_gate`,
+`trajectory_audit`, `evidence_handoff`, `world_model`, `context_sensitivity`,
+or `counterfactual_robustness` when those runtime-drift gates are part of the
+release policy. `fact_selfcheck_gate` is strict: a required handoff must carry a
+manifest-verified `verifier_signal_fusion_workflow` report whose
+`fact_selfcheck_evidence_gate` promoted with no failed runs. Treat the audit as
+pre-flight evidence hygiene: it explains why a contract will not satisfy a
+runtime-drift gate, but it does not itself satisfy the gate.
+
+After the audit, export an evidence-enriched contract from explicit local child
+reports:
+
+```bash
+python benchmarks/export_product_promotion_contract_evidence_handoff.py \
+  --contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
+  --json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json \
+  --audit-json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json \
+  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
+  --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
+  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --fact-selfcheck-signal-fusion artifacts/tiny_fact_selfcheck_signal_fusion/verifier-signal-fusion-workflow.json \
+  --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
+  --runtime-baseline artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/product-runtime-baseline.json \
+  --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-fact-collection-route/structured-qa-route-summary.json \
+  --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json \
+  --required-groups promotion,pre_generation,counterfactual,triple_audit,covered_fact_property,action_gate,frontier_release_evidence \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract-v1-6-evidence-handoff \
+  --version 0.4
+```
+
+The exporter only copies evidence from supplied reports; it does not invent
+trace-level triple-audit results or fact-level sample consistency coverage.
+`--fact-selfcheck-signal-fusion` should point to a workflow report produced with
+`--enable-fact-selfcheck --fact-selfcheck-gate` when `fact_selfcheck_gate` is a
+required group. `--frontier-release-evidence` should point to the refreshed
+frontier release-evidence verdict when the handoff is being used
+for current `frontier_audit` drift evidence. `--required-groups` applies the
+same strict handoff group set to both the enriched contract audit and the
+manifest/registry metadata, so a stricter frontier pass can preserve exactly
+which runtime-drift groups were required; include optional groups such as
+`claim_risk_localization`, `trajectory_audit`, or `world_model` only when the
+corresponding product-runtime evidence has been materialized. `--triple-audit-enrichment` can point either
+to `enrich_product_trace_triple_audit.py` output or to a promoted
+`run_source_family_structured_qa_claim_correction_workflow.py --enable-triple-audit`
+report; the older `--runtime-baseline` path remains supported for aggregated
+runtime evidence. The current v1.6 handoff export reduces
+missing metrics from `37/38` to `3/38`: promotion/triple matrix, pre-generation
+comparison, counterfactual verification, covered-fact property, and action-gate
+groups are present, while audit/slot triple coverage remains the next
+evidence-producing work.
+
+For the current checkout's frontier audit replay, the self-contained evidence
+handoff is `artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v2/`.
+It uses the available blind-spot Wikidata structured-QA route summary for
+covered-fact property metrics and deliberately leaves missing child reports
+missing instead of substituting stale paths. Its audit has `56/65` metrics
+present and `9` missing metrics across counterfactual verifier audit and
+trace-level triple audit. The companion
+`artifacts/smollm2_product_runtime_drift_v1_10_trace_evidence/` report carries
+`101` comparable metrics, including claim-risk localization, covered-fact
+property, trajectory-audit, evidence-handoff, action-gate, and frontier
+citation expected/observed batch-count rows. Replaying `frontier_audit` as
+`artifacts/frontier-audit-release-candidate-v8/` keeps the release blocked but
+reduces the evidence-gap plan to `20` missing metrics and `9` actions. This is
+trace-evidence materialization only; it does not promote the upstream frontier
+release evidence or fill missing counterfactual/world-model/context/triple-audit
+quality rows.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -3387,6 +6862,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --feedback-policy-min-matched-feedback-count 20 \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
+  --context-sensitivity-workflow-key report:<context-sensitivity-workflow-name>:<version> \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -3481,6 +6957,25 @@ write the smaller product handoff artifact consumed by demos and control-plane
 jobs. It converts either a release-candidate comparison or registry-workflow JSON
 into a `ProductPromotionContract`, writes a manifest, and can register a
 `product_promotion_contract:*:*` record. When the release candidate was gated by
+a frontier-audit or strict local-release profile, the exported contract now also
+contains a compact `summary` block. That summary preserves the source status,
+gate statuses, runtime recommendation, verifier-route quality/cost fields,
+action-gate status, grouped runtime-drift evidence counts, recommended records,
+control defaults, and runtime budget policy without requiring reviewers to scan
+the full metadata map. The manifest and registry record mirror the headline
+summary fields as `promotion_summary_*` metadata for dashboards and release
+checks. Runtime traces that load the contract carry the same view as
+`promotion_contract_promotion_summary`; when a frontier release-evidence report
+was supplied to the release candidate, they also carry
+`promotion_contract_frontier_release_evidence` plus headline
+`promotion_contract_frontier_release_evidence_*` metrics. Citation-batch
+provenance, query-sweep, and controlled-vs-external comparison aggregates are
+also preserved as runtime metadata so product baselines can show whether a
+frontier citation lane failed because evidence was missing, no query strategy
+passed, or external comparison stayed blocked. `product_runtime_metrics()`
+exposes both field families for baselines and SLO reports.
+
+When the release candidate was gated by
 a structured-fact route audit, the compact contract, manifest, and registry
 metadata keep the recommended route's covered Wikidata property ids plus
 required-route record-to-property coverage summaries, so deployment-side traces
@@ -3490,6 +6985,14 @@ compact contract, manifest, and registry metadata retain the comparator report
 path, source type, registry key, decision status, recommended route, route-gate
 status, and text-redline status so runtime traces can show which external
 evidence handoff was release-gated.
+When the release candidate was gated by a claim factuality probe comparison, the
+compact contract, manifest, and registry metadata retain the comparison report,
+manifest, registry record, workflow/status, model/run/dataset counts, dataset
+names, redline status, best run/model/layer, test-label AUROC, selective
+accuracy/coverage, conformal threshold, and redline margin.
+`ProductRuntimeEvidenceBundle` can lazily verify that comparison manifest and
+attach the local registry record to runtime trace metadata without rerunning
+claim probes.
 When the release candidate was gated by a counterfactual verifier audit, the
 compact contract, manifest, and registry metadata retain the audit report,
 manifest, registry record, workflow, status, record count, pass rate,
@@ -3527,7 +7030,11 @@ lift summary so triple-evidence routes can be audited from runtime traces.
 Performance-bundle provenance is preserved as well: exported contracts retain
 best quality signal, score-fusion status, and selected-fusion
 status/run/candidate/signal/AUROC/false-alarm/detection/artifact metadata when
-those fields were present in the release candidate.
+those fields were present in the release candidate. Release-candidate runtime
+cost provenance is preserved too: contracts and ProductTrace metadata expose
+`recommended_runtime_seconds`, `recommended_runtime_cost_source`,
+`max_recommended_runtime_seconds`, and uncached forward cost when the source
+candidate includes a recommended deployment path.
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \
@@ -3540,6 +7047,537 @@ python benchmarks/export_product_promotion_contract.py \
   --metadata release=smollm2-v1.6 \
   --metadata source_record=benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6 \
   --compact-json
+```
+
+Current frontier-audit handoff status:
+
+The latest local strict frontier-audit replay is promoted:
+`artifacts/frontier-audit-release-candidate-v15/frontier-audit-registry-workflow.json`
+registers
+`benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.15`
+after recursive manifest verification. The promoted chain uses
+`artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v5.json`
+for frontier evidence with `--require-input-manifests`, the refreshed v1.9/v7
+handoff at
+`artifacts/smollm2_product_promotion_evidence_handoff_v1_9_frontier_v7/`,
+and
+`artifacts/smollm2_product_runtime_drift_v1_16_receipts_frontier_v5/product-runtime-drift.json`,
+whose drift report promotes with `119` compared metrics and `0` blockers.
+The v1.9/v7 handoff audit promotes all `77/77` required metrics, including
+action-receipt and receipt-claim-support groups, and the v15 manifest verifies
+recursively. The older v13/v1.6 chain remains useful as the `65/65` pre-receipt
+boundary regression artifact.
+`frontier_audit` release candidates now also carry the promoted unresolved
+frontier evidence summary into `ProductPromotionContract`, runtime metrics, and
+bounded trace metadata, including queue-execution smoke status and recursive
+manifest verification counts.
+
+Build a single read-only status snapshot from the promoted release candidate,
+active product contract handoff, and latest evidence-gap plan. The default
+product-contract input is the v1.9/v7 receipt-aware handoff, so the product
+status and v15 release status both point at v5 frontier release evidence:
+
+```bash
+python benchmarks/build_frontier_status_report.py \
+  --json artifacts/frontier-status-report.json \
+  --artifact-manifest artifacts/frontier-status-report-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-status-report \
+  --version 0.1 \
+  --refresh-research-queue
+```
+
+The report separates `productized_status` from `research_queue`, so historical
+gap plans do not downgrade the current promoted release. With
+`--refresh-research-queue`, the report recomputes the queue from the gap plan's
+`source_path` using the current `EvidenceGapPlan` mapper, which keeps stale
+planning artifacts visible while surfacing the newest executable action ids.
+The `research_queue.lifecycle_status` and `research_queue.source_alignment`
+fields say whether those actions are still active for the current frontier
+release evidence path or have been superseded by a newer promoted release.
+Lower that refreshed queue into a non-executing command plan before binding any
+local paths or running child workflows:
+
+```bash
+python benchmarks/plan_frontier_research_queue_commands.py \
+  --source artifacts/frontier-status-report.json \
+  --json artifacts/frontier-research-queue-command-plan.json \
+  --artifact-manifest artifacts/frontier-research-queue-command-plan-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-command-plan \
+  --version 0.1
+```
+
+The command plan records action ids, command templates, placeholder counts,
+required inputs, planned outputs, and the source queue lifecycle/alignment
+metadata. It is still a planning artifact; commands remain unbound and
+unexecuted until a reviewed caller supplies concrete local paths.
+When the source is a status report and you only want actions that still belong
+to the current release blocker set, add `--only-active-research-queue`; closed
+or superseded historical queues then produce an empty command plan instead of
+reviewable commands.
+Generate a review scaffold before editing bindings by hand:
+
+```bash
+python benchmarks/scaffold_frontier_research_queue_bindings.py \
+  --command-plan artifacts/frontier-research-queue-command-plan.json \
+  --json artifacts/frontier-research-queue-binding-scaffold.json \
+  --bindings-json artifacts/frontier-research-queue-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-binding-scaffold-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-binding-scaffold \
+  --version 0.1 \
+  --registry-output-path artifacts/local-release-registry.json
+```
+
+The scaffold lists each ordered `...` placeholder, required input, suggested
+output/manifest/registry/name/version binding, command-level report/sidecar
+paths, and known command-specific CLI requirements. For example, it will mark an
+abstention rerun planner template as still needing `--scores`/`--signal-groups`
+when the action requires score dumps and signal groups, and it recognizes the
+frontier release-evidence promotion refresh scripts before binding review.
+Unresolved citation and world-model command plans also receive distinct
+per-command output-dir, workflow-report, rule-input/result sidecar, and manifest
+suggestions so alternate replays and chained rule fill/adapter/promotion runs do
+not collide on one artifact path. Placeholders whose flags map directly to
+required inputs carry that exact input name, such as
+`--contract -> product_promotion_contract_source` or
+`--baseline -> baseline_product_runtime_report`. The generated bindings sidecar
+now carries input and placeholder review records with those suggestions, but its
+actual `inputs` and `command_template_values` remain deliberately empty so
+feeding it directly to the binder remains `needs_inputs`.
+Optionally stage the purely mechanical suggestions into partial commands before
+review:
+
+```bash
+python benchmarks/stage_frontier_research_queue_binding_suggestions.py \
+  --scaffold artifacts/frontier-research-queue-binding-scaffold.json \
+  --bindings-json artifacts/frontier-research-queue-staged-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-staged-command-bindings-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-staged-command-bindings \
+  --version 0.1
+```
+
+The staging step copies only suggestions that do not carry
+`review_required=true` into `bound_commands`. Required source-backed inputs,
+upstream child-output references, and placeholders without safe suggestions
+remain as `...`, and every entry keeps `review_status=needs_review`; the binder
+still reports remaining input/placeholder gaps where present, and the runner
+still blocks real execution until a reviewer supplies the remaining values and
+marks the entry reviewed or approved.
+Add `--stage-upstream-outputs` when you also want to bind intra-action child
+outputs that the same staged plan already produced, such as a rule fill
+command's `--rule-inputs-jsonl` feeding the following adapter's `--rule-inputs`
+or an adapter's `--rule-results-jsonl`/report feeding promotion. The same
+mechanism now carries `bind_frontier_research_queue_command_plan.py --json`
+into the following `run_frontier_research_queue_bound_command_plan.py
+--bound-command-plan` placeholder for reviewed queue execution. This still does
+not fill source-backed numeric/temporal inputs and still leaves
+`review_status=needs_review`.
+
+For a no-model local fixture of the queue-execution control plane, run:
+
+```bash
+python benchmarks/frontier_queue_execution_smoke.py \
+  --output-dir artifacts/frontier-queue-execution-smoke
+```
+
+The smoke writes the seed-stage unresolved summary, seed command plan,
+seed-staged bindings, execution unresolved summary, command plan, binding
+scaffold, staged bindings, reviewed bindings, approved bound plan, dry-run
+report, artifact manifest, and registry record. It verifies the manifest
+recursively and keeps all artifacts marked as non-evidence; no child frontier
+workflow is executed.
+Pass the resulting `frontier-queue-execution-smoke.json` to
+`summarize_unresolved_frontier_evidence.py --frontier-queue-execution-smoke`
+when you want the unresolved closure summary and release registry workflow to
+carry this control-plane health check alongside real queue-execution evidence.
+When that summary promotes, the release-candidate comparison exposes it through
+the promotion contract and product runtime telemetry instead of leaving it as a
+standalone coordination artifact.
+After review, fill either ordered `command_template_values` or full
+`bound_commands` through that sidecar:
+
+```bash
+python benchmarks/bind_frontier_research_queue_command_plan.py \
+  --command-plan artifacts/frontier-research-queue-command-plan.json \
+  --bindings artifacts/frontier-research-queue-command-bindings.json \
+  --json artifacts/frontier-research-queue-bound-command-plan.json \
+  --artifact-manifest artifacts/frontier-research-queue-bound-command-plan-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-bound-command-plan \
+  --version 0.1
+```
+
+Before executing, lower any remaining source-backed placeholders into an
+explicit collection/review preflight:
+
+```bash
+python benchmarks/plan_frontier_research_queue_input_collection.py \
+  --bound-command-plan artifacts/frontier-research-queue-bound-command-plan.json \
+  --json artifacts/frontier-research-queue-input-collection-plan.json \
+  --collection-requests-jsonl artifacts/frontier-research-queue-input-collection-requests.jsonl \
+  --review-requests-jsonl artifacts/frontier-research-queue-input-review-requests.jsonl \
+  --artifact-manifest artifacts/frontier-research-queue-input-collection-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-collection-plan \
+  --version 0.1
+```
+
+The preflight reads `unbound_inputs` plus still-unfilled command placeholders
+from the bound plan. Source-backed numeric, temporal, subject, mechanism, and
+source-family URL seed inputs become non-evidence collection requests with
+required sidecar fields and recommended downstream tools. Source-family adapter
+`--seeds ...` placeholders preserve their collection-task path, source-family
+filters, and provider hints so URL selection can be reviewed before official,
+news, or domain-specific adapters run. Semantic-gap local artifacts such as
+`source_bound_verified_records_jsonl` and
+`detectability_blind_spot_record_indices_json` become separate non-evidence
+artifact review requests, because they may carry label-use provenance for gap
+selection. Unmapped `...` placeholders remain review requests, and actions that
+still lack command templates are surfaced as missing-template review requests.
+It does not approve bindings, execute commands, fetch evidence, or satisfy
+release gates.
+
+To stage reviewed local artifact requests back into command bindings, write an
+artifact binding JSONL from the generated review template and run:
+
+```bash
+python benchmarks/bind_frontier_research_queue_artifact_inputs.py \
+  --input-collection-plan artifacts/frontier-research-queue-input-collection-plan.json \
+  --base-bindings artifacts/frontier-research-queue-staged-bindings.json \
+  --artifact-bindings artifacts/frontier-research-queue-artifact-input-bindings.jsonl \
+  --output-dir artifacts/frontier-research-queue-artifact-input-stage \
+  --json artifacts/frontier-research-queue-artifact-input-stage/artifact-input-binding-staging.json \
+  --bindings-json artifacts/frontier-research-queue-artifact-input-stage/frontier-research-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-artifact-input-stage/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-artifact-input-binding-stage \
+  --version 0.1
+```
+
+This is the semantic-gap bridge for local artifacts such as
+`source_bound_verified_records_jsonl` and
+`detectability_blind_spot_record_indices_json`: only rows with approved review
+status, explicit allowed-label-use provenance, `not_verifier_evidence=true`,
+and materialized local artifact paths are inserted into the command bindings.
+The output still leaves the command binding review gate intact.
+
+To prepare editable source-backed binding sidecars from that preflight:
+
+```bash
+python benchmarks/scaffold_frontier_research_queue_input_bindings.py \
+  --input-collection-plan artifacts/frontier-research-queue-input-collection-plan.json \
+  --output-dir artifacts/frontier-research-queue-input-binding-scaffold \
+  --json artifacts/frontier-research-queue-input-binding-scaffold/frontier-input-binding-scaffold.json \
+  --artifact-manifest artifacts/frontier-research-queue-input-binding-scaffold/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-binding-scaffold \
+  --version 0.1
+```
+
+When the preflight exposes a reachable `--input-tasks` path, the scaffold
+expands source-backed requests into one empty JSONL skeleton per rule-input
+task, for example `source-backed-numeric-bindings.jsonl` and
+`source-backed-temporal-bindings.jsonl`. Source-family URL seed requests use the
+same boundary for catalog collection tasks: they expand matching official/news/
+domain-specific collection rows into `source-family-url-seeds.jsonl`, keeping
+query/task provenance while leaving `url` and `href` blank for review. Rows are
+deliberately written with `review_status=needs_review`, blank source/citation/
+value or URL fields, and `not_verifier_evidence=true`; after an external
+collector or reviewer fills and approves them, the generated downstream command
+hints show which existing `fill_world_model_rule_inputs_from_*_bindings.py`
+bridge can consume rule-input sidecars. URL seed sidecars instead feed the
+source-family adapter `--seeds` flag after audit.
+
+Before passing edited sidecars into those fill bridges, audit the sidecar set:
+
+```bash
+python benchmarks/audit_frontier_research_queue_input_bindings.py \
+  --input-binding-scaffold artifacts/frontier-research-queue-input-binding-scaffold/frontier-input-binding-scaffold.json \
+  --output-dir artifacts/frontier-research-queue-input-binding-audit \
+  --json artifacts/frontier-research-queue-input-binding-audit/frontier-input-binding-audit.json \
+  --binding-audit-rows-jsonl artifacts/frontier-research-queue-input-binding-audit/binding-audit-rows.jsonl \
+  --artifact-manifest artifacts/frontier-research-queue-input-binding-audit/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-binding-audit \
+  --version 0.1
+```
+
+The audit reports `ready` only when every edited binding row has an approved or
+ready review status, required source-backed values and citations or approved
+URL seeds, a `not_verifier_evidence=true` marker, no reserved label/model-answer
+fields, and no duplicate request ids. Numeric rows marked `ambiguous_subject`
+can become ready only when a matching approved subject-binding sidecar resolves
+the subject. Source-family seed rows must carry a task id plus an `http(s)` URL
+before adapter execution. The audit still executes no commands and still does
+not promote the bindings as verifier evidence; it is a pre-fill or pre-adapter
+quality gate.
+
+If the audit contains a ready `source_family_url_seeds` sidecar, stage that
+reviewed seed file back into command bindings before rerunning normal
+command-binding review:
+
+```bash
+python benchmarks/bind_frontier_research_queue_seed_inputs.py \
+  --input-binding-audit artifacts/frontier-research-queue-input-binding-audit/frontier-input-binding-audit.json \
+  --base-bindings artifacts/frontier-research-queue-staged-bindings.json \
+  --output-dir artifacts/frontier-research-queue-seed-input-binding-stage \
+  --json artifacts/frontier-research-queue-seed-input-binding-stage/source-family-seed-binding-staging.json \
+  --bindings-json artifacts/frontier-research-queue-seed-input-binding-stage/frontier-research-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-seed-input-binding-stage/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-seed-input-binding-stage \
+  --version 0.1
+```
+
+This bridge only replaces matching `--seeds ...` placeholders with the audited
+`source-family-url-seeds.jsonl` path and records the source-backed input review.
+It leaves the command bindings at `needs_review`, executes no adapters, and does
+not turn URL seeds into verifier evidence.
+When updating the unresolved closure summary, pass the same audit and staged
+bindings with `--input-binding-audit` and `--frontier-command-bindings`; the
+summary can then surface `stage_frontier_queue_seed_inputs` and the command
+planner can lower it back into the seed-binding staging command.
+
+To dry-run or explicitly execute the audited fill commands:
+
+```bash
+python benchmarks/run_frontier_research_queue_input_fill_commands.py \
+  --input-binding-audit artifacts/frontier-research-queue-input-binding-audit/frontier-input-binding-audit.json \
+  --json artifacts/frontier-research-queue-input-fill-command-run.json \
+  --artifact-manifest artifacts/frontier-research-queue-input-fill-command-run-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-fill-command-run \
+  --version 0.1
+```
+
+The default mode is a dry-run over the audit-ready downstream command hints.
+Use `--execute` only after the binding audit is `ready`; execution skips all
+commands when the audit is still blocked unless `--allow-partial-ready` is
+explicitly set for local debugging. The runner checks planned `--json`,
+`--artifact-manifest`, and sidecar output paths after successful execution, but
+the run report remains a non-evidence execution artifact. Adapter execution,
+candidate promotion, and ProductTrace handoff still happen in the downstream
+world-model rule chain.
+
+After successful fill execution, roll the materialized fill outputs into one
+rule-input file for the deterministic adapter:
+
+```bash
+python benchmarks/rollup_frontier_research_queue_input_fill_results.py \
+  --input-fill-command-run artifacts/frontier-research-queue-input-fill-command-run.json \
+  --output-dir artifacts/frontier-research-queue-input-fill-result-rollup \
+  --rule-stubs artifacts/world-model-rule-stubs.jsonl \
+  --json artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --combined-rule-inputs-jsonl artifacts/frontier-research-queue-input-fill-result-rollup/combined-rule-inputs.jsonl \
+  --combined-unfilled-tasks-jsonl artifacts/frontier-research-queue-input-fill-result-rollup/combined-unfilled-rule-input-tasks.jsonl \
+  --artifact-manifest artifacts/frontier-research-queue-input-fill-result-rollup/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-input-fill-result-rollup \
+  --version 0.1
+```
+
+The rollup requires the fill run's report and rule-input sidecars to be
+materialized, blocks duplicate request ids or rule inputs missing non-evidence
+and promotion-gate markers, and writes a combined adapter input plus any
+remaining unfilled rows. The downstream adapter command in the rollup is still a
+hint only; adapter execution and rule-candidate promotion remain separate gates.
+Pass the rollup back to `summarize_unresolved_frontier_evidence.py` with
+`--input-fill-result-rollup` so the frontier closure summary can show that the
+world-model lane is adapter-ready and point to the adapter/promotion workflow
+instead of only reporting generic missing rule inputs.
+
+Dry-run the combined rule-input sidecar through the adapter/promotion handoff,
+then add `--execute` only after the rollup is adapter-ready:
+
+```bash
+python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py \
+  --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --output-dir artifacts/frontier-research-queue-rule-adapter-promotion-workflow \
+  --json artifacts/frontier-research-queue-rule-adapter-promotion-workflow/frontier-rule-adapter-promotion-workflow.json \
+  --artifact-manifest artifacts/frontier-research-queue-rule-adapter-promotion-workflow/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-rule-adapter-promotion-workflow \
+  --version 0.1 \
+  --build-handoff \
+  --build-evidence-bundle
+
+python benchmarks/run_frontier_research_queue_rule_adapter_promotion_workflow.py \
+  --input-fill-result-rollup artifacts/frontier-research-queue-input-fill-result-rollup/frontier-input-fill-result-rollup.json \
+  --output-dir artifacts/frontier-research-queue-rule-adapter-promotion-workflow \
+  --json artifacts/frontier-research-queue-rule-adapter-promotion-workflow/frontier-rule-adapter-promotion-workflow.json \
+  --artifact-manifest artifacts/frontier-research-queue-rule-adapter-promotion-workflow/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-rule-adapter-promotion-workflow \
+  --version 0.1 \
+  --execute \
+  --build-handoff \
+  --build-evidence-bundle
+```
+
+This workflow consumes only the rollup's `combined-rule-inputs.jsonl` and
+`rule_stubs` path, fails closed if either side is missing or empty, and writes
+separate rule-adapter, rule-promotion, optional rule-candidate handoff, and
+optional mechanism-handoff evidence-bundle subdirectories. With
+`--build-evidence-bundle`, a top-level `promote` status means the deterministic
+adapter ran, the candidate promotion gate passed, the ProductTrace/action-result
+handoff promoted, and the evidence bundle gate passed; the workflow report
+itself is still not verifier evidence.
+
+Before a filled frontier command binding can execute, run the command-binding
+review gate with explicit reviewer decisions:
+
+```bash
+python benchmarks/review_frontier_research_queue_command_bindings.py \
+  --bound-command-plan artifacts/frontier-research-queue-bound-command-plan.json \
+  --base-bindings artifacts/frontier-research-queue-artifact-input-stage/frontier-research-command-bindings.json \
+  --review-decisions artifacts/frontier-research-queue-command-binding-review-decisions.jsonl \
+  --output-dir artifacts/frontier-research-queue-command-binding-review \
+  --json artifacts/frontier-research-queue-command-binding-review/frontier-command-binding-review.json \
+  --approved-bindings artifacts/frontier-research-queue-command-binding-review/frontier-research-command-bindings.json \
+  --artifact-manifest artifacts/frontier-research-queue-command-binding-review/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-command-binding-review \
+  --version 0.1
+```
+
+The review gate checks that every bound entry is ready, has no `...`
+placeholders, has clean known-command validation, has no reserved label or
+model-answer fields in inputs, and has approved local-artifact input reviews
+where present. Only actions with explicit `approved`/`reviewed` decisions,
+reviewer metadata, and `not_verifier_evidence=true` are marked approved in the
+output bindings. The review report remains non-evidence and executes no
+commands.
+
+Rebuild the bound command plan from the approved bindings before handing it to
+the runner:
+
+```bash
+python benchmarks/bind_frontier_research_queue_command_plan.py \
+  --command-plan artifacts/frontier-research-queue-command-plan.json \
+  --bindings artifacts/frontier-research-queue-command-binding-review/frontier-research-command-bindings.json \
+  --json artifacts/frontier-research-queue-approved-bound-command-plan.json \
+  --artifact-manifest artifacts/frontier-research-queue-approved-bound-command-plan-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-approved-bound-command-plan \
+  --version 0.1
+```
+
+Then dry-run the bound plan before any explicit execution:
+
+```bash
+python benchmarks/run_frontier_research_queue_bound_command_plan.py \
+  --bound-command-plan artifacts/frontier-research-queue-approved-bound-command-plan.json \
+  --json artifacts/frontier-research-queue-bound-command-run.json \
+  --artifact-manifest artifacts/frontier-research-queue-bound-command-run-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-research-queue-bound-command-run \
+  --version 0.1
+```
+
+The runner defaults to `dry_run` and only parses commands/expected outputs.
+`--execute` is required to run child workflows, and frontier execution now
+fails closed unless each bound entry carries `review_status` of `approved` or
+`reviewed` in the bindings sidecar. Use `--allow-unreviewed-bindings` only for
+local debugging. The run report itself is an execution audit artifact rather
+than release evidence. Successful frontier execution also inherits the planned
+output materialization audit; a command that exits zero but does not write its
+expected child report leaves the run report `blocked`.
+For known frontier benchmark scripts, the binder also fails closed when a bound
+command is syntactically filled but still misses required CLI flags, such as an
+`eval_abstention_stability.py --json ...` template without `--scores` and
+`--signals`, or an abstention rerun planner command that does not bind the
+action's required score dumps and signal groups.
+The same known-command validator covers the frontier queue control-plane
+scripts for command binding, local artifact input staging, command-binding
+review, and bound-plan dry-run/execution, so review gates cannot silently omit
+their required input/output flags.
+
+Active v1.9 product contract export:
+
+The promoted v13 replay has been exported as the active v1.9 product handoff
+under `artifacts/smollm2_product_promotion_contract_v1_9/`. The raw contract
+preserves the release candidate's selected cache-only runtime recommendation
+(`recommended_runtime_seconds=0.191662`) and registers
+`product_promotion_contract:smollm2-product-promotion-contract:1.9`.
+
+```bash
+PRODUCT_V19_DIR=artifacts/smollm2_product_promotion_contract_v1_9
+
+python benchmarks/export_product_promotion_contract.py \
+  --source artifacts/frontier-audit-release-candidate-v13/frontier-audit-registry-workflow.json \
+  --output "$PRODUCT_V19_DIR/product-promotion-contract.json" \
+  --artifact-manifest "$PRODUCT_V19_DIR/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract \
+  --version 1.9 \
+  --metadata release=smollm2-v1.9 \
+  --metadata source_record=benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13 \
+  --compact-json
+```
+
+The direct export intentionally keeps source release metadata compact, so run an
+explicit child-report handoff before using the contract as a runtime evidence
+bundle. The checked-in enriched contract is registered as
+`product_promotion_contract:smollm2-product-promotion-contract-v1-9-evidence-handoff:0.4`
+and independently promotes with the earlier `65/65` boundary. New refreshed
+handoffs require `77/77` present metrics: use a product-trace replay workflow
+or runtime-baseline input that carries `action_receipts` and
+`receipt_claim_support` summaries, otherwise the audit fails closed on the two
+receipt evidence groups.
+
+```bash
+PRODUCT_V19_DIR=artifacts/smollm2_product_promotion_contract_v1_9
+
+python benchmarks/export_product_promotion_contract_evidence_handoff.py \
+  --contract "$PRODUCT_V19_DIR/product-promotion-contract.json" \
+  --json "$PRODUCT_V19_DIR/product-promotion-contract-evidence-handoff.json" \
+  --audit-json "$PRODUCT_V19_DIR/product-promotion-contract-evidence-handoff-audit.json" \
+  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
+  --counterfactual-verification artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/counterfactual-verification-report.json \
+  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
+  --fact-selfcheck-signal-fusion artifacts/tiny_fact_selfcheck_signal_fusion/verifier-signal-fusion-workflow.json \
+  --frontier-release-evidence artifacts/frontier-release-evidence/frontier-release-evidence-budget-target-sweep-v4.json \
+  --triple-audit-enrichment artifacts/smollm2_product_trace_triple_audit_enrichment_v1/product-trace-triple-audit-enrichment.json \
+  --runtime-baseline artifacts/smollm2_product_runtime_drift_v1_10_trace_evidence/runtime-baseline/product-runtime-baseline.json \
+  --covered-fact-property-metrics artifacts/truthfulqa-frontier-smollm2-l80-blind-spot-wikidata-structured-qa-route/structured-qa-route-summary.json \
+  --artifact-manifest "$PRODUCT_V19_DIR/evidence-handoff-artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract-v1-9-evidence-handoff \
+  --version 0.4 \
+  --metadata release=smollm2-v1.9 \
+  --metadata source_record=benchmark_manifest:smollm2-l8-frontier-audit-release-candidate:0.13 \
+  --metadata evidence_scope=frontier_audit_v13_explicit_child_report_handoff
+```
+
+The historical v6 replay remains a useful fail-closed regression guard: it
+correctly refused product-contract export while the source release candidate was
+blocked. The active deployable frontier-audit handoff is the v13-derived v1.9
+contract above.
+Before treating the v6 handoff as locally reproducible, scan the active doc
+references against the checkout. A blocked report includes `recommended_actions`
+for the v6 release-candidate rerun, manifest verification, and final re-audit.
+By default
+it also inspects the frontier `artifact-json-cache.json` so the summary splits
+missing references into cache-recoverable and unrecoverable counts. Add
+`--restore-json-cache-artifacts` to restore only those cache-backed missing JSON
+files and re-run the audit before writing the final report. Restore mode
+also inspects failed artifact manifests for missing cache-backed JSON child
+artifacts; manifest children are written only when the restored bytes match the
+parent manifest digest. It normalizes repo-local absolute paths in cached JSON
+payloads to repo-relative paths before writing files:
+
+```bash
+python benchmarks/audit_frontier_artifact_references.py \
+  --json artifacts/frontier-artifact-reference-audit.json \
+  --artifact-manifest artifacts/frontier-artifact-reference-audit-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name frontier-artifact-reference-audit \
+  --version 0.1 \
+  --no-fail
 ```
 
 Current local smoke release candidate:
@@ -3852,7 +7890,10 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
   --require-product-runtime-drift-promotion-evidence \
   --require-product-runtime-drift-pre-generation-evidence \
+  --require-product-runtime-drift-claim-factuality-evidence \
   --require-product-runtime-drift-triple-audit-evidence \
+  --require-product-runtime-drift-evidence-handoff-evidence \
+  --require-product-runtime-drift-world-model-evidence \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -4235,6 +8276,79 @@ useful source expansion must add broader fact predicates or a more structured
 Wikidata verifier; tuning lexical thresholds alone would not create refutation
 coverage.
 
+## `build_retrieval_semantic_gap_handoff.py`
+
+Turns retrieval route gaps into a concrete next-step queue once local evidence
+coverage exists. The script consumes the same `eval_verifier_ensemble.py
+--verified-records-jsonl` sidecar, selects records with retrieval hits that
+remain unresolved (by default false-label records that were not refuted), and
+writes handoff requests for claim/evidence alignment review, structured-fact
+normalization, world-model or calculator rule authoring, and query refinement
+when source binding or lexical overlap is weak. The handoff is explicitly not
+verifier evidence; it may use labels to identify false negatives, and it records
+that fact in `label_usage` for auditability. When source-backed number/entity
+slots are available, the payload also includes `fact_candidates` in the
+`structured_fact_review_only` schema accepted by
+`build_alignment_fact_review_corpus.py`.
+
+```bash
+python benchmarks/build_retrieval_semantic_gap_handoff.py \
+  --verified-records-jsonl artifacts/source-bound-sweep/verified-records/question_answer_overlap_0p5-verified-records.jsonl \
+  --record-indices-json artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --output artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.json \
+  --artifact-manifest artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name source-bound-retrieval-semantic-gap-handoff \
+  --version 0.1
+
+python benchmarks/build_alignment_fact_review_corpus.py \
+  --candidates artifacts/source-bound-sweep/retrieval-semantic-gap-handoff.json \
+  --output artifacts/source-bound-sweep/alignment-fact-review-corpus.json \
+  --report-json artifacts/source-bound-sweep/alignment-fact-review-report.json \
+  --records-jsonl artifacts/source-bound-sweep/alignment-fact-review-records.jsonl
+```
+
+Use this after source-bound citation sweeps when `records_with_retrieval_hits`
+is high but false-label refutation remains low. In that state, the bottleneck is
+usually semantic interpretation of good snippets rather than query coverage; the
+handoff makes that distinction reviewable before adding structured facts,
+world-model rules, or more aggressive verifier logic.
+
+## `run_retrieval_semantic_gap_review_workflow.py`
+
+Runs the retrieval semantic-gap handoff through the existing alignment
+fact-review and promotion gates in one reproducible command. It builds the
+semantic-gap queue, converts emitted `fact_candidates` into a review-only
+alignment fact corpus, applies the deterministic Wikidata subject/property/value
+rule reviewer, and reruns the promotion gate with those explicit decisions. With
+`--run-covered-fact-route`, it also builds a source-family structured QA corpus
+from approved source documents and runs the covered-fact structured-QA route
+audit. The workflow can emit covered-fact route evidence for reviewed rows, but
+it does not promote broad retrieval correction or treat handoff requests as
+verifier evidence.
+
+```bash
+OUT=artifacts/source-bound-sweep/retrieval-semantic-gap-review-workflow-v1
+
+python benchmarks/run_retrieval_semantic_gap_review_workflow.py \
+  --verified-records-jsonl artifacts/source-bound-sweep/verified-records/question_answer_overlap_0p5-verified-records.jsonl \
+  --record-indices-json artifacts/truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json \
+  --output-dir "$OUT" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name source-bound-retrieval-semantic-gap-review-workflow \
+  --version 0.1 \
+  --run-covered-fact-route
+```
+
+The top-level report summarizes candidate counts, fact-review accepted/skipped
+rows, rule-review approvals, approved source-document count, source-family QA
+document count, and covered-fact route metrics when requested. A
+`ready_for_structured_qa` status means only that reviewed structured source
+documents exist. A `covered_fact_route_promote` status means the generated
+covered-fact route audit passed for the reviewed rows only; it is still not
+broad blind-spot recall.
+
 ## `build_external_retrieval_corpus.py`
 
 Builds an explicit external-candidate retrieval corpus from caller-supplied
@@ -4301,6 +8415,10 @@ adapter audits where labels should remain only in the score dump used for
 evaluation. CLI-built fixtures include `input_provenance` with the score dump
 metadata, corpus fingerprints, optional retriever-index fingerprint, and the
 effective builder config.
+Set `--query-field triple_slot` for slot-aligned audits: the builder extracts
+claim triples from question+answer text, queries by subject/predicate while
+omitting the generated object, and records the triple-slot plan in per-record
+retrieval metadata.
 
 ```bash
 python benchmarks/build_evidence_fixture.py \
@@ -4336,8 +8454,14 @@ external or domain-shifted evidence: `--require-retrieval-source`,
 `--allowed-retrieval-source-prefix`, `--denied-retrieval-source-prefix`,
 `--min-retrieval-score`, `--required-retrieval-metadata key=value`, and
 `--max-retrieval-hits-per-source` drop untrusted hits before they become verifier
-evidence and record the filter in `input_provenance`. `--verification-cache-dir`
-is optional and stores verified-record traces keyed by score dump,
+evidence and record the filter in `input_provenance`. For citation-oriented
+fixtures, `--source-family-filter planned` can hard-filter retrieved evidence by
+the planned source family, while `--source-family-filter planned_rerank`
+expands the candidate pool, deduplicates repeated sources, prioritizes
+compatible evidence by the plan's family order, boosts structured metadata slot
+matches such as World Bank `country_name`/`indicator_name`, and keeps other hits
+as fallback. Both modes are metadata-driven and remain dependency-free. `--verification-cache-dir` is
+optional and stores verified-record traces keyed by score dump,
 claims/evidence content, verifier parameters, and state/QA sources so repeated
 alpha/repeat sweeps can skip claim verification.
 
@@ -4697,8 +8821,11 @@ python benchmarks/eval_score_ensemble.py \
   --json artifacts/qwen05_score_ensemble_report.json
 ```
 
-It can also evaluate the newer geometry-calibrated interaction score by
-separating representation-geometry signals from uncertainty/confidence proxies:
+It can also evaluate newer geometry-calibrated scores by separating
+representation-geometry signals from uncertainty/confidence proxies. The
+`product` fusion method is the dependency-free GLU-style global-local
+uncertainty gate: hidden-state geometry must agree with local token or
+semantic uncertainty before the fused score becomes large.
 
 ```bash
 python benchmarks/eval_score_ensemble.py \
@@ -4708,9 +8835,26 @@ python benchmarks/eval_score_ensemble.py \
   --uncertainty-signals nll_answer,inside_semantic_energy \
   --geometry-fusion-methods interaction,product \
   --best-alpha 0.10 \
+  --confidence-signal nll_answer \
+  --max-high-confidence-accepted-false-rate 0.0 \
   --save-best-geometry-fusion-artifact artifacts/qwen05_geometry_fusion_artifact.json \
   --json artifacts/qwen05_score_ensemble_report.json
 ```
+
+When `--confidence-signal` is supplied, the report adds a
+`fusion_release_gate_at_alpha` block and per-candidate
+`confidence_error_at_best_alpha` / `release_gate_at_best_alpha` payloads. This
+is the release-facing check for global-local or semantic-energy fusion: the
+candidate may have good AUROC and conformal false-alarm behavior, but it is
+blocked if the configured high-confidence region still contains accepted false
+answers above `--max-high-confidence-accepted-false-rate`. Uncertainty-style
+signals such as `nll_answer`, `first_token_entropy`, and
+`inside_semantic_energy` default to `--confidence-direction lower` because lower
+values mean higher model confidence.
+Runtime recommendations now honor each candidate's
+`release_gate_at_best_alpha`: a score-fusion route is only promoted as a
+quality signal when both the conformal gate and the high-confidence release gate
+pass.
 
 Verifier outputs can be converted into the same score-dump interface before
 running the geometry-fusion comparison:
@@ -4724,14 +8868,58 @@ python benchmarks/eval_verifier_ensemble.py \
   --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
   --json artifacts/verifier-signals/verifier-ensemble-report.json
 
+python benchmarks/enrich_evidence_alignment_sidecar.py \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --evidence artifacts/verifier-signals/citation-search-evidence.jsonl \
+  --run-name qwen-l80 \
+  --require-cited-evidence \
+  --output artifacts/verifier-signals/verified-records-evidence-alignment.jsonl \
+  --json artifacts/verifier-signals/evidence-alignment-sidecar-report.json
+
+python benchmarks/build_context_sensitivity_logprob_pairs.py \
+  --records artifacts/verifier-signals/verified-records-evidence-alignment.jsonl \
+  --model-id Qwen/Qwen2.5-0.5B \
+  --run-name qwen-l80 \
+  --output artifacts/verifier-signals/paired-context-logprobs.jsonl \
+  --json artifacts/verifier-signals/paired-context-logprobs-report.json
+
+python benchmarks/enrich_context_sensitivity_sidecar.py \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records-evidence-alignment.jsonl \
+  --paired-logprobs artifacts/verifier-signals/paired-context-logprobs.jsonl \
+  --run-name qwen-l80 \
+  --output artifacts/verifier-signals/verified-records-context.jsonl \
+  --json artifacts/verifier-signals/context-sensitivity-sidecar-report.json
+
 python benchmarks/build_verifier_signal_score_dump.py \
   --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
-  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records-context.jsonl \
   --run-name qwen-l80 \
   --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
   --output artifacts/verifier-signals/qwen-l80-enhanced-scores.manifest.json \
   --output-format jsonl
 ```
+
+The context-sensitivity subchain can also run as a single local workflow with
+manifest verification and optional registry metadata:
+
+```bash
+python benchmarks/run_context_sensitivity_workflow.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --model-id Qwen/Qwen2.5-0.5B \
+  --run-name qwen-l80 \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output-dir artifacts/verifier-signals/context-sensitivity-workflow \
+  --registry-path artifacts/verifier-signals/registry.json \
+  --registry-name qwen-l80-context-sensitivity \
+  --registry-version 0.1
+```
+
+Registered context-sensitivity workflow reports can be promoted into the release
+candidate gate with `--context-sensitivity-workflow-key` or supplied directly
+with `--context-sensitivity-workflow`. The gate verifies the workflow manifest
+and fails closed when paired-logprob, enriched-sidecar, or enhanced score-dump
+evidence is missing; it does not require a non-zero flagged rate.
 
 When verified records include state-transition prediction metadata or direct
 world-model ensemble agreement metadata, the same converter also emits
@@ -4741,6 +8929,17 @@ metadata includes explicit postcondition conflicts, it also emits
 `world_model_conflict`, `world_model_conflict_delta`, and the audit-oriented
 `world_model_trace_gap`, so simulator/model disagreement and expected-vs-actual
 world conflicts can be swept or fused under the same conformal calibration path.
+When `transformers` is installed via the optional HF extra,
+`build_context_sensitivity_logprob_pairs.py` can compute paired no-context and
+evidence-context token log-probabilities directly from the verified-record
+sidecar. Teams with their own model serving stack can instead emit the same
+paired-logprob JSONL schema. `enrich_context_sensitivity_sidecar.py` then adds
+per-record `ContextSensitivityReport` payloads without depending on that model
+runtime. The score-dump converter emits
+`context_sensitivity_flagged_rate`, `context_sensitivity_max_shift`,
+`context_sensitivity_mean_shift`, and `context_sensitivity_max_ratio` so
+evidence-context likelihood disagreements can be calibrated alongside geometry
+and verifier outcomes.
 
 Simple text baselines can also be appended to statement-bearing dumps as
 redline controls. This is a post-hoc check for whether a proposed detector is
@@ -4775,6 +8974,38 @@ near-random: `answer_token_count` AUROC `0.519` with detection `0.110`,
 `question_answer_token_overlap` AUROC `0.330` with zero triggered detection
 under the low-overlap direction. Treat this as a redline baseline for future
 verifier/retrieval/selfcheck signals.
+
+## `select_hidden_evidence.py`
+
+Selects a sparse, budgeted evidence report from primary and `sweep_scores`
+diagnostics. This is the local HIVE-style bridge between hidden-state/trajectory
+signals and downstream verifier or world-model adapters: it records which
+record/layer/signal items should be inspected under a fixed budget, but it does
+not execute a verifier or promote a route by itself.
+
+```bash
+python benchmarks/select_hidden_evidence.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores.json \
+  --signals truth_proj,subspace_resid,nll_answer \
+  --sweep-signals truth_proj,subspace_resid,resid_update_norm \
+  --direction selfcheck_support_rate=lower \
+  --max-items 64 \
+  --max-per-record 4 \
+  --max-per-layer 8 \
+  --json artifacts/qwen05_hidden_evidence_selection.json \
+  --registry artifacts/registry.json \
+  --register-name qwen05-hidden-evidence-selection \
+  --quiet
+```
+
+The report rank-normalizes scores per `source/layer/signal` channel, applies
+`higher` or `lower` anomaly directions, preserves statement metadata when
+available, and writes selected `evidence_ref` values that can be copied into
+`ProductTrace.metadata` or passed to
+`ClaimVerificationPlanner.plan(..., hidden_evidence=report)` so verifier budgets
+prioritize claims selected by hidden-state evidence. Bounded `ProductTrace`
+summaries expose the resulting hidden-evidence claim counts, score families,
+layers, and evidence refs for replay.
 
 ## `eval_detectability_taxonomy.py`
 
@@ -4825,7 +9056,13 @@ python benchmarks/run_verifier_signal_fusion_workflow.py \
 ```
 
 Add `--samples path/to/sample-records.json` when a score dump or external
-sampler provides aligned self-consistency responses.
+sampler provides aligned self-consistency responses. Add
+`--enable-fact-selfcheck` when those responses also carry extractable
+fact triples or sample-level `triples` metadata; the workflow tries fact-level
+consistency before the sentence-overlap selfcheck fallback and carries
+`fact_selfcheck_*` score columns into the same fusion report. Add
+`--fact-selfcheck-gate` when weak fact-level sample coverage should block
+promotion instead of only appearing as diagnostics.
 
 The workflow is intentionally post-hoc and dependency-free. It is the preferred
 entry point when testing whether local retrieval and self-consistency evidence
@@ -5322,14 +9559,16 @@ cost. The selected policy is written into the runtime recommendation evidence
 and readiness/registry metadata.
 With `--score-ensemble-report`, a best fusion signal is added to
 `quality_signals` only when the selected ensemble alpha passed its conformal
-false-alarm gate; blocked or ambiguous fusion evidence is retained in
-`score_fusion` and `evidence` without changing the runtime recommendation.
+false-alarm gate and any attached high-confidence release gate. Blocked or
+ambiguous fusion evidence is retained in `score_fusion` and `evidence` without
+changing the runtime recommendation.
 With `--selected-fusion-artifact-report`, selected fusion artifacts produced by
 `build_selected_fusion_artifacts.py` can likewise contribute a
-`selected_fusion_*` quality signal. If the report has multiple runs, pass
-`--selected-fusion-run <run_name>`; otherwise the recommendation keeps the
-selected-fusion evidence as `ambiguous_matching_runs` and does not change the
-best quality signal.
+`selected_fusion_*` quality signal, but only when the artifact path is present
+and the report's per-run `release_gate` is either absent or promoted. If the
+report has multiple runs, pass `--selected-fusion-run <run_name>`; otherwise the
+recommendation keeps the selected-fusion evidence as `ambiguous_matching_runs`
+and does not change the best quality signal.
 When the matrix report and worker-sweep child matrix are separate files, the
 recommendation still treats them as compatible if they select the same promoted
 runtime cell and matching quality/cache-only evidence; this lets a serial matrix
@@ -5376,7 +9615,8 @@ python benchmarks/run_performance_baseline_workflow.py \
 When reusing selected fusion artifacts, add
 `--selected-fusion-artifact-report <build-report.json>` and pass
 `--selected-fusion-run <run_name>` for multi-run reports. The workflow records
-the selected report, selected artifact path, selected run, selected candidate,
+the selected build report, selected artifact path, selected-artifact manifest
+path, selected run, selected candidate, selected-artifact release-gate status,
 and promoted `selected_fusion_*` signal in the runtime recommendation,
 performance evidence bundle, artifact manifest metadata, and registry record.
 The current local SmolLM2 l8 selected-fusion handoff uses:
@@ -5410,8 +9650,8 @@ with recursive manifest verification
 `manifest_verification:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate-verification:0.3`.
 It reuses the same readiness and `structured_qa` route baselines as the
 score-fusion candidate, but gates against the selected-fusion performance
-baseline and records the selected-fusion run/signal/AUROC/artifact path in the
-release registry.
+baseline and records the selected-fusion run/signal/AUROC/artifact path plus
+selected-artifact manifest path in the release registry.
 The deployable contract for this local handoff is
 `product_promotion_contract:smollm2-l8-selected-fusion-product-promotion-contract:0.3`
 at
@@ -5421,8 +9661,9 @@ Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
 phase timings, route costs, cache hit rates, retrieval use, staged-verification
 skip savings, verification-scope counts, triggered-only partial skip savings,
-triple/slot-audit coverage, promotion-contract covered-fact property scope and
-per-property quality rollups, and optionally apply a
+triple/slot-audit coverage, trace-provenance coverage, evidence-graph
+consistency rates over linked support evidence, promotion-contract covered-fact
+property scope and per-property quality rollups, and optionally apply a
 `ProductRuntimeBudgetPolicy` or promoted
 `ProductPromotionContract` budget. It also aggregates promotion-contract
 external-evidence baseline-comparison handoff coverage, source/status counts,
@@ -5431,7 +9672,16 @@ text-redline run-count summaries into the report, manifest, and registry
 metadata. It also aggregates promotion-contract counterfactual verifier-audit
 coverage, source/status/workflow counts, manifest-verification counts,
 record-count/pass-rate/false-invariance summaries, and flip-success summaries
-into the same report, manifest, and registry metadata. The output includes
+into the same report, manifest, and registry metadata. Fact-selfcheck gate
+handoffs are likewise aggregated with coverage, report/manifest presence,
+manifest verification, pass counts, run-count quality, failed runs, and blocking
+reasons in the report, manifest, and registry metadata. Retrieval
+evidence-quality summaries are also aggregated into coverage, pass/failure, and
+provenance-freshness rates for report, manifest, and registry metadata.
+Metacognition summaries compare final-answer verbal uncertainty cues with
+trace-level risk/verifier/diagnostic evidence and aggregate coverage, pass rate,
+overconfident-risk rate, and miscalibration summaries for the same report,
+manifest, and registry outputs. The output includes
 `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
@@ -5617,11 +9867,252 @@ coverage/safety thresholds pass.
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
-retrieval-use, cache-hit-rate, verifier-skip-rate, promotion-contract coverage,
-covered-fact per-property rollup drift, triple-extraction fixture-matrix
-coverage/quality drift, counterfactual verifier-audit coverage, manifest
-verification, record count, pass rate, false-invariance rate, flip-success
-drift, trace-level triple/slot-audit coverage, and trace-count drift.
+retrieval-use, cache-hit-rate, verifier-skip-rate, pre-generation risk
+coverage, learned-risk coverage, audit-profile rate, learned-risk routed rate,
+learned-risk probability drift, trace-level world-model
+participation/coverage/conflict/low-agreement/trace-gap drift, trace-level
+context-sensitivity participation/coverage/flagged-rate/ratio drift,
+trace-level claim/evidence alignment participation/coverage/alignment,
+misalignment, insufficient-evidence, citation-reference coverage, issue, and
+trace-gap drift,
+promotion-contract coverage, covered-fact per-property rollup drift,
+triple-extraction fixture-matrix coverage/quality drift, claim factuality probe
+comparison coverage, manifest-verification, redline, AUROC,
+selective-accuracy, and selective-coverage drift, counterfactual verifier-audit
+coverage, manifest verification, record count, pass rate, false-invariance
+rate, flip-success drift, fact-selfcheck gate coverage, manifest/pass rate,
+run-count, failed-run, executed/decided/not-applicable, and fact-density drift,
+trace-level triple/slot-audit coverage, and trace-count drift. When ProductTrace
+provenance summaries are present, the same comparison can gate structural
+provenance coverage plus evidence-graph consistency coverage, supported-claim
+consistency, numeric drift, cross-claim retrieval-hit drift, and error-rate
+drift. When ProductTrace retrieval action results include evidence-quality
+summaries, the comparison can gate trace/result coverage, pass rate, failure
+rate, stale evidence, untrusted sources, and missing-source or timestamp drift.
+When ProductTrace metacognition summaries are present, the comparison can also
+gate trace coverage, pass rate, overconfident-risk rate increase, and
+miscalibration-score mean increase using
+`--min-product-trace-metacognition-trace-coverage-rate`,
+`--min-product-trace-metacognition-pass-rate`,
+`--max-product-trace-metacognition-overconfident-risk-rate-increase`, and
+`--max-product-trace-metacognition-miscalibration-score-mean-increase`.
+Release candidates can require that evidence explicitly with
+`compare_release_candidates.py --require-product-runtime-drift-evidence-quality-evidence`
+or `--require-product-runtime-drift-metacognition-evidence`, plus the matching
+`run_release_candidate_registry_workflow.py` flags.
+When ProductTrace
+action results carry action receipts, the
+same comparison can gate receipt coverage plus missing, invalid,
+fingerprint-mismatch, and unsigned receipt rates. When claims or final answers
+explicitly reference action request ids or receipt fingerprints, it can also
+gate receipt-backed claim-support rates and the drift of unsupported,
+unreceipted, failed-result, fingerprint-mismatch, or unsigned references.
+`build_product_trace_corpus.py` materializes redaction-safe
+`summaries.triple_coverage` plus
+`metadata.trace_corpus.triple_coverage_summary` for accepted full ProductTrace
+inputs, so these drift gates can consume triple-audit coverage after text
+redaction. The summary is only evidence when the original trace already carried
+`claim_triples` and verifier `audit_report` metadata; the corpus builder does
+not infer or fabricate audit results from redacted text.
+
+Use `enrich_product_trace_triple_audit.py` when you still have full, unredacted
+ProductTrace JSON or JSONL sidecars and a local evidence corpus but the original
+runtime did not record strict triple-audit metadata. The workflow extracts
+conservative `claim_triples` or reuses metadata-supplied triples, retrieves
+local evidence snippets, attaches status-aware `audit_report` metadata to
+existing verifier results or explicit `audit_only` results, and writes
+manifest-backed enriched traces for `run_product_runtime_baseline.py`.
+Source-family correction handoffs now place model-answer triples and structured
+refutation evidence into their ProductTrace JSONL rows, so they can be enriched
+directly with `--trace-jsonl` before runtime-baseline replay. For the current
+SmolLM2 action-payload
+compatibility traces, the Wikidata capital corpus plus the NASA-backed Moon
+composition corpus promotes the trace-level triple-audit handoff with
+`claim_triple_coverage_rate=1.0`, `audit_claim_coverage_rate=1.0`,
+`audit_pass_rate=1.0`, and `slot_coverage_rate=1.0`; refuted claims are marked
+with `evidence_relation=refutes_claim` rather than treated as supported:
+
+```bash
+python benchmarks/enrich_product_trace_triple_audit.py \
+  --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
+  --evidence-corpus artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-corpus.json \
+  --evidence-corpus artifacts/nasa-moon-composition-external-corpus/moon-composition-corpus.json \
+  --output-dir artifacts/smollm2_product_trace_triple_audit_enrichment_v1 \
+  --registry artifacts/smollm2_product_trace_triple_audit_enrichment_v1/registry.json \
+  --name smollm2-product-trace-triple-audit \
+  --version 0.2
+```
+
+For source-family correction handoff sidecars:
+
+```bash
+python benchmarks/enrich_product_trace_triple_audit.py \
+  --trace-jsonl artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-handoff/product-traces.jsonl \
+  --output-dir artifacts/truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-triple-audit \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-source-family-structured-qa-correction-triple-audit \
+  --version 0.1 \
+  --compact-json
+```
+
+Use `enrich_product_trace_runtime_evidence.py` when existing full traces already
+carry verifier results but lack the bounded summaries needed by the
+world-model, context-sensitivity, and counterfactual-robustness runtime drift
+gates. The workflow attaches local deterministic sidecars from calculator and
+structured-QA metadata, records its limitations in verifier metadata, and does
+not call network retrieval, vector stores, or LLMs. For the current SmolLM2
+action-payload compatibility traces, `8/12` traces contain verifier results;
+the enrichment therefore uses `0.66` participating-trace gates while keeping
+coverage, trace-gap, pass-rate, flip-success, and false-invariance gates
+strict:
+
+```bash
+python benchmarks/enrich_product_trace_runtime_evidence.py \
+  --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
+  --output-dir artifacts/smollm2_product_trace_runtime_evidence_enrichment_v0 \
+  --registry artifacts/smollm2_product_trace_runtime_evidence_enrichment_v0/artifact-registry.json \
+  --name smollm2-product-trace-runtime-evidence \
+  --version 0.1 \
+  --min-world-model-participating-trace-rate 0.66 \
+  --min-context-sensitivity-participating-trace-rate 0.66 \
+  --min-counterfactual-robustness-participating-trace-rate 0.66 \
+  --compact-json
+```
+
+After `enrich_product_trace_triple_audit.py` has added `audit_only` verifier
+results for skipped verification profiles, rerun runtime-evidence enrichment on
+the triple-audited traces. This attaches deterministic
+`TripleAuditWorldModelAdapter` sidecars to the audit reports, so the current
+SmolLM2 trace set can use strict `1.0` participating-trace gates across
+world-model, context-sensitivity, and counterfactual-robustness evidence:
+
+```bash
+python benchmarks/enrich_product_trace_runtime_evidence.py \
+  --trace-glob 'artifacts/smollm2_product_trace_triple_audit_enrichment_v1/traces/*.json' \
+  --output-dir artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1 \
+  --registry artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1/artifact-registry.json \
+  --name smollm2-product-trace-frontier-evidence \
+  --version 0.1 \
+  --min-world-model-participating-trace-rate 1.0 \
+  --min-context-sensitivity-participating-trace-rate 1.0 \
+  --min-counterfactual-robustness-participating-trace-rate 1.0 \
+  --compact-json
+```
+
+The v1.13 runtime-drift replay over those frontier-evidence traces keeps all
+triple-audit, world-model, context-sensitivity, and counterfactual-robustness
+rows passing. The refreshed frontier audit v11 remains fail-closed on
+readiness/performance/frontier-release evidence, but its gap plan drops to
+`9` gaps, `4` actions, and `0` missing metrics.
+
+Use `enrich_product_trace_action_receipts.py` when replay traces have dry-run
+action results but lack stable request ids, signed receipts, or explicit
+claim-to-receipt references. The workflow keeps `status="dry_run"` on replayed
+action results, records a receipt-support policy that accepts dry-run replay
+evidence, and signs each action result with a local HMAC receipt so runtime
+baselines can fill action-receipt and receipt-claim-support handoff rows:
+
+```bash
+python benchmarks/enrich_product_trace_action_receipts.py \
+  --trace-glob 'artifacts/smollm2_product_trace_frontier_evidence_enrichment_v1/traces/*.json' \
+  --output-dir artifacts/smollm2_product_trace_action_receipts_v1 \
+  --report artifacts/smollm2_product_trace_action_receipts_v1/product-trace-action-receipt-enrichment.json \
+  --artifact-manifest artifacts/smollm2_product_trace_action_receipts_v1/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-action-receipts \
+  --version 0.1 \
+  --created-at 2026-06-30T00:00:00Z \
+  --compact-json
+```
+
+The v1.15 action-receipt replay over receipt-enriched traces promotes both
+receipt evidence groups: action receipt coverage is `1.0`, invalid/missing/
+fingerprint-mismatch/unsigned receipt rates are all `0.0`, receipt claim
+support is `1.0`, and unsupported/missing/unreceipted/failed/fingerprint-
+mismatch/unsigned reference rates are all `0.0`. Passing that runtime baseline
+into `export_product_promotion_contract_evidence_handoff.py --runtime-baseline`
+alongside the input-manifest-verified v5 frontier release evidence produces the
+current v1.9/v7 frontier handoff with `77/77` required metrics present:
+
+```bash
+TRACE_ARGS=$(find artifacts/smollm2_product_trace_action_receipts_v1/traces -name '*.json' | sort | sed 's#^#--trace #')
+
+python benchmarks/run_product_runtime_baseline.py $TRACE_ARGS \
+  --json artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/product-runtime-baseline.json \
+  --trace-records-jsonl artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/trace-records.jsonl \
+  --trace-records-cache-json artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/trace-record-cache.json \
+  --refresh-trace-records-cache \
+  --trace-scan-workers 4 \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_9/product-promotion-contract.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_15_action_receipts/runtime-baseline/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-runtime-baseline-action-receipts \
+  --version 0.1 \
+  --metadata release=smollm2-v1.9 \
+  --metadata evidence_scope=action_receipts_receipt_claim_support \
+  --compact-json
+```
+
+The promoted release-candidate runtime drift refresh is
+`artifacts/smollm2_product_runtime_drift_v1_16_receipts_frontier_v5/product-runtime-drift.json`.
+It compares receipt-enriched baseline/current reports built with the v1.9/v7
+handoff, promotes with `119` compared metrics and `0` blockers, and carries
+both `action_receipts.*` and `receipt_claim_support.*` metrics for the final
+`frontier_audit` gate. Newer provenance-evidence refreshes also include
+`evidence_graph_consistency.*` drift metrics under the release provenance
+evidence group.
+
+Replay the enriched traces through `run_product_runtime_baseline.py` with
+`--trace-scan-workers` when the trace set is large enough to benefit from
+bounded parallel scanning, then compare baseline/current with the same
+product-runtime drift gates used by the prior release candidate plus the new
+trace-level runtime-evidence gates:
+
+```bash
+TRACE_ARGS=$(find artifacts/smollm2_product_trace_runtime_evidence_enrichment_v0/traces -name '*.json' | sort | sed 's#^#--trace #')
+
+python benchmarks/run_product_runtime_baseline.py $TRACE_ARGS \
+  --json artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-baseline/product-runtime-baseline.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-baseline/artifact-manifest.json \
+  --promotion-contract artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v3/product-promotion-contract-evidence-handoff.json \
+  --trace-scan-workers 4 \
+  --compact-json
+
+python benchmarks/compare_product_runtime_baselines.py \
+  --baseline artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-baseline/product-runtime-baseline.json \
+  --current artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/runtime-current/product-runtime-baseline.json \
+  --json artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/product-runtime-drift.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_12_runtime_evidence_enriched/artifact-manifest.json \
+  --min-current-trace-count 12 \
+  --min-world-model-participating-trace-rate 0.66 \
+  --min-world-model-coverage-rate 1.0 \
+  --max-world-model-conflict-rate-increase 0.0 \
+  --max-world-model-low-agreement-rate-increase 0.0 \
+  --max-world-model-trace-gap-rate-increase 0.0 \
+  --min-context-sensitivity-participating-trace-rate 0.66 \
+  --min-context-sensitivity-coverage-rate 1.0 \
+  --max-context-sensitivity-flagged-result-rate-increase 0.0 \
+  --max-context-sensitivity-trace-gap-rate-increase 0.0 \
+  --max-context-sensitivity-max-flagged-rate-increase 0.0 \
+  --max-context-sensitivity-max-ratio-increase 0.0 \
+  --min-counterfactual-robustness-participating-trace-rate 0.66 \
+  --min-counterfactual-robustness-coverage-rate 1.0 \
+  --min-counterfactual-robustness-pass-rate 1.0 \
+  --min-counterfactual-robustness-flip-success-rate 1.0 \
+  --max-counterfactual-robustness-false-invariance-rate-increase 0.0 \
+  --max-counterfactual-robustness-trace-gap-rate-increase 0.0 \
+  --min-product-trace-action-receipts-coverage-rate 1.0 \
+  --max-product-trace-action-receipts-missing-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-invalid-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-fingerprint-mismatch-rate-increase 0.0 \
+  --max-product-trace-action-receipts-unsigned-receipt-rate-increase 0.0 \
+  --min-product-trace-receipt-claim-support-reference-support-rate 1.0 \
+  --max-product-trace-receipt-claim-support-unsupported-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-unreceipted-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-fingerprint-mismatch-reference-rate-increase 0.0 \
+  --compact-json
+```
+
 When a saved `ProductRuntimeBudgetPolicy` is supplied with
 `--runtime-budget-policy` or `--runtime-budget-policy-key`, the current baseline
 summary is also checked against the reusable budget using p95/aggregate metrics. When a
@@ -5645,7 +10136,35 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-retrieval-use-rate-delta 0.0 \
   --max-cache-hit-rate-drop 0.0 \
   --max-verification-skip-rate-drop 0.0 \
+  --min-world-model-participating-trace-rate 1.0 \
+  --min-world-model-coverage-rate 1.0 \
+  --max-world-model-conflict-rate-increase 0.0 \
+  --max-world-model-low-agreement-rate-increase 0.0 \
+  --max-world-model-trace-gap-rate-increase 0.0 \
+  --min-world-model-action-gate-coverage-rate 1.0 \
+  --min-world-model-action-gate-pass-rate 1.0 \
+  --max-world-model-action-gate-blocked-rate-increase 0.0 \
+  --max-world-model-action-gate-side-effect-block-violation-rate-increase 0.0 \
+  --max-world-model-action-gate-low-prediction-confidence-rate-increase 0.0 \
+  --max-world-model-action-gate-postcondition-refuted-rate-increase 0.0 \
+  --min-context-sensitivity-participating-trace-rate 1.0 \
+  --min-context-sensitivity-coverage-rate 1.0 \
+  --max-context-sensitivity-flagged-result-rate-increase 0.0 \
+  --max-context-sensitivity-trace-gap-rate-increase 0.0 \
+  --max-context-sensitivity-max-flagged-rate-increase 0.0 \
+  --max-context-sensitivity-max-ratio-increase 0.0 \
   --min-promotion-contract-coverage 1.0 \
+  --min-claim-factuality-probe-comparison-coverage 1.0 \
+  --min-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
+  --min-claim-factuality-probe-comparison-model-count 2 \
+  --min-claim-factuality-probe-comparison-run-count 2 \
+  --min-claim-factuality-probe-comparison-dataset-count 2 \
+  --min-claim-factuality-probe-comparison-redline-pass-rate 1.0 \
+  --max-claim-factuality-probe-comparison-best-test-label-auroc-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-test-selective-accuracy-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-test-selective-coverage-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-redline-auroc-drop 0.02 \
+  --max-claim-factuality-probe-comparison-best-redline-margin-drop 0.02 \
   --min-counterfactual-verification-coverage 1.0 \
   --min-counterfactual-verification-manifest-verified-rate 1.0 \
   --min-counterfactual-verification-record-count 10 \
@@ -5665,6 +10184,15 @@ python benchmarks/compare_product_runtime_baselines.py \
   --min-triple-audit-claim-coverage 1.0 \
   --min-triple-audit-pass-rate 1.0 \
   --min-triple-slot-coverage 1.0 \
+  --min-product-trace-action-receipts-coverage-rate 1.0 \
+  --max-product-trace-action-receipts-missing-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-invalid-receipt-rate-increase 0.0 \
+  --max-product-trace-action-receipts-fingerprint-mismatch-rate-increase 0.0 \
+  --max-product-trace-action-receipts-unsigned-receipt-rate-increase 0.0 \
+  --min-product-trace-receipt-claim-support-reference-support-rate 1.0 \
+  --max-product-trace-receipt-claim-support-unsupported-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-unreceipted-reference-rate-increase 0.0 \
+  --max-product-trace-receipt-claim-support-fingerprint-mismatch-reference-rate-increase 0.0 \
   --min-current-trace-count 12 \
   --metadata evidence=smollm2_product_runtime_drift_refresh_v1_6 \
   --fail-on-drift
@@ -5702,6 +10230,77 @@ product logs; pass
 replay with `--runtime-pair-index` to avoid rebuilding the paired-runtime index
 from trace files.
 
+Use `build_product_trace_action_payload_compat.py` before strict action-gated
+replays over older ProductTrace files. It copies the source traces to a new
+local input set and only repairs legacy `retrieve` action payloads that lack an
+executable query/target list, deriving deterministic `retrieval_targets` from
+the trace's saved claim IDs. This is a compatibility handoff, not new verifier
+or retrieval evidence:
+
+```bash
+python benchmarks/build_product_trace_action_payload_compat.py \
+  --trace-glob 'artifacts/smollm2_product_runtime_profile_sweep/traces/*/*.json' \
+  --output-dir artifacts/smollm2_product_trace_action_payload_compat_v0 \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-action-payload-compat \
+  --version 0.1 \
+  --metadata source=frontier_action_gate_rebuild
+```
+
+The current SmolLM2 compatibility handoff writes 12 replay traces, modifies the
+single legacy trace with an empty retrieve payload, adds two claim-backed
+retrieval targets, and verifies its manifest. Feed
+`artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json` to
+`run_product_trace_replay_workflow.py` when enforcing zero-tolerance
+action-audit gates over the historical profile-sweep traces.
+
+The latest local frontier-audit v6 refresh also repairs the cross-corpus
+triple-extraction matrix provenance. Generate the lookup-gold external
+prediction files from the generated fixture records with
+`build_triple_extraction_lookup_gold_predictions.py`, then rerun
+`run_triple_extraction_fixture_matrix.py` with the two `--external-predictions`
+paths under `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/`.
+The v1 matrix manifest now verifies and
+`triple_extraction_fixture_matrix_gate` promotes in v6. The release candidate
+still blocks on frontier-release evidence and product-runtime evidence coverage;
+the refreshed `evidence-gap-plan.json` tracks 16 remaining gaps and 15 actions.
+
+The canonical local action-gated replay rebuild is:
+
+```bash
+python benchmarks/run_product_trace_replay_workflow.py \
+  --trace-glob 'artifacts/smollm2_product_trace_action_payload_compat_v0/traces/**/*.json' \
+  --output-dir artifacts/smollm2_product_trace_replay_workflow_action_gated_v0 \
+  --candidate default=artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json \
+  --candidate latency_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json \
+  --candidate audit_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json \
+  --replay-policy artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-replay-workflow-action-gated \
+  --version 0.1 \
+  --require-runtime-trace \
+  --verify-manifest \
+  --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/fingerprints.json \
+  --corpus-cache-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus-cache.json \
+  --refresh-corpus-cache \
+  --corpus-source-cache-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/corpus/source-cache.json \
+  --refresh-corpus-source-cache \
+  --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/runtime-baseline/trace-record-cache.json \
+  --refresh-runtime-trace-records-cache \
+  --runtime-trace-scan-workers 4 \
+  --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/selector-replay/trace-inputs.json \
+  --refresh-selector-trace-inputs \
+  --max-action-audit-error-rate 0.0 \
+  --max-action-audit-missing-retrieval-rate 0.0 \
+  --max-action-audit-missing-plan-retrieval-query-rate 0.0 \
+  --max-action-audit-malformed-payload-rate 0.0 \
+  --max-action-audit-unexpected-action-rate 0.0 \
+  --max-action-audit-unknown-claim-id-rate 0.0 \
+  --max-action-execution-missing-result-rate 0.0 \
+  --max-action-execution-unexpected-result-rate 0.0 \
+  --max-action-execution-request-id-mismatch-rate 0.0
+```
+
 Use `run_product_trace_replay_workflow.py` when the raw-trace handoff should be
 one reproducible command. It builds the redacted corpus, runs the product
 runtime baseline over the standardized traces, runs selector replay with the
@@ -5712,7 +10311,9 @@ summaries for local performance tuning, lifts the runtime baseline
 report and registry metadata, can save the runtime baseline's recommended
 `ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
 runtime baseline through action-audit, action-execution alignment, or
-product-runtime drift/policy gates, and registers one workflow report.
+product-runtime drift/policy gates, including evidence-graph consistency and
+evidence-quality, metacognition, and world-model guarded-action gates when
+configured, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
@@ -5726,13 +10327,61 @@ observed baseline's candidate budget thresholds, and
 `--runtime-drift-baseline` plus optional `--runtime-drift-budget-policy` when
 the workflow should immediately validate the current runtime baseline against
 the previous promoted baseline/policy gate. The runtime-drift pass-through also
-accepts promotion evidence gates such as
+accepts pre-generation risk telemetry gates such as
+`--min-runtime-drift-world-model-action-gate-coverage-rate`,
+`--min-runtime-drift-world-model-action-gate-pass-rate`, and
+`--max-runtime-drift-world-model-action-gate-postcondition-refuted-rate-increase`
+when the replay should emit world-model guarded-action release evidence, plus
+`--min-runtime-drift-pre-generation-risk-coverage-rate`,
+`--min-runtime-drift-pre-generation-learned-risk-coverage-rate`,
+`--max-runtime-drift-pre-generation-audit-profile-rate-increase`,
+`--max-runtime-drift-pre-generation-learned-risk-routed-rate-increase`, and
+`--max-runtime-drift-pre-generation-learned-risk-probability-mean-increase`,
+world-model gates such as
+`--min-runtime-drift-world-model-participating-trace-rate`,
+`--min-runtime-drift-world-model-coverage-rate`,
+`--max-runtime-drift-world-model-conflict-rate-increase`,
+`--max-runtime-drift-world-model-low-agreement-rate-increase`, and
+`--max-runtime-drift-world-model-trace-gap-rate-increase`, context-sensitivity
+gates such as
+`--min-runtime-drift-context-sensitivity-participating-trace-rate`,
+`--min-runtime-drift-context-sensitivity-coverage-rate`,
+`--max-runtime-drift-context-sensitivity-flagged-result-rate-increase`,
+`--max-runtime-drift-context-sensitivity-trace-gap-rate-increase`,
+`--max-runtime-drift-context-sensitivity-max-flagged-rate-increase`, and
+`--max-runtime-drift-context-sensitivity-max-ratio-increase`, evidence-alignment
+gates such as
+`--min-runtime-drift-evidence-alignment-participating-trace-rate`,
+`--min-runtime-drift-evidence-alignment-coverage-rate`,
+`--min-runtime-drift-evidence-alignment-alignment-rate`,
+`--min-runtime-drift-evidence-alignment-citation-reference-coverage-rate`,
+`--max-runtime-drift-evidence-alignment-misalignment-rate-increase`,
+`--max-runtime-drift-evidence-alignment-insufficient-evidence-rate-increase`,
+`--max-runtime-drift-evidence-alignment-issue-rate-increase`, and
+`--max-runtime-drift-evidence-alignment-trace-gap-rate-increase`, plus promotion
+evidence gates such as
 `--min-runtime-drift-promotion-contract-coverage`,
 pre-generation probe comparison gates such as
 `--min-runtime-drift-pre-generation-probe-comparison-coverage`,
 `--min-runtime-drift-pre-generation-probe-comparison-manifest-verified-rate`,
 `--min-runtime-drift-pre-generation-probe-comparison-redline-pass-rate`, and
 `--max-runtime-drift-pre-generation-probe-comparison-best-*-drop`,
+claim factuality probe comparison gates such as
+`--min-runtime-drift-claim-factuality-probe-comparison-coverage`,
+`--min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate`,
+`--min-runtime-drift-claim-factuality-probe-comparison-dataset-count`,
+`--min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate`, and
+`--max-runtime-drift-claim-factuality-probe-comparison-best-*-drop`,
+fact-selfcheck gate checks such as
+`--min-runtime-drift-fact-selfcheck-gate-coverage`,
+`--min-runtime-drift-fact-selfcheck-gate-manifest-verified-rate`,
+`--min-runtime-drift-fact-selfcheck-gate-passed-rate`,
+`--min-runtime-drift-fact-selfcheck-gate-run-count`,
+`--max-runtime-drift-fact-selfcheck-gate-failed-run-count`,
+`--min-runtime-drift-fact-selfcheck-gate-min-executed-rate`,
+`--min-runtime-drift-fact-selfcheck-gate-min-decided-rate`,
+`--max-runtime-drift-fact-selfcheck-gate-max-not-applicable-rate`, and the
+claim/sample triple-density gates,
 `--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, the two
 `--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates, and
 covered-fact property gates such as
@@ -5773,6 +10422,16 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --max-action-execution-unexpected-result-rate 0.0 \
   --max-action-execution-request-id-mismatch-rate 0.0 \
   --max-runtime-drift-total-seconds-p95-ratio 1.6 \
+  --min-runtime-drift-pre-generation-risk-coverage-rate 1.0 \
+  --min-runtime-drift-pre-generation-learned-risk-coverage-rate 1.0 \
+  --max-runtime-drift-pre-generation-audit-profile-rate-increase 0.0 \
+  --max-runtime-drift-pre-generation-learned-risk-routed-rate-increase 0.0 \
+  --max-runtime-drift-pre-generation-learned-risk-probability-mean-increase 0.02 \
+  --min-runtime-drift-world-model-participating-trace-rate 1.0 \
+  --min-runtime-drift-world-model-coverage-rate 1.0 \
+  --max-runtime-drift-world-model-conflict-rate-increase 0.0 \
+  --max-runtime-drift-world-model-low-agreement-rate-increase 0.0 \
+  --max-runtime-drift-world-model-trace-gap-rate-increase 0.0 \
   --min-runtime-drift-promotion-contract-coverage 1.0 \
   --min-runtime-drift-pre-generation-probe-comparison-coverage 1.0 \
   --min-runtime-drift-pre-generation-probe-comparison-manifest-verified-rate 1.0 \
@@ -5782,6 +10441,17 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --max-runtime-drift-pre-generation-probe-comparison-best-test-label-auroc-drop 0.02 \
   --max-runtime-drift-pre-generation-probe-comparison-best-redline-auroc-drop 0.02 \
   --max-runtime-drift-pre-generation-probe-comparison-best-redline-margin-drop 0.02 \
+  --min-runtime-drift-claim-factuality-probe-comparison-coverage 1.0 \
+  --min-runtime-drift-claim-factuality-probe-comparison-manifest-verified-rate 1.0 \
+  --min-runtime-drift-claim-factuality-probe-comparison-model-count 2 \
+  --min-runtime-drift-claim-factuality-probe-comparison-run-count 2 \
+  --min-runtime-drift-claim-factuality-probe-comparison-dataset-count 2 \
+  --min-runtime-drift-claim-factuality-probe-comparison-redline-pass-rate 1.0 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-test-label-auroc-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-accuracy-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-test-selective-coverage-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-redline-auroc-drop 0.02 \
+  --max-runtime-drift-claim-factuality-probe-comparison-best-redline-margin-drop 0.02 \
   --min-runtime-drift-covered-fact-property-metric-count 3 \
   --min-runtime-drift-covered-fact-min-records 8 \
   --min-runtime-drift-covered-fact-min-source-documents 100 \
@@ -6013,7 +10683,8 @@ and records
 It keeps `truth_proj` as the best quality signal while adding promoted
 `score_fusion_mean_rank` evidence (`AUROC=0.679`, false alarm `0.090`,
 detection `0.196`, `alpha=0.1`) to the runtime recommendation and performance
-evidence bundle.
+evidence bundle; current runtime recommendations also require that score-fusion
+candidate's high-confidence release gate to pass when present.
 The selected-fusion handoff baseline at
 `artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/`
 reuses the same worker-sweep matrix plus
@@ -6047,7 +10718,8 @@ Its manifest and release registry metadata carry
 `recommended_score_fusion_status=promote`,
 `recommended_score_fusion_signal=score_fusion_mean_rank`,
 `recommended_score_fusion_auroc=0.679`,
-`recommended_score_fusion_conformal_gate_passed=true`, and
+`recommended_score_fusion_conformal_gate_passed=true`,
+`recommended_score_fusion_release_gate_status=promote`, and
 `performance_score_ensemble_report=artifacts/truthfulqa_score_ensemble_report.json`.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
@@ -6137,6 +10809,18 @@ python benchmarks/verify_artifact_manifest.py \
 artifacts during direct manifest verification. Keep the default `1` for strictly
 serial timing comparisons; use the worker-sweep report to choose a local value
 for large release manifests.
+Use `audit_frontier_artifact_references.py` one level higher when the question is
+whether the docs' active frontier/product handoff references are actually
+materialized in the local checkout; it reports missing artifacts and verifies any
+referenced artifact manifests that exist, then emits ordered
+`recommended_actions` for regenerating and verifying missing handoff artifacts.
+Use repeated `--json-cache` arguments to inspect additional persisted JSON
+artifact caches, or `--no-json-cache` for a pure filesystem-only audit. The
+restore mode never rewrites existing files; it only writes references that were
+missing and had a valid cached JSON payload, with repo-local absolute paths
+normalized for portability. When restoring a child of an artifact manifest, a
+cache payload whose restored bytes would not match the manifest sha/size is
+reported as a digest mismatch rather than written.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:
@@ -6216,14 +10900,23 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/cache_worker_sweep_smoke.py`, and
 `benchmarks/registry_baseline_smoke.py`, plus
 `benchmarks/performance_baseline_smoke.py`,
+`benchmarks/product_promotion_contract_smoke.py`,
+`benchmarks/frontier_status_smoke.py`,
+`benchmarks/frontier_release_evidence_smoke.py`,
+`benchmarks/frontier_artifact_reference_smoke.py`,
+`benchmarks/frontier_queue_execution_smoke.py`,
 `benchmarks/product_trace_replay_smoke.py`, and
 `benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
-payloads to verify that direct gates, cache-profile gates, worker-count sweep
-decisions, INSIDE sampling sample-efficiency gates, and registry-backed
-baseline/ProductTrace replay/release gates pass acceptable candidates, reject bounded
-telemetry payloads where full traces are required, and catch expected regressions. They
-are stable enough for default local/CI checks because they do not load a model
-or measure machine speed. Use real `eval_truthfulqa.py --profile-json`
+payloads plus the checked-in v1.9 product handoff, the active v1.9/v7
+receipt-aware `77/77` evidence handoff, active frontier status, and active
+frontier doc references to verify that direct gates, cache-profile gates, worker-count sweep
+decisions, INSIDE sampling sample-efficiency gates, registry-backed baselines,
+the default promotion contract/evidence-handoff path, active frontier status, active frontier artifact
+references, promoted frontier release-evidence report tracks, ProductTrace
+replay, and release gates pass acceptable candidates, reject bounded telemetry
+payloads where full traces are required, and catch expected regressions. They are
+stable enough for default local/CI checks because they do not load a model or
+measure machine speed. Use real `eval_truthfulqa.py --profile-json`
 artifacts, `run_cache_profile_triplet.py`, or `run_inside_sampling_profile.py`
 before making actual runtime or sampling-cost claims.
 
@@ -6376,16 +11069,28 @@ python benchmarks/build_selected_fusion_artifacts.py \
   --scores gpt2=artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.json \
   --scores smollm2=artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json \
   --output-dir artifacts/e7-truthfulqa-trajectory-multimodel \
+  --confidence-signal nll_answer \
+  --max-high-confidence-accepted-false-rate 0.0 \
   --json artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json \
+  --artifact-manifest artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-manifest.json \
+  --registry artifacts/local-readiness-registry.json \
+  --name e7-truthfulqa-trajectory-selected-fusion-artifacts \
+  --version 0.1 \
   --quiet
 ```
 
 The committed build report writes `gpt2-selected-fusion-artifact.json` with
 `truth_proj,subspace_resid,eigenscore,maha_last,trajectory_convergence` and
 `smollm2-selected-fusion-artifact.json` with the geometry-only bundle. Both use
-`mean_rank` and alpha 0.1. A runtime recommendation can consume this build
-report with `--selected-fusion-artifact-report`; because this report has one
-artifact per trajectory source run, provide `--selected-fusion-run gpt2` or
+`mean_rank` and alpha 0.1. When a confidence signal is provided, the build report
+also stores a selected-artifact release gate so runtime recommendation and
+performance workflows can block promotion if the artifact accepts high-confidence
+false answers. The optional artifact manifest fingerprints the build report,
+per-run fusion artifacts, source selection report, and source score dumps, while
+the optional registry entry records release-gate counts and confidence-audit
+configuration. A runtime recommendation can consume this build report with
+`--selected-fusion-artifact-report`; because this report has one artifact per
+trajectory source run, provide `--selected-fusion-run gpt2` or
 `--selected-fusion-run smollm2` explicitly.
 
 ## `compare_transfer.py`

@@ -1,0 +1,58 @@
+{
+  "config": {
+    "min_confidence": 0.0
+  },
+  "metadata": {
+    "source_workflow": "metadata_slot_fact_extraction"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/artifact-manifest.json",
+    "records_jsonl": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/alignment-fact-review-records.jsonl",
+    "report": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/alignment-fact-review-report.json",
+    "review_corpus": "artifacts/improve-unresolved-citation-alignment/metadata-slot-fact-review-corpus/alignment-fact-review-corpus.json"
+  },
+  "schema_version": 1,
+  "scope": "Converts alignment-audit structured_fact_review_only candidates into review-gated QA rows. It does not promote verifier evidence.",
+  "source": {
+    "structured_fact_candidates": "artifacts/improve-unresolved-citation-alignment/metadata-slot-alignment-audit/structured-fact-candidates.jsonl"
+  },
+  "status": "ready_for_review",
+  "summary": {
+    "accepted_document_count": 8,
+    "by_property_hint": {
+      "country:P17": 2,
+      "description": 4,
+      "founded_by:P112": 1,
+      "has_part:P527": 1
+    },
+    "by_provider": {
+      "openalex": 2,
+      "source_family_catalog": 4,
+      "tesla": 1,
+      "worldbank": 1
+    },
+    "by_source_family": {
+      "official": 1,
+      "official_statistics": 1,
+      "reference": 4,
+      "scholarly": 2
+    },
+    "input_candidate_count": 22,
+    "skipped": {
+      "answer_value_matches_model_answer": 0,
+      "duplicate_candidate": 6,
+      "generic_value": 0,
+      "invalid_row": 0,
+      "low_confidence": 0,
+      "missing_required_fields": 0,
+      "non_review_usage": 0,
+      "property_value_invalid": 0,
+      "subject_not_in_evidence_span": 7,
+      "value_equals_subject": 1,
+      "value_not_in_evidence_span": 0
+    },
+    "skipped_count": 14,
+    "unique_candidate_count": 22
+  },
+  "workflow": "alignment_fact_review_corpus_builder"
+}

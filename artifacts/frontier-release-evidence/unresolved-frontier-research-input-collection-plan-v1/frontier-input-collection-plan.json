@@ -1,0 +1,90 @@
+{
+  "collection_requests": [],
+  "config": {
+    "review_contracts": [
+      "bound_command_template_values",
+      "valid_bound_commands",
+      "command_templates"
+    ],
+    "source_backed_contracts": [
+      "source_backed_numeric_bindings",
+      "source_backed_subject_bindings",
+      "source_backed_temporal_bindings",
+      "source_backed_mechanism_bindings",
+      "source_backed_entity_bindings"
+    ]
+  },
+  "covered_inputs": [],
+  "label_usage": {
+    "collection_requests_are_verifier_evidence": false,
+    "labels_copied_to_collection_requests": false,
+    "labels_used_for_collection_planning": false,
+    "model_answers_copied_to_collection_requests": false,
+    "planner_approves_bindings": false,
+    "planner_executes_commands": false
+  },
+  "metadata": {},
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/artifact-manifest.json",
+    "collection_requests": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-requests.jsonl",
+    "input_collection_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-collection-plan.json",
+    "review_requests": "artifacts/frontier-release-evidence/unresolved-frontier-research-input-collection-plan-v1/frontier-input-review-requests.jsonl"
+  },
+  "review_requests": [],
+  "schema_version": 1,
+  "scope": "Preflight collection plan for unbound frontier research-queue inputs. Requests are not verifier evidence and do not approve or execute the bound command plan.",
+  "source": {
+    "bound_command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
+    "bound_plan_status": "ready",
+    "bound_plan_summary": {
+      "action_ids": [
+        "improve_unresolved_citation_alignment"
+      ],
+      "binding_review_status_counts": {
+        "needs_review": 1
+      },
+      "bound_placeholder_count": 0,
+      "command_count": 3,
+      "command_status_counts": {
+        "ready": 1
+      },
+      "command_validation_issue_count": 0,
+      "entry_count": 1,
+      "evidence_route_counts": {
+        "citation_evidence": 1,
+        "source_family_acquisition": 1
+      },
+      "expected_output_count": 2,
+      "missing_command_template_count": 0,
+      "missing_input_count": 0,
+      "needs_input_entry_count": 0,
+      "placeholder_count": 0,
+      "ready_entry_count": 1,
+      "review_required_entry_count": 1,
+      "source_gap_ids": [],
+      "unbound_placeholder_count": 0
+    },
+    "bound_plan_workflow": "frontier_research_queue_bound_command_plan"
+  },
+  "status": "empty",
+  "summary": {
+    "action_ids": [],
+    "actionable_entry_count": 0,
+    "binding_review_status_counts": {
+      "needs_review": 1
+    },
+    "blocking_placeholder_count": 0,
+    "collection_family_counts": {},
+    "collection_request_count": 0,
+    "collection_request_ids": [],
+    "covered_input_count": 0,
+    "entry_count": 1,
+    "input_counts": {},
+    "review_family_counts": {},
+    "review_request_count": 0,
+    "review_request_ids": [],
+    "source_backed_request_count": 0,
+    "unbound_input_count": 0
+  },
+  "workflow": "frontier_research_queue_input_collection_plan"
+}

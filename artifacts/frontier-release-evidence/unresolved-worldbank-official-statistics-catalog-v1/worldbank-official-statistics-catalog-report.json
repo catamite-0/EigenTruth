@@ -1,0 +1,55 @@
+{
+  "config": {
+    "api_base_url": "https://api.worldbank.org/v2",
+    "include_aggregates": false,
+    "indicator": "SP.POP.TOTL",
+    "max_countries": null,
+    "max_pages": null,
+    "max_tasks": null,
+    "min_delay_seconds": 0.0,
+    "mrnev": 1,
+    "per_page": 300,
+    "source_family": "official_statistics",
+    "timeout_seconds": 20.0
+  },
+  "errors": [],
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "output_path": "artifacts/frontier-release-evidence/unresolved-worldbank-official-statistics-catalog-v1/worldbank-official-statistics-catalog.jsonl",
+  "schema_version": 1,
+  "source": {
+    "collection_tasks": "artifacts/frontier-release-evidence/unresolved-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl"
+  },
+  "status": "ready",
+  "summary": {
+    "country_metadata_page_count": 1,
+    "error_count": 0,
+    "page_count": 1,
+    "provider_counts": {
+      "worldbank": 217
+    },
+    "region_counts": {
+      "East Asia & Pacific": 37,
+      "Europe & Central Asia": 58,
+      "Latin America & Caribbean": 42,
+      "Middle East, North Africa, Afghanistan & Pakistan": 23,
+      "North America": 3,
+      "South Asia": 6,
+      "Sub-Saharan Africa": 48
+    },
+    "skipped_aggregate_count": 44,
+    "skipped_empty_value_count": 0,
+    "skipped_unknown_country_count": 4,
+    "source_document_count": 217,
+    "source_family_counts": {
+      "official_statistics": 217
+    },
+    "task_count": 1,
+    "task_source_family_counts": {
+      "official_statistics": 1
+    }
+  },
+  "workflow": "worldbank_source_family_catalog_adapter"
+}

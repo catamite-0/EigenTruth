@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "collection_tasks": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-source-family-catalog-collection-plan-v1/source-family-catalog-collection-tasks.jsonl",
+      "sha256": "1cd744174fee2fbaf5d41e08406ca55319e10ec8c6ccedecdc8662b66e95badc",
+      "size_bytes": 65576
+    },
+    "source_family_catalog": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "worldbank-official-statistics-catalog.jsonl",
+      "sha256": "ff6ab3fa72178adaf85bc1dc663cab381797ba2c07323a3cc7be273f48a4808c",
+      "size_bytes": 378137
+    },
+    "worldbank_catalog_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "worldbank-official-statistics-catalog-report.json",
+      "sha256": "aacf181c4c035d0fc8d7e7645a8b8912f1fc5d356031c36d80b504b47378c0c2",
+      "size_bytes": 1619
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "error_count": 0,
+    "model": "smollm2-l80",
+    "page_count": 1,
+    "source": "frontier-v4",
+    "source_document_count": 217,
+    "status": "ready",
+    "task_count": 1,
+    "workflow": "worldbank_source_family_catalog_adapter"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

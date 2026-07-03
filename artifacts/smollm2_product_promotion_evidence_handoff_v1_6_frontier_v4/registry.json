@@ -1,0 +1,66 @@
+{
+  "records": [
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "after_missing_metric_count": 0,
+        "artifact_manifest": "artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/artifact-manifest.json",
+        "before_missing_metric_count": 64,
+        "evidence_handoff_audit": "artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/product-promotion-contract-evidence-audit.json",
+        "evidence_scope": "local_frontier_budget_target_sweep_handoff",
+        "filled_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "action_gate",
+          "frontier_release_evidence",
+          "triple_audit",
+          "covered_fact_property"
+        ],
+        "release": "smollm2-v1.6-frontier-v4",
+        "required_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "triple_audit",
+          "covered_fact_property",
+          "action_gate",
+          "frontier_release_evidence"
+        ],
+        "resolved_missing_metric_count": 64,
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "workflow": "product_promotion_evidence_handoff_export"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-frontier-v4-evidence-handoff",
+      "path": "artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/product-promotion-contract-evidence-handoff.json",
+      "version": "0.4"
+    },
+    {
+      "artifact_type": "product_promotion_evidence_audit",
+      "metadata": {
+        "blocked_group_count": 0,
+        "enriched_contract": "artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/product-promotion-contract-evidence-handoff.json",
+        "evidence_scope": "local_frontier_budget_target_sweep_handoff",
+        "missing_metric_count": 0,
+        "recommended_action_ids": [],
+        "release": "smollm2-v1.6-frontier-v4",
+        "required_groups": [
+          "promotion",
+          "pre_generation",
+          "counterfactual",
+          "triple_audit",
+          "covered_fact_property",
+          "action_gate",
+          "frontier_release_evidence"
+        ],
+        "source_contract": "artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json",
+        "status": "promote",
+        "workflow": "product_promotion_evidence_handoff_audit"
+      },
+      "name": "smollm2-product-promotion-contract-v1-6-frontier-v4-evidence-handoff-audit",
+      "path": "artifacts/smollm2_product_promotion_evidence_handoff_v1_6_frontier_v4/product-promotion-contract-evidence-audit.json",
+      "version": "0.4"
+    }
+  ],
+  "schema_version": 1
+}

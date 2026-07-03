@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "abstention_stability_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "abstention-stability-report.json",
+      "sha256": "ea85b15884f238bbcd8787c639cd1219a81d3f5234cdddb18a7ca7fc18854f47",
+      "size_bytes": 168688
+    },
+    "input_score_records.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../../../truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.records.jsonl",
+      "sha256": "ca00ae6a2fa86fab0056d22e63b3f021047eb957ec7d7908195b288d3f27587f",
+      "size_bytes": 857544
+    },
+    "input_scores.smollm2-l80": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../../../../truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json",
+      "sha256": "a417279938bd6a153947ec43b39be0dc26206f0e0651aa85d8309310cfb14251",
+      "size_bytes": 3333
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "best_by": "correct_retention_lower_bound",
+    "runner": "eval_abstention_stability",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

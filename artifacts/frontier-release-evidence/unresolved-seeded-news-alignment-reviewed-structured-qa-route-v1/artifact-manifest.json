@@ -1,0 +1,72 @@
+{
+  "artifacts": {
+    "covered_fact_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "covered-facts-scores.json",
+      "sha256": "9aff9b00ed77acae589a61a28b6a4c103a876ba73688aaeb9759353263e25374",
+      "size_bytes": 34654
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-alignment-reviewed-source-family-qa-v1/source-family-qa-corpus.json",
+      "sha256": "e4a0b7ecd8094bdf014ebd8bcb74f75893d22389eea46c985914b901599cf896",
+      "size_bytes": 13077
+    },
+    "route_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-route-summary.json",
+      "sha256": "85a9b9d5005139122e586a84ec66f274e3893899a86749b0816e6275f7820e8c",
+      "size_bytes": 12753
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "e6225b4b7236de90276ea8e10b8b64d9b84e2a1005b070e46bc941ff6832f1b8",
+      "size_bytes": 96751
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "structured-qa-verifier-report.json",
+      "sha256": "157418383fd82245bd695c56c4f31e198e2a4f0ab28c9cc45b8eee0d70b3f135",
+      "size_bytes": 14512
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "alpha": 0.1,
+    "fact_group_count": 5,
+    "model": "smollm2-l80",
+    "n_false": 11,
+    "n_records": 22,
+    "n_true": 11,
+    "promotes_covered_facts_route": true,
+    "provider_count": 1,
+    "route": "structured_qa",
+    "score_name": "smollm2-l80-frontier-v4-alignment-reviewed-covered-facts",
+    "signal": "truth_proj",
+    "source": "frontier-v4",
+    "source_family_count": 1,
+    "status": "promote",
+    "structured_qa_decision_accuracy": 1.0,
+    "structured_qa_false_refuted_rate": 1.0,
+    "structured_qa_false_supported_rate": 0.0,
+    "workflow": "source_family_structured_qa_route_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

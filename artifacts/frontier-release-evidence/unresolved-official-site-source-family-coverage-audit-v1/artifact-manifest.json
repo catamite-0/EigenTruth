@@ -1,0 +1,52 @@
+{
+  "artifacts": {
+    "coverage_audit_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-coverage-audit.json",
+      "sha256": "c45838d45d15e8a4a411a3a0e4dde49d5010a55d92bf20c72708ad8a6dfe100a",
+      "size_bytes": 42891
+    },
+    "source_family_acquisition_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-family-acquisition-plan.jsonl",
+      "sha256": "440b8a7e3c26963f2f65efa24c1a4e93bca5617698abb15901ede17785c42c72",
+      "size_bytes": 179512
+    },
+    "source_family_adapter_results": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-official-site-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+      "sha256": "4aea192e4b981c340155a33b9a21b223ca83cb5f8328268abcf3912bb9cdbed2",
+      "size_bytes": 1451470
+    },
+    "source_family_requests": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-official-site-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl",
+      "sha256": "ab3fb8d4b5a8adf0d637a4bd6b17ec6ccc3cf641b5fad9a3048154cdb49e12ae",
+      "size_bytes": 346447
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "acquisition_plan_count": 172,
+    "model": "smollm2-l80",
+    "request_count": 260,
+    "source": "frontier-v4",
+    "status": "needs_catalog_expansion",
+    "workflow": "source_family_coverage_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

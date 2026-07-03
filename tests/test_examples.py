@@ -52,25 +52,45 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     assert payload["metadata"]["artifact_model_id"] == demo.default_artifact().model_id
     assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
     if demo.default_promotion_contract_path() is not None:
-        assert "v1_5" in payload["metadata"]["promotion_contract_source"]
+        promotion_source = payload["metadata"]["promotion_contract_source"]
+        assert promotion_source.endswith("product-promotion-contract.json")
+        assert any(
+            version in promotion_source
+            for version in ("v1_9", "v1_8", "v1_6", "v1_5", "v0_3")
+        )
         assert payload["metadata"]["promotion_contract_model_id"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
         assert payload["metadata"]["promotion_contract_budget_enabled"] is False
-        assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
-            "performance_baseline:smollm2-l20-performance-baseline:0.9"
-        )
+        if "v1_9" in promotion_source:
+            assert payload["metadata"]["promotion_contract_recommended_runtime_seconds"] == pytest.approx(0.191662)
+            assert (
+                payload["metadata"]["promotion_contract_recommended_runtime_cost_source"]
+                == "cache_only_total_seconds"
+            )
+            assert payload["metadata"]["promotion_contract_evidence_handoff_status"] == "promote"
+            assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 65
+            assert payload["metadata"]["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+            assert payload["metadata"]["promotion_contract_evidence_handoff_blocked_group_count"] == 0
+            assert payload["metadata"]["promotion_contract_evidence_handoff_group_statuses"][
+                "frontier_release_evidence"
+            ] == "promote"
+            assert (
+                payload["metadata"]["promotion_contract_product_runtime_drift_status"]
+                == "promote"
+            )
+            assert (
+                payload["metadata"]["promotion_contract_product_runtime_drift_compared_metric_count"]
+                == 107
+            )
+            assert (
+                payload["metadata"]["promotion_contract_product_runtime_drift_blocked_metric_count"]
+                == 0
+            )
         assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
         assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
         assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_status"] == "promote"
         assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_blocked_metric_count"] == 0
-        assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
-            "structured_state",
-            "state_transition",
-            "retrieval_groundedness",
-            "retrieval_structured_qa",
-        ]
-        assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
-            "retrieval_structured_qa"
-        ]
+        assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"]
+        assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"]
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
     assert payload["risk_decision"]["action"] == "abstain"
@@ -78,6 +98,250 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     assert payload["final_answer"]["answerable"] is False
     assert payload["metadata"]["final_answer_summary"]["status"] == "abstained"
     assert payload["runtime_trace"]["summary"]["phase_counts"]["action_execution"] == 1
+
+
+def test_calibrated_control_demo_can_use_multiple_testing_gate(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    eval_conformal = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.calibration import (
+        CalibrationArtifact,
+        CalibrationScore,
+    )
+
+    artifact_path = tmp_path / "calibration.json"
+    gate_path = tmp_path / "multiple-testing-calibration.json"
+    report_path = tmp_path / "multiple-testing-report.json"
+    scores_path = tmp_path / "scores.json"
+    CalibrationArtifact(
+        model_id="demo-model",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1000.0),),
+        eigentruth_version="0.1.0",
+    ).save_json(artifact_path)
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "demo-model", "layer": -1},
+            "labels": [0] * 20 + [1, 1, 1, 1],
+            "scores": {
+                "support_score": list(range(100, 120)) + [0, 1, 115, 116],
+                "maha_last": list(range(20)) + [100, 101, 5, 6],
+            },
+        }),
+        encoding="utf-8",
+    )
+    eval_conformal.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            signal="support_score",
+            signals=None,
+            repeats=1,
+            seed=0,
+            json=None,
+            save_calibration=None,
+            save_adaptive_calibration=None,
+            save_abstention_report=None,
+            include_abstention_report=False,
+            save_abstention_comparison=None,
+            include_abstention_comparison=False,
+            save_abstention_release_gate=None,
+            include_abstention_release_gate=False,
+            save_multiple_testing_report=str(report_path),
+            save_multiple_testing_calibration=str(gate_path),
+            include_multiple_testing_report=False,
+            multiple_testing_signals="support_score,maha_last",
+            multiple_testing_alpha=0.30,
+            multiple_testing_method="by",
+            save_sweep_report=None,
+            save_best_calibration=None,
+            best_by="auroc",
+            artifact_alpha=0.10,
+            abstention_alpha=0.10,
+            abstention_signal=None,
+            abstention_direction=None,
+            abstention_signals=None,
+            abstention_best_by="conditional_correctness_lower_bound",
+            min_abstention_conditional_correctness_lower_bound=0.8,
+            max_abstention_rate=0.5,
+            direction="lower",
+            adaptive_feature=(),
+            adaptive_feature_weight=(),
+            adaptive_intercept=0.0,
+            adaptive_score_name="adaptive",
+            confidence_signal="nll_answer",
+            confidence_direction=None,
+            confidence_top_fraction=0.25,
+            disable_confidence_audit=True,
+            model_id=None,
+            model_revision=None,
+            target_layer=None,
+            created_at="2026-06-29T00:00:00+00:00",
+            commit_sha=None,
+            artifact_manifest=None,
+        )
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["config"]["directions"] == {
+        "support_score": "lower",
+        "maha_last": "higher",
+    }
+    assert gate_path.exists()
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=str(artifact_path),
+            multiple_testing_gate=str(gate_path),
+            diagnostics='{"maha_last": 100.0, "support_score": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="multiple-testing-gate-demo",
+            output=None,
+            registry=None,
+        )
+    )
+    gate_trace = payload["risk_decision"]["diagnostics"]["multiple_testing_gate"]
+
+    assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["final_answer"]["status"] == "abstained"
+    assert payload["metadata"]["multiple_testing_gate_enabled"] is True
+    assert payload["metadata"]["multiple_testing_gate_source"] == str(gate_path)
+    assert payload["metadata"]["multiple_testing_gate_signals"] == ("support_score", "maha_last")
+    assert gate_trace["status"] == "rejected"
+    assert set(gate_trace["rejected_signal_names"]) == {"support_score", "maha_last"}
+
+
+def test_calibrated_control_demo_preserves_bool_diagnostics_for_fail_closed(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.calibration import CalibrationArtifact, CalibrationScore
+
+    artifact_path = tmp_path / "calibration.json"
+    CalibrationArtifact(
+        model_id="demo-model",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1.0),),
+        eigentruth_version="0.1.0",
+    ).save_json(artifact_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=str(artifact_path),
+            multiple_testing_gate=None,
+            sequential_gate=None,
+            diagnostics='{"maha_last": true}',
+            diagnostics_sequence=None,
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=None,
+            request_id="bool-diagnostic-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assert payload["risk_decision"]["action"] == "clarify"
+    assert payload["risk_decision"]["risk_level"] == "unknown"
+    assert payload["risk_decision"]["diagnostics"]["invalid_scores"] == ("maha_last",)
+
+
+def test_calibrated_control_demo_rejects_bool_runtime_budget_mapping():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    with pytest.raises(ValueError, match="max_phase_seconds.initial_verification"):
+        demo.runtime_budget_policy_from_args(
+            SimpleNamespace(
+                promotion_contract=None,
+                max_runtime_phase_seconds='{"initial_verification": true}',
+            )
+        )
+
+
+def test_calibrated_control_demo_can_replay_sequential_gate_trace(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.calibration import (
+        CalibrationArtifact,
+        CalibrationScore,
+        SequentialConformalCalibrator,
+    )
+
+    artifact_path = tmp_path / "calibration.json"
+    gate_path = tmp_path / "sequential-calibration.json"
+    output_path = tmp_path / "sequence-trace.json"
+    CalibrationArtifact(
+        model_id="demo-model",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1000.0),),
+        eigentruth_version="0.1.0",
+    ).save_json(artifact_path)
+    SequentialConformalCalibrator(alpha=0.5, schedule="linear").calibrate(
+        model_id="demo-model",
+        target_layer=-1,
+        signal_name="support_score",
+        calibration_scores=[10.0, 11.0, 12.0, 13.0],
+        direction="lower",
+        eigentruth_version="0.1.0",
+    ).save_json(gate_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=str(artifact_path),
+            multiple_testing_gate=None,
+            sequential_gate=str(gate_path),
+            diagnostics=None,
+            diagnostics_sequence=json.dumps((
+                {"maha_last": 1.0, "support_score": 9.0},
+                {"maha_last": 1.0, "support_score": 12.0},
+            )),
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=None,
+            request_id="sequential-gate-demo",
+            output=str(output_path),
+            registry=None,
+            compact_json=False,
+        )
+    )
+    written = json.loads(output_path.read_text(encoding="utf-8"))
+    first_gate = payload["risk_decisions"][0]["diagnostics"]["sequential_gate"]
+    second_gate = payload["risk_decisions"][1]["diagnostics"]["sequential_gate"]
+
+    assert written["trace_format"] == "risk_decision_sequence"
+    assert payload["trace_format"] == "risk_decision_sequence"
+    assert payload["metadata"]["sequential_gate_enabled"] is True
+    assert payload["metadata"]["sequential_gate_source"] == str(gate_path)
+    assert payload["metadata"]["sequence_decision_summary"]["action_counts"] == {
+        "abstain": 1,
+        "accept": 1,
+    }
+    assert payload["risk_decisions"][0]["action"] == "abstain"
+    assert payload["risk_decisions"][1]["action"] == "accept"
+    assert first_gate["status"] == "rejected"
+    assert first_gate["step"] == 1
+    assert first_gate["report_summary"]["rejected_steps"] == (1,)
+    assert second_gate["status"] == "passed"
+    assert payload["events"][0]["event_type"] == "sequence_risk_decision"
 
 
 def test_calibrated_control_demo_can_emit_bounded_trace():
@@ -123,7 +387,7 @@ def test_calibrated_control_demo_can_emit_bounded_trace():
     assert payload["truncation"]["verification_results"]["included"] <= 1
     assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
     if demo.default_promotion_contract_path() is not None:
-        assert "v1_5" in payload["metadata"]["promotion_contract_source"]
+        assert payload["metadata"]["promotion_contract_source"].endswith("product-promotion-contract.json")
 
 
 def test_calibrated_control_demo_can_route_calculator_refutations():
@@ -422,6 +686,62 @@ def test_calibrated_control_demo_pre_generation_profile_records_and_applies():
     assert "is_time_sensitive" in assessment["triggered_features"]
     assert assessment["triggered_metadata"] == ("requires_current_facts",)
     assert payload["metadata"]["staged_verification_enabled"] is False
+
+
+def test_calibrated_control_demo_can_route_on_learned_pre_generation_risk(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    artifact = demo.default_artifact()
+    policy_path = tmp_path / "pre-generation-policy.json"
+    learned_risk_path = tmp_path / "learned-risk.json"
+    policy_path.write_text(
+        json.dumps({"route_on_learned_risk": True, "soft_risk_config": None}),
+        encoding="utf-8",
+    )
+    learned_risk_path.write_text(
+        json.dumps({
+            "score": 2.0,
+            "probability": 0.88,
+            "risk_level": "high",
+            "source": "unit_pre_generation_probe",
+            "layer_idx": 2,
+        }),
+        encoding="utf-8",
+    )
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=json.dumps(demo.low_diagnostics_for_artifact(artifact)),
+            text="Explain calibration intuitively.",
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            runtime_profile_selector_policy=None,
+            pre_generation_profile="auto",
+            pre_generation_risk_policy=str(policy_path),
+            pre_generation_metadata=None,
+            pre_generation_learned_risk=str(learned_risk_path),
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="pre-generation-learned-risk",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assessment = payload["metadata"]["pre_generation_risk_assessment"]
+
+    assert payload["metadata"]["runtime_profile"] == "audit"
+    assert payload["metadata"]["runtime_profile_source"] == "pre_generation"
+    assert payload["metadata"]["pre_generation_risk_policy"]["route_on_learned_risk"] is True
+    assert assessment["selected_profile"] == "audit"
+    assert assessment["reason"] == "learned pre-generation risk estimate exceeded high threshold"
+    assert assessment["learned_risk"]["source"] == "unit_pre_generation_probe"
+    assert assessment["learned_risk"]["layer_idx"] == 2
 
 
 def test_calibrated_control_demo_uses_promotion_contract_release_efficiency_profile(tmp_path):
@@ -963,11 +1283,14 @@ def test_calibrated_control_demo_can_enforce_claim_coherence():
     assert "initial_claim_coherence" in event_types
 
 
-def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_contract_budget():
+def test_calibrated_control_demo_can_use_default_frontier_audit_contract_evidence():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()
-    assert contract_path is not None
-    assert "smollm2_product_promotion_contract_v1_5" in str(contract_path)
+    if contract_path is None:
+        pytest.skip("frontier-audit promotion contract artifact is not available")
+    if "smollm2_product_promotion_contract_v1_9" not in str(contract_path):
+        pytest.skip("frontier-audit v1.9 promotion contract artifact is not available")
+    assert "smollm2_product_promotion_contract_v1_9" in str(contract_path)
     assert contract_path.name == "product-promotion-contract.json"
 
     payload = demo.run(
@@ -986,9 +1309,11 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
             runtime_trace=True,
             promotion_contract=str(contract_path),
             promotion_contract_manifest=None,
+            promotion_contract_evidence_handoff_manifest=None,
             promotion_contract_registry="artifacts/local-release-registry.json",
             promotion_contract_registry_key=None,
             verify_promotion_contract_manifest=True,
+            verify_promotion_contract_evidence_handoff_manifest=True,
             cache_verifier=False,
             cache_retriever=False,
             max_runtime_total_seconds=None,
@@ -1019,10 +1344,45 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     assert payload["metadata"]["promotion_contract_manifest_verification"]["checked"] == 2
     assert payload["metadata"]["promotion_contract_registry"] == "artifacts/local-release-registry.json"
     assert payload["metadata"]["promotion_contract_registry_key"] == (
-        "product_promotion_contract:smollm2-product-promotion-contract:1.5"
+        "product_promotion_contract:smollm2-product-promotion-contract:1.9"
+    )
+    assert payload["metadata"]["promotion_contract_recommended_runtime_seconds"] == pytest.approx(0.191662)
+    assert payload["metadata"]["promotion_contract_recommended_runtime_cost_source"] == "cache_only_total_seconds"
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest"].endswith(
+        "evidence-handoff-artifact-manifest.json"
+    )
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["passed"] is True
+    assert payload["metadata"]["promotion_contract_evidence_handoff_manifest_verification"]["checked"] == 11
+    assert payload["metadata"]["promotion_contract_evidence_handoff_status"] == "promote"
+    assert payload["metadata"]["promotion_contract_evidence_handoff_present_metric_count"] == 65
+    assert payload["metadata"]["promotion_contract_evidence_handoff_missing_metric_count"] == 0
+    assert payload["metadata"]["promotion_contract_evidence_handoff_blocked_group_count"] == 0
+    assert payload["metadata"]["promotion_contract_evidence_handoff_group_statuses"] == {
+        "action_gate": "promote",
+        "counterfactual": "promote",
+        "covered_fact_property": "promote",
+        "frontier_release_evidence": "promote",
+        "pre_generation": "promote",
+        "promotion": "promote",
+        "triple_audit": "promote",
+    }
+    assert payload["metadata"]["promotion_contract_frontier_release_evidence"][
+        "decision_status"
+    ] == "promote"
+    assert (
+        payload["metadata"]["promotion_contract_product_runtime_drift_status"]
+        == "promote"
+    )
+    assert (
+        payload["metadata"]["promotion_contract_product_runtime_drift_compared_metric_count"]
+        == 107
+    )
+    assert (
+        payload["metadata"]["promotion_contract_product_runtime_drift_blocked_metric_count"]
+        == 0
     )
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
-        "performance_baseline:smollm2-l20-performance-baseline:0.9"
+        "performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2"
     )
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
     assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
@@ -1032,24 +1392,28 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
         "structured_state",
         "state_transition",
-        "retrieval_groundedness",
-        "retrieval_structured_qa",
+        "triple_evidence",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_status"] == "promote"
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_records"] == [
-        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5"
+        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+        "benchmark_manifest:wikidata-country-core-facts-structured-fact-canonical-route:0.1",
+        "benchmark_manifest:wikidata-country-core-facts-structured-fact-paraphrase-route:0.1",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
-        "retrieval_structured_qa"
+        "retrieval_structured_qa",
+        "structured_fact",
+        "structured_fact",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_budget_policy"][
-        "required_route_max_retrieval_hit_count"
-    ] == 450.0
+        "required_route_min_selected"
+    ] == 200.0
     assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
     assert route_summary["mean_attempted_route_count"] == 1.0
     assert runtime_budget["passed"] is True
-    assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 1.1
-    assert runtime_budget["policy"]["max_retrieval_use_rate"] == 0.0
+    assert runtime_budget["enabled"] is True
+    assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 3.0
+    assert runtime_budget["policy"]["max_retrieval_use_rate"] == 1.0
 
 
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):

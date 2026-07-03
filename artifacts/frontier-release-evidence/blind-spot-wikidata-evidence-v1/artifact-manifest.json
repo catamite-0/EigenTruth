@@ -1,0 +1,45 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_collection_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../blind-spot-evidence-collection-corpus-v1/blind-spot-evidence-collection-corpus.json",
+      "sha256": "f2376672e3f1cee20a8f5f88dc92ec0b494276e50966b5bce9c2e683bb9cf580",
+      "size_bytes": 1525558
+    },
+    "blind_spot_wikidata_evidence_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-evidence-fetch-report.json",
+      "sha256": "e70d7fbdaacc24c8922641e3bd404bb63a7e7cc40f495a375e1260835411c202",
+      "size_bytes": 265775
+    },
+    "wikidata_source_docs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-source-docs.jsonl",
+      "sha256": "ccab73bcb869741b2f0a98a8b41ca7a24e1c138b8e5b6bcc36c83b464516fa9d",
+      "size_bytes": 261438
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "document_count": 322,
+    "endpoint": "https://www.wikidata.org/w/api.php",
+    "fetched_at": "2026-06-30T15:54:55+00:00",
+    "request_count": 672,
+    "resolved_entity_count": 75,
+    "runner": "fetch_blind_spot_wikidata_evidence",
+    "status": "collected"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

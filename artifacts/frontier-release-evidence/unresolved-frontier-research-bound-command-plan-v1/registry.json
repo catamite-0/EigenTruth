@@ -1,0 +1,61 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/artifact-manifest.json",
+        "binding_review_status_counts": {
+          "needs_review": 2
+        },
+        "bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-binding-staging-v1/frontier-research-command-bindings-staged.json",
+        "command_count": 9,
+        "command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+        "entry_count": 2,
+        "manifest_summary": {
+          "artifact_count": 3,
+          "directory_count": 0,
+          "file_count": 3,
+          "missing_count": 0
+        },
+        "missing_input_count": 3,
+        "ready_entry_count": 1,
+        "review_required_entry_count": 2,
+        "status": "needs_inputs",
+        "unbound_placeholder_count": 2,
+        "workflow": "frontier_research_queue_bound_command_plan"
+      },
+      "name": "unresolved-frontier-research-bound-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/artifact-manifest.json",
+        "binding_review_status_counts": {
+          "needs_review": 1
+        },
+        "bindings": "artifacts/frontier-release-evidence/unresolved-frontier-research-binding-staging-v1/frontier-research-command-bindings-staged.json",
+        "command_count": 3,
+        "command_plan": "artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json",
+        "entry_count": 1,
+        "manifest_summary": {
+          "artifact_count": 3,
+          "directory_count": 0,
+          "file_count": 3,
+          "missing_count": 0
+        },
+        "missing_input_count": 0,
+        "ready_entry_count": 1,
+        "review_required_entry_count": 1,
+        "status": "ready",
+        "unbound_placeholder_count": 0,
+        "workflow": "frontier_research_queue_bound_command_plan"
+      },
+      "name": "unresolved-frontier-research-bound-command-plan",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-research-bound-command-plan-v1/frontier-research-bound-command-plan.json",
+      "version": "0.2"
+    }
+  ],
+  "schema_version": 1
+}

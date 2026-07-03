@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import math
+import re
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -56,18 +57,49 @@ from eigentruth.eval.score_dump import (
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
+    EvidenceAlignmentVerifier,
+    FactSelfConsistencyVerifier,
     GroundednessVerifier,
     JsonTraceCache,
     SelfConsistencyVerifier,
     TripleEvidenceVerifier,
     VerificationResult,
     VerificationStatus,
+    claim_features,
+    extract_claim_triples,
     stable_cache_key,
 )
 from eigentruth.verify.features import flag_value_enabled
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
+_EXACT_VERIFIER_CACHE_KEY_MODE = "exact"
+_TEXT_VERIFIER_CACHE_KEY_MODE = "semantic"
+_VERIFIER_CACHE_KEY_MODES = {
+    "qa_verifier": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "fact_verifier": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "groundedness_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "triple_evidence_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "retrieval_qa_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "retrieval_alignment_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "fact_selfcheck_verifiers": _TEXT_VERIFIER_CACHE_KEY_MODE,
+    "state_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
+    "transition_verifier": _EXACT_VERIFIER_CACHE_KEY_MODE,
+}
+_NUMBER_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9_])-?\d+(?:,\d{3})*(?:\.\d+)?%?")
+_SYNTHETIC_INDEX_NUMBER_RE = re.compile(
+    r"\b(?:item|record|example|sample)\s+-?\d+(?:,\d{3})*(?:\.\d+)?\b",
+    re.IGNORECASE,
+)
+_CITATION_TOKEN_RE = re.compile(r"\[[A-Za-z0-9_.:/#?=&%+-]{1,80}\]|(?:doi|arxiv):\S+", re.IGNORECASE)
+_RETRIEVAL_ALIGNMENT_POLICY = {
+    "min_keyword_overlap": 0.2,
+    "min_refute_keyword_overlap": 0.5,
+    "min_number_recall": 1.0,
+    "min_entity_recall": 0.5,
+    "require_cited_evidence": False,
+}
 
 
 @dataclass(frozen=True)
@@ -164,6 +196,23 @@ def _load_fact_verifier(path: Path | None) -> StructuredFactVerifier | None:
     if not isinstance(payload, Mapping):
         raise ValueError("fact corpus must be a JSON object or list.")
     return StructuredFactVerifier.from_corpus(payload)
+
+
+def _cache_stats_with_key_mode(stats: Mapping[str, Any], cache_key_mode: str) -> dict[str, Any]:
+    payload = dict(stats)
+    payload["cache_key_mode"] = cache_key_mode
+    return payload
+
+
+def _cache_key_modes_from_stats(cache_stats: Mapping[str, Any]) -> dict[str, str]:
+    modes = {}
+    for name, stats in cache_stats.items():
+        if not isinstance(stats, Mapping):
+            continue
+        mode = stats.get("cache_key_mode")
+        if mode is not None:
+            modes[str(name)] = str(mode)
+    return modes
 
 
 def _load_world_model_rules(raw: Any, *, field_name: str) -> tuple[Mapping[str, Any], ...]:
@@ -514,6 +563,7 @@ def _staged_skip_record(
         "qa": None,
         "state": None,
         "transition": None,
+        "fact_selfcheck": None,
         "selfcheck": None,
         "retrieval_hits": (),
         "route": _route_metadata(
@@ -539,8 +589,15 @@ def _verify_records(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    enable_fact_selfcheck: bool = False,
+    fact_selfcheck_min_samples: int | None = None,
+    fact_selfcheck_support_threshold: float | None = None,
+    fact_selfcheck_refute_threshold: float | None = None,
+    fact_selfcheck_early_stop: bool = False,
+    fact_selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     qa_verifier: QuestionAnswerVerifier | None = None,
     fact_verifier: StructuredFactVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
@@ -563,15 +620,41 @@ def _verify_records(
     verified = []
     state_checks = {} if state_checks is None else state_checks
     state_transitions = {} if state_transitions is None else state_transitions
-    qa_runner = CachedVerifier(qa_verifier) if qa_verifier is not None else None
-    fact_runner = CachedVerifier(fact_verifier) if fact_verifier is not None else None
+    qa_runner = (
+        CachedVerifier(qa_verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
+        if qa_verifier is not None
+        else None
+    )
+    fact_runner = (
+        CachedVerifier(fact_verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
+        if fact_verifier is not None
+        else None
+    )
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
     transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
     triple_evidence_runners: dict[str, CachedVerifier] = {}
     retrieval_qa_runners: dict[str, CachedVerifier] = {}
+    retrieval_alignment_runners: dict[str, CachedVerifier] = {}
     selfcheck_runners: dict[str, CachedVerifier] = {}
+    fact_selfcheck_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
+    resolved_fact_selfcheck_min_samples = (
+        selfcheck_min_samples if fact_selfcheck_min_samples is None else fact_selfcheck_min_samples
+    )
+    resolved_fact_selfcheck_support_threshold = (
+        selfcheck_support_threshold
+        if fact_selfcheck_support_threshold is None
+        else fact_selfcheck_support_threshold
+    )
+    resolved_fact_selfcheck_refute_threshold = (
+        selfcheck_refute_threshold
+        if fact_selfcheck_refute_threshold is None
+        else fact_selfcheck_refute_threshold
+    )
+    resolved_fact_selfcheck_max_samples = (
+        selfcheck_max_samples if fact_selfcheck_max_samples is None else fact_selfcheck_max_samples
+    )
 
     def groundedness_runner(
         evidence: Sequence[Mapping[str, Any] | str],
@@ -589,7 +672,8 @@ def _verify_records(
                     evidence=evidence,
                     refutations=refutations,
                     min_overlap=verifier_min_overlap,
-                )
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
             groundedness_runners[key] = runner
         return runner
@@ -600,6 +684,7 @@ def _verify_records(
         key = stable_cache_key({
             "evidence": evidence,
             "min_slot_coverage": triple_min_slot_coverage,
+            "refute_object_mismatch": triple_refute_object_mismatch,
         })
         runner = triple_evidence_runners.get(key)
         if runner is None:
@@ -607,7 +692,9 @@ def _verify_records(
                 TripleEvidenceVerifier(
                     evidence=evidence,
                     min_slot_coverage=triple_min_slot_coverage,
-                )
+                    refute_object_mismatch=triple_refute_object_mismatch,
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
             triple_evidence_runners[key] = runner
         return runner
@@ -623,8 +710,28 @@ def _verify_records(
             verifier = QuestionAnswerVerifier.from_corpus({"documents": documents})
         except ValueError:
             return None
-        runner = CachedVerifier(verifier)
+        runner = CachedVerifier(verifier, cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE)
         retrieval_qa_runners[key] = runner
+        return runner
+
+    def retrieval_alignment_runner(
+        documents: Sequence[Mapping[str, Any] | str],
+    ) -> CachedVerifier:
+        key = stable_cache_key({
+            "documents": documents,
+            "verifier": "EvidenceAlignmentVerifier",
+            "policy": _RETRIEVAL_ALIGNMENT_POLICY,
+        })
+        runner = retrieval_alignment_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                EvidenceAlignmentVerifier(
+                    evidence=documents,
+                    policy=_RETRIEVAL_ALIGNMENT_POLICY,
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
+            retrieval_alignment_runners[key] = runner
         return runner
 
     def selfcheck_runner(samples: Sequence[Mapping[str, Any] | str]) -> CachedVerifier:
@@ -648,9 +755,35 @@ def _verify_records(
                     refute_threshold=selfcheck_refute_threshold,
                     early_stop=selfcheck_early_stop,
                     max_samples=selfcheck_max_samples,
-                )
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
             )
             selfcheck_runners[key] = runner
+        return runner
+
+    def fact_selfcheck_runner(samples: Sequence[Mapping[str, Any] | str]) -> CachedVerifier:
+        key = stable_cache_key({
+            "samples": samples,
+            "min_samples": resolved_fact_selfcheck_min_samples,
+            "support_threshold": resolved_fact_selfcheck_support_threshold,
+            "refute_threshold": resolved_fact_selfcheck_refute_threshold,
+            "early_stop": fact_selfcheck_early_stop,
+            "max_samples": resolved_fact_selfcheck_max_samples,
+        })
+        runner = fact_selfcheck_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                FactSelfConsistencyVerifier(
+                    samples=samples,
+                    min_samples=resolved_fact_selfcheck_min_samples,
+                    support_threshold=resolved_fact_selfcheck_support_threshold,
+                    refute_threshold=resolved_fact_selfcheck_refute_threshold,
+                    early_stop=fact_selfcheck_early_stop,
+                    max_samples=resolved_fact_selfcheck_max_samples,
+                ),
+                cache_key_mode=_TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
+            fact_selfcheck_runners[key] = runner
         return runner
 
     def retriever_for(documents: Sequence[Mapping[str, Any] | str]) -> CachedRetriever:
@@ -693,7 +826,10 @@ def _verify_records(
         state_result = None
         transition_result = None
         selfcheck_result = None
+        fact_selfcheck_result = None
         retrieval_qa_result = None
+        retrieval_alignment_result = None
+        retrieval_triple_evidence_result = None
         attempted_routes = []
         route_timings: list[dict[str, Any]] = []
         if qa_runner is not None:
@@ -717,6 +853,7 @@ def _verify_records(
                     "qa": _verification_to_dict(qa_result),
                     "state": None,
                     "transition": None,
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -752,6 +889,7 @@ def _verify_records(
                     "fact": _verification_to_dict(fact_result),
                     "state": None,
                     "transition": None,
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -786,6 +924,7 @@ def _verify_records(
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": None,
                     "transition": _verification_to_dict(transition_result),
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -820,6 +959,7 @@ def _verify_records(
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": _verification_to_dict(state_result),
                     "transition": None,
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -855,6 +995,7 @@ def _verify_records(
                     "state": None if state_result is None else _verification_to_dict(state_result),
                     "transition": None,
                     "triple_evidence": _verification_to_dict(triple_result),
+                    "fact_selfcheck": None,
                     "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
@@ -880,7 +1021,29 @@ def _verify_records(
         selected_route = "groundedness"
         selected_verifier = "GroundednessVerifier"
         selected_retrieval_hits: tuple[Mapping[str, Any], ...] = ()
-        if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.selfcheck_samples:
+        if (
+            initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+            and enable_fact_selfcheck
+            and record.selfcheck_samples
+        ):
+            attempted_routes.append("fact_self_consistency")
+            fact_selfcheck_result = _timed_verify(
+                route_timings,
+                route="fact_self_consistency",
+                runner=fact_selfcheck_runner(record.selfcheck_samples),
+                claim=record.claim,
+            )
+            final = fact_selfcheck_result
+            selected_route = "fact_self_consistency"
+            selected_verifier = "FactSelfConsistencyVerifier"
+        if (
+            initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+            and final.status in {
+                VerificationStatus.INSUFFICIENT_EVIDENCE,
+                VerificationStatus.NOT_APPLICABLE,
+            }
+            and record.selfcheck_samples
+        ):
             attempted_routes.append("self_consistency")
             selfcheck_result = _timed_verify(
                 route_timings,
@@ -896,8 +1059,7 @@ def _verify_records(
                 VerificationStatus.INSUFFICIENT_EVIDENCE,
                 VerificationStatus.NOT_APPLICABLE,
             }:
-                selected_route = "self_consistency"
-                selected_verifier = "SelfConsistencyVerifier"
+                pass
             else:
                 final = initial if selfcheck_result is None else selfcheck_result
         if final.status in {
@@ -905,8 +1067,9 @@ def _verify_records(
             VerificationStatus.NOT_APPLICABLE,
         } and record.retrieval_documents:
             fixture_documents = _retrieval_document_payloads(record.retrieval_documents)
-            if fixture_documents:
-                runner = retrieval_qa_runner(fixture_documents)
+            fixture_qa_documents = _retrieval_qa_scope_documents(record, fixture_documents)
+            if fixture_qa_documents:
+                runner = retrieval_qa_runner(fixture_qa_documents)
                 if runner is not None:
                     attempted_routes.append("retrieval_structured_qa")
                     retrieval_qa_result = _timed_verify(
@@ -923,21 +1086,28 @@ def _verify_records(
                         final = retrieval_qa_result
                         selected_route = "retrieval_structured_qa"
                         selected_verifier = "QuestionAnswerVerifier"
-                        selected_retrieval_hits = fixture_documents
+                        selected_retrieval_hits = fixture_qa_documents
             hit_documents: tuple[Mapping[str, Any], ...] = ()
             if final.status in {
                 VerificationStatus.INSUFFICIENT_EVIDENCE,
                 VerificationStatus.NOT_APPLICABLE,
             }:
-                retriever = retriever_for(record.retrieval_documents)
-                hits = _timed_retrieve(
-                    route_timings,
-                    retriever=retriever,
-                    query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
-                    limit=retrieval_limit,
-                )
-                hit_documents = tuple(hit.to_dict() for hit in hits)
-            qa_documents = hit_documents
+                if _record_has_precomputed_retrieval_hits(record):
+                    hit_documents = _timed_precomputed_retrieve(
+                        route_timings,
+                        documents=record.retrieval_documents,
+                    )
+                else:
+                    retriever = retriever_for(record.retrieval_documents)
+                    hits = _timed_retrieve(
+                        route_timings,
+                        retriever=retriever,
+                        query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
+                        limit=retrieval_limit,
+                    )
+                    hit_documents = tuple(hit.to_dict() for hit in hits)
+            qa_documents = _retrieval_qa_scope_documents(record, hit_documents)
+            has_retrieval_alignment_signal = _record_has_retrieval_alignment_signal(record)
             if qa_documents and retrieval_qa_result is None:
                 runner = retrieval_qa_runner(qa_documents)
                 if runner is not None:
@@ -965,7 +1135,48 @@ def _verify_records(
                 if final.status in {
                     VerificationStatus.INSUFFICIENT_EVIDENCE,
                     VerificationStatus.NOT_APPLICABLE,
-                } and hit_documents:
+                } and hit_documents and enable_triple_evidence and _record_has_claim_triple(record):
+                    attempted_routes.append("retrieval_triple_evidence")
+                    retrieval_triple_evidence_result = _timed_verify(
+                        route_timings,
+                        route="retrieval_triple_evidence",
+                        runner=triple_evidence_runner(hit_documents),
+                        claim=record.claim,
+                    )
+                    if retrieval_triple_evidence_result.status in {
+                        VerificationStatus.SUPPORTED,
+                        VerificationStatus.REFUTED,
+                    }:
+                        final = retrieval_triple_evidence_result
+                        triple_result = retrieval_triple_evidence_result
+                        selected_route = "retrieval_triple_evidence"
+                        selected_verifier = "TripleEvidenceVerifier"
+                        selected_retrieval_hits = hit_documents
+                        _retag_retrieval_timings(
+                            route_timings,
+                            from_route="retrieval_groundedness",
+                            to_route="retrieval_triple_evidence",
+                        )
+                if final.status in {
+                    VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    VerificationStatus.NOT_APPLICABLE,
+                } and hit_documents and has_retrieval_alignment_signal:
+                    attempted_routes.append("retrieval_groundedness")
+                    retrieval_alignment_result = _timed_verify(
+                        route_timings,
+                        route="retrieval_groundedness",
+                        runner=retrieval_alignment_runner(hit_documents),
+                        claim=record.claim,
+                        context={"statement": record.metadata.get("statement", {})},
+                    )
+                    selected_route = "retrieval_groundedness"
+                    selected_verifier = "EvidenceAlignmentVerifier"
+                    selected_retrieval_hits = hit_documents
+                    final = retrieval_alignment_result
+                if final.status in {
+                    VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    VerificationStatus.NOT_APPLICABLE,
+                } and hit_documents and not has_retrieval_alignment_signal:
                     attempted_routes.append("retrieval_groundedness")
                     final_evidence = tuple(record.initial_evidence) + hit_documents
                     final = _timed_verify(
@@ -995,8 +1206,17 @@ def _verify_records(
             "state": None if state_result is None else _verification_to_dict(state_result),
             "transition": None if transition_result is None else _verification_to_dict(transition_result),
             "triple_evidence": None if triple_result is None else _verification_to_dict(triple_result),
+            "fact_selfcheck": None if fact_selfcheck_result is None else _verification_to_dict(fact_selfcheck_result),
             "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
             "retrieval_qa": None if retrieval_qa_result is None else _verification_to_dict(retrieval_qa_result),
+            "retrieval_triple_evidence": (
+                None
+                if retrieval_triple_evidence_result is None
+                else _verification_to_dict(retrieval_triple_evidence_result)
+            ),
+            "retrieval_alignment": (
+                None if retrieval_alignment_result is None else _verification_to_dict(retrieval_alignment_result)
+            ),
             "retrieval_hits": selected_retrieval_hits,
             "route": _route_metadata(
                 selected_route=selected_route,
@@ -1008,21 +1228,61 @@ def _verify_records(
             "metadata": _record_metadata(record, stage_payload),
         })
     if cache_stats is not None:
-        qa_stats = {} if qa_runner is None else qa_runner.stats.to_dict()
-        fact_stats = {} if fact_runner is None else fact_runner.stats.to_dict()
-        state_stats = {} if state_runner is None else state_runner.stats.to_dict()
-        transition_stats = {} if transition_runner is None else transition_runner.stats.to_dict()
-        groundedness_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in groundedness_runners.values())
+        qa_stats = (
+            {}
+            if qa_runner is None
+            else _cache_stats_with_key_mode(
+                qa_runner.stats.to_dict(),
+                _TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
         )
-        triple_evidence_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in triple_evidence_runners.values())
+        fact_stats = (
+            {}
+            if fact_runner is None
+            else _cache_stats_with_key_mode(
+                fact_runner.stats.to_dict(),
+                _TEXT_VERIFIER_CACHE_KEY_MODE,
+            )
         )
-        retrieval_qa_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in retrieval_qa_runners.values())
+        state_stats = (
+            {}
+            if state_runner is None
+            else _cache_stats_with_key_mode(
+                state_runner.stats.to_dict(),
+                _EXACT_VERIFIER_CACHE_KEY_MODE,
+            )
         )
-        selfcheck_stats = combine_cache_stats(
-            *(runner.stats.to_dict() for runner in selfcheck_runners.values())
+        transition_stats = (
+            {}
+            if transition_runner is None
+            else _cache_stats_with_key_mode(
+                transition_runner.stats.to_dict(),
+                _EXACT_VERIFIER_CACHE_KEY_MODE,
+            )
+        )
+        groundedness_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in groundedness_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        triple_evidence_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in triple_evidence_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        retrieval_qa_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in retrieval_qa_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        retrieval_alignment_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in retrieval_alignment_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        selfcheck_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in selfcheck_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
+        )
+        fact_selfcheck_stats = _cache_stats_with_key_mode(
+            combine_cache_stats(*(runner.stats.to_dict() for runner in fact_selfcheck_runners.values())),
+            _TEXT_VERIFIER_CACHE_KEY_MODE,
         )
         retriever_stats = combine_cache_stats(*(retriever.stats.to_dict() for retriever in retrievers.values()))
         cache_stats.update({
@@ -1042,9 +1302,17 @@ def _verify_records(
                 **retrieval_qa_stats,
                 "instances": len(retrieval_qa_runners),
             },
+            "retrieval_alignment_verifiers": {
+                **retrieval_alignment_stats,
+                "instances": len(retrieval_alignment_runners),
+            },
             "selfcheck_verifiers": {
                 **selfcheck_stats,
                 "instances": len(selfcheck_runners),
+            },
+            "fact_selfcheck_verifiers": {
+                **fact_selfcheck_stats,
+                "instances": len(fact_selfcheck_runners),
             },
             "retrievers": {
                 **retriever_stats,
@@ -1057,7 +1325,9 @@ def _verify_records(
                 groundedness_stats,
                 triple_evidence_stats,
                 retrieval_qa_stats,
+                retrieval_alignment_stats,
                 selfcheck_stats,
+                fact_selfcheck_stats,
                 retriever_stats,
             ),
         })
@@ -1072,6 +1342,8 @@ def _record_has_state_check(record: ClaimEvidenceRecord, state_checks: Mapping[s
 
 
 def _record_has_triple_evidence(record: ClaimEvidenceRecord) -> bool:
+    if not record.initial_evidence:
+        return False
     metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
     if flag_value_enabled(metadata.get("requires_triple_audit")):
         return True
@@ -1084,6 +1356,75 @@ def _record_has_triple_evidence(record: ClaimEvidenceRecord) -> bool:
             for key in ("has_number", "has_citation", "is_time_sensitive")
         )
     return False
+
+
+def _record_has_claim_triple(record: ClaimEvidenceRecord) -> bool:
+    try:
+        return bool(extract_claim_triples(record.claim))
+    except ValueError:
+        return False
+
+
+def _record_has_precomputed_retrieval_hits(record: ClaimEvidenceRecord) -> bool:
+    if not record.retrieval_documents:
+        return False
+    retrieval = record.metadata.get("retrieval")
+    if not isinstance(retrieval, Mapping):
+        return False
+    if flag_value_enabled(retrieval.get("use_precomputed_hits")):
+        n_hits = _non_negative_int(retrieval.get("n_hits"))
+        return n_hits is None or n_hits > 0
+    query_field = str(retrieval.get("query_field", "")).strip()
+    if query_field != "triple_slot":
+        return False
+    n_hits = _non_negative_int(retrieval.get("n_hits"))
+    if n_hits is not None and n_hits <= 0:
+        return False
+    return bool(retrieval.get("query") or retrieval.get("queries") or retrieval.get("query_plan"))
+
+
+def _record_has_retrieval_alignment_signal(record: ClaimEvidenceRecord) -> bool:
+    metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
+    features = metadata.get("features", {})
+    if isinstance(features, Mapping) and any(
+        flag_value_enabled(features.get(key))
+        for key in (
+            "has_number",
+            "has_citation",
+            "has_negation",
+            "is_time_sensitive",
+            "has_named_entity_hint",
+        )
+    ):
+        return True
+    inferred_features = claim_features(record.claim.text)
+    if (
+        flag_value_enabled(inferred_features.get("has_number"))
+        and _has_fact_slot_number_signal(record.claim.text)
+    ):
+        return True
+    if any(flag_value_enabled(inferred_features.get(key)) for key in ("has_citation", "is_time_sensitive")):
+        return True
+    statement = record.metadata.get("statement", {})
+    answer = ""
+    if isinstance(statement, Mapping):
+        answer = str(statement.get("answer", "")).strip()
+    if not answer:
+        answer = str(metadata.get("answer", "")).strip()
+    return bool(_NUMBER_TOKEN_RE.search(answer) or _CITATION_TOKEN_RE.search(answer))
+
+
+def _has_fact_slot_number_signal(text: str) -> bool:
+    matches = tuple(_NUMBER_TOKEN_RE.finditer(str(text)))
+    if not matches:
+        return False
+    synthetic_spans = tuple(_SYNTHETIC_INDEX_NUMBER_RE.finditer(str(text)))
+    if not synthetic_spans:
+        return True
+    return any(
+        not any(span.start() <= match.start() and match.end() <= span.end() for span in synthetic_spans)
+        for match in matches
+    )
 
 
 def _retrieval_document_payloads(
@@ -1112,6 +1453,53 @@ def _retrieval_document_payloads(
             "metadata": dict(item.get("metadata", {})),
         })
     return tuple(payloads)
+
+
+def _retrieval_qa_scope_documents(
+    record: ClaimEvidenceRecord,
+    documents: Sequence[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    """Filter target-specific QA documents to their source score row."""
+    scope_indexes = _record_scope_indexes(record)
+    scoped = []
+    for document in documents:
+        metadata = document.get("metadata")
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        if not _is_target_specific_qa_document(metadata):
+            scoped.append(document)
+            continue
+        source_index = _non_negative_int(metadata.get("source_record_index"))
+        if source_index is not None and source_index in scope_indexes:
+            scoped.append(document)
+    return tuple(scoped)
+
+
+def _is_target_specific_qa_document(metadata: Mapping[str, Any]) -> bool:
+    correction_scope = str(metadata.get("correction_scope") or "").strip()
+    if correction_scope == "target_specific_covered_fact_candidate":
+        return True
+    if correction_scope.startswith("target_specific_"):
+        return True
+    return _non_negative_int(metadata.get("source_record_index")) is not None
+
+
+def _record_scope_indexes(record: ClaimEvidenceRecord) -> frozenset[int]:
+    indexes: set[int] = set()
+    _add_scope_index(indexes, record.metadata.get("index"))
+    statement = record.metadata.get("statement")
+    if isinstance(statement, Mapping):
+        for key in ("record_index", "source_index", "row_index", "index"):
+            _add_scope_index(indexes, statement.get(key))
+    claim_metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
+    for key in ("record_index", "source_index", "row_index", "index"):
+        _add_scope_index(indexes, claim_metadata.get(key))
+    return frozenset(indexes)
+
+
+def _add_scope_index(indexes: set[int], value: Any) -> None:
+    index = _non_negative_int(value)
+    if index is not None:
+        indexes.add(index)
 
 
 def _state_context(record: ClaimEvidenceRecord, state_checks: Mapping[str, Any]) -> dict[str, Any]:
@@ -1286,6 +1674,24 @@ def _timed_retrieve(
         "operation": "retrieve",
         "duration_seconds": duration,
         "hit_count": len(hits),
+    })
+    return hits
+
+
+def _timed_precomputed_retrieve(
+    route_timings: list[dict[str, Any]],
+    *,
+    documents: Sequence[Mapping[str, Any] | str],
+) -> tuple[Mapping[str, Any], ...]:
+    started = perf_counter()
+    hits = _retrieval_document_payloads(documents)
+    duration = perf_counter() - started
+    route_timings.append({
+        "route": "retrieval_groundedness",
+        "operation": "retrieve",
+        "duration_seconds": duration,
+        "hit_count": len(hits),
+        "source": "precomputed_fixture",
     })
     return hits
 
@@ -1566,6 +1972,62 @@ def _selfcheck_execution_summary(verified_records: Sequence[Mapping[str, Any]]) 
         "processed_samples": processed_samples,
         "skipped_samples": skipped_samples,
         "processing_rate": _safe_div(processed_samples, considered_samples),
+    }
+
+
+def _fact_selfcheck_execution_summary(verified_records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize fact-level self-consistency sample and triple processing."""
+    records_with_fact_selfcheck = 0
+    early_stopped_records = 0
+    available_samples = 0
+    considered_samples = 0
+    processed_samples = 0
+    skipped_samples = 0
+    claim_triples = 0
+    sample_triples = 0
+    supported_triples = 0
+    refuted_triples = 0
+    insufficient_triples = 0
+    not_applicable_records = 0
+    for record in verified_records:
+        payload = record.get("fact_selfcheck")
+        if not isinstance(payload, Mapping):
+            continue
+        metadata = payload.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        records_with_fact_selfcheck += 1
+        considered = _non_negative_int(metadata.get("sample_count"))
+        available = _non_negative_int(metadata.get("available_sample_count"))
+        processed = _non_negative_int(metadata.get("processed_sample_count"))
+        skipped = _non_negative_int(metadata.get("skipped_sample_count"))
+        considered_samples += considered if considered is not None else 0
+        available_samples += available if available is not None else (considered or 0)
+        processed_samples += processed if processed is not None else (considered or 0)
+        skipped_samples += skipped if skipped is not None else 0
+        if metadata.get("early_stop"):
+            early_stopped_records += 1
+        claim_triples += _non_negative_int(metadata.get("triple_count")) or 0
+        sample_triples += _non_negative_int(metadata.get("sample_triple_count")) or 0
+        supported_triples += _non_negative_int(metadata.get("supported_triple_count")) or 0
+        refuted_triples += _non_negative_int(metadata.get("refuted_triple_count")) or 0
+        insufficient_triples += _non_negative_int(metadata.get("insufficient_triple_count")) or 0
+        if payload.get("status") == VerificationStatus.NOT_APPLICABLE.value:
+            not_applicable_records += 1
+    return {
+        "executed_records": records_with_fact_selfcheck,
+        "early_stopped_records": early_stopped_records,
+        "not_applicable_records": not_applicable_records,
+        "available_samples": available_samples,
+        "considered_samples": considered_samples,
+        "processed_samples": processed_samples,
+        "skipped_samples": skipped_samples,
+        "processing_rate": _safe_div(processed_samples, considered_samples),
+        "claim_triple_count": claim_triples,
+        "sample_triple_count": sample_triples,
+        "supported_triple_count": supported_triples,
+        "refuted_triple_count": refuted_triples,
+        "insufficient_triple_count": insufficient_triples,
     }
 
 
@@ -1944,8 +2406,15 @@ def _verification_trace_cache_key(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    enable_fact_selfcheck: bool,
+    fact_selfcheck_min_samples: int,
+    fact_selfcheck_support_threshold: float,
+    fact_selfcheck_refute_threshold: float,
+    fact_selfcheck_early_stop: bool,
+    fact_selfcheck_max_samples: int | None,
     enable_triple_evidence: bool,
     triple_min_slot_coverage: float,
+    triple_refute_object_mismatch: bool,
     min_world_model_confidence: float,
     staged_verification: bool,
     staged_alpha: float,
@@ -1955,7 +2424,7 @@ def _verification_trace_cache_key(
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v4",
+        "builder": "eval_verifier_ensemble:verified_records:v8",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -1974,6 +2443,7 @@ def _verification_trace_cache_key(
         "verifier": {
             "min_overlap": float(verifier_min_overlap),
         },
+        "verifier_cache_key_modes": dict(_VERIFIER_CACHE_KEY_MODES),
         "retriever": {
             "type": "InMemoryRetriever",
             "min_overlap": float(retriever_min_overlap),
@@ -1988,10 +2458,25 @@ def _verification_trace_cache_key(
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
         },
+        "fact_selfcheck_verifier": {
+            "type": "FactSelfConsistencyVerifier",
+            "enabled": bool(enable_fact_selfcheck),
+            "min_samples": int(fact_selfcheck_min_samples),
+            "support_threshold": float(fact_selfcheck_support_threshold),
+            "refute_threshold": float(fact_selfcheck_refute_threshold),
+            "early_stop": bool(fact_selfcheck_early_stop),
+            "max_samples": fact_selfcheck_max_samples,
+        },
         "triple_evidence_verifier": {
             "type": "TripleEvidenceVerifier",
             "enabled": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+            "refute_object_mismatch": bool(triple_refute_object_mismatch),
+        },
+        "retrieval_alignment_verifier": {
+            "type": "EvidenceAlignmentVerifier",
+            "enabled_for_numeric_or_cited_answers": True,
+            "policy": dict(_RETRIEVAL_ALIGNMENT_POLICY),
         },
         "transition_verifier": {
             "type": "StateTransitionVerifier",
@@ -2161,8 +2646,15 @@ def build_verifier_ensemble_report(
     selfcheck_refute_threshold: float = 0.50,
     selfcheck_early_stop: bool = False,
     selfcheck_max_samples: int | None = None,
+    enable_fact_selfcheck: bool = False,
+    fact_selfcheck_min_samples: int | None = None,
+    fact_selfcheck_support_threshold: float | None = None,
+    fact_selfcheck_refute_threshold: float | None = None,
+    fact_selfcheck_early_stop: bool = False,
+    fact_selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
+    triple_refute_object_mismatch: bool = False,
     min_world_model_confidence: float = 0.0,
     verification_cache_dir: Path | None = None,
     staged_verification: bool = False,
@@ -2200,6 +2692,34 @@ def build_verifier_ensemble_report(
         raise ValueError("selfcheck_refute_threshold must be in [0, 1].")
     if selfcheck_max_samples is not None and selfcheck_max_samples < selfcheck_min_samples:
         raise ValueError("selfcheck_max_samples must be >= selfcheck_min_samples when set.")
+    resolved_fact_selfcheck_min_samples = (
+        selfcheck_min_samples if fact_selfcheck_min_samples is None else int(fact_selfcheck_min_samples)
+    )
+    resolved_fact_selfcheck_support_threshold = (
+        selfcheck_support_threshold
+        if fact_selfcheck_support_threshold is None
+        else float(fact_selfcheck_support_threshold)
+    )
+    resolved_fact_selfcheck_refute_threshold = (
+        selfcheck_refute_threshold
+        if fact_selfcheck_refute_threshold is None
+        else float(fact_selfcheck_refute_threshold)
+    )
+    resolved_fact_selfcheck_max_samples = (
+        selfcheck_max_samples if fact_selfcheck_max_samples is None else int(fact_selfcheck_max_samples)
+    )
+    if resolved_fact_selfcheck_min_samples < 1:
+        raise ValueError("fact_selfcheck_min_samples must be >= 1.")
+    if not (0.0 <= resolved_fact_selfcheck_support_threshold <= 1.0):
+        raise ValueError("fact_selfcheck_support_threshold must be in [0, 1].")
+    if not (0.0 <= resolved_fact_selfcheck_refute_threshold <= 1.0):
+        raise ValueError("fact_selfcheck_refute_threshold must be in [0, 1].")
+    if (
+        resolved_fact_selfcheck_max_samples is not None
+        and resolved_fact_selfcheck_max_samples < resolved_fact_selfcheck_min_samples
+    ):
+        raise ValueError("fact_selfcheck_max_samples must be >= fact_selfcheck_min_samples when set.")
+    fact_selfcheck_early_stop = bool(fact_selfcheck_early_stop)
     if not (0.0 <= triple_min_slot_coverage <= 1.0):
         raise ValueError("triple_min_slot_coverage must be in [0, 1].")
     if not (0.0 <= min_world_model_confidence <= 1.0):
@@ -2263,6 +2783,7 @@ def build_verifier_ensemble_report(
     any_state_enabled = False
     any_transition_enabled = False
     any_selfcheck_enabled = False
+    any_fact_selfcheck_enabled = False
     any_triple_evidence_enabled = False
     any_fact_enabled = fact_verifier is not None
     verified_record_counts: dict[str, int] = {}
@@ -2305,9 +2826,14 @@ def build_verifier_ensemble_report(
             any_state_enabled = any_state_enabled or state_enabled
             selfcheck_enabled = any(record.selfcheck_samples for record in records)
             any_selfcheck_enabled = any_selfcheck_enabled or selfcheck_enabled
+            fact_selfcheck_enabled = bool(enable_fact_selfcheck and selfcheck_enabled)
+            any_fact_selfcheck_enabled = any_fact_selfcheck_enabled or fact_selfcheck_enabled
             triple_evidence_enabled = bool(
                 enable_triple_evidence
-                and any(_record_has_triple_evidence(record) for record in records)
+                and (
+                    any(_record_has_triple_evidence(record) for record in records)
+                    or any(record.retrieval_documents and _record_has_claim_triple(record) for record in records)
+                )
             )
             any_triple_evidence_enabled = any_triple_evidence_enabled or triple_evidence_enabled
             transition_verifier = (
@@ -2348,8 +2874,15 @@ def build_verifier_ensemble_report(
                 selfcheck_refute_threshold=selfcheck_refute_threshold,
                 selfcheck_early_stop=selfcheck_early_stop,
                 selfcheck_max_samples=selfcheck_max_samples,
+                enable_fact_selfcheck=bool(enable_fact_selfcheck),
+                fact_selfcheck_min_samples=resolved_fact_selfcheck_min_samples,
+                fact_selfcheck_support_threshold=resolved_fact_selfcheck_support_threshold,
+                fact_selfcheck_refute_threshold=resolved_fact_selfcheck_refute_threshold,
+                fact_selfcheck_early_stop=fact_selfcheck_early_stop,
+                fact_selfcheck_max_samples=resolved_fact_selfcheck_max_samples,
                 enable_triple_evidence=bool(enable_triple_evidence),
                 triple_min_slot_coverage=float(triple_min_slot_coverage),
+                triple_refute_object_mismatch=bool(triple_refute_object_mismatch),
                 min_world_model_confidence=float(min_world_model_confidence),
                 staged_verification=stage_policy is not None,
                 staged_alpha=float(staged_alpha),
@@ -2378,8 +2911,15 @@ def build_verifier_ensemble_report(
                     selfcheck_refute_threshold=selfcheck_refute_threshold,
                     selfcheck_early_stop=selfcheck_early_stop,
                     selfcheck_max_samples=selfcheck_max_samples,
+                    enable_fact_selfcheck=bool(enable_fact_selfcheck),
+                    fact_selfcheck_min_samples=resolved_fact_selfcheck_min_samples,
+                    fact_selfcheck_support_threshold=resolved_fact_selfcheck_support_threshold,
+                    fact_selfcheck_refute_threshold=resolved_fact_selfcheck_refute_threshold,
+                    fact_selfcheck_early_stop=fact_selfcheck_early_stop,
+                    fact_selfcheck_max_samples=resolved_fact_selfcheck_max_samples,
                     enable_triple_evidence=bool(enable_triple_evidence),
                     triple_min_slot_coverage=float(triple_min_slot_coverage),
+                    triple_refute_object_mismatch=bool(triple_refute_object_mismatch),
                     qa_verifier=qa_verifier,
                     fact_verifier=fact_verifier,
                     state_verifier=state_verifier,
@@ -2402,7 +2942,7 @@ def build_verifier_ensemble_report(
                             "cache_stats": dict(run_cache_stats),
                         },
                         metadata={
-                            "builder": "eval_verifier_ensemble:verified_records:v4",
+                            "builder": "eval_verifier_ensemble:verified_records:v7",
                             "name": name,
                             "signal": signal,
                             "material": trace_material,
@@ -2440,6 +2980,7 @@ def build_verifier_ensemble_report(
                 for alpha in alphas
             }
             selfcheck_execution = _selfcheck_execution_summary(verified_records)
+            fact_selfcheck_execution = _fact_selfcheck_execution_summary(verified_records)
             staged_execution = _staged_verification_summary(
                 verified_records,
                 enabled=stage_policy is not None,
@@ -2455,6 +2996,7 @@ def build_verifier_ensemble_report(
                 "config": dump["config"],
                 "signal": signal,
                 "direction": resolved_direction,
+                "verifier_cache_key_modes": _cache_key_modes_from_stats(run_cache_stats),
                 "n_total": int(labels.numel()),
                 "n_true": int((labels == 0).sum().item()),
                 "n_false": int((labels == 1).sum().item()),
@@ -2495,6 +3037,21 @@ def build_verifier_ensemble_report(
                         1 for record in verified_records
                         if record.get("retrieval_qa") is not None
                         and record["retrieval_qa"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                },
+                "retrieval_alignment": {
+                    "enabled": any(record.get("retrieval_alignment") is not None for record in verified_records),
+                    "records_with_signal": sum(
+                        1 for record in records
+                        if _record_has_retrieval_alignment_signal(record)
+                    ),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("retrieval_alignment") is not None
+                        and record["retrieval_alignment"]["status"] in {
                             VerificationStatus.SUPPORTED.value,
                             VerificationStatus.REFUTED.value,
                         }
@@ -2547,13 +3104,38 @@ def build_verifier_ensemble_report(
                     ),
                     **selfcheck_execution,
                 },
+                "fact_selfcheck_verifier": {
+                    "type": "FactSelfConsistencyVerifier",
+                    "enabled": fact_selfcheck_enabled,
+                    "requested": bool(enable_fact_selfcheck),
+                    "min_samples": resolved_fact_selfcheck_min_samples,
+                    "support_threshold": resolved_fact_selfcheck_support_threshold,
+                    "refute_threshold": resolved_fact_selfcheck_refute_threshold,
+                    "early_stop": bool(fact_selfcheck_early_stop),
+                    "max_samples": resolved_fact_selfcheck_max_samples,
+                    "records_with_samples": sum(1 for record in records if record.selfcheck_samples),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("fact_selfcheck") is not None
+                        and record["fact_selfcheck"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                    **fact_selfcheck_execution,
+                },
                 "triple_evidence_verifier": {
                     "type": "TripleEvidenceVerifier",
                     "enabled": triple_evidence_enabled,
                     "min_slot_coverage": float(triple_min_slot_coverage),
+                    "refute_object_mismatch": bool(triple_refute_object_mismatch),
                     "records_with_triple_route": sum(
                         1 for record in records
                         if _record_has_triple_evidence(record)
+                    ),
+                    "records_with_retrieval_triple_route": sum(
+                        1 for record in records
+                        if record.retrieval_documents and _record_has_claim_triple(record)
                     ),
                     "decided_records": sum(
                         1 for record in verified_records
@@ -2615,6 +3197,7 @@ def build_verifier_ensemble_report(
         "verifier": {
             "type": "GroundednessVerifier",
             "min_overlap": verifier_min_overlap,
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "selfcheck_verifier": {
             "type": "SelfConsistencyVerifier",
@@ -2625,22 +3208,38 @@ def build_verifier_ensemble_report(
             "refute_threshold": selfcheck_refute_threshold,
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
+        },
+        "fact_selfcheck_verifier": {
+            "type": "FactSelfConsistencyVerifier",
+            "enabled": any_fact_selfcheck_enabled,
+            "requested": bool(enable_fact_selfcheck),
+            "min_samples": resolved_fact_selfcheck_min_samples,
+            "support_threshold": resolved_fact_selfcheck_support_threshold,
+            "refute_threshold": resolved_fact_selfcheck_refute_threshold,
+            "early_stop": bool(fact_selfcheck_early_stop),
+            "max_samples": resolved_fact_selfcheck_max_samples,
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "triple_evidence_verifier": {
             "type": "TripleEvidenceVerifier",
             "enabled": any_triple_evidence_enabled,
             "requested": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+            "refute_object_mismatch": bool(triple_refute_object_mismatch),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "qa_verifier": {
             "type": "QuestionAnswerVerifier",
             "enabled": qa_verifier is not None,
             "corpus_path": None if qa_corpus_path is None else str(qa_corpus_path),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "fact_verifier": {
             "type": "StructuredFactVerifier",
             "enabled": any_fact_enabled,
             "corpus_path": None if fact_corpus_path is None else str(fact_corpus_path),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "retrieval_qa_verifier": {
             "type": "QuestionAnswerVerifier",
@@ -2650,6 +3249,18 @@ def build_verifier_ensemble_report(
                 if isinstance(run.get("retrieval_qa"), Mapping)
             ),
             "source": "retrieval_hits",
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
+        },
+        "retrieval_alignment_verifier": {
+            "type": "EvidenceAlignmentVerifier",
+            "enabled": any(
+                bool(run.get("retrieval_alignment", {}).get("enabled"))
+                for run in runs
+                if isinstance(run.get("retrieval_alignment"), Mapping)
+            ),
+            "source": "retrieval_hits",
+            "policy": dict(_RETRIEVAL_ALIGNMENT_POLICY),
+            "cache_key_mode": _TEXT_VERIFIER_CACHE_KEY_MODE,
         },
         "state_verifier": {
             "type": "StructuredStateVerifier",
@@ -2657,6 +3268,7 @@ def build_verifier_ensemble_report(
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),
             "global_checks": len(global_state_checks),
+            "cache_key_mode": _EXACT_VERIFIER_CACHE_KEY_MODE,
         },
         "transition_verifier": {
             "type": "StateTransitionVerifier",
@@ -2672,6 +3284,7 @@ def build_verifier_ensemble_report(
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),
             "global_transitions": len(global_state_transitions),
+            "cache_key_mode": _EXACT_VERIFIER_CACHE_KEY_MODE,
         },
         "retriever": {
             "type": "InMemoryRetriever",
@@ -2682,6 +3295,7 @@ def build_verifier_ensemble_report(
             "enabled": trace_cache is not None,
             "path": None if trace_cache is None else str(trace_cache.path),
         },
+        "verifier_cache_key_modes": dict(_VERIFIER_CACHE_KEY_MODES),
         "score_dump_cache": score_dump_cache_summary(score_dump_metadata_cache),
         "staged_verification": {
             "enabled": stage_policy is not None,
@@ -2718,8 +3332,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_refute_threshold=float(getattr(args, "selfcheck_refute_threshold", 0.50)),
         selfcheck_early_stop=bool(getattr(args, "selfcheck_early_stop", False)),
         selfcheck_max_samples=getattr(args, "selfcheck_max_samples", None),
+        enable_fact_selfcheck=bool(getattr(args, "enable_fact_selfcheck", False)),
+        fact_selfcheck_min_samples=getattr(args, "fact_selfcheck_min_samples", None),
+        fact_selfcheck_support_threshold=getattr(args, "fact_selfcheck_support_threshold", None),
+        fact_selfcheck_refute_threshold=getattr(args, "fact_selfcheck_refute_threshold", None),
+        fact_selfcheck_early_stop=bool(getattr(args, "fact_selfcheck_early_stop", False)),
+        fact_selfcheck_max_samples=getattr(args, "fact_selfcheck_max_samples", None),
         enable_triple_evidence=bool(getattr(args, "enable_triple_evidence", False)),
         triple_min_slot_coverage=float(getattr(args, "triple_min_slot_coverage", 1.0)),
+        triple_refute_object_mismatch=bool(getattr(args, "triple_refute_object_mismatch", False)),
         min_world_model_confidence=float(getattr(args, "min_world_model_confidence", 0.0)),
         verification_cache_dir=(
             None
@@ -2810,10 +3431,24 @@ def main() -> None:
                         help="stop self-consistency sample judging once the final threshold outcome is fixed")
     parser.add_argument("--selfcheck-max-samples", type=int, default=None,
                         help="optional cap on self-consistency samples considered per claim")
+    parser.add_argument("--enable-fact-selfcheck", action="store_true",
+                        help="run fact/triple-level self-consistency before sentence-level selfcheck fallback")
+    parser.add_argument("--fact-selfcheck-min-samples", type=int, default=None,
+                        help="minimum sampled responses for fact-level self-consistency; defaults to selfcheck value")
+    parser.add_argument("--fact-selfcheck-support-threshold", type=float, default=None,
+                        help="fact-level support-rate threshold; defaults to selfcheck support threshold")
+    parser.add_argument("--fact-selfcheck-refute-threshold", type=float, default=None,
+                        help="fact-level refute-rate threshold; defaults to selfcheck refute threshold")
+    parser.add_argument("--fact-selfcheck-early-stop", action="store_true",
+                        help="stop fact-level sample judging once the final threshold outcome is fixed")
+    parser.add_argument("--fact-selfcheck-max-samples", type=int, default=None,
+                        help="optional cap for fact-level self-consistency samples")
     parser.add_argument("--enable-triple-evidence", action="store_true",
                         help="enable strict subject-predicate-object evidence audits for sensitive factual claims")
     parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0,
                         help="minimum per-slot evidence coverage for triple-evidence audits")
+    parser.add_argument("--triple-refute-object-mismatch", action="store_true",
+                        help="refute when evidence matches a claim subject/predicate but gives a different object")
     parser.add_argument("--min-world-model-confidence", type=float, default=0.0,
                         help="minimum world-model prediction confidence required for state-transition postconditions")
     parser.add_argument("--verification-cache-dir", default=None,

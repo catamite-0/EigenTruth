@@ -1,0 +1,160 @@
+{
+  "artifact_manifest": "artifacts/frontier-artifact-reference-audit-manifest.json",
+  "artifact_manifest_summary": {
+    "artifact_count": 11,
+    "directory_count": 1,
+    "file_count": 10,
+    "missing_count": 0
+  },
+  "blocking_reasons": [],
+  "config": {
+    "documents": [
+      "README.md",
+      "benchmarks/README.md",
+      "docs/experiment-plan.md",
+      "docs/frontier-research-notes.md"
+    ],
+    "exclude_regex": null,
+    "include_regex": "frontier-audit-release-candidate-v6|smollm2_product_promotion_contract_v1_9",
+    "json_cache_paths": [
+      "artifacts/frontier-audit-release-candidate-v6/artifact-json-cache.json"
+    ],
+    "max_workers": 1,
+    "recursive_manifests": false,
+    "restore_json_cache_artifacts": false,
+    "root": "/home/z/projects/active/EigenTruth",
+    "verify_manifests": true
+  },
+  "metadata": {},
+  "recommended_actions": [],
+  "references": [
+    {
+      "documents": {
+        "docs/experiment-plan.md": [
+          420
+        ]
+      },
+      "exists": true,
+      "is_manifest": false,
+      "kind": "directory",
+      "line_numbers": [
+        420
+      ],
+      "path": "artifacts/frontier-audit-release-candidate-v6/",
+      "status": "present"
+    },
+    {
+      "documents": {
+        "docs/experiment-plan.md": [
+          420
+        ]
+      },
+      "exists": true,
+      "is_manifest": true,
+      "kind": "file",
+      "line_numbers": [
+        420
+      ],
+      "manifest_verification": {
+        "checked": 3,
+        "failures": [],
+        "manifest_path": "/home/z/projects/active/EigenTruth/artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json",
+        "nested": [],
+        "passed": true
+      },
+      "path": "artifacts/frontier-audit-release-candidate-v6/artifact-manifest.json",
+      "status": "present"
+    },
+    {
+      "documents": {
+        "docs/experiment-plan.md": [
+          420
+        ]
+      },
+      "exists": true,
+      "is_manifest": false,
+      "kind": "file",
+      "line_numbers": [
+        420
+      ],
+      "path": "artifacts/frontier-audit-release-candidate-v6/evidence-gap-plan.json",
+      "status": "present"
+    },
+    {
+      "documents": {
+        "docs/experiment-plan.md": [
+          420
+        ]
+      },
+      "exists": true,
+      "is_manifest": false,
+      "kind": "file",
+      "line_numbers": [
+        420
+      ],
+      "path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-comparison.json",
+      "status": "present"
+    },
+    {
+      "documents": {
+        "benchmarks/README.md": [
+          5668
+        ],
+        "docs/experiment-plan.md": [
+          420
+        ]
+      },
+      "exists": true,
+      "is_manifest": false,
+      "kind": "file",
+      "line_numbers": [
+        420,
+        5668
+      ],
+      "path": "artifacts/frontier-audit-release-candidate-v6/frontier-audit-registry-workflow.json",
+      "status": "present"
+    },
+    {
+      "documents": {
+        "docs/experiment-plan.md": [
+          420
+        ]
+      },
+      "exists": true,
+      "is_manifest": false,
+      "kind": "file",
+      "line_numbers": [
+        420
+      ],
+      "path": "artifacts/frontier-audit-release-candidate-v6/manifest-verification.json",
+      "status": "present"
+    }
+  ],
+  "registry_record": "report:frontier-artifact-reference-audit:0.1",
+  "schema_version": 1,
+  "status": "passed",
+  "summary": {
+    "blocking_reference_count": 0,
+    "directory_count": 1,
+    "document_count": 4,
+    "existing_count": 6,
+    "file_count": 5,
+    "manifest_child_missing_count": 0,
+    "manifest_child_recoverable_from_json_cache_count": 0,
+    "manifest_child_unrecoverable_count": 0,
+    "manifest_error_count": 0,
+    "manifest_failed_count": 0,
+    "manifest_reference_count": 1,
+    "manifest_verified_count": 1,
+    "missing_count": 0,
+    "missing_recoverable_from_json_cache_count": 0,
+    "missing_unrecoverable_count": 0,
+    "recommended_action_count": 0,
+    "recommended_action_ids": [],
+    "reference_count": 6,
+    "status_counts": {
+      "present": 6
+    }
+  },
+  "workflow": "frontier_artifact_reference_audit"
+}

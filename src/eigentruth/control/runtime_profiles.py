@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from math import exp
+from math import exp, log
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
@@ -419,6 +419,105 @@ class SoftPreGenerationRiskEstimate:
 
 
 @dataclass(frozen=True)
+class LearnedPreGenerationRiskEstimate:
+    """JSON-ready risk estimate from an optional learned pre-generation probe."""
+
+    score: float
+    probability: float
+    risk_level: str
+    source: str = "learned_pre_generation_probe"
+    medium_threshold: float = 0.45
+    high_threshold: float = 0.75
+    layer_idx: int | None = None
+    attention_summary: Mapping[str, Any] = field(default_factory=dict)
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        score = _finite_float(self.score, field_name="score")
+        probability = _probability_float(self.probability, field_name="probability")
+        risk_level = RiskLevel(str(self.risk_level)).value
+        source = str(self.source).strip()
+        if not source:
+            raise ValueError("source must be a non-empty string")
+        medium_threshold = _probability_float(self.medium_threshold, field_name="medium_threshold")
+        high_threshold = _probability_float(self.high_threshold, field_name="high_threshold")
+        if medium_threshold > high_threshold:
+            raise ValueError("medium_threshold must be <= high_threshold")
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "probability", probability)
+        object.__setattr__(self, "risk_level", risk_level)
+        object.__setattr__(self, "source", source)
+        object.__setattr__(self, "medium_threshold", medium_threshold)
+        object.__setattr__(self, "high_threshold", high_threshold)
+        object.__setattr__(self, "layer_idx", None if self.layer_idx is None else int(self.layer_idx))
+        object.__setattr__(self, "attention_summary", dict(self.attention_summary))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @classmethod
+    def from_probe(
+        cls,
+        probe: Any,
+        hidden_states: Any,
+        *,
+        attention_mask: Any | None = None,
+        medium_threshold: float = 0.45,
+        high_threshold: float = 0.75,
+        source: str = "attention_soft_target_probe",
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "LearnedPreGenerationRiskEstimate":
+        """Score one prompt with a saved pre-generation probe artifact.
+
+        The probe object must expose ``decision_function`` and may expose
+        ``attention_weights``. This keeps the control-plane API independent of
+        a specific artifact class while supporting
+        ``AttentionSoftTargetProbeArtifact`` directly.
+        """
+        if not hasattr(probe, "decision_function"):
+            raise ValueError("probe must expose decision_function(hidden_states, attention_mask=...)")
+        logits = probe.decision_function(hidden_states, attention_mask=attention_mask)
+        logit_values = _flatten_numeric_values(logits, field_name="probe logits")
+        if len(logit_values) != 1:
+            raise ValueError("learned pre-generation probe scoring expects exactly one prompt.")
+        score = logit_values[0]
+        probability = _sigmoid(score)
+        if probability >= high_threshold:
+            risk_level = RiskLevel.HIGH.value
+        elif probability >= medium_threshold:
+            risk_level = RiskLevel.MEDIUM.value
+        else:
+            risk_level = RiskLevel.LOW.value
+        attention_summary: dict[str, Any] = {}
+        if hasattr(probe, "attention_weights"):
+            attention_values = probe.attention_weights(hidden_states, attention_mask=attention_mask)
+            attention_summary = _attention_summary(attention_values)
+        return cls(
+            score=score,
+            probability=probability,
+            risk_level=risk_level,
+            source=source,
+            medium_threshold=medium_threshold,
+            high_threshold=high_threshold,
+            layer_idx=getattr(probe, "layer_idx", None),
+            attention_summary=attention_summary,
+            metadata={} if metadata is None else metadata,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "score": self.score,
+            "probability": self.probability,
+            "risk_level": self.risk_level,
+            "source": self.source,
+            "medium_threshold": self.medium_threshold,
+            "high_threshold": self.high_threshold,
+            "layer_idx": self.layer_idx,
+            "attention_summary": dict(self.attention_summary),
+            "metadata": dict(self.metadata),
+        }
+
+
+@dataclass(frozen=True)
 class SoftPreGenerationRiskConfig:
     """Config for prompt-level soft risk scoring before generation.
 
@@ -543,6 +642,7 @@ class PreGenerationRiskPolicy:
     medium_risk_feature_flags: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_FEATURE_FLAGS
     high_risk_metadata_keys: Sequence[str] = _DEFAULT_HIGH_RISK_PROMPT_METADATA_KEYS
     medium_risk_metadata_keys: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_METADATA_KEYS
+    route_on_learned_risk: bool = False
     soft_risk_config: SoftPreGenerationRiskConfig | Mapping[str, Any] | None = field(
         default_factory=SoftPreGenerationRiskConfig
     )
@@ -589,6 +689,11 @@ class PreGenerationRiskPolicy:
         )
         object.__setattr__(
             self,
+            "route_on_learned_risk",
+            _strict_bool(self.route_on_learned_risk, field_name="route_on_learned_risk"),
+        )
+        object.__setattr__(
+            self,
             "soft_risk_config",
             _soft_risk_config(self.soft_risk_config),
         )
@@ -612,6 +717,7 @@ class PreGenerationRiskPolicy:
             medium_risk_metadata_keys=_as_sequence(
                 payload.get("medium_risk_metadata_keys", cls.medium_risk_metadata_keys)
             ),
+            route_on_learned_risk=payload.get("route_on_learned_risk", cls.route_on_learned_risk),
             soft_risk_config=payload.get("soft_risk_config", SoftPreGenerationRiskConfig()),
         )
 
@@ -625,6 +731,7 @@ class PreGenerationRiskPolicy:
             "medium_risk_feature_flags": tuple(self.medium_risk_feature_flags),
             "high_risk_metadata_keys": tuple(self.high_risk_metadata_keys),
             "medium_risk_metadata_keys": tuple(self.medium_risk_metadata_keys),
+            "route_on_learned_risk": self.route_on_learned_risk,
             "soft_risk_config": self.soft_risk_config.to_dict() if self.soft_risk_config is not None else None,
         }
 
@@ -641,6 +748,7 @@ class PreGenerationRiskAssessment:
     prompt_features: Mapping[str, bool] = field(default_factory=dict)
     metadata_flags: Mapping[str, bool] = field(default_factory=dict)
     soft_risk: SoftPreGenerationRiskEstimate | Mapping[str, Any] | None = None
+    learned_risk: LearnedPreGenerationRiskEstimate | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         selected_profile = _normalize_profile_name(self.selected_profile)
@@ -676,6 +784,11 @@ class PreGenerationRiskAssessment:
             "soft_risk",
             _soft_risk_payload(self.soft_risk),
         )
+        object.__setattr__(
+            self,
+            "learned_risk",
+            _learned_risk_payload(self.learned_risk),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
@@ -688,6 +801,7 @@ class PreGenerationRiskAssessment:
             "prompt_features": dict(self.prompt_features),
             "metadata_flags": dict(self.metadata_flags),
             "soft_risk": self.soft_risk,
+            "learned_risk": self.learned_risk,
         }
 
 
@@ -773,6 +887,7 @@ def select_pre_generation_profile(
     prompt: str,
     *,
     metadata: Mapping[str, Any] | None = None,
+    learned_risk: LearnedPreGenerationRiskEstimate | Mapping[str, Any] | None = None,
     risk_policy: PreGenerationRiskPolicy | Mapping[str, Any] | None = None,
     low_risk_profile: str = "latency",
     default_profile: str = "balanced",
@@ -813,6 +928,7 @@ def select_pre_generation_profile(
         metadata_payload,
         keys=(*policy.high_risk_metadata_keys, *policy.medium_risk_metadata_keys),
     )
+    learned_risk_payload = _learned_risk_payload(learned_risk)
     soft_risk = (
         None
         if policy.soft_risk_config is None
@@ -830,6 +946,23 @@ def select_pre_generation_profile(
             prompt_features=prompt_features,
             metadata_flags=metadata_flags,
             soft_risk=soft_risk,
+            learned_risk=learned_risk_payload,
+        )
+    if (
+        learned_risk_payload is not None
+        and policy.route_on_learned_risk
+        and learned_risk_payload.get("risk_level") == RiskLevel.HIGH.value
+    ):
+        return PreGenerationRiskAssessment(
+            selected_profile=policy.high_risk_profile,
+            risk_level=RiskLevel.HIGH.value,
+            reason="learned pre-generation risk estimate exceeded high threshold",
+            triggered_features=(),
+            triggered_metadata=(),
+            prompt_features=prompt_features,
+            metadata_flags=metadata_flags,
+            soft_risk=soft_risk,
+            learned_risk=learned_risk_payload,
         )
     if (
         soft_risk is not None
@@ -846,6 +979,7 @@ def select_pre_generation_profile(
             prompt_features=prompt_features,
             metadata_flags=metadata_flags,
             soft_risk=soft_risk,
+            learned_risk=learned_risk_payload,
         )
     medium_features = _enabled_feature_names(prompt_features, policy.medium_risk_feature_flags)
     medium_metadata = _enabled_feature_names(metadata_flags, policy.medium_risk_metadata_keys)
@@ -859,6 +993,23 @@ def select_pre_generation_profile(
             prompt_features=prompt_features,
             metadata_flags=metadata_flags,
             soft_risk=soft_risk,
+            learned_risk=learned_risk_payload,
+        )
+    if (
+        learned_risk_payload is not None
+        and policy.route_on_learned_risk
+        and learned_risk_payload.get("risk_level") == RiskLevel.MEDIUM.value
+    ):
+        return PreGenerationRiskAssessment(
+            selected_profile=policy.default_profile,
+            risk_level=RiskLevel.MEDIUM.value,
+            reason="learned pre-generation risk estimate exceeded medium threshold",
+            triggered_features=(),
+            triggered_metadata=(),
+            prompt_features=prompt_features,
+            metadata_flags=metadata_flags,
+            soft_risk=soft_risk,
+            learned_risk=learned_risk_payload,
         )
     if (
         soft_risk is not None
@@ -875,6 +1026,7 @@ def select_pre_generation_profile(
             prompt_features=prompt_features,
             metadata_flags=metadata_flags,
             soft_risk=soft_risk,
+            learned_risk=learned_risk_payload,
         )
     return PreGenerationRiskAssessment(
         selected_profile=policy.low_risk_profile,
@@ -883,6 +1035,7 @@ def select_pre_generation_profile(
         prompt_features=prompt_features,
         metadata_flags=metadata_flags,
         soft_risk=soft_risk,
+        learned_risk=learned_risk_payload,
     )
 
 
@@ -1214,6 +1367,82 @@ def _soft_risk_payload(value: SoftPreGenerationRiskEstimate | Mapping[str, Any] 
             payload["risk_level"] = RiskLevel(str(payload["risk_level"])).value
         return payload
     raise ValueError("soft_risk must be a mapping, SoftPreGenerationRiskEstimate, or None")
+
+
+def _learned_risk_payload(
+    value: LearnedPreGenerationRiskEstimate | Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, LearnedPreGenerationRiskEstimate):
+        return value.to_dict()
+    if isinstance(value, Mapping):
+        payload = dict(value)
+        payload["score"] = _finite_float(payload.get("score"), field_name="learned_risk.score")
+        payload["probability"] = _probability_float(
+            payload.get("probability"),
+            field_name="learned_risk.probability",
+        )
+        payload["risk_level"] = RiskLevel(str(payload.get("risk_level"))).value
+        source = str(payload.get("source", "learned_pre_generation_probe")).strip()
+        if not source:
+            raise ValueError("learned_risk.source must be a non-empty string")
+        payload["source"] = source
+        payload["medium_threshold"] = _probability_float(
+            payload.get("medium_threshold", 0.45),
+            field_name="learned_risk.medium_threshold",
+        )
+        payload["high_threshold"] = _probability_float(
+            payload.get("high_threshold", 0.75),
+            field_name="learned_risk.high_threshold",
+        )
+        if payload["medium_threshold"] > payload["high_threshold"]:
+            raise ValueError("learned_risk.medium_threshold must be <= learned_risk.high_threshold")
+        if payload.get("layer_idx") is not None:
+            payload["layer_idx"] = int(payload["layer_idx"])
+        payload["attention_summary"] = dict(payload.get("attention_summary") or {})
+        payload["metadata"] = dict(payload.get("metadata") or {})
+        return payload
+    raise ValueError("learned_risk must be a mapping, LearnedPreGenerationRiskEstimate, or None")
+
+
+def _flatten_numeric_values(value: Any, *, field_name: str) -> tuple[float, ...]:
+    if hasattr(value, "detach"):
+        value = value.detach().cpu().reshape(-1).tolist()
+    elif hasattr(value, "reshape") and hasattr(value, "tolist"):
+        value = value.reshape(-1).tolist()
+    else:
+        value = _flatten_python_sequence(value)
+    return tuple(_finite_float(item, field_name=field_name) for item in _as_sequence(value))
+
+
+def _flatten_python_sequence(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, (str, bytes, bytearray)):
+        return (value,)
+    if isinstance(value, Sequence):
+        flattened: list[Any] = []
+        for item in value:
+            flattened.extend(_flatten_python_sequence(item))
+        return tuple(flattened)
+    return (value,)
+
+
+def _attention_summary(attention_weights: Any) -> dict[str, Any]:
+    values = _flatten_numeric_values(attention_weights, field_name="attention_weights")
+    if not values:
+        return {}
+    total = sum(values)
+    if total <= 0.0:
+        return {"token_count": len(values), "max_weight": max(values)}
+    normalized = tuple(max(0.0, value) / total for value in values)
+    max_index, max_weight = max(enumerate(normalized), key=lambda item: item[1])
+    entropy = -sum(weight * log(weight) for weight in normalized if weight > 0.0)
+    return {
+        "token_count": len(values),
+        "max_weight": max_weight,
+        "max_index": max_index,
+        "entropy": entropy,
+    }
 
 
 def _enabled_weight_contributions(

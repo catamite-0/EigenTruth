@@ -1,0 +1,34 @@
+{
+  "config": {
+    "python_executable": ".venv/bin/python",
+    "queues": {
+      "frontier_multiple_testing_rerun_rollup": "artifacts/frontier-multiple-testing-rerun-queue-v1/rerun-queue.json",
+      "multiple_testing": "artifacts/frontier-multiple-testing-rerun-queue-v1/rerun-queue.json"
+    }
+  },
+  "entries": [],
+  "metadata": {},
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-rerun-rollup-completion-plan-v1/artifact-manifest.json",
+    "completion_plan": "artifacts/frontier-rerun-rollup-completion-plan-v1/completion-plan.json",
+    "rollup_output_dir": "artifacts/frontier-rerun-rollups-v1"
+  },
+  "schema_version": 1,
+  "source": {
+    "decision_status": "blocked",
+    "frontier_rerun_rollup_track_status": "promote",
+    "path": "artifacts/frontier-release-evidence/frontier-release-evidence-refreshed.json",
+    "status": "complete",
+    "workflow": "frontier_release_evidence_comparison"
+  },
+  "status": "empty",
+  "summary": {
+    "blocked_rollup_count": 0,
+    "command_count": 0,
+    "entry_count": 0,
+    "missing_queue_count": 0,
+    "tracks": [],
+    "unsupported_workflow_count": 0
+  },
+  "workflow": "frontier_rerun_rollup_completion_plan"
+}

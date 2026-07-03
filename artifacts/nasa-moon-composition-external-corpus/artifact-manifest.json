@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "moon-composition-corpus.json",
+      "sha256": "a08549586b0e6a927e7135abd11099f72d0fb34205948b5959934fd8ca9364db",
+      "size_bytes": 2600
+    },
+    "source.1.nasa-moon-composition-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "nasa-moon-composition-source.jsonl",
+      "sha256": "a2248a1d6b5be765ca3c1d2e7ee8958f69ff283124b8e5516691e6f7f8a31c34",
+      "size_bytes": 864
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "external_evidence_candidate",
+    "summary": {
+      "n_documents": 1,
+      "n_documents_with_source": 1,
+      "n_documents_with_timestamp": 0,
+      "n_documents_with_url": 1,
+      "n_skipped_short": 0,
+      "n_sources": 1
+    },
+    "workflow": "build_external_retrieval_corpus"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

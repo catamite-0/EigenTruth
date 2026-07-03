@@ -1,0 +1,37 @@
+{
+  "artifacts": {
+    "covered_fact_mapping_audit": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-covered-fact-mapping.json",
+      "sha256": "68b5ae764f70b4ab3b2a6959c8f3cd58e321922efc742c0c65db6492400cb368",
+      "size_bytes": 203668
+    },
+    "question_property_mapping": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "blind-spot-question-property-mapping.json",
+      "sha256": "9bfe551bd40dc1effc6a7abb5235a459fa2195ac840b14d5f0ac8a4451dd8416",
+      "size_bytes": 329487
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "generic_fact_only_count": 6,
+    "mapped_correction_candidate_count": 1,
+    "model": "smollm2-l80",
+    "source": "frontier-v4",
+    "status": "observed",
+    "target_count": 89,
+    "workflow": "blind_spot_question_property_mapping"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "candidate_entity_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "candidate-entity-bindings.jsonl",
+      "sha256": "c62162f095f4fd5fd91fadbe74cd366484d26503d9e88d2f6157b78380010365",
+      "size_bytes": 14432
+    },
+    "citation_collection_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "citation-collection-records.jsonl",
+      "sha256": "20c35ca1a5b6e5b3a57c1f2be0035d4c1016e646e08c5fddaaeca13df771c01b",
+      "size_bytes": 4112
+    },
+    "citation_corpus_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-worldbank-source-family-citation-workflow-v1/evidence-gate/citation-search-corpus.json",
+      "sha256": "83134d7f74db41ca2431122ceb415885d3837a59f4e004ab31253c87e03dc2ba",
+      "size_bytes": 849462
+    },
+    "entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "entity-binding-plan.json",
+      "sha256": "905931f723500dca23b1aafc02a4ba013b9aa3fe641fcf76c93ff8b63cd37d46",
+      "size_bytes": 58096
+    },
+    "source_entity_binding_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-frontier-research-entity-binding-plan-v1/entity-binding-plan.json",
+      "sha256": "95ce156924bfc92d24be3640bb91b914865a02fd12de5f6a0baa2241facaf8b2",
+      "size_bytes": 52122
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "candidate_count": 8,
+    "closure_action": "collect_entity_role_bindings_from_citation_corpus",
+    "enriched_candidate_count": 2,
+    "output_workflow": "world_model_rule_entity_binding_plan",
+    "ready_for_review_candidate_count": 4,
+    "status": "ready_for_review",
+    "workflow": "world_model_rule_entity_binding_citation_corpus_collection"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

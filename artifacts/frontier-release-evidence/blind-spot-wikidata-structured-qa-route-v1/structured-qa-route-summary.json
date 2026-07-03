@@ -1,0 +1,609 @@
+{
+  "alpha": 0.1,
+  "covered_fact_score_dump_path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/covered-facts-scores.json",
+  "fact_verifier": {
+    "decided_records": 0,
+    "enabled": false
+  },
+  "next_step": "Use this covered-facts route as the property-level correction path; keep lexical retrieval gated separately for broad open-domain coverage.",
+  "property_count": 12,
+  "property_metrics": {
+    "P106": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 20
+        },
+        "true": {
+          "supported": 20
+        }
+      },
+      "n_decided_supported_or_refuted": 40,
+      "n_false": 20,
+      "n_records": 40,
+      "n_source_documents": 20,
+      "n_true": 20,
+      "selected_route_counts": {
+        "structured_qa": 40
+      },
+      "statement_property": "P106",
+      "statement_property_label": "occupation",
+      "status_counts": {
+        "refuted": 20,
+        "supported": 20
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P112": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 3
+        },
+        "true": {
+          "supported": 3
+        }
+      },
+      "n_decided_supported_or_refuted": 6,
+      "n_false": 3,
+      "n_records": 6,
+      "n_source_documents": 3,
+      "n_true": 3,
+      "selected_route_counts": {
+        "structured_qa": 6
+      },
+      "statement_property": "P112",
+      "statement_property_label": "founder",
+      "status_counts": {
+        "refuted": 3,
+        "supported": 3
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P131": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 6
+        },
+        "true": {
+          "supported": 6
+        }
+      },
+      "n_decided_supported_or_refuted": 12,
+      "n_false": 6,
+      "n_records": 12,
+      "n_source_documents": 6,
+      "n_true": 6,
+      "selected_route_counts": {
+        "structured_qa": 12
+      },
+      "statement_property": "P131",
+      "statement_property_label": "located in the administrative territorial entity",
+      "status_counts": {
+        "refuted": 6,
+        "supported": 6
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P17": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 54
+        },
+        "true": {
+          "supported": 54
+        }
+      },
+      "n_decided_supported_or_refuted": 108,
+      "n_false": 54,
+      "n_records": 108,
+      "n_source_documents": 54,
+      "n_true": 54,
+      "selected_route_counts": {
+        "structured_qa": 108
+      },
+      "statement_property": "P17",
+      "statement_property_label": "country",
+      "status_counts": {
+        "refuted": 54,
+        "supported": 54
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P170": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 4
+        },
+        "true": {
+          "supported": 4
+        }
+      },
+      "n_decided_supported_or_refuted": 8,
+      "n_false": 4,
+      "n_records": 8,
+      "n_source_documents": 4,
+      "n_true": 4,
+      "selected_route_counts": {
+        "structured_qa": 8
+      },
+      "statement_property": "P170",
+      "statement_property_label": "creator",
+      "status_counts": {
+        "refuted": 4,
+        "supported": 4
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P27": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 8
+        },
+        "true": {
+          "supported": 8
+        }
+      },
+      "n_decided_supported_or_refuted": 16,
+      "n_false": 8,
+      "n_records": 16,
+      "n_source_documents": 8,
+      "n_true": 8,
+      "selected_route_counts": {
+        "structured_qa": 16
+      },
+      "statement_property": "P27",
+      "statement_property_label": "country of citizenship",
+      "status_counts": {
+        "refuted": 8,
+        "supported": 8
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P279": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 22
+        },
+        "true": {
+          "supported": 22
+        }
+      },
+      "n_decided_supported_or_refuted": 44,
+      "n_false": 22,
+      "n_records": 44,
+      "n_source_documents": 22,
+      "n_true": 22,
+      "selected_route_counts": {
+        "structured_qa": 44
+      },
+      "statement_property": "P279",
+      "statement_property_label": "subclass of",
+      "status_counts": {
+        "refuted": 22,
+        "supported": 22
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P31": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 103
+        },
+        "true": {
+          "supported": 103
+        }
+      },
+      "n_decided_supported_or_refuted": 206,
+      "n_false": 103,
+      "n_records": 206,
+      "n_source_documents": 103,
+      "n_true": 103,
+      "selected_route_counts": {
+        "structured_qa": 206
+      },
+      "statement_property": "P31",
+      "statement_property_label": "instance of",
+      "status_counts": {
+        "refuted": 103,
+        "supported": 103
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P527": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 13
+        },
+        "true": {
+          "supported": 13
+        }
+      },
+      "n_decided_supported_or_refuted": 26,
+      "n_false": 13,
+      "n_records": 26,
+      "n_source_documents": 13,
+      "n_true": 13,
+      "selected_route_counts": {
+        "structured_qa": 26
+      },
+      "statement_property": "P527",
+      "statement_property_label": "has part(s)",
+      "status_counts": {
+        "refuted": 13,
+        "supported": 13
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P793": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 7
+        },
+        "true": {
+          "supported": 7
+        }
+      },
+      "n_decided_supported_or_refuted": 14,
+      "n_false": 7,
+      "n_records": 14,
+      "n_source_documents": 7,
+      "n_true": 7,
+      "selected_route_counts": {
+        "structured_qa": 14
+      },
+      "statement_property": "P793",
+      "statement_property_label": "significant event",
+      "status_counts": {
+        "refuted": 7,
+        "supported": 7
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "P856": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 31
+        },
+        "true": {
+          "supported": 31
+        }
+      },
+      "n_decided_supported_or_refuted": 62,
+      "n_false": 31,
+      "n_records": 62,
+      "n_source_documents": 31,
+      "n_true": 31,
+      "selected_route_counts": {
+        "structured_qa": 62
+      },
+      "statement_property": "P856",
+      "statement_property_label": "official website",
+      "status_counts": {
+        "refuted": 31,
+        "supported": 31
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    },
+    "description": {
+      "decision_accuracy": 1.0,
+      "decision_error_rate": 0.0,
+      "false_refuted_rate": 1.0,
+      "false_supported_rate": 0.0,
+      "insufficient_evidence_rate": 0.0,
+      "label_status_matrix": {
+        "false": {
+          "refuted": 51
+        },
+        "true": {
+          "supported": 51
+        }
+      },
+      "n_decided_supported_or_refuted": 102,
+      "n_false": 51,
+      "n_records": 102,
+      "n_source_documents": 51,
+      "n_true": 51,
+      "selected_route_counts": {
+        "structured_qa": 102
+      },
+      "statement_property": "description",
+      "statement_property_label": "description",
+      "status_counts": {
+        "refuted": 51,
+        "supported": 51
+      },
+      "true_refuted_rate": 0.0,
+      "true_supported_rate": 1.0
+    }
+  },
+  "qa_corpus_path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/wikidata-blind-spot-qa-corpus.json",
+  "qa_verifier": {
+    "decided_records": 644,
+    "enabled": true
+  },
+  "route": "structured_qa",
+  "route_metrics": {
+    "attempted_route_count_observations": 644,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 644,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 322,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 322
+      }
+    },
+    "max_duration_seconds": 0.05728996801190078,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.0001781228287123803,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.0001781228287123803,
+    "n_decided_supported_or_refuted": 644,
+    "n_false": 322,
+    "n_true": 322,
+    "p95_duration_seconds": 0.00015211914433166385,
+    "p95_selected_route_duration_seconds": 0.00015211914433166385,
+    "p99_duration_seconds": 0.00015917341108433904,
+    "p99_selected_route_duration_seconds": 0.00015917341108433904,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 644,
+    "selected_route_duration_observations": 644,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 644.0,
+    "total_duration_seconds": 0.11471110169077292,
+    "total_selected_route_duration_seconds": 0.11471110169077292,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "schema_version": 1,
+  "scope": "covered Wikidata QA facts, not open-domain TruthfulQA route coverage",
+  "score_dump_summary": {
+    "by_property": {
+      "P106": {
+        "n_false": 20,
+        "n_records": 40,
+        "n_source_documents": 20,
+        "n_true": 20,
+        "statement_property": "P106",
+        "statement_property_label": "occupation"
+      },
+      "P112": {
+        "n_false": 3,
+        "n_records": 6,
+        "n_source_documents": 3,
+        "n_true": 3,
+        "statement_property": "P112",
+        "statement_property_label": "founder"
+      },
+      "P131": {
+        "n_false": 6,
+        "n_records": 12,
+        "n_source_documents": 6,
+        "n_true": 6,
+        "statement_property": "P131",
+        "statement_property_label": "located in the administrative territorial entity"
+      },
+      "P17": {
+        "n_false": 54,
+        "n_records": 108,
+        "n_source_documents": 54,
+        "n_true": 54,
+        "statement_property": "P17",
+        "statement_property_label": "country"
+      },
+      "P170": {
+        "n_false": 4,
+        "n_records": 8,
+        "n_source_documents": 4,
+        "n_true": 4,
+        "statement_property": "P170",
+        "statement_property_label": "creator"
+      },
+      "P27": {
+        "n_false": 8,
+        "n_records": 16,
+        "n_source_documents": 8,
+        "n_true": 8,
+        "statement_property": "P27",
+        "statement_property_label": "country of citizenship"
+      },
+      "P279": {
+        "n_false": 22,
+        "n_records": 44,
+        "n_source_documents": 22,
+        "n_true": 22,
+        "statement_property": "P279",
+        "statement_property_label": "subclass of"
+      },
+      "P31": {
+        "n_false": 103,
+        "n_records": 206,
+        "n_source_documents": 103,
+        "n_true": 103,
+        "statement_property": "P31",
+        "statement_property_label": "instance of"
+      },
+      "P527": {
+        "n_false": 13,
+        "n_records": 26,
+        "n_source_documents": 13,
+        "n_true": 13,
+        "statement_property": "P527",
+        "statement_property_label": "has part(s)"
+      },
+      "P793": {
+        "n_false": 7,
+        "n_records": 14,
+        "n_source_documents": 7,
+        "n_true": 7,
+        "statement_property": "P793",
+        "statement_property_label": "significant event"
+      },
+      "P856": {
+        "n_false": 31,
+        "n_records": 62,
+        "n_source_documents": 31,
+        "n_true": 31,
+        "statement_property": "P856",
+        "statement_property_label": "official website"
+      },
+      "description": {
+        "n_false": 51,
+        "n_records": 102,
+        "n_source_documents": 51,
+        "n_true": 51,
+        "statement_property": "description",
+        "statement_property_label": "description"
+      }
+    },
+    "n_false": 322,
+    "n_records": 644,
+    "n_skipped_false_answer": 0,
+    "n_source_documents": 322,
+    "n_true": 322,
+    "property_count": 12
+  },
+  "selected_route_counts": {
+    "structured_qa": 644
+  },
+  "signal": "truth_proj",
+  "status": "promote",
+  "structured_qa_metrics": {
+    "attempted_route_count_observations": 644,
+    "decision_accuracy": 1.0,
+    "decision_error_rate": 0.0,
+    "duration_observations": 644,
+    "false_refuted_rate": 1.0,
+    "false_supported_rate": 0.0,
+    "insufficient_evidence_rate": 0.0,
+    "label_status_matrix": {
+      "false": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 322,
+        "supported": 0
+      },
+      "true": {
+        "error": 0,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 322
+      }
+    },
+    "max_duration_seconds": 0.05728996801190078,
+    "mean_attempted_route_count": 1.0,
+    "mean_duration_seconds": 0.0001781228287123803,
+    "mean_retrieval_hits": 0.0,
+    "mean_selected_route_duration_seconds": 0.0001781228287123803,
+    "n_decided_supported_or_refuted": 644,
+    "n_false": 322,
+    "n_true": 322,
+    "p95_duration_seconds": 0.00015211914433166385,
+    "p95_selected_route_duration_seconds": 0.00015211914433166385,
+    "p99_duration_seconds": 0.00015917341108433904,
+    "p99_selected_route_duration_seconds": 0.00015917341108433904,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 644,
+    "selected_route_duration_observations": 644,
+    "selection_rate": 1.0,
+    "total_attempted_route_count": 644.0,
+    "total_duration_seconds": 0.11471110169077292,
+    "total_selected_route_duration_seconds": 0.11471110169077292,
+    "true_refuted_rate": 0.0,
+    "true_supported_rate": 1.0,
+    "used_retrieval_count": 0
+  },
+  "verification_status_counts": {
+    "error": 0,
+    "insufficient_evidence": 0,
+    "not_applicable": 0,
+    "refuted": 322,
+    "supported": 322
+  },
+  "verified_records_jsonl_path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/verified-records.jsonl",
+  "verifier_report_path": "artifacts/frontier-release-evidence/blind-spot-wikidata-structured-qa-route-v1/structured-qa-verifier-report.json",
+  "workflow": "wikidata_structured_qa_route_workflow"
+}

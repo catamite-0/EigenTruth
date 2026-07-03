@@ -1,0 +1,7 @@
+{
+  "checked": 3,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

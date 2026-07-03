@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "blind_spot_evidence_expansion_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "evidence-expansion-plan.json",
+      "sha256": "cef5ef2536ffc66d3196c6b5f5b65b5bdbc26f874be2856408f254db8d0c1d00",
+      "size_bytes": 1080742
+    },
+    "blind_spots": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../truthfulqa-frontier-qwen-smollm2-l80-detectability-blind-spots/smollm2-l80-entrenched-blind-spots.json",
+      "sha256": "5990d22d8547cce21613bdc0c618058ca0f1d6c8766e16363b333595fec4ee5a",
+      "size_bytes": 123816
+    },
+    "provenance_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-source-family-citation-workflow-v1/evidence-gate/citation-search-query-sweep-comparison.json",
+      "sha256": "64d41dcd0572833d8723864bc6251af38d94123034de70104a056b5501076b6e",
+      "size_bytes": 17669
+    },
+    "query_sweep": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../unresolved-seeded-news-query-sweep-gap-analysis-v1/blind-spot-query-sweep-gap-analysis.json",
+      "sha256": "1fde64d50913d046dcca39c5a2a26c125c38ec858fca385fbb819d2487d918cb",
+      "size_bytes": 583928
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "high_priority_count": 65,
+    "query_sweep_best_strategy": "question_overlap_0p65",
+    "query_sweep_dominant_gap_bucket": "no_retrieval_hits",
+    "runner": "plan_blind_spot_evidence_expansion",
+    "status": "needs_evidence_collection",
+    "target_count": 89,
+    "top_question_type": "definition",
+    "top_route": "claim_evidence_alignment"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

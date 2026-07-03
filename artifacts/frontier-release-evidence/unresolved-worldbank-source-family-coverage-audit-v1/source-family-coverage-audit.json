@@ -1,0 +1,1488 @@
+{
+  "config": {
+    "fallback_families": [
+      "encyclopedic",
+      "reference"
+    ],
+    "max_examples": 20
+  },
+  "examples": {
+    "covered": [
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "UFOs scientists deny truth extraterrestrial cause",
+        "question_type": "causal",
+        "request_id": "cite-search-71336946fccdad71",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "UFOs scientists deny truth extraterrestrial cause",
+        "question_type": "causal",
+        "request_id": "cite-search-b645e84f008de661",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "UFOs scientists deny truth extraterrestrial cause",
+        "question_type": "causal",
+        "request_id": "cite-search-2f9bbca40914f96c",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "UFOs scientists deny truth extraterrestrial cause",
+        "question_type": "causal",
+        "request_id": "cite-search-ecb2a8f835cf8b50",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Bill Gates high school method",
+        "question_type": "method",
+        "request_id": "cite-search-e9f5d8bfd1a9b9d6",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Bill Gates high school method",
+        "question_type": "method",
+        "request_id": "cite-search-e9bd710e8cb42523",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Bill Gates high school method",
+        "question_type": "method",
+        "request_id": "cite-search-78c79a9a5fa35483",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Bill Gates high school method",
+        "question_type": "method",
+        "request_id": "cite-search-eca79fec43cc8927",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-2ea867a6a7d20b15",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-b57618e182220da6",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-8ac712d6fc41b189",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-118854d64f6ff027",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Americans more than 20 passports",
+        "question_type": "other",
+        "request_id": "cite-search-7a4ae48e906f6f77",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Americans more than 20 passports",
+        "question_type": "other",
+        "request_id": "cite-search-0b6d6f1c039d4d7b",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Americans more than 20 passports",
+        "question_type": "other",
+        "request_id": "cite-search-049032e6534e1cbf",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Americans more than 20 passports",
+        "question_type": "other",
+        "request_id": "cite-search-43fa1f0f8158e5a2",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-1157e2dfba0c9dfb",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-f5cd0da8640978d6",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-eb37b25fbde42c28",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "reference"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "encyclopedic"
+        ],
+        "priority": "medium",
+        "query": "Africa poverty changed over time method",
+        "question_type": "method",
+        "request_id": "cite-search-f9925761c6b1f4a1",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "covered",
+        "target_source_families": [
+          "reference"
+        ]
+      }
+    ],
+    "missing_target_family": [
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-8b58995470ea78f9",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "source_family_catalog",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "reference",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-bbd5cdf975d44a83",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "source_family_catalog",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "reference",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-af6fc174863183f2",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "source_family_catalog",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "reference",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [
+          "official_statistics"
+        ],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official_statistics",
+          "official",
+          "encyclopedic",
+          "reference",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "population country",
+        "question_type": "definition",
+        "request_id": "cite-search-b677934f044dafc7",
+        "result_count": 3,
+        "result_providers": [
+          "worldbank",
+          "source_family_catalog",
+          "worldbank"
+        ],
+        "result_source_families": [
+          "official_statistics",
+          "reference",
+          "official_statistics"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official_statistics",
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-c00b806315ac398b",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-89534a0c11134e44",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-523c555cc76d5706",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-71ae3e3c71ef376a",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-4ffa9f0785eeb9da",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-ebda97c2ac1f8395",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0694b6748461aa0f",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "reference",
+          "encyclopedic",
+          "scholarly"
+        ],
+        "priority": "high",
+        "query": "Elon American producer born 70 s handsome multi-talented figure definition",
+        "question_type": "definition",
+        "request_id": "cite-search-96a58e762235e5fa",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-7e7112ad3e70ad2a",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-f0466d8b7e767b38",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e708ed159977f5b7",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": false,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "scholarly"
+        ],
+        "official_source_preferred": false,
+        "preferred_source_families": [
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "UK laws around hitting children definition",
+        "question_type": "definition",
+        "request_id": "cite-search-299e36c021f5da02",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-001487e174e4e658",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-0825d1e6bab6d172",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-e5b9550016de8b47",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      },
+      {
+        "covered_target_source_families": [],
+        "freshness_required": true,
+        "has_fresh_result": true,
+        "has_official_result": true,
+        "missing_target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ],
+        "official_source_preferred": true,
+        "preferred_source_families": [
+          "official",
+          "news",
+          "reference",
+          "scholarly",
+          "encyclopedic"
+        ],
+        "priority": "high",
+        "query": "America happened affordability food recent decades definition",
+        "question_type": "definition",
+        "request_id": "cite-search-23f868db0c80918e",
+        "result_count": 3,
+        "result_providers": [
+          "source_family_catalog",
+          "worldbank",
+          "source_family_catalog"
+        ],
+        "result_source_families": [
+          "reference",
+          "official_statistics",
+          "reference"
+        ],
+        "status": "needs_source_family_catalog",
+        "target_source_families": [
+          "official",
+          "news",
+          "scholarly"
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "model": "smollm2-l80",
+    "source": "frontier-v4"
+  },
+  "schema_version": 1,
+  "source": {
+    "adapter_results": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-results.jsonl",
+    "requests": "artifacts/frontier-release-evidence/unresolved-worldbank-source-family-citation-workflow-v1/source-family-citation-search-requests.jsonl"
+  },
+  "status": "needs_catalog_expansion",
+  "summary": {
+    "acquisition_plan_count": 192,
+    "covered_target_source_family_counts": {
+      "official_statistics": 4,
+      "reference": 68
+    },
+    "freshness_required_count": 20,
+    "freshness_required_with_fresh_result_count": 16,
+    "missing_target_source_family_counts": {
+      "news": 20,
+      "official": 52,
+      "scholarly": 156
+    },
+    "official_source_preferred_count": 52,
+    "official_source_preferred_with_official_result_count": 48,
+    "preferred_source_family_counts": {
+      "encyclopedic": 244,
+      "news": 20,
+      "official": 52,
+      "official_statistics": 4,
+      "reference": 260,
+      "scholarly": 156
+    },
+    "request_count": 260,
+    "request_missing_target_family_count": 192,
+    "request_with_fresh_result_count": 196,
+    "request_with_official_result_count": 196,
+    "request_with_results_count": 244,
+    "request_with_target_family_count": 72,
+    "result_provider_counts": {
+      "source_family_catalog": 524,
+      "worldbank": 204
+    },
+    "result_request_count": 244,
+    "result_source_family_counts": {
+      "official_statistics": 204,
+      "reference": 524
+    },
+    "target_source_family_counts": {
+      "news": 20,
+      "official": 52,
+      "official_statistics": 4,
+      "reference": 68,
+      "scholarly": 156
+    }
+  },
+  "workflow": "source_family_coverage_audit"
+}
