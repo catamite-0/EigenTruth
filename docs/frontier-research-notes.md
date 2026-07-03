@@ -929,6 +929,14 @@ Added the first monitor-first tool-selection audit layer:
   by default, so a partial search run with missing request ids cannot look like
   complete route-quality evidence. This preserves the frontier distinction
   between collected snippets and route-quality evidence.
+- `audit_citation_search_result_bindings.py` adds the missing claim-specific
+  source-binding gate for citation/search returns. It binds handoff source docs
+  back through sanitized queue fingerprints and filters for request intent
+  alignment, such as numeric evidence for rate questions or founder evidence
+  for "who founded" questions, without using labels, record ids, target ids,
+  model answers, or retrieval-only `retrieval_index_text`. The evidence
+  workflow can now run this as `--audit-source-bindings` and sweep over the
+  filtered `citation-search-bound-corpus.json`.
 - `run_external_citation_search_adapter_workflow.py` adds the local command
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the

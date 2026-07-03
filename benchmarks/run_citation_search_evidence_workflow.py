@@ -25,6 +25,15 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from benchmarks.audit_citation_search_result_bindings import (  # noqa: E402
+    DEFAULT_CORPUS_NAME as DEFAULT_BOUND_CORPUS_NAME,
+)
+from benchmarks.audit_citation_search_result_bindings import (  # noqa: E402
+    DEFAULT_SOURCE_KIND as DEFAULT_BOUND_SOURCE_KIND,
+)
+from benchmarks.audit_citation_search_result_bindings import (  # noqa: E402
+    run as run_citation_binding_audit,
+)
 from benchmarks.audit_retrieval_corpus_provenance import (  # noqa: E402
     audit_retrieval_corpus_provenance,
 )
@@ -95,6 +104,11 @@ def run(
     max_exact_answer_copy_rate: float = 0.80,
     max_claim_id_link_rate: float = 0.0,
     max_label_metadata_rate: float = 0.0,
+    audit_source_bindings: bool = False,
+    require_binding_source_family_match: bool = False,
+    binding_min_keyword_overlap: float = 0.2,
+    binding_min_support_keyword_overlap: float = 0.65,
+    binding_min_entity_recall: float = 0.5,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
 ) -> dict[str, Any]:
@@ -132,7 +146,30 @@ def run(
     provenance_report: dict[str, Any] | None = None
     query_sweep_report: dict[str, Any] | None = None
     comparison_report: dict[str, Any] | None = None
+    binding_audit_report: dict[str, Any] | None = None
     corpus_path = paths["corpus"] if handoff["external_retrieval_corpus"] is not None else None
+
+    if corpus_path is not None and audit_source_bindings:
+        binding_audit_report = run_citation_binding_audit(
+            requests_path=paths["adapter_requests"],
+            source_documents_path=paths["source_documents"],
+            report_json_path=paths["binding_audit"],
+            bound_source_documents_path=paths["bound_source_documents"],
+            bound_corpus_json_path=paths["bound_corpus"],
+            artifact_manifest_path=paths["binding_manifest"],
+            corpus_name=DEFAULT_BOUND_CORPUS_NAME,
+            source_kind=DEFAULT_BOUND_SOURCE_KIND,
+            min_keyword_overlap=float(binding_min_keyword_overlap),
+            min_support_keyword_overlap=float(binding_min_support_keyword_overlap),
+            min_entity_recall=float(binding_min_entity_recall),
+            require_source_family_match=bool(require_binding_source_family_match),
+            metadata={**dict(metadata or {}), "source_workflow": WORKFLOW},
+            compact_json=compact_json,
+        )
+        if _nested_int(binding_audit_report, "summary", "accepted_source_document_count"):
+            corpus_path = paths["bound_corpus"]
+        else:
+            corpus_path = None
 
     if corpus_path is not None:
         score_dump = load_score_dump(scores_path, allow_missing_scores=True, require_statements=True)
@@ -187,6 +224,7 @@ def run(
 
     gate = _gate(
         handoff=handoff,
+        binding_audit_report=binding_audit_report,
         provenance_report=provenance_report,
         query_sweep_report=query_sweep_report,
         comparison_report=comparison_report,
@@ -237,9 +275,15 @@ def run(
             "max_exact_answer_copy_rate": float(max_exact_answer_copy_rate),
             "max_claim_id_link_rate": float(max_claim_id_link_rate),
             "max_label_metadata_rate": float(max_label_metadata_rate),
+            "audit_source_bindings": bool(audit_source_bindings),
+            "require_binding_source_family_match": bool(require_binding_source_family_match),
+            "binding_min_keyword_overlap": float(binding_min_keyword_overlap),
+            "binding_min_support_keyword_overlap": float(binding_min_support_keyword_overlap),
+            "binding_min_entity_recall": float(binding_min_entity_recall),
         },
         "summary": _summary(
             handoff=handoff,
+            binding_audit_report=binding_audit_report,
             provenance_report=provenance_report,
             query_sweep_report=query_sweep_report,
             comparison_report=comparison_report,
@@ -249,7 +293,9 @@ def run(
             report_path=report_path,
             manifest_path=manifest_path,
             query_sweep_verified_records_dir=query_sweep_verified_records_dir,
+            active_corpus_path=corpus_path,
             has_corpus=corpus_path is not None,
+            has_binding_audit=binding_audit_report is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
             has_comparison=comparison_report is not None,
@@ -268,7 +314,9 @@ def run(
             blind_spots_path=blind_spots_path,
             controlled_sweep_paths=controlled_sweep_paths,
             query_sweep_verified_records_dir=query_sweep_verified_records_dir,
+            active_corpus_path=corpus_path,
             has_corpus=corpus_path is not None,
+            has_binding_audit=binding_audit_report is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
             has_comparison=comparison_report is not None,
@@ -296,6 +344,17 @@ def run(
             ),
             "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
             "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
+            "binding_audit_status": None if binding_audit_report is None else binding_audit_report.get("status"),
+            "bound_source_document_count": _nested_int(
+                binding_audit_report,
+                "summary",
+                "accepted_source_document_count",
+            ),
+            "bound_request_count": _nested_int(
+                binding_audit_report,
+                "summary",
+                "accepted_request_count",
+            ),
             "query_sweep_failure_reason_counts": _nested(
                 report,
                 "summary",
@@ -353,6 +412,17 @@ def run(
                 ),
                 "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
                 "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
+                "binding_audit_status": None if binding_audit_report is None else binding_audit_report.get("status"),
+                "bound_source_document_count": _nested_int(
+                    binding_audit_report,
+                    "summary",
+                    "accepted_source_document_count",
+                ),
+                "bound_request_count": _nested_int(
+                    binding_audit_report,
+                    "summary",
+                    "accepted_request_count",
+                ),
                 "query_sweep_failure_reason_counts": _nested(
                     report,
                     "summary",
@@ -392,6 +462,10 @@ def _paths(output: Path) -> dict[str, Path]:
     return {
         "adapter_requests": output / "citation-search-adapter-requests.jsonl",
         "artifact_manifest": output / "artifact-manifest.json",
+        "binding_audit": output / "citation-search-binding-audit.json",
+        "binding_manifest": output / "citation-search-binding-audit-manifest.json",
+        "bound_corpus": output / "citation-search-bound-corpus.json",
+        "bound_source_documents": output / "citation-search-bound-source-docs.jsonl",
         "corpus": output / "citation-search-corpus.json",
         "handoff_manifest": output / "citation-search-handoff-manifest.json",
         "handoff_report": output / "citation-search-handoff.json",
@@ -409,6 +483,7 @@ def _paths(output: Path) -> dict[str, Path]:
 def _gate(
     *,
     handoff: Mapping[str, Any],
+    binding_audit_report: Mapping[str, Any] | None,
     provenance_report: Mapping[str, Any] | None,
     query_sweep_report: Mapping[str, Any] | None,
     comparison_report: Mapping[str, Any] | None,
@@ -442,6 +517,16 @@ def _gate(
         blocking.append({
             "gate": "adapter_results",
             "reason": "No source documents were produced from adapter results.",
+        })
+    if binding_audit_report is not None and _nested_int(
+        binding_audit_report,
+        "summary",
+        "accepted_source_document_count",
+    ) == 0:
+        blocking.append({
+            "gate": "source_binding_audit",
+            "reason": "No citation/search source documents passed claim-specific binding audit.",
+            "issue_counts": _nested(binding_audit_report, "summary", "issue_counts"),
         })
     if provenance_report is not None and not bool(provenance_report.get("passed")):
         blocking.append({
@@ -486,6 +571,7 @@ def _gate(
 def _summary(
     *,
     handoff: Mapping[str, Any],
+    binding_audit_report: Mapping[str, Any] | None,
     provenance_report: Mapping[str, Any] | None,
     query_sweep_report: Mapping[str, Any] | None,
     comparison_report: Mapping[str, Any] | None,
@@ -532,6 +618,15 @@ def _summary(
         ),
         "source_document_count": _nested_int(handoff, "summary", "source_document_count"),
         "corpus_document_count": _nested_int(handoff, "summary", "corpus_document_count"),
+        "binding_audit_status": None if binding_audit_report is None else binding_audit_report.get("status"),
+        "binding_audit_passed": None if binding_audit_report is None else bool(binding_audit_report.get("passed")),
+        "bound_source_document_count": _nested_int(
+            binding_audit_report,
+            "summary",
+            "accepted_source_document_count",
+        ),
+        "bound_request_count": _nested_int(binding_audit_report, "summary", "accepted_request_count"),
+        "binding_issue_counts": _nested(binding_audit_report, "summary", "issue_counts"),
         "provenance_status": None if provenance_report is None else provenance_report.get("status"),
         "provenance_passed": None if provenance_report is None else bool(provenance_report.get("passed")),
         "evidence_class": None if provenance_report is None else provenance_report.get("evidence_class"),
@@ -724,7 +819,9 @@ def _report_paths(
     report_path: Path,
     manifest_path: Path,
     query_sweep_verified_records_dir: str | Path | None,
+    active_corpus_path: Path | None,
     has_corpus: bool,
+    has_binding_audit: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
@@ -739,7 +836,12 @@ def _report_paths(
         "handoff_manifest": str(paths["handoff_manifest"]),
         "adapter_requests": str(paths["adapter_requests"]),
         "source_documents": str(paths["source_documents"]),
-        "external_retrieval_corpus": str(paths["corpus"]) if has_corpus else None,
+        "external_retrieval_corpus": str(active_corpus_path) if has_corpus and active_corpus_path is not None else None,
+        "raw_external_retrieval_corpus": str(paths["corpus"]) if has_corpus else None,
+        "binding_audit": str(paths["binding_audit"]) if has_binding_audit else None,
+        "bound_source_documents": str(paths["bound_source_documents"]) if has_binding_audit else None,
+        "bound_retrieval_corpus": str(paths["bound_corpus"]) if has_binding_audit and has_corpus else None,
+        "binding_manifest": str(paths["binding_manifest"]) if has_binding_audit else None,
         "provenance_audit": str(paths["provenance_audit"]) if has_provenance else None,
         "query_sweep": str(paths["query_sweep"]) if has_query_sweep else None,
         "query_sweep_manifest": str(paths["query_sweep_manifest"]) if has_query_sweep else None,
@@ -765,7 +867,9 @@ def _manifest_artifacts(
     blind_spots_path: str | Path,
     controlled_sweep_paths: Sequence[str | Path],
     query_sweep_verified_records_dir: str | Path | None,
+    active_corpus_path: Path | None,
     has_corpus: bool,
+    has_binding_audit: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
@@ -783,7 +887,12 @@ def _manifest_artifacts(
         "handoff_manifest": paths["handoff_manifest"],
         "adapter_requests": paths["adapter_requests"],
         "source_documents": paths["source_documents"],
-        "external_retrieval_corpus": paths["corpus"] if has_corpus else None,
+        "external_retrieval_corpus": active_corpus_path if has_corpus else None,
+        "raw_external_retrieval_corpus": paths["corpus"] if has_corpus else None,
+        "binding_audit": paths["binding_audit"] if has_binding_audit else None,
+        "bound_source_documents": paths["bound_source_documents"] if has_binding_audit else None,
+        "bound_retrieval_corpus": paths["bound_corpus"] if has_binding_audit and has_corpus else None,
+        "binding_manifest": paths["binding_manifest"] if has_binding_audit else None,
         "provenance_audit": paths["provenance_audit"] if has_provenance else None,
         "query_sweep": paths["query_sweep"] if has_query_sweep else None,
         "query_sweep_manifest": paths["query_sweep_manifest"] if has_query_sweep else None,
@@ -933,6 +1042,15 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-exact-answer-copy-rate", type=float, default=0.80)
     parser.add_argument("--max-claim-id-link-rate", type=float, default=0.0)
     parser.add_argument("--max-label-metadata-rate", type=float, default=0.0)
+    parser.add_argument(
+        "--audit-source-bindings",
+        action="store_true",
+        help="Run claim-specific citation/source binding before provenance and query-sweep gates.",
+    )
+    parser.add_argument("--require-binding-source-family-match", action="store_true")
+    parser.add_argument("--binding-min-keyword-overlap", type=float, default=0.2)
+    parser.add_argument("--binding-min-support-keyword-overlap", type=float, default=0.65)
+    parser.add_argument("--binding-min-entity-recall", type=float, default=0.5)
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args(argv)
@@ -980,6 +1098,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         max_exact_answer_copy_rate=args.max_exact_answer_copy_rate,
         max_claim_id_link_rate=args.max_claim_id_link_rate,
         max_label_metadata_rate=args.max_label_metadata_rate,
+        audit_source_bindings=bool(args.audit_source_bindings),
+        require_binding_source_family_match=bool(args.require_binding_source_family_match),
+        binding_min_keyword_overlap=float(args.binding_min_keyword_overlap),
+        binding_min_support_keyword_overlap=float(args.binding_min_support_keyword_overlap),
+        binding_min_entity_recall=float(args.binding_min_entity_recall),
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
     )

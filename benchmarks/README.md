@@ -2626,6 +2626,36 @@ python benchmarks/build_citation_search_adapter_handoff.py \
   --version 0.1
 ```
 
+## `audit_citation_search_result_bindings.py`
+
+Audits citation/search result documents before they become retrieval-corpus
+candidates. The audit consumes the sanitized request JSONL and handoff-produced
+source-document JSONL, binds each document through the queue fingerprint, then
+checks claim/request alignment without labels, score rows, target ids, record
+ids, or model answers. It keeps only documents whose text and safe metadata
+match the request intent, for example founder evidence for "who founded"
+questions or numeric evidence for quantity/rate questions. Retrieval-only
+`retrieval_index_text` is not treated as evidence.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-smollm2-l80-citation-binding-audit
+
+python benchmarks/audit_citation_search_result_bindings.py \
+  --requests artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow/citation-search-adapter-requests.jsonl \
+  --source-documents artifacts/truthfulqa-frontier-smollm2-l80-citation-search-evidence-workflow/citation-search-source-docs.jsonl \
+  --json "$OUT/citation-search-binding-audit.json" \
+  --bound-source-documents-jsonl "$OUT/citation-search-bound-source-docs.jsonl" \
+  --bound-corpus-json "$OUT/citation-search-bound-corpus.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-smollm2-l80-citation-binding-audit \
+  --version 0.1
+```
+
+The output corpus is still `external_evidence_candidate` material. It only
+proves claim-specific source binding and must still pass provenance, blind-spot
+query sweep, and controlled-vs-external gates before release use.
+
 ## `run_citation_search_evidence_workflow.py`
 
 Runs the next gate after an external citation/search adapter has returned local
@@ -2661,6 +2691,11 @@ optional `--batch-id` values are forwarded into the citation/search handoff, so
 the downstream query sweep automatically binds source documents back to the
 queue report and consumes those source-bound fixture hits as precomputed
 retrieval evidence.
+Use `--audit-source-bindings` to insert
+`audit_citation_search_result_bindings.py` before provenance and query-sweep
+evaluation. When enabled, the workflow keeps the raw handoff corpus for audit
+traceability but runs provenance and sweep over
+`citation-search-bound-corpus.json`, the filtered claim-bound corpus.
 Large evidence queues can be normalized, audited, and swept batch by batch while
 preserving the same manifest and registry gates.
 Use `--source-family-filters off,planned_rerank` for diagnostic sweeps that

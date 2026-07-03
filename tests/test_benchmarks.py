@@ -62716,6 +62716,175 @@ def test_citation_search_adapter_handoff_rejects_reserved_result_metadata():
         )
 
 
+def test_citation_search_result_binding_audit_filters_unbound_hits(tmp_path):
+    handoff_module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+    module = importlib.import_module("benchmarks.audit_citation_search_result_bindings")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    results_path = tmp_path / "adapter-results.jsonl"
+    handoff_dir = tmp_path / "citation-handoff"
+    report_path = tmp_path / "binding-audit.json"
+    bound_docs_path = tmp_path / "bound-source-docs.jsonl"
+    bound_corpus_path = tmp_path / "bound-corpus.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    queue_requests = [
+        {
+            "queue_id": "queue:alpha:external_citation:1",
+            "source_request_id": "cite:alpha:1",
+            "target_id": "alpha",
+            "record_index": 1,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "definition",
+            "question": "What is Alpha Syndrome?",
+            "model_answer": "A moon.",
+            "query": "What is Alpha Syndrome? A moon.",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+        {
+            "queue_id": "queue:beta:external_citation:1",
+            "source_request_id": "cite:beta:1",
+            "target_id": "beta",
+            "record_index": 2,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "person",
+            "question": "Who founded Beta Lab?",
+            "model_answer": "Nobody.",
+            "query": "Who founded Beta Lab? Nobody.",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+        {
+            "queue_id": "queue:passport:external_citation:1",
+            "source_request_id": "cite:passport:1",
+            "target_id": "passport",
+            "record_index": 3,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "quantity",
+            "question": "Do more than 20% of Americans have passports?",
+            "model_answer": "No.",
+            "query": "Do more than 20% of Americans have passports? No.",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+    ]
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 3, "adapter_request_count": 3},
+            "adapter_requests": queue_requests,
+        }),
+        encoding="utf-8",
+    )
+    results_path.write_text(
+        "\n".join(
+            [
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[0]),
+                    "results": [
+                        {
+                            "title": "Alpha Syndrome reference",
+                            "snippet": "Alpha Syndrome is a fictional condition documented in the test source.",
+                            "url": "https://example.org/alpha",
+                            "provider": "unit-search",
+                            "source_family": "reference",
+                            "metadata": {"entity": "Alpha Syndrome", "property": "definition"},
+                        }
+                    ],
+                }),
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[1]),
+                    "results": [
+                        {
+                            "title": "Beta Lab executives",
+                            "snippet": "Beta Lab named Carol Example as chief executive officer.",
+                            "url": "https://example.org/beta-ceo",
+                            "provider": "unit-search",
+                            "source_family": "news",
+                            "metadata": {"entity": "Beta Lab", "property": "chief executive officer"},
+                        },
+                        {
+                            "title": "Beta Lab founder",
+                            "snippet": "Beta Lab was founded by Ada Example.",
+                            "url": "https://example.org/beta-founder",
+                            "provider": "unit-search",
+                            "source_family": "reference",
+                            "metadata": {"entity": "Beta Lab", "property": "founder", "value": "Ada Example"},
+                        },
+                    ],
+                }),
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[2]),
+                    "results": [
+                        {
+                            "title": "Americans reference",
+                            "snippet": "Americans are a nationality listed by the reference source.",
+                            "url": "https://example.org/americans",
+                            "provider": "unit-search",
+                            "source_family": "reference",
+                            "metadata": {"entity": "Americans", "property": "instance of", "value": "nationality"},
+                        }
+                    ],
+                }),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    handoff_module.run(
+        queue_report_path=queue_path,
+        adapter_results_path=results_path,
+        output_dir=handoff_dir,
+    )
+
+    payload = module.run(
+        requests_path=handoff_dir / "citation-search-adapter-requests.jsonl",
+        source_documents_path=handoff_dir / "citation-search-source-docs.jsonl",
+        report_json_path=report_path,
+        bound_source_documents_path=bound_docs_path,
+        bound_corpus_json_path=bound_corpus_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="citation-binding-audit-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    bound_docs = [json.loads(line) for line in bound_docs_path.read_text(encoding="utf-8").splitlines()]
+    bound_corpus = json.loads(bound_corpus_path.read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-binding-audit-unit:0.1"
+    )
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["source_document_count"] == 4
+    assert payload["summary"]["accepted_source_document_count"] == 2
+    assert payload["summary"]["accepted_request_count"] == 2
+    assert payload["summary"]["issue_counts"]["person_intent_requires_relation_evidence"] == 1
+    assert payload["summary"]["issue_counts"]["numeric_intent_requires_numeric_evidence"] == 1
+    assert [doc["metadata"]["citation_binding_intent_reason"] for doc in bound_docs] == [
+        "lexical_alignment_only",
+        "person_relation_intent_matched",
+    ]
+    assert all(doc["metadata"]["citation_binding_status"] == "accepted" for doc in bound_docs)
+    assert "20%" not in bound_docs[0]["text"]
+    assert bound_corpus["summary"]["n_documents"] == 2
+    assert bound_corpus["documents"][1]["metadata"]["citation_binding_request_id"].startswith("cite-search-")
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "citation_search_result_binding_audit"
+    assert record.metadata["accepted_source_document_count"] == 2
+    assert record.metadata["suite"] == "unit"
+
+
 def test_citation_search_adapter_handoff_selects_execution_batch(tmp_path):
     module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
 
@@ -64841,6 +65010,163 @@ def test_citation_search_evidence_workflow_blocks_partial_adapter_result_coverag
     missing_id = handoff_module._adapter_request_id(queue_requests[1])
     assert payload["summary"]["adapter_result_missing_request_ids"] == (missing_id,)
     assert payload["gate"]["blocking_reasons"][0]["missing_request_count"] == 1
+
+
+def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
+    module = importlib.import_module("benchmarks.run_citation_search_evidence_workflow")
+    handoff_module = importlib.import_module("benchmarks.build_citation_search_adapter_handoff")
+
+    queue_path = tmp_path / "unresolved-evidence-queue.json"
+    results_path = tmp_path / "adapter-results.jsonl"
+    scores_path = tmp_path / "scores.json"
+    blind_spots_path = tmp_path / "blind-spots.json"
+    output_dir = tmp_path / "citation-search-evidence"
+    queue_requests = [
+        {
+            "queue_id": "queue:alpha:external_citation:1",
+            "source_request_id": "cite:alpha:1",
+            "target_id": "alpha",
+            "record_index": 1,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "definition",
+            "question": "What is Alpha?",
+            "model_answer": "Wrong A1",
+            "query": "What is Alpha? Wrong A1",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+        {
+            "queue_id": "queue:passport:external_citation:1",
+            "source_request_id": "cite:passport:1",
+            "target_id": "passport",
+            "record_index": 2,
+            "adapter_family": "external_citation_search",
+            "request_type": "external_citation",
+            "priority": "high",
+            "question_type": "quantity",
+            "question": "Do more than 20% of Americans have passports?",
+            "model_answer": "No",
+            "query": "Do more than 20% of Americans have passports? No",
+            "requires_timestamp": False,
+            "usage": "source_discovery_only",
+        },
+    ]
+    queue_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "unresolved_blind_spot_evidence_queue",
+            "status": "ready_for_adapter_execution",
+            "summary": {"target_count": 2, "adapter_request_count": 2},
+            "adapter_requests": queue_requests,
+        }),
+        encoding="utf-8",
+    )
+    results_path.write_text(
+        "\n".join(
+            [
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[0]),
+                    "results": [
+                        {
+                            "title": "Alpha reference",
+                            "snippet": "Alpha is the first letter of the Greek alphabet.",
+                            "url": "https://example.org/alpha",
+                            "provider": "unit-search",
+                            "source_family": "reference",
+                            "metadata": {"entity": "Alpha", "property": "definition"},
+                        }
+                    ],
+                }),
+                json.dumps({
+                    "request_id": handoff_module._adapter_request_id(queue_requests[1]),
+                    "results": [
+                        {
+                            "title": "Americans reference",
+                            "snippet": "Americans are a nationality listed by the reference source.",
+                            "url": "https://example.org/americans",
+                            "provider": "unit-search",
+                            "source_family": "reference",
+                            "metadata": {"entity": "Americans", "property": "instance of", "value": "nationality"},
+                        }
+                    ],
+                }),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.9, 0.8, 0.2]},
+            "statements": [
+                {"question": "What is Alpha?", "answer": "Alpha", "text": "What is Alpha? Alpha"},
+                {"question": "What is Alpha?", "answer": "Wrong A1", "text": "What is Alpha? Wrong A1"},
+                {
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "No",
+                    "text": "Do more than 20% of Americans have passports? No",
+                },
+                {
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "Yes",
+                    "text": "Do more than 20% of Americans have passports? Yes",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    blind_spots_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "detectability_blind_spot_analysis",
+            "records": [
+                {
+                    "record_index": 2,
+                    "label": 1,
+                    "question_type": "quantity",
+                    "features": {},
+                    "question": "Do more than 20% of Americans have passports?",
+                    "answer": "No",
+                    "text": "Do more than 20% of Americans have passports? No",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        queue_report_path=queue_path,
+        adapter_results_path=results_path,
+        scores_path=scores_path,
+        blind_spots_path=blind_spots_path,
+        output_dir=output_dir,
+        query_fields=("question",),
+        retriever_min_overlaps=(0.5,),
+        source_family_filters=("planned_rerank",),
+        retrieval_limit=1,
+        alpha=0.2,
+        max_verified_false_alarm=1.0,
+        min_blind_refuted_rate=0.0,
+        audit_source_bindings=True,
+    )
+    workflow_report = json.loads((output_dir / "citation-search-evidence-workflow.json").read_text(encoding="utf-8"))
+    binding_report = json.loads((output_dir / "citation-search-binding-audit.json").read_text(encoding="utf-8"))
+    query_sweep = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
+
+    assert payload["config"]["audit_source_bindings"] is True
+    assert payload["summary"]["source_document_count"] == 2
+    assert payload["summary"]["bound_source_document_count"] == 1
+    assert payload["summary"]["bound_request_count"] == 1
+    assert payload["summary"]["binding_issue_counts"]["numeric_intent_requires_numeric_evidence"] == 1
+    assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-bound-corpus.json")
+    assert workflow_report["paths"]["raw_external_retrieval_corpus"].endswith("citation-search-corpus.json")
+    assert workflow_report["paths"]["binding_audit"].endswith("citation-search-binding-audit.json")
+    assert binding_report["summary"]["accepted_source_document_count"] == 1
+    assert query_sweep["source"]["corpus_paths"] == [str(output_dir / "citation-search-bound-corpus.json")]
 
 
 def test_citation_search_evidence_workflow_passes_batch_ids_to_handoff(tmp_path):
