@@ -58,7 +58,7 @@
       "confidence": 0.9473684210526315,
       "evidence_source": "wikidata:Q846570:description",
       "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
-      "matched_entity": "do",
+      "matched_entity": "Americans",
       "metadata": {
         "builder": "retrieval_semantic_gap_handoff",
         "decision_rule": "slot_evidence_alignment",
@@ -71,7 +71,7 @@
       "request_id": "fact:record-11:1",
       "requested_subject": "Americans",
       "source_family": "reference",
-      "subject": "do",
+      "subject": "Americans",
       "target_id": "record-11",
       "usage": "structured_fact_review_only",
       "value": "citizens and nationals of the United States of America"
@@ -173,7 +173,7 @@
       "confidence": 0.9473684210526315,
       "evidence_source": "wikidata:Q846570:description",
       "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
-      "matched_entity": "do",
+      "matched_entity": "Americans",
       "metadata": {
         "builder": "retrieval_semantic_gap_handoff",
         "decision_rule": "slot_evidence_alignment",
@@ -186,7 +186,7 @@
       "request_id": "fact:record-182:1",
       "requested_subject": "Americans",
       "source_family": "reference",
-      "subject": "do",
+      "subject": "Americans",
       "target_id": "record-182",
       "usage": "structured_fact_review_only",
       "value": "citizens and nationals of the United States of America"
@@ -196,7 +196,7 @@
       "confidence": 0.9523809523809523,
       "evidence_source": "wikidata:Q421:description",
       "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
-      "matched_entity": "UFOs",
+      "matched_entity": "unidentified flying object",
       "metadata": {
         "builder": "retrieval_semantic_gap_handoff",
         "decision_rule": "low_overlap",
@@ -209,7 +209,7 @@
       "request_id": "fact:record-212:1",
       "requested_subject": "UFOs",
       "source_family": "reference",
-      "subject": "UFOs",
+      "subject": "unidentified flying object",
       "target_id": "record-212",
       "usage": "structured_fact_review_only",
       "value": "unusual apparent anomaly in the sky that is not readily identifiable"
@@ -219,7 +219,7 @@
       "confidence": 0.9523809523809523,
       "evidence_source": "wikidata:Q421:description",
       "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
-      "matched_entity": "UFOs",
+      "matched_entity": "unidentified flying object",
       "metadata": {
         "builder": "retrieval_semantic_gap_handoff",
         "decision_rule": "low_overlap",
@@ -232,7 +232,7 @@
       "request_id": "fact:record-224:1",
       "requested_subject": "UFOs",
       "source_family": "reference",
-      "subject": "UFOs",
+      "subject": "unidentified flying object",
       "target_id": "record-224",
       "usage": "structured_fact_review_only",
       "value": "unusual apparent anomaly in the sky that is not readily identifiable"
@@ -246,6 +246,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "parent_workflow": "retrieval_semantic_gap_review_workflow"
   },

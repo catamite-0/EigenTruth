@@ -5,51 +5,52 @@
       "file_count": 1,
       "kind": "file",
       "path": "covered-facts-scores.json",
-      "sha256": "457c53ff95e59771330bb83a5278b0a91434583924b83de24ee397f87e6ca203",
-      "size_bytes": 10001
+      "sha256": "49b998e797d7d6022828aa8336bd459539a6be66daa94a86be20e1cbf38e36a4",
+      "size_bytes": 16060
     },
     "qa_corpus": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../source-family-qa/source-family-qa-corpus.json",
-      "sha256": "b4216a2629829b9590856620d3dc44f53f2a7286a7e52bc8f77e3b6d997356d6",
-      "size_bytes": 4298
+      "sha256": "2d339870b19e1f927dc91bc1ef2d20254278a44a204eb6ddd16d5d618bb86967",
+      "size_bytes": 6561
     },
     "route_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "structured-qa-route-summary.json",
-      "sha256": "58fe35ac76bc0a439f0fe8ab86d3d5b476174af4291b9207ea1a31312c968c03",
-      "size_bytes": 8261
+      "sha256": "f81fcb4de922b6ec17625b4dfc1f572814203bd89836ce4a03b408e426ea9b29",
+      "size_bytes": 8337
     },
     "verified_records_jsonl": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "verified-records.jsonl",
-      "sha256": "c6f6ef2c2f91a69ca019cba82e0ca7a24281b484639dba3ceb5fc444b90e9c49",
-      "size_bytes": 25845
+      "sha256": "8ee8769fc7c7a8017362b2dfaece1c614b6fc65a1d04f8e606b0cccf0775fd03",
+      "size_bytes": 44111
     },
     "verifier_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "structured-qa-verifier-report.json",
-      "sha256": "0836500a9f2375c57aea02460b9b72f95bede6b0fb2725adde4396c22b38a7ad",
-      "size_bytes": 17862
+      "sha256": "c958dd057e36513f5684320ad3e2af4f80b2a6a46d393189d9a54e535a4aa8e4",
+      "size_bytes": 17885
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "alpha": 0.1,
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "fact_group_count": 1,
-    "n_false": 3,
-    "n_records": 6,
-    "n_true": 3,
+    "n_false": 5,
+    "n_records": 10,
+    "n_true": 5,
     "parent_workflow": "retrieval_semantic_gap_review_workflow",
     "promotes_covered_facts_route": true,
     "provider_count": 1,

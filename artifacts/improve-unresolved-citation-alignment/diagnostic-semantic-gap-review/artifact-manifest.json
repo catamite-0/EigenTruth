@@ -5,112 +5,112 @@
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review-corpus.json",
-      "sha256": "8490aee063130f268d7d70a14b9f7841403233ad543bf1618f8a47b07143e506",
-      "size_bytes": 5073
+      "sha256": "d1a590943422992ec1655b37e2467916294d1fceb4389976037067c1311ebdfd",
+      "size_bytes": 7656
     },
     "alignment_fact_review_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review.manifest.json",
-      "sha256": "5b6faaceea898244968c54f0691248596dd3420d75e78c828abf3fbe15020528",
-      "size_bytes": 1746
+      "sha256": "25bd7eed7c3a6cb90b03e0e14f1da2d1fc3f1d355ae10060732c7e9829f727d9",
+      "size_bytes": 1803
     },
     "alignment_fact_review_promotion_gate_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-reviewed-promotion-gate/promotion-gate-report.json",
-      "sha256": "58b8875f1fe09e6e858adb691edc12d42d69cae169d96bb9d3e7d7a659880387",
-      "size_bytes": 12188
+      "sha256": "d8949df40f4a38269c087d196e211b1b8139495a02360e5f0b895e9aea240cef",
+      "size_bytes": 17823
     },
     "alignment_fact_review_records": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review-records.jsonl",
-      "sha256": "4a3ea090eb176026fa77d63cd074c54876ec5d6a6e330a48f50cf351a9b87e84",
-      "size_bytes": 6374
+      "sha256": "aa378158285ae3654e88fce5c91c06d4f73809310607bb1f1f1b4e3c2943a58c",
+      "size_bytes": 6396
     },
     "alignment_fact_review_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-fact-review-report.json",
-      "sha256": "98ea9bf76535469e2e980400110d807646769b0a9b2e949663167f660436d77c",
-      "size_bytes": 1957
+      "sha256": "881cfd382173709f340273a6f6d00a6cbef2ff4fd00837e008076ca54e926f5d",
+      "size_bytes": 2014
     },
     "alignment_fact_rule_review_decisions": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-rule-review/review-decisions.jsonl",
-      "sha256": "335a87813cbf24a8037abb87c1b7d41ef513063c4639c31e640d14b700a1db68",
-      "size_bytes": 762
+      "sha256": "1eb80afdf6d9be21de9a25c79c800d422abb781e110cefc9d868720cde48216e",
+      "size_bytes": 1271
     },
     "alignment_fact_rule_review_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-rule-review/artifact-manifest.json",
-      "sha256": "169705e264b94489dd39217187d22d6b9015ba67d225bfcb1ad6748ed67d24cf",
-      "size_bytes": 1676
+      "sha256": "2847e99b5ecf6aa46a356c9acf3eb5b6f704cee3a39a5b203060793338a9412b",
+      "size_bytes": 1734
     },
     "alignment_fact_rule_review_records": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-rule-review/review-records.jsonl",
-      "sha256": "d2cbc3284ed7ccf9e2cb6a645f715ca977a1d0188b68bd6ee0b1cec1268292ca",
-      "size_bytes": 2165
+      "sha256": "761e47c60cf271fb35db73efb7364c7c112559b8af7fef66a1cb8802806495b3",
+      "size_bytes": 3676
     },
     "alignment_fact_rule_review_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-rule-review/review-report.json",
-      "sha256": "523b21df7befae76ab672b26812749b8b8651a863013e18c05d7c34c4bc67ac2",
-      "size_bytes": 5706
+      "sha256": "3c5370b0c061557dd8e9bd816a7596c046794924ff7f461c7de84b0e71534391",
+      "size_bytes": 8231
     },
     "approved_source_documents": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-reviewed-promotion-gate/approved-source-documents.json",
-      "sha256": "125f27a3656b515ea17d46fc8efa55e9dc8918cd5a566329c3f66023ee390cb4",
-      "size_bytes": 4845
+      "sha256": "ab54bbcb9e086aec514eddbad95ba3cd2ec991ee577b7c6c488634e48cca498e",
+      "size_bytes": 7314
     },
     "covered_fact_route_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "covered-fact-route/artifact-manifest.json",
-      "sha256": "1d94fecfdd3e466e15ec83dc6d4915295b231cce637ff4f9ce907481a78766bc",
-      "size_bytes": 2244
+      "sha256": "211c2fa575a71e78baccaffcb4c22f40826978d4ef2cd6944bf6fa88ce3db926",
+      "size_bytes": 2302
     },
     "covered_fact_route_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "covered-fact-route/structured-qa-route-summary.json",
-      "sha256": "58fe35ac76bc0a439f0fe8ab86d3d5b476174af4291b9207ea1a31312c968c03",
-      "size_bytes": 8261
+      "sha256": "f81fcb4de922b6ec17625b4dfc1f572814203bd89836ce4a03b408e426ea9b29",
+      "size_bytes": 8337
     },
     "promotion_gate_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-reviewed-promotion-gate/artifact-manifest.json",
-      "sha256": "2396da866954d6807134721a7597b8229614bb656e86f9806262c70079cff92e",
-      "size_bytes": 2271
+      "sha256": "42d80350b6c9dbed97d2e2d101f3593ff9f33fcb16addc876fc2701f79d7ce89",
+      "size_bytes": 2329
     },
     "promotion_gate_records": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "alignment-reviewed-promotion-gate/promotion-gate-records.jsonl",
-      "sha256": "b034f5987c8a944a6f67e68cee3a12d385ebe267843d2f8416ad380fd9a50198",
-      "size_bytes": 1376
+      "sha256": "8bb63d5157533a38ff789afc1599119e6c7596c7836e28cee46d609d542cd1be",
+      "size_bytes": 2361
     },
     "record_indices_json": {
       "exists": true,
@@ -125,23 +125,23 @@
       "file_count": 1,
       "kind": "file",
       "path": "retrieval-semantic-gap-review-workflow.json",
-      "sha256": "b575346e4d7ce8285414abd1b25842da78b55101867598dc5dc46f25d1c8c431",
-      "size_bytes": 7717
+      "sha256": "1ca79868ede5ca1b7c11722823393d21a629cba10b087c0a1653da622dc4b41c",
+      "size_bytes": 7775
     },
     "semantic_gap_handoff": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "retrieval-semantic-gap-handoff.json",
-      "sha256": "e4fd770efcb163f434664faa6606bb3c57ed17512872c64efd91d5e3f998de44",
-      "size_bytes": 1030679
+      "sha256": "47e858b94c05797b14cab37983ef1a2dfc7aed3479c6992251fff9f659804e49",
+      "size_bytes": 1030852
     },
     "semantic_gap_handoff_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "retrieval-semantic-gap-handoff.manifest.json",
-      "sha256": "8123d669dd101402b07fa6625089d318b24807b5bfdebca7696112596444ee5e",
+      "sha256": "c9a9535205b793760aaab646e52c8e7d980b0680cf2d4db388cc9ce2d91c4b0d",
       "size_bytes": 1211
     },
     "source_family_qa_corpus": {
@@ -149,24 +149,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "source-family-qa/source-family-qa-corpus.json",
-      "sha256": "b4216a2629829b9590856620d3dc44f53f2a7286a7e52bc8f77e3b6d997356d6",
-      "size_bytes": 4298
+      "sha256": "2d339870b19e1f927dc91bc1ef2d20254278a44a204eb6ddd16d5d618bb86967",
+      "size_bytes": 6561
     },
     "source_family_qa_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "source-family-qa/artifact-manifest.json",
-      "sha256": "e640a021285a60357ced6029b1d2055ca26a84f57da5ff74867f9e544e0e2266",
-      "size_bytes": 1453
+      "sha256": "a3aaffe8af55892afe69c3c9a881019c97e6727ef158166a1506b80c3ebc94ce",
+      "size_bytes": 1510
     },
     "source_family_qa_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "source-family-qa/source-family-qa-report.json",
-      "sha256": "bcf39b83802e6d98f34e000473e16f455204b26d7ff653e96d867a51ca723cd3",
-      "size_bytes": 1381
+      "sha256": "adf7d0fa0796ea75c87e0908f4d01a8dd3eb980ce44103ae58541883d224c88a",
+      "size_bytes": 1438
     },
     "verified_records_jsonl": {
       "exists": true,
@@ -179,15 +179,16 @@
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "approved_source_document_count": 3,
+    "approved_source_document_count": 5,
     "candidate_count": 63,
     "closure_action": "improve_unresolved_citation_alignment",
     "covered_fact_route_status": "promote",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "fact_candidate_count": 10,
-    "review_document_count": 3,
-    "rule_review_approved_count": 3,
-    "source_family_qa_document_count": 3,
+    "review_document_count": 5,
+    "rule_review_approved_count": 5,
+    "source_family_qa_document_count": 5,
     "status": "covered_fact_route_promote",
     "workflow": "retrieval_semantic_gap_review_workflow"
   },

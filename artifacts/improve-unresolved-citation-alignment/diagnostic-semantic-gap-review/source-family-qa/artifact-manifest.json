@@ -5,33 +5,34 @@
       "file_count": 1,
       "kind": "file",
       "path": "../alignment-reviewed-promotion-gate/approved-source-documents.json",
-      "sha256": "125f27a3656b515ea17d46fc8efa55e9dc8918cd5a566329c3f66023ee390cb4",
-      "size_bytes": 4845
+      "sha256": "ab54bbcb9e086aec514eddbad95ba3cd2ec991ee577b7c6c488634e48cca498e",
+      "size_bytes": 7314
     },
     "source_family_structured_qa_corpus": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "source-family-qa-corpus.json",
-      "sha256": "b4216a2629829b9590856620d3dc44f53f2a7286a7e52bc8f77e3b6d997356d6",
-      "size_bytes": 4298
+      "sha256": "2d339870b19e1f927dc91bc1ef2d20254278a44a204eb6ddd16d5d618bb86967",
+      "size_bytes": 6561
     },
     "source_family_structured_qa_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "source-family-qa-report.json",
-      "sha256": "bcf39b83802e6d98f34e000473e16f455204b26d7ff653e96d867a51ca723cd3",
-      "size_bytes": 1381
+      "sha256": "adf7d0fa0796ea75c87e0908f4d01a8dd3eb980ce44103ae58541883d224c88a",
+      "size_bytes": 1438
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "candidate_document_count": 3,
+    "candidate_document_count": 5,
     "closure_action": "improve_unresolved_citation_alignment",
     "corpus_type": "source_family_structured_qa_external_evidence",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
-    "document_count": 3,
+    "document_count": 5,
     "parent_workflow": "retrieval_semantic_gap_review_workflow",
     "status": "ready",
     "workflow": "source_family_structured_qa_corpus_builder"

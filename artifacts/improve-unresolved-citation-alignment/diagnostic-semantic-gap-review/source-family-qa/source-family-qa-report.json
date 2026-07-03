@@ -4,6 +4,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "parent_workflow": "retrieval_semantic_gap_review_workflow"
   },
@@ -21,14 +22,14 @@
   "status": "ready",
   "summary": {
     "by_provider": {
-      "wikidata": 3
+      "wikidata": 5
     },
     "by_source_family": {
-      "reference": 3
+      "reference": 5
     },
-    "n_candidate_documents": 3,
-    "n_documents": 3,
-    "n_source_documents": 3,
+    "n_candidate_documents": 5,
+    "n_documents": 5,
+    "n_source_documents": 5,
     "skipped": {
       "duplicates": 0,
       "missing_fields": 0,

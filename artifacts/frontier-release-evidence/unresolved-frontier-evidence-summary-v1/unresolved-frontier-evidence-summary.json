@@ -146,17 +146,17 @@
       "unreviewed_execution_override_count": 0
     },
     "semantic_gap_review": {
-      "approved_source_document_count": 3,
+      "approved_source_document_count": 5,
       "best_covered_fact_route_decision_accuracy": 1.0,
       "best_covered_fact_route_false_refuted_rate": 1.0,
       "blocked_workflow_count": 0,
-      "covered_fact_route_n_records": 6,
+      "covered_fact_route_n_records": 10,
       "covered_fact_route_skipped_count": 0,
-      "fact_review_document_count": 3,
+      "fact_review_document_count": 5,
       "promoted_workflow_count": 1,
       "semantic_gap_candidate_count": 63,
       "semantic_gap_fact_candidate_count": 10,
-      "source_family_qa_document_count": 3,
+      "source_family_qa_document_count": 5,
       "status": "promote",
       "status_counts": {
         "covered_fact_route_promote": 1
@@ -164,16 +164,16 @@
       "workflow_count": 1,
       "workflows": [
         {
-          "approved_source_document_count": 3,
+          "approved_source_document_count": 5,
           "covered_fact_route_decision_accuracy": 1.0,
           "covered_fact_route_false_refuted_rate": 1.0,
-          "covered_fact_route_n_records": 6,
+          "covered_fact_route_n_records": 10,
           "covered_fact_route_status": "promote",
-          "fact_review_document_count": 3,
+          "fact_review_document_count": 5,
           "index": 1,
           "semantic_gap_candidate_count": 63,
           "semantic_gap_fact_candidate_count": 10,
-          "source_family_qa_document_count": 3,
+          "source_family_qa_document_count": 5,
           "status": "covered_fact_route_promote",
           "workflow": "retrieval_semantic_gap_review_workflow"
         }
@@ -519,6 +519,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "model": "smollm2-l80",
     "semantic_gap_review": "diagnostic_verified_records_sidecar",
     "source": "frontier-v4"
@@ -544,7 +545,7 @@
       "query_sweep_target_route_not_selected_strategy_count": 0,
       "query_sweep_verified_false_alarm_above_max_strategy_count": 24,
       "reason": "source acquisition is covered but citation/search evidence gates still do not promote; inspect query alignment, claim mapping, or route thresholds before release use",
-      "semantic_gap_covered_fact_route_n_records": 6,
+      "semantic_gap_covered_fact_route_n_records": 10,
       "semantic_gap_review_status": "promote",
       "unresolved_target_count": 88
     }
@@ -624,8 +625,8 @@
     },
     "mechanism_handoff_trace_count": 9,
     "missing_lane_count": 0,
-    "semantic_gap_review_approved_source_document_count": 3,
-    "semantic_gap_review_covered_fact_route_n_records": 6,
+    "semantic_gap_review_approved_source_document_count": 5,
+    "semantic_gap_review_covered_fact_route_n_records": 10,
     "semantic_gap_review_promoted_workflow_count": 1,
     "semantic_gap_review_workflow_count": 1,
     "source_family_coverage_audit_count": 1,

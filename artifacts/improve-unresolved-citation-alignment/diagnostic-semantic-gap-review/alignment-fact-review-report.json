@@ -4,6 +4,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "parent_workflow": "retrieval_semantic_gap_review_workflow"
   },
@@ -20,31 +21,31 @@
   },
   "status": "ready_for_review",
   "summary": {
-    "accepted_document_count": 3,
+    "accepted_document_count": 5,
     "by_property_hint": {
-      "description": 3
+      "description": 5
     },
     "by_provider": {
-      "source_family_catalog": 3
+      "source_family_catalog": 5
     },
     "by_source_family": {
-      "reference": 3
+      "reference": 5
     },
     "input_candidate_count": 10,
     "skipped": {
       "answer_value_matches_model_answer": 0,
-      "duplicate_candidate": 2,
+      "duplicate_candidate": 4,
       "generic_value": 0,
       "invalid_row": 0,
       "low_confidence": 0,
       "missing_required_fields": 0,
       "non_review_usage": 0,
       "property_value_invalid": 0,
-      "subject_not_in_evidence_span": 5,
+      "subject_not_in_evidence_span": 1,
       "value_equals_subject": 0,
       "value_not_in_evidence_span": 0
     },
-    "skipped_count": 7,
+    "skipped_count": 5,
     "unique_candidate_count": 10
   },
   "workflow": "alignment_fact_review_corpus_builder"

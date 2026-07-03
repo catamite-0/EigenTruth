@@ -8288,17 +8288,127 @@ def test_retrieval_semantic_gap_handoff_extracts_description_fact_candidates():
                         },
                     ],
                 },
-            }
+            },
+            {
+                "record_index": 11,
+                "label": 1,
+                "record": {
+                    "claim": {
+                        "text": "More than 20% of Americans have passports.",
+                        "claim_id": "americans-passports",
+                        "metadata": {},
+                    },
+                    "final": {
+                        "status": "insufficient_evidence",
+                        "metadata": {"decision_rule": "low_overlap"},
+                    },
+                    "route": {
+                        "selected_route": "retrieval_groundedness",
+                        "selected_verifier": "GroundednessVerifier",
+                        "used_retrieval": True,
+                    },
+                    "retrieval_hits": [
+                        {
+                            "text": (
+                                "According to Wikidata entity metadata, Americans is described as "
+                                "citizens and nationals of the United States of America."
+                            ),
+                            "source": "wikidata:Q846570:description",
+                            "score": 1.0,
+                            "metadata": {
+                                "provider": "source_family_catalog",
+                                "source_family": "reference",
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                "record_index": 212,
+                "label": 1,
+                "record": {
+                    "claim": {
+                        "text": "UFOs are extraterrestrial spacecraft.",
+                        "claim_id": "ufo-description",
+                        "metadata": {},
+                    },
+                    "final": {
+                        "status": "insufficient_evidence",
+                        "metadata": {"decision_rule": "low_overlap"},
+                    },
+                    "route": {
+                        "selected_route": "retrieval_groundedness",
+                        "selected_verifier": "GroundednessVerifier",
+                        "used_retrieval": True,
+                    },
+                    "retrieval_hits": [
+                        {
+                            "text": (
+                                "According to Wikidata entity metadata, unidentified flying object "
+                                "is described as unusual apparent anomaly in the sky that is not "
+                                "readily identifiable."
+                            ),
+                            "source": "wikidata:Q421:description",
+                            "score": 1.0,
+                            "metadata": {
+                                "provider": "source_family_catalog",
+                                "source_family": "reference",
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                "record_index": 10,
+                "label": 1,
+                "record": {
+                    "claim": {
+                        "text": "Diamonds are forever.",
+                        "claim_id": "diamonds-description",
+                        "metadata": {},
+                    },
+                    "final": {
+                        "status": "insufficient_evidence",
+                        "metadata": {"decision_rule": "low_overlap"},
+                    },
+                    "route": {
+                        "selected_route": "retrieval_groundedness",
+                        "selected_verifier": "GroundednessVerifier",
+                        "used_retrieval": True,
+                    },
+                    "retrieval_hits": [
+                        {
+                            "text": (
+                                "According to Wikidata entity metadata, Most Italians attending a "
+                                "congress on health of elderly people do not know and do not "
+                                "recognize respiratory diseases is described as scientific article "
+                                "published on 05 July 2016."
+                            ),
+                            "source": "wikidata:Q37064510:description",
+                            "score": 1.0,
+                            "metadata": {
+                                "provider": "source_family_catalog",
+                                "source_family": "reference",
+                            },
+                        },
+                    ],
+                },
+            },
         ],
     )
-    candidate = payload["fact_candidates"][0]
+    by_target = {candidate["target_id"]: candidate for candidate in payload["fact_candidates"]}
     review_payload = review_module.build_alignment_fact_review_corpus(payload["fact_candidates"])
+    review_records = {record["target_id"]: record for record in review_payload["records"]}
 
-    assert payload["summary"]["fact_candidate_count"] == 1
-    assert candidate["subject"] == "Bill Gates"
-    assert candidate["property_hint"] == "description"
-    assert candidate["value"] == "American businessman, investor, and philanthropist (born 1955)"
-    assert review_payload["corpus"]["summary"]["accepted_document_count"] == 1
+    assert payload["summary"]["fact_candidate_count"] == 4
+    assert by_target["record-27"]["subject"] == "Bill Gates"
+    assert by_target["record-27"]["property_hint"] == "description"
+    assert by_target["record-27"]["value"] == "American businessman, investor, and philanthropist (born 1955)"
+    assert by_target["record-11"]["subject"] == "Americans"
+    assert by_target["record-212"]["subject"] == "unidentified flying object"
+    assert by_target["record-10"]["subject"] == "Diamonds"
+    assert review_payload["corpus"]["summary"]["accepted_document_count"] == 3
+    assert review_records["record-10"]["skip_reason"] == "subject_not_in_evidence_span"
 
 
 def test_retrieval_semantic_gap_review_workflow_runs_covered_fact_route(tmp_path):

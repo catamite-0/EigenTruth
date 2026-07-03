@@ -88,9 +88,9 @@
                 "detection": 0.0,
                 "false_alarm": 0.0
               },
-              "n_false": 3,
-              "n_selected": 6,
-              "n_true": 3,
+              "n_false": 5,
+              "n_selected": 10,
+              "n_true": 5,
               "verified": {
                 "detection": 1.0,
                 "false_alarm": 0.0
@@ -129,9 +129,9 @@
           "cache_key_mode": "semantic",
           "hit_rate": 0.0,
           "hits": 0,
-          "misses": 6,
-          "requests": 6,
-          "size": 6
+          "misses": 10,
+          "requests": 10,
+          "size": 10
         },
         "retrieval_alignment_verifiers": {
           "cache_key_mode": "semantic",
@@ -172,9 +172,9 @@
         "total": {
           "hit_rate": 0.0,
           "hits": 0,
-          "misses": 6,
-          "requests": 6,
-          "size": 6
+          "misses": 10,
+          "requests": 10,
+          "size": 10
         },
         "trace_cache": {
           "enabled": false,
@@ -243,12 +243,12 @@
         "supported_triple_count": 0,
         "type": "FactSelfConsistencyVerifier"
       },
-      "n_false": 3,
-      "n_total": 6,
-      "n_true": 3,
+      "n_false": 5,
+      "n_total": 10,
+      "n_true": 5,
       "name": "semantic-gap-reviewed-covered-facts",
       "qa": {
-        "decided_records": 6,
+        "decided_records": 10,
         "enabled": true
       },
       "retrieval": {
@@ -259,7 +259,7 @@
       "retrieval_alignment": {
         "decided_records": 0,
         "enabled": false,
-        "records_with_signal": 5
+        "records_with_signal": 6
       },
       "retrieval_qa": {
         "decided_records": 0,
@@ -267,10 +267,10 @@
       },
       "route_quality": {
         "structured_qa": {
-          "attempted_route_count_observations": 6,
+          "attempted_route_count_observations": 10,
           "decision_accuracy": 1.0,
           "decision_error_rate": 0.0,
-          "duration_observations": 6,
+          "duration_observations": 10,
           "false_refuted_rate": 1.0,
           "false_supported_rate": 0.0,
           "insufficient_evidence_rate": 0.0,
@@ -279,7 +279,7 @@
               "error": 0,
               "insufficient_evidence": 0,
               "not_applicable": 0,
-              "refuted": 3,
+              "refuted": 5,
               "supported": 0
             },
             "true": {
@@ -287,29 +287,29 @@
               "insufficient_evidence": 0,
               "not_applicable": 0,
               "refuted": 0,
-              "supported": 3
+              "supported": 5
             }
           },
-          "max_duration_seconds": 0.0001204529544338584,
+          "max_duration_seconds": 0.00012360198888927698,
           "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 0.00010328883460412423,
+          "mean_duration_seconds": 0.0001012694905512035,
           "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 0.00010328883460412423,
-          "n_decided_supported_or_refuted": 6,
-          "n_false": 3,
-          "n_true": 3,
-          "p95_duration_seconds": 0.00011981645366176963,
-          "p95_selected_route_duration_seconds": 0.00011981645366176963,
-          "p99_duration_seconds": 0.00012032565427944064,
-          "p99_selected_route_duration_seconds": 0.00012032565427944064,
+          "mean_selected_route_duration_seconds": 0.0001012694905512035,
+          "n_decided_supported_or_refuted": 10,
+          "n_false": 5,
+          "n_true": 5,
+          "p95_duration_seconds": 0.00011854984913952648,
+          "p95_selected_route_duration_seconds": 0.00011854984913952648,
+          "p99_duration_seconds": 0.00012259156093932688,
+          "p99_selected_route_duration_seconds": 0.00012259156093932688,
           "retrieval_hit_count": 0,
           "retrieval_use_rate": 0.0,
-          "selected": 6,
-          "selected_route_duration_observations": 6,
+          "selected": 10,
+          "selected_route_duration_observations": 10,
           "selection_rate": 1.0,
-          "total_attempted_route_count": 6.0,
-          "total_duration_seconds": 0.0006197330076247454,
-          "total_selected_route_duration_seconds": 0.0006197330076247454,
+          "total_attempted_route_count": 10.0,
+          "total_duration_seconds": 0.001012694905512035,
+          "total_selected_route_duration_seconds": 0.001012694905512035,
           "true_refuted_rate": 0.0,
           "true_supported_rate": 1.0,
           "used_retrieval_count": 0
@@ -317,25 +317,25 @@
       },
       "route_summary": {
         "attempted_counts": {
-          "structured_qa": 6
+          "structured_qa": 10
         },
         "by_route": {
           "structured_qa": {
-            "attempted_route_count_observations": 6,
-            "duration_observations": 6,
+            "attempted_route_count_observations": 10,
+            "duration_observations": 10,
             "labels": {
-              "false": 3,
-              "true": 3
+              "false": 5,
+              "true": 5
             },
-            "max_duration_seconds": 0.0001204529544338584,
+            "max_duration_seconds": 0.00012360198888927698,
             "mean_attempted_route_count": 1.0,
-            "mean_duration_seconds": 0.00010328883460412423,
+            "mean_duration_seconds": 0.0001012694905512035,
             "mean_retrieval_hits": 0.0,
-            "mean_selected_route_duration_seconds": 0.00010328883460412423,
-            "p95_duration_seconds": 0.00011981645366176963,
-            "p95_selected_route_duration_seconds": 0.00011981645366176963,
-            "p99_duration_seconds": 0.00012032565427944064,
-            "p99_selected_route_duration_seconds": 0.00012032565427944064,
+            "mean_selected_route_duration_seconds": 0.0001012694905512035,
+            "p95_duration_seconds": 0.00011854984913952648,
+            "p95_selected_route_duration_seconds": 0.00011854984913952648,
+            "p99_duration_seconds": 0.00012259156093932688,
+            "p99_selected_route_duration_seconds": 0.00012259156093932688,
             "rates": {
               "error": 0.0,
               "insufficient_evidence": 0.0,
@@ -344,32 +344,32 @@
             },
             "retrieval_hit_count": 0,
             "retrieval_use_rate": 0.0,
-            "selected": 6,
-            "selected_route_duration_observations": 6,
+            "selected": 10,
+            "selected_route_duration_observations": 10,
             "statuses": {
               "error": 0,
               "insufficient_evidence": 0,
               "not_applicable": 0,
-              "refuted": 3,
-              "supported": 3
+              "refuted": 5,
+              "supported": 5
             },
-            "total_attempted_route_count": 6.0,
-            "total_duration_seconds": 0.0006197330076247454,
-            "total_selected_route_duration_seconds": 0.0006197330076247454,
+            "total_attempted_route_count": 10.0,
+            "total_duration_seconds": 0.001012694905512035,
+            "total_selected_route_duration_seconds": 0.001012694905512035,
             "used_retrieval": 0,
             "used_retrieval_count": 0
           }
         },
         "selected_counts": {
-          "structured_qa": 6
+          "structured_qa": 10
         }
       },
       "score_dump": {
         "exists": true,
         "kind": "file",
         "path": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/covered-fact-route/covered-facts-scores.json",
-        "sha256": "457c53ff95e59771330bb83a5278b0a91434583924b83de24ee397f87e6ca203",
-        "size_bytes": 10001,
+        "sha256": "49b998e797d7d6022828aa8336bd459539a6be66daa94a86be20e1cbf38e36a4",
+        "size_bytes": 16060,
         "source_format": "json",
         "summary": {
           "all_signal_names": [
@@ -378,14 +378,14 @@
           "has_statements": true,
           "layer": -1,
           "model": "source-family-covered-facts",
-          "n_false": 3,
-          "n_total": 6,
-          "n_true": 3,
+          "n_false": 5,
+          "n_total": 10,
+          "n_true": 5,
           "score_count": 1,
           "score_names": [
             "truth_proj"
           ],
-          "statement_count": 6,
+          "statement_count": 10,
           "sweep_layer_count": 0,
           "sweep_layers": [],
           "sweep_score_count": 0,
@@ -418,7 +418,7 @@
         "skip_rate": null,
         "skipped_records": 0,
         "threshold": null,
-        "total_records": 6,
+        "total_records": 10,
         "triggered_claim_count": 0,
         "triggered_feature_counts": {},
         "triggered_metadata_counts": {},
@@ -459,7 +459,7 @@
             "error": 0,
             "insufficient_evidence": 0,
             "not_applicable": 0,
-            "refuted": 3,
+            "refuted": 5,
             "supported": 0
           },
           "true": {
@@ -467,10 +467,10 @@
             "insufficient_evidence": 0,
             "not_applicable": 0,
             "refuted": 0,
-            "supported": 3
+            "supported": 5
           }
         },
-        "n_decided_supported_or_refuted": 6,
+        "n_decided_supported_or_refuted": 10,
         "true_refuted_rate": 0.0,
         "true_supported_rate": 1.0
       },
@@ -478,11 +478,11 @@
         "error": 0,
         "insufficient_evidence": 0,
         "not_applicable": 0,
-        "refuted": 3,
-        "supported": 3
+        "refuted": 5,
+        "supported": 5
       },
       "verified_records": {
-        "count": 6,
+        "count": 10,
         "path": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/covered-fact-route/verified-records.jsonl",
         "storage": "jsonl_sidecar"
       },
@@ -583,10 +583,10 @@
     "path": null
   },
   "verified_records": {
-    "count": 6,
+    "count": 10,
     "path": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/covered-fact-route/verified-records.jsonl",
     "run_counts": {
-      "semantic-gap-reviewed-covered-facts": 6
+      "semantic-gap-reviewed-covered-facts": 10
     },
     "storage": "jsonl_sidecar"
   },

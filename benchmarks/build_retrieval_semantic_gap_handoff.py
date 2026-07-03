@@ -43,6 +43,23 @@ STRUCTURED_METADATA_KEYS = (
     "object_label",
 )
 DESCRIBED_AS_RE = re.compile(r"\bis\s+described\s+as\s+(?P<value>[^.]+)", re.IGNORECASE)
+DESCRIBED_SUBJECT_RE = re.compile(
+    r"^\s*(?:according\s+to\s+[^,]+,\s*)?"
+    r"(?P<subject>.+?)\s+is\s+described\s+as\s+(?P<value>[^.]+)",
+    re.IGNORECASE,
+)
+GENERIC_ENTITY_CANDIDATES = {
+    "according",
+    "did",
+    "do",
+    "does",
+    "more",
+    "no",
+    "not",
+    "the",
+    "truth",
+    "yes",
+}
 
 
 def build_retrieval_semantic_gap_handoff(
@@ -699,7 +716,7 @@ def _has_structured_hit(hits: Sequence[Mapping[str, Any]]) -> bool:
 
 def _fact_subject(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
     metadata = _mapping(hit.get("metadata"))
-    return _clean_text(_first_nonempty((
+    metadata_subject = _clean_text(_first_nonempty((
         metadata.get("country_name"),
         metadata.get("subject_label"),
         metadata.get("subject"),
@@ -707,9 +724,13 @@ def _fact_subject(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
         metadata.get("entity"),
         metadata.get("organization_name"),
         metadata.get("location_name"),
-        *_sequence(_mapping(target.get("alignment")).get("claim_entities")),
-        *_sequence(_mapping(target.get("claim")).get("entity_candidates")),
     )))
+    if metadata_subject:
+        return metadata_subject
+    parsed_description_subject = _extract_description_subject(str(hit.get("text", "")))
+    if parsed_description_subject and _matches_target_entity(parsed_description_subject, target):
+        return parsed_description_subject
+    return _clean_text(_first_nonempty(_target_entity_candidates(target)))
 
 
 def _fact_property_hint(target: Mapping[str, Any], hit: Mapping[str, Any]) -> str:
@@ -808,6 +829,57 @@ def _extract_description_value(text: str) -> str:
     if match is None:
         return ""
     return match.group("value").strip()
+
+
+def _extract_description_subject(text: str) -> str:
+    match = DESCRIBED_SUBJECT_RE.search(text)
+    if match is None:
+        return ""
+    return _clean_text(match.group("subject")).strip(" \t\r\n.,;:!?\"'")
+
+
+def _matches_target_entity(subject: str, target: Mapping[str, Any]) -> bool:
+    normalized_subject = _entity_match_key(subject)
+    if not normalized_subject:
+        return False
+    subject_acronym = _subject_acronym(subject)
+    for candidate in _target_entity_candidates(target):
+        normalized_candidate = _entity_match_key(candidate)
+        if not normalized_candidate:
+            continue
+        if normalized_subject == normalized_candidate:
+            return True
+        if subject_acronym and normalized_candidate.removesuffix("s") == subject_acronym:
+            return True
+    return False
+
+
+def _target_entity_candidates(target: Mapping[str, Any]) -> tuple[str, ...]:
+    values = (
+        *_sequence(_mapping(target.get("alignment")).get("claim_entities")),
+        *_sequence(_mapping(target.get("alignment")).get("evidence_entities")),
+        *_sequence(_mapping(target.get("claim")).get("entity_candidates")),
+    )
+    return tuple(
+        dict.fromkeys(
+            text
+            for value in values
+            if (text := _clean_text(value)) and _entity_match_key(text)
+        )
+    )
+
+
+def _entity_match_key(value: str) -> str:
+    tokens = tuple(match.group(0).casefold() for match in re.finditer(r"[A-Za-z0-9]+", value))
+    filtered = tuple(token for token in tokens if token not in GENERIC_ENTITY_CANDIDATES)
+    return " ".join(filtered)
+
+
+def _subject_acronym(value: str) -> str:
+    tokens = tuple(match.group(0) for match in re.finditer(r"[A-Za-z]+", value))
+    if len(tokens) < 2:
+        return ""
+    return "".join(token[0].casefold() for token in tokens)
 
 
 def _hit_confidence(hit: Mapping[str, Any]) -> float:

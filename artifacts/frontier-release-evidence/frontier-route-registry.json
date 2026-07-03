@@ -1782,6 +1782,84 @@
       "name": "unresolved-frontier-evidence-summary",
       "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
       "version": "0.3"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "approved_source_document_count": 5,
+        "artifact_manifest": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/artifact-manifest.json",
+        "candidate_count": 63,
+        "closure_action": "improve_unresolved_citation_alignment",
+        "covered_fact_route_status": "promote",
+        "description_subject_matching": "entity_or_acronym",
+        "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
+        "fact_candidate_count": 10,
+        "review_document_count": 5,
+        "rule_review_approved_count": 5,
+        "source_family_qa_document_count": 5,
+        "status": "covered_fact_route_promote",
+        "workflow": "retrieval_semantic_gap_review_workflow"
+      },
+      "name": "improve-unresolved-citation-alignment-semantic-gap-review-diagnostic",
+      "path": "artifacts/improve-unresolved-citation-alignment/diagnostic-semantic-gap-review/retrieval-semantic-gap-review-workflow.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "citation_query_sweep_blind_refuted_rate_below_min_strategy_count": 24,
+        "citation_query_sweep_failure_reason_counts": {
+          "blind_refuted_rate_below_min": 24,
+          "verified_false_alarm_above_max": 24
+        },
+        "citation_query_sweep_no_hit_strategy_count": 0,
+        "citation_query_sweep_recommended_next_action_counts": {
+          "improve_claim_intent_alignment_or_query_construction": 3,
+          "tighten_false_alarm_calibration": 3
+        },
+        "citation_query_sweep_target_route_not_selected_strategy_count": 0,
+        "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 24,
+        "citation_status": "blocked",
+        "closure_action": "improve_unresolved_citation_alignment",
+        "description_subject_matching": "entity_or_acronym",
+        "frontier_bound_command_run_count": 0,
+        "frontier_bound_command_succeeded_count": 0,
+        "frontier_command_binding_review_count": 0,
+        "frontier_queue_execution_smoke_count": 0,
+        "frontier_queue_execution_smoke_manifest_verified_count": 0,
+        "frontier_queue_execution_smoke_status": "not_configured",
+        "frontier_queue_execution_status": "not_configured",
+        "manifest_summary": {
+          "artifact_count": 17,
+          "directory_count": 0,
+          "file_count": 17,
+          "missing_count": 0
+        },
+        "model": "smollm2-l80",
+        "next_action_count": 1,
+        "semantic_gap_review": "diagnostic_verified_records_sidecar",
+        "semantic_gap_review_approved_source_document_count": 5,
+        "semantic_gap_review_promoted_workflow_count": 1,
+        "semantic_gap_review_status": "promote",
+        "semantic_gap_review_workflow_count": 1,
+        "source": "frontier-v4",
+        "source_family_acquisition_status": "covered",
+        "status": "needs_evidence",
+        "unresolved_target_count": 88,
+        "workflow": "unresolved_frontier_evidence_summary",
+        "world_model_rule_audit_adjusted_remaining_task_count": 0,
+        "world_model_rule_audit_requeue_suggestion_count": 8,
+        "world_model_rule_combined_rule_input_count": 0,
+        "world_model_rule_combined_unfilled_task_count": 0,
+        "world_model_rule_input_fill_adapter_ready": false,
+        "world_model_rule_input_fill_rollup_status": null,
+        "world_model_rule_remaining_task_count": 8,
+        "world_model_rule_requeue_outstanding_count": 0,
+        "world_model_rule_status": "promote"
+      },
+      "name": "unresolved-frontier-evidence-summary",
+      "path": "artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json",
+      "version": "0.4"
     }
   ],
   "schema_version": 1

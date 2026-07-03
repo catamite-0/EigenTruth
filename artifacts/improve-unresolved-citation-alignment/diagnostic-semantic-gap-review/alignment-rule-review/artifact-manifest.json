@@ -5,42 +5,43 @@
       "file_count": 1,
       "kind": "file",
       "path": "../alignment-fact-review-corpus.json",
-      "sha256": "8490aee063130f268d7d70a14b9f7841403233ad543bf1618f8a47b07143e506",
-      "size_bytes": 5073
+      "sha256": "d1a590943422992ec1655b37e2467916294d1fceb4389976037067c1311ebdfd",
+      "size_bytes": 7656
     },
     "alignment_fact_rule_review_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "review-report.json",
-      "sha256": "523b21df7befae76ab672b26812749b8b8651a863013e18c05d7c34c4bc67ac2",
-      "size_bytes": 5706
+      "sha256": "3c5370b0c061557dd8e9bd816a7596c046794924ff7f461c7de84b0e71534391",
+      "size_bytes": 8231
     },
     "review_decisions": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "review-decisions.jsonl",
-      "sha256": "335a87813cbf24a8037abb87c1b7d41ef513063c4639c31e640d14b700a1db68",
-      "size_bytes": 762
+      "sha256": "1eb80afdf6d9be21de9a25c79c800d422abb781e110cefc9d868720cde48216e",
+      "size_bytes": 1271
     },
     "review_records": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "review-records.jsonl",
-      "sha256": "d2cbc3284ed7ccf9e2cb6a645f715ca977a1d0188b68bd6ee0b1cec1268292ca",
-      "size_bytes": 2165
+      "sha256": "761e47c60cf271fb35db73efb7364c7c112559b8af7fef66a1cb8802806495b3",
+      "size_bytes": 3676
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "approved_count": 3,
+    "approved_count": 5,
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "needs_more_evidence_count": 0,
     "parent_workflow": "retrieval_semantic_gap_review_workflow",
-    "review_document_count": 3,
+    "review_document_count": 5,
     "reviewer": "rule_based_alignment_fact_reviewer_v1",
     "status": "ready_for_promotion_gate",
     "workflow": "alignment_fact_rule_review"

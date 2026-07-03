@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "retrieval-semantic-gap-handoff.json",
-      "sha256": "e4fd770efcb163f434664faa6606bb3c57ed17512872c64efd91d5e3f998de44",
-      "size_bytes": 1030679
+      "sha256": "47e858b94c05797b14cab37983ef1a2dfc7aed3479c6992251fff9f659804e49",
+      "size_bytes": 1030852
     },
     "verified_records_jsonl": {
       "exists": true,

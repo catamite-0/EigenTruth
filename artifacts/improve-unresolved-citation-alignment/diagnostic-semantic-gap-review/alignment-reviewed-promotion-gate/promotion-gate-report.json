@@ -29,8 +29,32 @@
       },
       {
         "metadata": {
-          "alignment_candidate_id": "fact:record-27:1",
+          "alignment_candidate_id": "fact:record-11:1",
           "alignment_source_document_id": "alignment-approved:2",
+          "confidence": 0.9473684210526315,
+          "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+          "provider": "wikidata",
+          "review_id": "review:3a9e1e7b876872e5",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-02T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q846570:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "Americans",
+          "value": "citizens and nationals of the United States of America"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q846570:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+        "title": "Reviewed alignment fact: Americans description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:record-27:1",
+          "alignment_source_document_id": "alignment-approved:3",
           "confidence": 0.9230769230769231,
           "evidence_span": "According to Wikidata entity metadata, Bill Gates is described as American businessman, investor, and philanthropist (born 1955).",
           "provider": "wikidata",
@@ -54,7 +78,7 @@
       {
         "metadata": {
           "alignment_candidate_id": "fact:record-61:1",
-          "alignment_source_document_id": "alignment-approved:3",
+          "alignment_source_document_id": "alignment-approved:4",
           "confidence": 0.9523809523809523,
           "evidence_span": "According to Wikidata entity metadata, English is described as West Germanic language.",
           "provider": "wikidata",
@@ -74,6 +98,30 @@
         "source_family": "reference",
         "text": "According to Wikidata entity metadata, English is described as West Germanic language.",
         "title": "Reviewed alignment fact: English description"
+      },
+      {
+        "metadata": {
+          "alignment_candidate_id": "fact:record-212:2",
+          "alignment_source_document_id": "alignment-approved:5",
+          "confidence": 0.9523809523809523,
+          "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+          "provider": "wikidata",
+          "review_id": "review:0e7791b35159e135",
+          "review_status": "approved",
+          "reviewed_at": "2026-07-02T00:00:00Z",
+          "reviewer": "rule_based_alignment_fact_reviewer_v1",
+          "source": "wikidata:Q421:description",
+          "source_family": "reference",
+          "statement_property": "description",
+          "statement_property_label": "description",
+          "subject": "unidentified flying object",
+          "value": "unusual apparent anomaly in the sky that is not readily identifiable"
+        },
+        "provider": "wikidata",
+        "source": "wikidata:Q421:description",
+        "source_family": "reference",
+        "text": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+        "title": "Reviewed alignment fact: unidentified flying object description"
       }
     ],
     "label_usage": {
@@ -90,23 +138,23 @@
     },
     "status": "ready",
     "summary": {
-      "approved_source_document_count": 3,
+      "approved_source_document_count": 5,
       "by_property": {
-        "description": 3
+        "description": 5
       },
       "by_provider": {
-        "wikidata": 3
+        "wikidata": 5
       },
       "by_source_family": {
-        "reference": 3
+        "reference": 5
       },
       "needs_more_evidence_count": 0,
       "pending_review_count": 0,
       "rejected_count": 0,
-      "review_decision_count": 3,
-      "review_document_count": 3,
+      "review_decision_count": 5,
+      "review_document_count": 5,
       "skip_counts": {
-        "approved": 3,
+        "approved": 5,
         "duplicate_review_decision": 0,
         "invalid_review_decision": 0,
         "missing_candidate_id": 0,
@@ -129,6 +177,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "description_subject_matching": "entity_or_acronym",
     "diagnostic": "semantic_gap_review_from_query_sweep_sidecar",
     "parent_workflow": "retrieval_semantic_gap_review_workflow"
   },
@@ -157,6 +206,20 @@
       "value": "2020 single by Sam Smith"
     },
     {
+      "alignment_candidate_id": "fact:record-11:1",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q846570:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:3a9e1e7b876872e5",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:2",
+      "subject": "Americans",
+      "value": "citizens and nationals of the United States of America"
+    },
+    {
       "alignment_candidate_id": "fact:record-27:1",
       "decision": "approved",
       "evidence_source": "wikidata:Q5284:description",
@@ -166,7 +229,7 @@
       "reviewed_at": "2026-07-02T00:00:00Z",
       "reviewer": "rule_based_alignment_fact_reviewer_v1",
       "skip_reason": null,
-      "source_document_id": "alignment-approved:2",
+      "source_document_id": "alignment-approved:3",
       "subject": "Bill Gates",
       "value": "American businessman, investor, and philanthropist (born 1955)"
     },
@@ -180,9 +243,23 @@
       "reviewed_at": "2026-07-02T00:00:00Z",
       "reviewer": "rule_based_alignment_fact_reviewer_v1",
       "skip_reason": null,
-      "source_document_id": "alignment-approved:3",
+      "source_document_id": "alignment-approved:4",
       "subject": "English",
       "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:record-212:2",
+      "decision": "approved",
+      "evidence_source": "wikidata:Q421:description",
+      "property_hint": "description",
+      "record_type": "review_document",
+      "review_id": "review:0e7791b35159e135",
+      "reviewed_at": "2026-07-02T00:00:00Z",
+      "reviewer": "rule_based_alignment_fact_reviewer_v1",
+      "skip_reason": null,
+      "source_document_id": "alignment-approved:5",
+      "subject": "unidentified flying object",
+      "value": "unusual apparent anomaly in the sky that is not readily identifiable"
     }
   ],
   "review_template": [
@@ -213,6 +290,32 @@
       "value": "2020 single by Sam Smith"
     },
     {
+      "alignment_candidate_id": "fact:record-11:1",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.9473684210526315,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q846570:description",
+      "evidence_span": "According to Wikidata entity metadata, Americans is described as citizens and nationals of the United States of America.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 2,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "Americans",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "citizens and nationals of the United States of America"
+    },
+    {
       "alignment_candidate_id": "fact:record-27:1",
       "allowed_decisions": [
         "approved",
@@ -226,7 +329,7 @@
       "notes": "",
       "property_hint": "description",
       "property_label": "description",
-      "review_document_index": 2,
+      "review_document_index": 3,
       "reviewed_at": "",
       "reviewer": "",
       "route_hints": [
@@ -252,7 +355,7 @@
       "notes": "",
       "property_hint": "description",
       "property_label": "description",
-      "review_document_index": 3,
+      "review_document_index": 4,
       "reviewed_at": "",
       "reviewer": "",
       "route_hints": [
@@ -263,6 +366,32 @@
       "template_usage": "alignment_fact_review_decision",
       "template_version": 1,
       "value": "West Germanic language"
+    },
+    {
+      "alignment_candidate_id": "fact:record-212:2",
+      "allowed_decisions": [
+        "approved",
+        "needs_more_evidence",
+        "rejected"
+      ],
+      "confidence": 0.9523809523809523,
+      "decision": "pending",
+      "evidence_source": "wikidata:Q421:description",
+      "evidence_span": "According to Wikidata entity metadata, unidentified flying object is described as unusual apparent anomaly in the sky that is not readily identifiable.",
+      "notes": "",
+      "property_hint": "description",
+      "property_label": "description",
+      "review_document_index": 5,
+      "reviewed_at": "",
+      "reviewer": "",
+      "route_hints": [
+        "structured_qa",
+        "alignment_fact_review"
+      ],
+      "subject": "unidentified flying object",
+      "template_usage": "alignment_fact_review_decision",
+      "template_version": 1,
+      "value": "unusual apparent anomaly in the sky that is not readily identifiable"
     }
   ],
   "schema_version": 1,
@@ -273,23 +402,23 @@
   },
   "status": "ready_for_structured_qa",
   "summary": {
-    "approved_source_document_count": 3,
+    "approved_source_document_count": 5,
     "by_property": {
-      "description": 3
+      "description": 5
     },
     "by_provider": {
-      "wikidata": 3
+      "wikidata": 5
     },
     "by_source_family": {
-      "reference": 3
+      "reference": 5
     },
     "needs_more_evidence_count": 0,
     "pending_review_count": 0,
     "rejected_count": 0,
-    "review_decision_count": 3,
-    "review_document_count": 3,
+    "review_decision_count": 5,
+    "review_document_count": 5,
     "skip_counts": {
-      "approved": 3,
+      "approved": 5,
       "duplicate_review_decision": 0,
       "invalid_review_decision": 0,
       "missing_candidate_id": 0,
