@@ -1,7 +1,7 @@
 # EigenTruth 0.2.0 Research Release Notes
 
 Date: 2026-06-25
-Last validated: 2026-06-29
+Last validated: 2026-07-03
 
 ## Status
 
@@ -42,6 +42,10 @@ models remain optional or adapter-level integrations.
   detectability taxonomy, optional multiple-testing evidence, and citation or
   source-family batch rollups without treating adapter requests as evidence
   before provenance-audited source documents exist.
+- Unresolved frontier closure coordination that can summarize remaining blind
+  spot lanes, lower reviewed command queues, execute scoped covered-fact route
+  work, verify terminal closure, and preserve blocked citation/search diagnostics
+  as negative evidence instead of silently promoting broad retrieval.
 - Training-side representation telemetry with per-layer norms, variance trace,
   spectrum rank diagnostics, and Gaussian 2-Wasserstein/Bures distance to a
   baseline.
@@ -73,6 +77,7 @@ models remain optional or adapter-level integrations.
 | Sequential conformal replay | Accepted as session/batch audit primitive. | `sequential_pvalue_monitor(...)`, `SequentialConformalArtifact`, `RiskController(..., sequential_gate=...)`, and demo replay tests cover finite alpha spending; sequence traces are kept separate from timed ProductTrace runtime budgets. |
 | World-model traceability | Accepted as observable control-plane evidence. | `StateTransitionVerifier` emits reference/view/conflict metadata; `ProductTrace.world_model_summary()` and verifier-signal dumps preserve nested world-model metadata while ignoring generic prediction metadata. |
 | Frontier evidence handoff | Accepted as fail-closed local release boundary. | Release workflows preserve frontier evidence track status, multiple-testing status, and citation/source-family batch rollup counts through registry metadata, ProductPromotionContract, bounded ProductTrace metadata, runtime baselines, and drift gates. |
+| Unresolved frontier closure | Accepted as scoped coordination closure, not as broad citation/search success. | Merged main at `dcdf270` carries the `unresolved_frontier_evidence_summary` artifact with `status=promote`, `next_actions=[]`, semantic-gap covered-fact route coverage `1.0`, coverage gap `0`, and closure verification `pass`; the derived frontier command plan is `empty`. Historical citation/search query-sweep blockers remain visible as negative evidence. |
 
 ## Known Non-Claims
 
@@ -98,11 +103,12 @@ make check
 make release-check
 ```
 
-The current working tree was revalidated with `make release-check` on
-2026-06-29: ruff passed, `pytest tests/ -v` reported `1214 passed`,
-`pip check` reported no broken requirements, deterministic smoke workflows ran,
-and package build produced `eigentruth-0.2.0.tar.gz` plus
-`eigentruth-0.2.0-py3-none-any.whl`.
+The 0.2 frontier-gates branch was revalidated before merge on 2026-07-03:
+`make check` and `make release-check` passed, `pytest tests/ -v` reported
+`1622 passed`, `pip check` reported no broken requirements, deterministic smoke
+workflows ran, and package build produced `eigentruth-0.2.0.tar.gz` plus
+`eigentruth-0.2.0-py3-none-any.whl`. The branch was then merged into `main` as
+`dcdf270`.
 
 Representative calibrated-observability chain:
 

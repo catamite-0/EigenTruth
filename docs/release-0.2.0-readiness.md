@@ -1,147 +1,92 @@
-# EigenTruth 0.2.0 Readiness Checklist
+# EigenTruth 0.2.0 Readiness Snapshot
 
-Date: 2026-06-29
+Date: 2026-07-03
 
-This checklist records the current working-tree boundary before publishing the
-0.2 calibrated-observability/frontier-toolkit work. It is intentionally focused
-on submit safety: what changed, which untracked files must be included, and
-which validation already passed.
+This snapshot records the post-merge 0.2 boundary. It is intentionally a
+readiness note, not a production certification. EigenTruth remains an alpha
+research-preview toolkit.
+
+## Branch State
+
+- `main` has been fast-forwarded to `origin/main` at `dcdf270`.
+- `dcdf270` is the merge commit for the calibrated-observability frontier gates.
+- The previous local feature branch
+  `codex/calibrated-observability-frontier-gates` points to `0346437`; its remote
+  tracking branch has been removed after merge.
+- The current 0.2 documentation wrap-up work is isolated on
+  `codex/0-2-wrap-up`.
 
 ## Validation Snapshot
 
-- `make release-check` passed on 2026-06-29.
-  - `ruff check .` passed.
-  - `pytest tests/ -v` reported `1214 passed`.
-  - `pip check` reported no broken requirements.
-  - deterministic smoke workflows completed.
-  - package build produced `dist/eigentruth-0.2.0.tar.gz` and
-    `dist/eigentruth-0.2.0-py3-none-any.whl`.
-- `make check-fast` passed after the release-note/readiness documentation pass.
-- `git diff --check` passed after the release-note update.
+The 0.2 frontier-gates branch was validated before merge on 2026-07-03:
 
-Generated `dist/` and `src/eigentruth.egg-info/` outputs are ignored and should
-not be committed.
+- `make check` passed.
+- `make release-check` passed.
+- `pytest tests/ -v` reported `1622 passed`.
+- `pip check` reported no broken requirements.
+- deterministic smoke workflows completed.
+- package build produced `dist/eigentruth-0.2.0.tar.gz` and
+  `dist/eigentruth-0.2.0-py3-none-any.whl`.
 
-## Must-Include Untracked Files
-
-These files are part of the current feature set and must be added if this work
-is staged or committed:
-
-- `src/eigentruth/calibration/multiple_testing.py`
-- `src/eigentruth/calibration/sequential.py`
-- `benchmarks/plan_frontier_multiple_testing_reruns.py`
-- `benchmarks/rollup_citation_search_batch_evidence.py`
-- `benchmarks/run_citation_batch_rollup_worker_sweep.py`
-
-The two calibration modules are imported from
-`src/eigentruth/calibration/__init__.py`. Omitting either module will make the
-public calibration API incomplete and can break package import/release checks.
-
-## Suggested Commit Slices
-
-### 1. Calibration and conformal evaluation
-
-Core files:
-
-- `src/eigentruth/eval/conformal.py`
-- `src/eigentruth/eval/__init__.py`
-- `src/eigentruth/calibration/__init__.py`
-- `src/eigentruth/calibration/multiple_testing.py`
-- `src/eigentruth/calibration/sequential.py`
-- `benchmarks/eval_conformal.py`
-
-Test/doc coverage:
-
-- `tests/test_conformal.py`
-- `tests/test_calibration.py`
-- relevant README and benchmark README sections.
-
-### 2. Control plane, traces, and world-model traceability
-
-Core files:
-
-- `src/eigentruth/control/controller.py`
-- `src/eigentruth/control/trace.py`
-- `src/eigentruth/control/runtime_budget.py`
-- `src/eigentruth/control/runtime_drift_keys.py`
-- `src/eigentruth/control/promotion.py`
-- `src/eigentruth/control/evidence_gaps.py`
-- `src/eigentruth/control/evidence_handoff.py`
-- `src/eigentruth/control/__init__.py`
-- `src/eigentruth/adapters/world_model.py`
-- `examples/calibrated_control_demo.py`
-
-Test coverage:
-
-- `tests/test_control_loop.py`
-- `tests/test_trace_registry.py`
-- `tests/test_examples.py`
-- `tests/test_frontier_toolkit.py`
-- `tests/test_evidence_gaps.py`
-- `tests/test_evidence_handoff.py`
-- `tests/test_structure_contracts.py`
-
-### 3. Frontier workflows and release evidence
-
-Core files:
-
-- `benchmarks/compare_frontier_release_evidence.py`
-- `benchmarks/compare_product_runtime_baselines.py`
-- `benchmarks/compare_release_candidates.py`
-- `benchmarks/release_policy_profiles.py`
-- `benchmarks/run_calibrated_observability_workflow.py`
-- `benchmarks/run_citation_search_evidence_workflow.py`
-- `benchmarks/run_external_citation_search_adapter_workflow.py`
-- `benchmarks/run_product_runtime_baseline.py`
-- `benchmarks/run_product_trace_replay_workflow.py`
-- `benchmarks/run_release_candidate_registry_workflow.py`
-- `benchmarks/run_source_family_citation_search_workflow.py`
-- `benchmarks/run_truthfulqa_frontier_workflow.py`
-- `benchmarks/build_citation_search_adapter_handoff.py`
-- `benchmarks/build_unresolved_blind_spot_evidence_queue.py`
-- `benchmarks/build_verifier_signal_score_dump.py`
-- `benchmarks/plan_frontier_multiple_testing_reruns.py`
-- `benchmarks/rollup_citation_search_batch_evidence.py`
-- `benchmarks/run_citation_batch_rollup_worker_sweep.py`
-
-Test coverage:
-
-- `tests/test_benchmarks.py`
-
-### 4. Documentation and release notes
-
-Files:
-
-- `README.md`
-- `benchmarks/README.md`
-- `docs/experiment-plan.md`
-- `docs/frontier-research-notes.md`
-- `docs/product-development-spec.md`
-- `docs/release-0.2.0.md`
-- `docs/release-0.2.0-readiness.md`
-
-## Release Boundary
-
-This work keeps the 0.2 scope monitor-first and dependency-light:
-
-- no mandatory dependency beyond the existing project core dependencies;
-- no production RAG, search, database, network verifier, rewrite LLM, SAE/ReFT,
-  or heavyweight world-model integration;
-- citation/source-family adapter requests are not evidence until provenance
-  audits promote source-backed results;
-- world-model routes are traceable control-plane inputs, not truth oracles;
-- all gates remain local, reproducible artifact checks unless explicitly wired
-  to a concrete external adapter.
-
-## Recommended Next Action
-
-Before pushing, stage the must-include untracked files together with the related
-tracked changes, then rerun at least:
+After this documentation wrap-up, run at least:
 
 ```bash
-git diff --check
 make check-fast
 ```
 
-Run `make release-check` again if commits are rearranged, packaging metadata is
-changed, or any Python source changes after this checklist.
+Run `make check` or `make release-check` again if Python source, packaging
+metadata, release gates, or checked-in benchmark artifacts change.
+
+Generated `dist/`, `build/`, and `src/eigentruth.egg-info/` outputs remain build
+products and should not be committed unless a release process explicitly asks
+for them.
+
+## Current Closure Artifacts
+
+The unresolved frontier closure lane is now closed in the checked-in artifacts:
+
+- `artifacts/frontier-release-evidence/unresolved-frontier-evidence-summary-v1/unresolved-frontier-evidence-summary.json`
+  has `status=promote`.
+- The summary has `next_actions=[]`.
+- Semantic-gap covered-fact route coverage is `1.0`.
+- Semantic-gap coverage gap is `0`.
+- Closure verification status is `pass`.
+- `artifacts/frontier-release-evidence/unresolved-frontier-research-command-plan-v1/frontier-research-command-plan.json`
+  has `status=empty`.
+
+The citation/search lane still carries blocked query-sweep diagnostics. That is
+expected and should remain visible as negative evidence. The closure is scoped to
+promoted covered-fact route evidence plus terminal coordination checks; it is
+not a broad claim that citation/search retrieval has been solved.
+
+The checked-in `artifacts/` tree is large, about `1.5G` in this checkout. Treat
+it as release-evidence state, not casual scratch output. New artifact families
+should be added only when they are tied to a manifest, registry record, or
+documented benchmark/release boundary.
+
+## Release Boundary
+
+0.2 remains monitor-first and dependency-light:
+
+- mandatory package dependency: `torch`;
+- Hugging Face, datasets, examples, retrieval systems, databases, rewrite LLMs,
+  and world models stay optional or adapter-level;
+- activation steering remains experimental and opt-in;
+- citation/source-family adapter requests are not evidence until provenance
+  audits promote source-backed results;
+- world-model routes are traceable control-plane inputs, not truth oracles;
+- release gates are local, reproducible artifact checks unless explicitly wired
+  to a concrete external adapter.
+
+## 0.3 Starting Point
+
+The recommended next development phase is control and verification hardening:
+
+- convert more ProductTrace examples into deterministic regression fixtures;
+- tighten claim, citation, triple-evidence, and receipt-support audits;
+- simplify developer entry points and separate short demos from long qualitative
+  examples;
+- replicate the strongest diagnostics on additional small and mid-sized models;
+- keep network retrieval, external databases, rewrite LLMs, SAE/ReFT probes, and
+  heavy world models behind optional adapters until cost and failure modes are
+  measured.

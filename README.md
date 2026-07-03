@@ -12,7 +12,7 @@
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://python.org)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[Quick start](#quick-start) | [0.2.0 Notes](docs/release-0.2.0.md) | [Architecture](#architecture) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
+[Quick start](#quick-start) | [0.2.0 Notes](docs/release-0.2.0.md) | [Architecture Map](docs/architecture.md) | [Architecture](#architecture) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
 
 </div>
 
@@ -25,6 +25,17 @@ EigenTruth 是一个处于 alpha 阶段的研究预览工具库，适用于受�
 The current package baseline is the `0.2.0` research release. See
 [`docs/release-0.2.0.md`](docs/release-0.2.0.md) for the supported scope,
 evidence summary, negative results, and remaining limitations.
+For a compact codebase map, start with
+[`docs/architecture.md`](docs/architecture.md) before diving into the longer
+component tables below.
+
+Current local closure snapshot: merged `main` at `dcdf270` contains the
+calibrated-observability frontier gates. The unresolved frontier evidence
+summary is `promote`, its `next_actions` list is empty, covered-fact route
+coverage is `1.0` with coverage gap `0`, closure verification is `pass`, and the
+derived frontier command plan is `empty`. Historical blocked citation/search
+diagnostics remain documented as negative evidence rather than hidden behind the
+closure state.
 
 The current implementation explores a research hypothesis: hallucination-related generation behavior may sometimes be accompanied by measurable geometric drift in hidden-state representations. The signals exposed by this project are experimental diagnostics, not calibrated factuality scores.
 

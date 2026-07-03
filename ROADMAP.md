@@ -6,6 +6,12 @@ The product and development charter lives in [`docs/product-development-spec.md`
 
 The current packaged baseline is [`0.2.0`](docs/release-0.2.0.md): a calibrated-observability research release with local control-plane traces, dry-run/in-memory verification adapters, training telemetry primitives, and documented negative results. It remains alpha research software.
 
+Post-merge 0.2 closure state: `main` at `dcdf270` contains the
+calibrated-observability frontier gates. The unresolved frontier evidence
+summary now promotes with no open `next_actions`, and the derived frontier
+command plan is empty. This closes the scoped local artifact loop while keeping
+blocked citation/search diagnostics visible as negative evidence.
+
 ## Near-Term Milestones
 
 ### 0.3 Control And Verification Hardening
