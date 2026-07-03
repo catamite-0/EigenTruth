@@ -2524,6 +2524,7 @@ def test_question_answer_verifier_checks_structured_question_answers():
             question="What is the capital of France?",
             answer="Paris",
             source="qa:facts",
+            question_aliases=("Which city is France's capital?",),
         )
     ])
 
@@ -2538,6 +2539,10 @@ def test_question_answer_verifier_checks_structured_question_answers():
         Claim("Madrid"),
         context={"statement": {"question": "What is the capital of Spain?", "answer": "Madrid"}},
     )
+    alias_refuted = verifier.verify(
+        Claim("Marseille"),
+        context={"statement": {"question": "Which city is France's capital?", "answer": "Marseille"}},
+    )
 
     assert supported.status is VerificationStatus.SUPPORTED
     assert supported.metadata["decision_rule"] == "answer_match"
@@ -2546,6 +2551,9 @@ def test_question_answer_verifier_checks_structured_question_answers():
     assert "Paris" in refuted.evidence[0]
     assert unknown.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert unknown.metadata["decision_rule"] == "question_not_found"
+    assert alias_refuted.status is VerificationStatus.REFUTED
+    assert alias_refuted.metadata["matched_question_alias"] == "Which city is France's capital?"
+    assert alias_refuted.metadata["canonical_question"] == "What is the capital of France?"
 
 
 def test_calculator_verifier_supports_and_refutes_arithmetic_claims():

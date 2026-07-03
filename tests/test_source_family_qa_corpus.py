@@ -40,6 +40,30 @@ def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_pat
                             },
                         },
                         {
+                            "source_family": "reference",
+                            "source": "wikidata:Q1860:description",
+                            "text": (
+                                "According to Wikidata entity metadata, English is described "
+                                "as West Germanic language."
+                            ),
+                            "metadata": {
+                                "provider": "source_family_catalog",
+                                "statement_property": "description",
+                                "statement_property_label": "description",
+                                "subject": "English",
+                                "subject_qid": "Q1860",
+                                "value": "West Germanic language",
+                                "value_datatype": "wikibase-description",
+                                "retrieval_index_text": (
+                                    "What language is English? According to Wikidata entity metadata, "
+                                    "English is described as West Germanic language."
+                                ),
+                                "source_query_alias_review_status": "approved",
+                                "source_queue_request_sha256": "source-bind-english",
+                                "retrieved_at": "2026-06-28T00:00:00+00:00",
+                            },
+                        },
+                        {
                             "provider": "worldbank",
                             "source_family": "official_statistics",
                             "source": "worldbank:SP.POP.TOTL:AFG:2024",
@@ -98,6 +122,7 @@ def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_pat
         registry_path=registry_path,
         name="source-family-qa-unit",
         version="0.1",
+        include_source_query_aliases=True,
         metadata={"suite": "unit"},
     )
 
@@ -108,13 +133,43 @@ def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_pat
 
     assert report["status"] == "ready"
     assert corpus["corpus_type"] == "source_family_structured_qa_external_evidence"
-    assert corpus["summary"]["n_documents"] == 2
-    assert corpus["summary"]["n_candidate_documents"] == 3
-    assert corpus["summary"]["by_provider"] == {"wikidata": 1, "worldbank": 1}
+    assert corpus["summary"]["n_documents"] == 3
+    assert corpus["summary"]["n_candidate_documents"] == 4
+    assert corpus["summary"]["by_provider"] == {"wikidata": 2, "worldbank": 1}
     assert corpus["summary"]["skipped"]["unsupported_provider"] == 1
     assert corpus["summary"]["skipped"]["qid_values"] == 1
     assert corpus["summary"]["skipped"]["reserved_metadata"] == 1
     assert questions["What does Wikidata list as the founder for Tesla Motors?"]["answer"] == "Martin Eberhard"
+    assert (
+        questions["What does Wikidata list as the description for English?"]["metadata"]["source_provider"]
+        == "source_family_catalog"
+    )
+    assert (
+        questions["What does Wikidata list as the description for English?"]["metadata"][
+            "source_queue_request_sha256"
+        ]
+        == "source-bind-english"
+    )
+    assert (
+        questions["What does Wikidata list as the description for English?"]["metadata"][
+            "source_query_alias_review_status"
+        ]
+        == "approved"
+    )
+    assert "What language is English?" in (
+        questions["What does Wikidata list as the description for English?"]["metadata"][
+            "retrieval_index_text"
+        ]
+    )
+    assert questions["What does Wikidata list as the description for English?"]["question_aliases"] == (
+        "What language is English?",
+    )
+    assert (
+        questions["What does Wikidata list as the description for English?"]["metadata"][
+            "question_alias_scope"
+        ]
+        == "source_discovery_query"
+    )
     assert (
         questions["What does the World Bank list as Population, total for Afghanistan in 2024?"]["answer"]
         == "42,647,492"
@@ -126,8 +181,47 @@ def test_build_source_family_qa_corpus_extracts_only_structured_metadata(tmp_pat
 
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
     assert record.metadata["workflow"] == "source_family_structured_qa_corpus_builder"
-    assert record.metadata["document_count"] == 2
+    assert record.metadata["document_count"] == 3
+    assert record.metadata["include_source_query_aliases"] is True
     assert record.metadata["suite"] == "unit"
+
+
+def test_source_family_qa_corpus_requires_reviewed_source_query_alias():
+    module = importlib.import_module("benchmarks.build_source_family_qa_corpus")
+    source_document = {
+        "provider": "wikidata",
+        "source_family": "reference",
+        "source": "wikidata:Q1860:description",
+        "metadata": {
+            "provider": "wikidata",
+            "statement_property": "description",
+            "statement_property_label": "description",
+            "subject": "English",
+            "value": "West Germanic language",
+            "retrieval_index_text": (
+                "What language is English? According to Wikidata entity metadata, "
+                "English is described as West Germanic language."
+            ),
+        },
+    }
+
+    unreviewed = module.build_source_family_qa_corpus(
+        (source_document,),
+        include_source_query_aliases=True,
+    )
+    reviewed = module.build_source_family_qa_corpus(
+        ({
+            **source_document,
+            "metadata": {
+                **source_document["metadata"],
+                "source_query_alias_review_status": "approved",
+            },
+        },),
+        include_source_query_aliases=True,
+    )
+
+    assert "question_aliases" not in unreviewed["documents"][0]
+    assert reviewed["documents"][0]["question_aliases"] == ("What language is English?",)
 
 
 def test_alignment_fact_review_promotion_gate_requires_explicit_review(tmp_path):

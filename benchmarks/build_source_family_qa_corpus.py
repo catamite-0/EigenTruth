@@ -72,6 +72,14 @@ PROVENANCE_METADATA_KEYS = (
     "reviewed_at",
     "reviewer",
     "structured_evidence_slots",
+    "retrieval_index_text",
+    "source_queue_request_sha256",
+    "collection_request_sha256",
+    "query_sha256",
+    "result_sha256",
+    "source_query_alias_review_status",
+    "source_query_alias_reviewed_at",
+    "source_query_alias_reviewer",
 )
 
 
@@ -79,6 +87,7 @@ def build_source_family_qa_corpus(
     source_documents: Sequence[Mapping[str, Any]],
     *,
     skip_qid_values: bool = True,
+    include_source_query_aliases: bool = False,
 ) -> dict[str, Any]:
     """Return a structured QA corpus from safe source-family metadata."""
     documents: list[dict[str, Any]] = []
@@ -102,7 +111,13 @@ def build_source_family_qa_corpus(
             skipped["unsupported_provider"] += 1
             continue
         candidates += 1
-        document = builder(item, metadata, source_index=source_index, skip_qid_values=skip_qid_values)
+        document = builder(
+            item,
+            metadata,
+            source_index=source_index,
+            skip_qid_values=skip_qid_values,
+            include_source_query_aliases=include_source_query_aliases,
+        )
         if document is None:
             reason = _last_skip_reason(item, metadata, provider, skip_qid_values=skip_qid_values)
             skipped[reason] += 1
@@ -134,8 +149,9 @@ def build_source_family_qa_corpus(
         },
         "source": {
             "builder": WORKFLOW,
-            "accepted_providers": ("wikidata", "worldbank"),
+            "accepted_providers": ("wikidata", "worldbank", "source_family_catalog:wikidata_metadata"),
             "skip_qid_values": bool(skip_qid_values),
+            "include_source_query_aliases": bool(include_source_query_aliases),
         },
         "summary": {
             "n_source_documents": len(source_documents),
@@ -159,6 +175,7 @@ def run(
     name: str | None = None,
     version: str | None = None,
     skip_qid_values: bool = True,
+    include_source_query_aliases: bool = False,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
 ) -> dict[str, Any]:
@@ -176,7 +193,11 @@ def run(
         else output.parent / "artifact-manifest.json"
     )
     source_documents = load_source_documents(source_paths)
-    corpus = build_source_family_qa_corpus(source_documents, skip_qid_values=skip_qid_values)
+    corpus = build_source_family_qa_corpus(
+        source_documents,
+        skip_qid_values=skip_qid_values,
+        include_source_query_aliases=include_source_query_aliases,
+    )
     status = "ready" if corpus["summary"]["n_documents"] else "blocked"
     report = {
         "schema_version": 1,
@@ -188,6 +209,7 @@ def run(
         },
         "config": {
             "skip_qid_values": bool(skip_qid_values),
+            "include_source_query_aliases": bool(include_source_query_aliases),
         },
         "paths": {
             "qa_corpus": str(output),
@@ -211,6 +233,7 @@ def run(
             "corpus_type": CORPUS_TYPE,
             "document_count": corpus["summary"]["n_documents"],
             "candidate_document_count": corpus["summary"]["n_candidate_documents"],
+            "include_source_query_aliases": bool(include_source_query_aliases),
             **dict(metadata or {}),
         },
     )
@@ -227,6 +250,7 @@ def run(
                 "corpus_type": CORPUS_TYPE,
                 "document_count": corpus["summary"]["n_documents"],
                 "candidate_document_count": corpus["summary"]["n_candidate_documents"],
+                "include_source_query_aliases": bool(include_source_query_aliases),
                 "artifact_manifest": str(manifest_path),
                 **dict(metadata or {}),
             },
@@ -274,6 +298,7 @@ def _wikidata_document(
     *,
     source_index: int,
     skip_qid_values: bool,
+    include_source_query_aliases: bool,
 ) -> dict[str, Any] | None:
     subject = _clean_text(metadata.get("subject"))
     answer = _clean_text(metadata.get("value"))
@@ -294,6 +319,7 @@ def _wikidata_document(
         source_index=source_index,
         provider="wikidata",
         extraction_rule="wikidata_subject_property_value",
+        include_source_query_aliases=include_source_query_aliases,
         extra_metadata={
             "statement_property": statement_property,
             "statement_property_label": property_label,
@@ -310,6 +336,7 @@ def _worldbank_document(
     *,
     source_index: int,
     skip_qid_values: bool,
+    include_source_query_aliases: bool,
 ) -> dict[str, Any] | None:
     del skip_qid_values
     country = _clean_text(metadata.get("country_name"))
@@ -330,6 +357,7 @@ def _worldbank_document(
         source_index=source_index,
         provider="worldbank",
         extraction_rule="worldbank_country_indicator_year_value",
+        include_source_query_aliases=include_source_query_aliases,
         extra_metadata={
             "country_name": country,
             "country_code_iso3": _clean_text(metadata.get("country_code_iso3")),
@@ -352,6 +380,7 @@ def _document(
     source_index: int,
     provider: str,
     extraction_rule: str,
+    include_source_query_aliases: bool,
     extra_metadata: Mapping[str, Any],
 ) -> dict[str, Any]:
     document_metadata = {
@@ -360,7 +389,12 @@ def _document(
         "extraction_rule": extraction_rule,
         "source_family": _clean_text(item.get("source_family")) or _clean_text(metadata.get("source_family")),
     }
+    raw_provider = _clean_text(item.get("provider")) or _clean_text(metadata.get("provider"))
+    if raw_provider and raw_provider.casefold() != provider:
+        document_metadata["source_provider"] = raw_provider
     for key in PROVENANCE_METADATA_KEYS:
+        if key == "provider":
+            continue
         value = item.get(key, metadata.get(key))
         cleaned = _json_safe(value)
         if cleaned is not None and key not in RESERVED_METADATA_KEYS:
@@ -369,13 +403,24 @@ def _document(
         cleaned = _json_safe(value)
         if cleaned is not None and key not in RESERVED_METADATA_KEYS:
             document_metadata[key] = cleaned
-    return {
+    question_aliases = (
+        _source_query_aliases(item, metadata, canonical_question=question)
+        if include_source_query_aliases
+        else ()
+    )
+    if question_aliases:
+        document_metadata["question_alias_scope"] = "source_discovery_query"
+        document_metadata["question_alias_count"] = len(question_aliases)
+    document = {
         "question": question,
         "answer": answer,
         "text": text,
         "source": source,
         "metadata": document_metadata,
     }
+    if question_aliases:
+        document["question_aliases"] = question_aliases
+    return document
 
 
 def _builder_for_provider(provider: str):
@@ -408,11 +453,106 @@ def _metadata(item: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def _provider(item: Mapping[str, Any], metadata: Mapping[str, Any]) -> str:
     provider = item.get("provider", metadata.get("provider", ""))
-    return str(provider).strip().casefold()
+    provider = str(provider).strip().casefold()
+    if provider == "source_family_catalog" and _looks_like_wikidata_metadata(metadata):
+        return "wikidata"
+    return provider
+
+
+def _looks_like_wikidata_metadata(metadata: Mapping[str, Any]) -> bool:
+    return bool(
+        _clean_text(metadata.get("statement_property"))
+        and _clean_text(metadata.get("subject"))
+        and _clean_text(metadata.get("value"))
+    )
 
 
 def _has_reserved_metadata(item: Mapping[str, Any], metadata: Mapping[str, Any]) -> bool:
     return any(key in item or key in metadata for key in RESERVED_METADATA_KEYS)
+
+
+def _source_query_aliases(
+    item: Mapping[str, Any],
+    metadata: Mapping[str, Any],
+    *,
+    canonical_question: str,
+) -> tuple[str, ...]:
+    aliases: list[str] = []
+    for key in ("question_aliases", "source_query_aliases"):
+        for value in _as_sequence(item.get(key, metadata.get(key))):
+            alias = _question_prefix(value) or _clean_text(value)
+            if alias is not None:
+                aliases.append(alias)
+    if _source_query_alias_is_reviewed(item, metadata):
+        for key in ("retrieval_index_text", "source_query", "matched_query"):
+            for value in _as_sequence(item.get(key, metadata.get(key))):
+                alias = _question_prefix(value)
+                if alias is not None:
+                    aliases.append(alias)
+    canonical_key = normalize_claim_text(canonical_question)
+    unique_aliases: list[str] = []
+    seen: set[str] = set()
+    for alias in aliases:
+        key = normalize_claim_text(alias)
+        if not key or key == canonical_key or key in seen:
+            continue
+        seen.add(key)
+        unique_aliases.append(alias)
+    return tuple(unique_aliases)
+
+
+def _source_query_alias_is_reviewed(item: Mapping[str, Any], metadata: Mapping[str, Any]) -> bool:
+    status = _clean_text(item.get("source_query_alias_review_status", metadata.get("source_query_alias_review_status")))
+    if status is None:
+        return False
+    return status.casefold() in {"approved", "accepted", "reviewed"}
+
+
+def _question_prefix(value: Any) -> str | None:
+    text = _clean_text(value)
+    if text is None:
+        return None
+    marker = text.find("?")
+    if marker < 0:
+        return None
+    question = text[: marker + 1].strip()
+    if len(question) < 8 or len(question) > 240:
+        return None
+    first = question.split(maxsplit=1)[0].strip(".,:;!?()[]{}\"'").casefold()
+    if first not in {
+        "are",
+        "can",
+        "could",
+        "did",
+        "do",
+        "does",
+        "has",
+        "have",
+        "how",
+        "is",
+        "should",
+        "was",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "whom",
+        "whose",
+        "why",
+        "would",
+    }:
+        return None
+    return question
+
+
+def _as_sequence(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return (value,)
 
 
 def _clean_text(value: Any) -> str | None:
@@ -503,6 +643,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
     parser.add_argument("--keep-qid-values", action="store_true")
+    parser.add_argument(
+        "--include-source-query-aliases",
+        action="store_true",
+        help=(
+            "Bind explicit or reviewed source-discovery question aliases from "
+            "provenance metadata as QuestionAnswerVerifier aliases."
+        ),
+    )
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--compact-json", action="store_true")
     args = parser.parse_args(argv)
@@ -515,6 +663,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         name=args.name,
         version=args.version,
         skip_qid_values=not bool(args.keep_qid_values),
+        include_source_query_aliases=bool(args.include_source_query_aliases),
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
     )
