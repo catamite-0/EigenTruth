@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "f19839a980cd30b17e8e1960f3facf933e31aef7b8ee25c5c668400024dfbddb",
-      "size_bytes": 471705
+      "sha256": "db1940232409e82fa118070605a52e205ef74abb8ce5ca388b7d9c53de0c7f08",
+      "size_bytes": 1822853
     },
     "blind_spots": {
       "exists": true,

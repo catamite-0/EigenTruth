@@ -45,16 +45,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-handoff-manifest.json",
-      "sha256": "05b4197ee29e0a04089d532f79d545b1905a88e8cd31897b4973d837915b5aab",
-      "size_bytes": 2272
+      "sha256": "0ab7d4e983ff83ebfb929855a83a897a4652954db8cd9915914d353467fe9916",
+      "size_bytes": 2313
     },
     "handoff_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-handoff.json",
-      "sha256": "52e8262645290fc84b95a3017784464f8135fae187c58cbadc9a10c2005c2024",
-      "size_bytes": 6556468
+      "sha256": "7117205c54b71b6902152380763b4151eb5911370961818ce353a89d02fd24c6",
+      "size_bytes": 6556509
     },
     "provenance_audit": {
       "exists": true,
@@ -69,32 +69,32 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "e2eb0c35d541b3ed749f40549803706f0ed8157a79592d78a26022abef440240",
-      "size_bytes": 468524
+      "sha256": "71baa7e9370b406f3e1406e06278010fe8e51234ec353b620b27469425756bcf",
+      "size_bytes": 1725399
     },
     "query_sweep_comparison": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-comparison.json",
-      "sha256": "d861c9d26af11ab970dfce95d2f90bcd229ca7268d2be6edc63f4fc4c3e483e3",
-      "size_bytes": 17848
+      "sha256": "5b2498a6892aa463bd28a74a0d30258a072c2dedc6b7c835a66eeb5ff75881cf",
+      "size_bytes": 31136
     },
     "query_sweep_comparison_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-comparison-manifest.json",
-      "sha256": "3c477c9b758a996aae247e4df343fc9dab3d4c260f06d104fa0fb5ee9a1bcc5e",
-      "size_bytes": 1390
+      "sha256": "124de14ee845e19ae85fd252a401c631a3567b7d8a92934c82e2785c9da21772",
+      "size_bytes": 1391
     },
     "query_sweep_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-manifest.json",
-      "sha256": "f6948dfde5d0e53a7c1f4694a9375e39b685402fba1994c99a9ff7c63c4bbbc0",
-      "size_bytes": 2020
+      "sha256": "f4c676afd20569687cfa08bb33829880f0320eed05abdca50fffb2ac08c1bc36",
+      "size_bytes": 2039
     },
     "queue_report": {
       "exists": true,
@@ -125,8 +125,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-evidence-workflow.json",
-      "sha256": "cec3d455d7f1f646b9de27e0558dcdd7e1e246c98cdf417869c2aae957e75b5c",
-      "size_bytes": 6557
+      "sha256": "cf01119d27694d7edf51730381e86a8a8e161cc9fb649fc5878ef514d2ebb529",
+      "size_bytes": 6696
     }
   },
   "digest_algorithm": "sha256",
@@ -137,6 +137,7 @@
     "blocking_reason_count": 2,
     "closure_action": "improve_unresolved_citation_alignment",
     "corpus_document_count": 740,
+    "diagnostic_query_mode": "question",
     "passed": false,
     "promotion_ready": false,
     "query_sweep_best_observed_failure_reasons": [
@@ -145,8 +146,8 @@
     ],
     "query_sweep_best_observed_strategy": "question_overlap_0p5",
     "query_sweep_failure_reason_counts": {
-      "blind_refuted_rate_below_min": 8,
-      "verified_false_alarm_above_max": 8
+      "blind_refuted_rate_below_min": 32,
+      "verified_false_alarm_above_max": 32
     },
     "query_sweep_no_hit_strategy_count": 0,
     "query_sweep_target_route_not_selected_strategy_count": 0,

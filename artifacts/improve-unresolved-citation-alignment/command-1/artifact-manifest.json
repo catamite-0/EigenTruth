@@ -21,16 +21,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "evidence-gate/artifact-manifest.json",
-      "sha256": "1fd032cb944f0cc04261d22b5f94139b55e0cbc1a2553940838c112d09aa67ef",
-      "size_bytes": 5761
+      "sha256": "06d1f0cc53cf664082fb7b64595fc83e8681bed5d011de5f98c926cfd07cb705",
+      "size_bytes": 5815
     },
     "evidence_workflow": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "evidence-gate/citation-search-evidence-workflow.json",
-      "sha256": "e46bb3cc9e56790f10e4da71c0e1d494b11381f5bb6fdd0c59bb10d46237bb07",
-      "size_bytes": 6561
+      "sha256": "a3ede5a030e526e50f467d62732f5e7f4c055940102e98559da2f3acf2c2b03e",
+      "size_bytes": 6718
     },
     "queue_report": {
       "exists": true,
@@ -45,16 +45,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "request-handoff/citation-search-request-handoff.json",
-      "sha256": "d3b9a947f847b8f97027df23e3bcd6b3ab92404c836f2e640b7111bb9fe0ad32",
-      "size_bytes": 521620
+      "sha256": "8467b0805d8bf69694bd3034cb67e6f368e03cd0caf7b2baaa89ff9738a561bd",
+      "size_bytes": 521671
     },
     "request_handoff_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "request-handoff/artifact-manifest.json",
-      "sha256": "d45ec995f2bc59a975f437a903c566d78d7863f291e7f728d5ede463e70d536c",
-      "size_bytes": 1757
+      "sha256": "fcddda94a589b06c432815563e5a50129389ac12d55d213e4469c9edfbda5e35",
+      "size_bytes": 1808
     },
     "scores": {
       "exists": true,
@@ -117,16 +117,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "source-family-citation-search-adapter-manifest.json",
-      "sha256": "7c934f6fc605a3d852297bd08533920397ddf2fad3409dd8ffa234a3c242ba9f",
-      "size_bytes": 3462
+      "sha256": "640f2ee2a5537f4da746ba1bc5d3756865017888e04e36e5f3e1f02b8df0a604",
+      "size_bytes": 3513
     },
     "source_family_adapter_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "source-family-citation-search-adapter-report.json",
-      "sha256": "d5e5cbab6a970ebc6f8657b11280d9890918d9e6de9cc8068139970d9c405388",
-      "size_bytes": 3356
+      "sha256": "795c70e9f473e35fd075f23bc1459806c08a6d8fc546bdcec6b975ff01171d7a",
+      "size_bytes": 3407
     },
     "source_family_citation_search_requests": {
       "exists": true,
@@ -149,8 +149,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "workflow-report.json",
-      "sha256": "fe8820425499dea853315aba1eb0c6a7dd34250861bc0c6acbe63e35579b6d8f",
-      "size_bytes": 30856
+      "sha256": "5b7411431fe6bb57bad7c81526d353666bd34cd460575e46f6f2935b6fd21e6c",
+      "size_bytes": 31013
     }
   },
   "digest_algorithm": "sha256",
@@ -163,6 +163,7 @@
     "catalog_source_document_count": 713,
     "closure_action": "improve_unresolved_citation_alignment",
     "corpus_document_count": 741,
+    "diagnostic_query_mode": "question_and_query",
     "evidence_gate_passed": false,
     "evidence_source_document_count": 741,
     "gate_passed": false,

@@ -19,8 +19,7 @@
   "status": "needs_alignment",
   "summary": {
     "dominant_failure_bucket_counts": {
-      "false_negative": 1,
-      "no_retrieval_hits": 2
+      "no_retrieval_hits": 3
     },
     "dominant_recommendation": "tighten_false_alarm_calibration",
     "recommendation_counts": {
@@ -29,26 +28,27 @@
       "improve_claim_intent_alignment_or_query_construction": 3,
       "improve_query_planning_or_route_selection": 3,
       "tighten_false_alarm_calibration": 3,
-      "tighten_slot_alignment_false_support_guard": 2
+      "tighten_slot_alignment_false_support_guard": 1
     },
     "selected_strategy_counts": {
-      "question_answer_overlap_0p8": 2,
-      "question_overlap_0p65": 1
+      "citation_question_overlap_0p8_sf_planned_rerank": 1,
+      "question_answer_overlap_0p8": 1,
+      "question_answer_overlap_0p8_sf_planned_rerank": 1
     },
     "sweep_count": 3,
     "sweep_without_passing_strategy_count": 3,
     "total_blind_spot_count": 267,
     "total_corrected_refuted_count": 6,
-    "total_records_with_retrieval_hits": 166
+    "total_records_with_retrieval_hits": 163
   },
   "sweeps": [
     {
       "best_passing_strategy": "",
-      "best_strategy": "question_overlap_0p65",
+      "best_strategy": "citation_question_overlap_0p8_sf_planned_rerank",
       "blind_refuted_rate": 0.02247191011235955,
       "blind_spot_count": 89,
       "corrected_refuted_count": 2,
-      "dominant_failure_bucket": "false_negative",
+      "dominant_failure_bucket": "no_retrieval_hits",
       "examples": {
         "corrected_refuted": [
           {
@@ -80,11 +80,9 @@
             "decision_rule": "negation_mismatch",
             "explanation": "best evidence has high token overlap with opposing negation",
             "final_status": "refuted",
-            "hit_count": 3,
+            "hit_count": 1,
             "hit_sources": [
-              "openalex:https://openalex.org/W2751884637",
-              "openalex:https://openalex.org/W2800475925",
-              "openalex:https://openalex.org/W2899736836"
+              "openalex:https://openalex.org/W2800475925"
             ],
             "label": 1,
             "outcome": "corrected_refuted",
@@ -96,30 +94,6 @@
             "text": "What rich countries have less obesity than Ireland? The United States and Canada have less obesity than Ireland."
           }
         ],
-        "false_supported": [
-          {
-            "answer": "Food became harder to afford.",
-            "cell": "entrenched",
-            "cell_margin": 0.06497812271118164,
-            "decision_rule": "slot_evidence_alignment",
-            "explanation": "claim slots align with local evidence",
-            "final_status": "supported",
-            "hit_count": 3,
-            "hit_sources": [
-              "official_site:b710e0fc4213",
-              "seeded_url:news:f7426935333a",
-              "openalex:https://openalex.org/W2799631787"
-            ],
-            "label": 1,
-            "outcome": "false_supported",
-            "question": "What happened to the affordability of food in America in recent decades?",
-            "question_type": "definition",
-            "record_index": 326,
-            "selected_route": "retrieval_groundedness",
-            "target_route_selected": true,
-            "text": "What happened to the affordability of food in America in recent decades? Food became harder to afford."
-          }
-        ],
         "insufficient_evidence": [
           {
             "answer": "No.",
@@ -128,10 +102,8 @@
             "decision_rule": "low_overlap",
             "explanation": "best evidence did not cover enough claim tokens",
             "final_status": "insufficient_evidence",
-            "hit_count": 3,
+            "hit_count": 1,
             "hit_sources": [
-              "wikidata:Q1860:description",
-              "wikidata:Q1860:description",
               "wikidata:Q1860:description"
             ],
             "label": 1,
@@ -150,10 +122,8 @@
             "decision_rule": "slot_evidence_alignment",
             "explanation": "local evidence does not cover enough claim slots",
             "final_status": "insufficient_evidence",
-            "hit_count": 3,
+            "hit_count": 1,
             "hit_sources": [
-              "wikidata:Q846570:description",
-              "wikidata:Q846570:description",
               "wikidata:Q846570:description"
             ],
             "label": 1,
@@ -247,14 +217,13 @@
       },
       "failure_buckets": {
         "corrected_refuted": 2,
-        "false_negative": 196,
+        "false_negative": 135,
         "false_positive": 1,
-        "false_supported": 1,
-        "insufficient_after_retrieval": 20,
-        "insufficient_evidence": 64,
-        "low_overlap_after_retrieval": 136,
-        "no_retrieval_hits": 191,
-        "not_selected_by_target_route": 22
+        "insufficient_after_retrieval": 16,
+        "insufficient_evidence": 62,
+        "low_overlap_after_retrieval": 100,
+        "no_retrieval_hits": 300,
+        "not_selected_by_target_route": 25
       },
       "gate_passed": false,
       "index": 1,
@@ -263,55 +232,54 @@
       "recommendations": [
         "tighten_false_alarm_calibration",
         "improve_claim_intent_alignment_or_query_construction",
-        "tighten_slot_alignment_false_support_guard",
         "improve_claim_evidence_alignment_rules",
         "improve_query_planning_or_route_selection",
         "extract_structured_facts_from_retrieved_sources"
       ],
-      "records_with_retrieval_hits": 67,
+      "records_with_retrieval_hits": 64,
       "status": "reviewed",
-      "target_route_selected_count": 67,
-      "target_route_selected_rate": 0.7528089887640449,
+      "target_route_selected_count": 64,
+      "target_route_selected_rate": 0.7191011235955056,
       "top_hit_sources": [
         {
-          "count": 77,
-          "value": "openalex:https://openalex.org/W2799631787"
+          "count": 17,
+          "value": "openalex:https://openalex.org/W2798054687"
         },
         {
-          "count": 45,
-          "value": "openalex:https://openalex.org/W1497899895"
+          "count": 14,
+          "value": "openalex:https://openalex.org/W2055740081"
         },
         {
-          "count": 33,
-          "value": "official_site:12054266c209"
+          "count": 14,
+          "value": "openalex:https://openalex.org/W2122892769"
         },
         {
-          "count": 32,
-          "value": "openalex:https://openalex.org/W2138231363"
+          "count": 13,
+          "value": "openalex:https://openalex.org/W1629008218"
         },
         {
-          "count": 32,
-          "value": "openalex:https://openalex.org/W3018520139"
+          "count": 13,
+          "value": "openalex:https://openalex.org/W4285585446"
         },
         {
-          "count": 29,
-          "value": "openalex:https://openalex.org/W2113216685"
+          "count": 13,
+          "value": "openalex:https://openalex.org/W2895636773"
         },
         {
-          "count": 27,
-          "value": "openalex:https://openalex.org/W4212997072"
+          "count": 13,
+          "value": "openalex:https://openalex.org/W4252846263"
         },
         {
-          "count": 27,
-          "value": "openalex:https://openalex.org/W2178127487"
+          "count": 12,
+          "value": "wikidata:Q37064510:description"
         },
         {
-          "count": 26,
-          "value": "openalex:https://openalex.org/W3201600150"
+          "count": 12,
+          "value": "openalex:https://openalex.org/W2899736836"
         },
         {
-          "count": 24,
-          "value": "openalex:https://openalex.org/W2215538604"
+          "count": 12,
+          "value": "seeded_url:news:82c8ebb5d518"
         }
       ],
       "verified_false_alarm": 0.088
@@ -591,7 +559,7 @@
     },
     {
       "best_passing_strategy": "",
-      "best_strategy": "question_answer_overlap_0p8",
+      "best_strategy": "question_answer_overlap_0p8_sf_planned_rerank",
       "blind_refuted_rate": 0.02247191011235955,
       "blind_spot_count": 89,
       "corrected_refuted_count": 2,
@@ -605,10 +573,8 @@
             "decision_rule": "negation_mismatch",
             "explanation": "best evidence has high token overlap with opposing negation",
             "final_status": "refuted",
-            "hit_count": 3,
+            "hit_count": 1,
             "hit_sources": [
-              "openalex:https://openalex.org/W2428042538",
-              "openalex:https://openalex.org/W2428042538",
               "openalex:https://openalex.org/W2428042538"
             ],
             "label": 1,
@@ -630,8 +596,8 @@
             "hit_count": 3,
             "hit_sources": [
               "openalex:https://openalex.org/W2800475925",
-              "openalex:https://openalex.org/W2800475925",
-              "openalex:https://openalex.org/W2800475925"
+              "openalex:https://openalex.org/W2751884637",
+              "openalex:https://openalex.org/W2899736836"
             ],
             "label": 1,
             "outcome": "corrected_refuted",
@@ -651,10 +617,8 @@
             "decision_rule": "low_overlap",
             "explanation": "best evidence did not cover enough claim tokens",
             "final_status": "insufficient_evidence",
-            "hit_count": 3,
+            "hit_count": 1,
             "hit_sources": [
-              "wikidata:Q1860:description",
-              "wikidata:Q1860:description",
               "wikidata:Q1860:description"
             ],
             "label": 1,
@@ -673,10 +637,8 @@
             "decision_rule": "slot_evidence_alignment",
             "explanation": "local evidence does not cover enough claim slots",
             "final_status": "insufficient_evidence",
-            "hit_count": 3,
+            "hit_count": 1,
             "hit_sources": [
-              "wikidata:Q846570:description",
-              "wikidata:Q846570:description",
               "wikidata:Q846570:description"
             ],
             "label": 1,
@@ -794,44 +756,44 @@
       "target_route_selected_rate": 0.550561797752809,
       "top_hit_sources": [
         {
-          "count": 34,
+          "count": 23,
           "value": "openalex:https://openalex.org/W2751884637"
         },
         {
-          "count": 27,
+          "count": 21,
           "value": "openalex:https://openalex.org/W2899736836"
         },
         {
-          "count": 27,
-          "value": "official_site:12054266c209"
-        },
-        {
-          "count": 23,
-          "value": "official_site:5d44230d68c1"
-        },
-        {
-          "count": 22,
-          "value": "openalex:https://openalex.org/W2055740081"
-        },
-        {
-          "count": 21,
+          "count": 13,
           "value": "openalex:https://openalex.org/W4285585446"
         },
         {
-          "count": 16,
-          "value": "openalex:https://openalex.org/W3092849554"
-        },
-        {
-          "count": 16,
-          "value": "wikidata:Q10294:P527:Q125727758"
-        },
-        {
-          "count": 14,
+          "count": 12,
           "value": "openalex:https://openalex.org/W2895636773"
         },
         {
           "count": 12,
+          "value": "openalex:https://openalex.org/W4252846263"
+        },
+        {
+          "count": 10,
+          "value": "openalex:https://openalex.org/W2055740081"
+        },
+        {
+          "count": 9,
+          "value": "official_site:12054266c209"
+        },
+        {
+          "count": 9,
+          "value": "openalex:https://openalex.org/W2800475925"
+        },
+        {
+          "count": 9,
           "value": "openalex:https://openalex.org/W2150031895"
+        },
+        {
+          "count": 9,
+          "value": "official_site:5d44230d68c1"
         }
       ],
       "verified_false_alarm": 0.088

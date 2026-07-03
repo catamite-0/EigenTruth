@@ -21,16 +21,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "../../improve-unresolved-citation-alignment/command-binding-review/reviewed-bound-command-run-report.json",
-      "sha256": "6ad8ebbfbf8b9dd66385e3123ea8760db37a626c18fac39950663cb98a0f1d55",
-      "size_bytes": 22547
+      "sha256": "e854240f77b66c738fac7c28087676d419d328fdd876b9e40a1712ef26c5974e",
+      "size_bytes": 23936
     },
     "frontier_command_binding_review_1": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../../improve-unresolved-citation-alignment/command-binding-review/frontier-command-binding-review.json",
-      "sha256": "076066c3b4b4ba3fdb6a8b5ca4242792f615ba0de626c3a648f736e9d10d09f2",
-      "size_bytes": 75850
+      "sha256": "435e20c193758b98a310b9e313177e7ecd5ee4eb5b149a564b7490dbc0511192",
+      "size_bytes": 28456
     },
     "mechanism_handoff_bundle": {
       "exists": true,

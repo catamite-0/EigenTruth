@@ -930,9 +930,10 @@ def _citation_query_plan(statement: Mapping[str, Any], *, query_field: str):
     if not question:
         raise ValueError(f"statement record is missing query field {query_field!r}.")
     strategy = "claim_entity" if query_field == "citation_entity" else "question_and_query"
+    answer_hints = _answer_slot_hints(statement, question_text=question)
     return plan_citation_search_query(
         question=question,
-        candidate_query="",
+        candidate_query=" ".join(answer_hints),
         question_type=_question_type(statement),
         strategy=strategy,
     )

@@ -29,8 +29,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-handoff.json",
-      "sha256": "3642976deeb86fea11cb9a43ef1468eede6cef7ccfcba5cac0803dc87bf3e844",
-      "size_bytes": 6599029
+      "sha256": "13b8ea51d7df70ed0bfb0df8f95706391f13e1911fa970c45150829c2579a094",
+      "size_bytes": 6599080
     },
     "citation_search_source_documents": {
       "exists": true,
@@ -54,6 +54,7 @@
     "adapter_request_count": 260,
     "closure_action": "improve_unresolved_citation_alignment",
     "corpus_document_count": 741,
+    "diagnostic_query_mode": "question_and_query",
     "selected_batch_count": 0,
     "source_document_count": 741,
     "source_workflow": "source_family_citation_search_workflow",

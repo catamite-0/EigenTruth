@@ -16971,6 +16971,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic_query_mode": "question",
     "source_workflow": "source_family_citation_search_workflow"
   },
   "paths": {

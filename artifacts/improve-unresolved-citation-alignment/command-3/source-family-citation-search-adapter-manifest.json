@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "source-family-citation-search-adapter-report.json",
-      "sha256": "44f05a59811e46b521c346bfc36d77c88a1776fa32b03e857eff58a7533707c5",
-      "size_bytes": 3356
+      "sha256": "a0decfb6b5239ba555cd5f9a8d339916ff13c4fa7a7281179850b5f21b0a52fd",
+      "size_bytes": 3397
     },
     "adapter_requests": {
       "exists": true,
@@ -76,6 +76,7 @@
   "digest_algorithm": "sha256",
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic_query_mode": "question",
     "gate_passed": true,
     "min_request_coverage": 1.0,
     "request_count": 260,

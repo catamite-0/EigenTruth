@@ -10285,6 +10285,44 @@ def test_build_evidence_fixture_supports_citation_safe_query_fields():
     assert entity_fixture["summary"]["records_with_hits"] == 1
     assert entity_fixture["records"][0]["metadata"]["retrieval"]["query_field"] == "citation_entity"
 
+    entity_dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [1],
+        "scores": {"truth_proj": [0.8]},
+        "statements": [
+            {
+                "question": "Who first started Tesla Motors?",
+                "answer": "Elon Musk.",
+                "text": "Who first started Tesla Motors? Elon Musk.",
+                "metadata": {"question_type": "person"},
+            },
+        ],
+    }
+    entity_corpus = (
+        {
+            "text": "Tesla Motors was founded by Martin Eberhard and Marc Tarpenning.",
+            "source": "reference:tesla-founders",
+            "metadata": {
+                "retrieval_index_text": (
+                    "Tesla Motors founders Martin Eberhard Marc Tarpenning Elon Musk "
+                    "official profile biography"
+                ),
+            },
+        },
+    )
+    entity_hint_fixture = builder.build_evidence_fixture(
+        entity_dump,
+        entity_corpus,
+        retriever_min_overlap=0.3,
+        retrieval_limit=1,
+        query_field="citation_question",
+        include_label_metadata=False,
+    )
+    entity_query = entity_hint_fixture["records"][0]["metadata"]["retrieval"]["query"]
+
+    assert entity_hint_fixture["summary"]["records_with_hits"] == 1
+    assert "Elon Musk" in entity_query
+
 
 def test_build_evidence_fixture_binds_retrieval_to_source_queue_requests():
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
@@ -35635,7 +35673,13 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
     assert "--retriever-min-overlaps 0.5,0.35,0.2" in (
         citation_entry["command_templates"][0]
     )
-    assert "--verifier-min-overlap 0.8" in citation_entry["command_templates"][0]
+    assert "--query-fields question,question_answer,citation_question,citation_entity" in (
+        citation_entry["command_templates"][0]
+    )
+    assert "--source-family-filters planned_rerank,off" in (
+        citation_entry["command_templates"][0]
+    )
+    assert "--verifier-min-overlap 0.65" in citation_entry["command_templates"][0]
     assert "diagnostic_target_route=groundedness" in citation_entry["command_templates"][3]
     assert "audit_source_family_coverage.py" in citation_entry["command_templates"][5]
     assert "--acquisition-plan-jsonl" in citation_entry["command_templates"][5]
@@ -35776,6 +35820,25 @@ def test_frontier_research_queue_command_plan_accepts_unresolved_summary(tmp_pat
         "input_name_hint": "adapter_report",
         "flag": "--adapter-report",
     }
+
+
+def test_frontier_research_queue_citation_closure_outputs_are_diagnostic_scoped():
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+
+    focused_outputs = plan_module._citation_closure_outputs((
+        "improve_claim_intent_alignment_or_query_construction",
+        "tighten_false_alarm_calibration",
+    ))
+    expansion_outputs = plan_module._citation_closure_outputs((
+        "expand_or_retarget_source_corpus",
+    ))
+
+    assert focused_outputs == (
+        "unresolved_citation_alignment_workflow_report",
+        "unresolved_citation_alignment_artifact_manifest",
+    )
+    assert "source_family_coverage_audit_report" in expansion_outputs
+    assert "source_family_catalog_collection_plan" in expansion_outputs
 
 
 def test_frontier_research_queue_command_plan_accepts_adapter_ready_fill_rollup(

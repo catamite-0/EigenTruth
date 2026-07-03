@@ -18,7 +18,9 @@
     "min_external_blind_refuted_rate": 0.5,
     "query_fields": [
       "question",
-      "question_answer"
+      "question_answer",
+      "citation_question",
+      "citation_entity"
     ],
     "query_mode": "queue_query",
     "query_sweep_verified_records_dir": null,
@@ -33,6 +35,7 @@
     "seed": 0,
     "signal": "truth_proj",
     "source_family_filters": [
+      "planned_rerank",
       "off"
     ],
     "source_kind": "external_citation_search_result",
@@ -57,6 +60,7 @@
   },
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic_query_mode": "queue_query",
     "source_workflow": "source_family_citation_search_workflow"
   },
   "paths": {
@@ -112,10 +116,10 @@
     "query_sweep_best_passing_blind_refuted_count": null,
     "query_sweep_best_passing_strategy": null,
     "query_sweep_best_strategy": "question_answer_overlap_0p8",
-    "query_sweep_blind_refuted_rate_below_min_strategy_count": 8,
+    "query_sweep_blind_refuted_rate_below_min_strategy_count": 32,
     "query_sweep_failure_reason_counts": {
-      "blind_refuted_rate_below_min": 8,
-      "verified_false_alarm_above_max": 8
+      "blind_refuted_rate_below_min": 32,
+      "verified_false_alarm_above_max": 32
     },
     "query_sweep_no_hit_strategy_count": 0,
     "query_sweep_recommended_next_actions": [
@@ -123,7 +127,7 @@
       "tighten_false_alarm_calibration"
     ],
     "query_sweep_target_route_not_selected_strategy_count": 0,
-    "query_sweep_verified_false_alarm_above_max_strategy_count": 8,
+    "query_sweep_verified_false_alarm_above_max_strategy_count": 32,
     "recommended_external_strategy": null,
     "selected_batch_count": 0,
     "selected_batch_ids": [],

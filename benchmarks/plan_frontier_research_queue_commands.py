@@ -490,6 +490,7 @@ def _unresolved_citation_alignment_action(
     workflow_paths = _string_tuple(_nested(payload, "paths", "citation_workflows"))
     diagnostic_next_actions = _mapping(action.get("query_sweep_recommended_next_action_counts"))
     diagnostic_failure_counts = _mapping(action.get("query_sweep_failure_reason_counts"))
+    diagnostics = _citation_diagnostic_actions(action)
     for workflow_path in workflow_paths:
         command_templates.extend(
             _citation_alignment_commands(
@@ -507,12 +508,7 @@ def _unresolved_citation_alignment_action(
         "suggested_commands": tuple(command_templates),
         "metadata": {
             "required_inputs": (),
-            "closure_outputs": (
-                "unresolved_citation_alignment_workflow_report",
-                "unresolved_citation_alignment_artifact_manifest",
-                "source_family_coverage_audit_report",
-                "source_family_catalog_collection_plan",
-            ),
+            "closure_outputs": _citation_closure_outputs(diagnostics),
             "source_summary_workflow": UNRESOLVED_SUMMARY_WORKFLOW,
             "source_citation_workflow_count": len(workflow_paths),
             "reason": str(action.get("reason") or ""),
@@ -532,6 +528,19 @@ def _unresolved_citation_alignment_action(
             ),
         },
     }
+
+
+def _citation_closure_outputs(diagnostics: Sequence[str]) -> tuple[str, ...]:
+    outputs = [
+        "unresolved_citation_alignment_workflow_report",
+        "unresolved_citation_alignment_artifact_manifest",
+    ]
+    if "expand_or_retarget_source_corpus" in diagnostics:
+        outputs.extend((
+            "source_family_coverage_audit_report",
+            "source_family_catalog_collection_plan",
+        ))
+    return tuple(outputs)
 
 
 def _citation_alignment_commands(
@@ -595,6 +604,8 @@ def _citation_alignment_commands(
         str(config.get("target_route") or "retrieval_groundedness"),
         diagnostics=diagnostics,
     )
+    query_fields = _citation_query_fields(config, diagnostics=diagnostics)
+    source_family_filters = _citation_source_family_filters(config, diagnostics=diagnostics)
     for mode in candidate_modes:
         target_route = target_routes[0]
         parts = [
@@ -626,9 +637,11 @@ def _citation_alignment_commands(
             "--target-route",
             target_route,
             "--query-fields",
-            ",".join(_string_tuple(config.get("query_fields"))) or "question,question_answer",
+            query_fields,
             "--retriever-min-overlaps",
             _citation_retriever_min_overlaps(config, diagnostics=diagnostics),
+            "--source-family-filters",
+            source_family_filters,
             "--retrieval-limit",
             str(_citation_retrieval_limit(config, diagnostics=diagnostics)),
             "--verifier-min-overlap",
@@ -672,9 +685,11 @@ def _citation_alignment_commands(
                 "--target-route",
                 route,
                 "--query-fields",
-                ",".join(_string_tuple(config.get("query_fields"))) or "question,question_answer",
+                query_fields,
                 "--retriever-min-overlaps",
                 _citation_retriever_min_overlaps(config, diagnostics=diagnostics),
+                "--source-family-filters",
+                source_family_filters,
                 "--retrieval-limit",
                 str(_citation_retrieval_limit(config, diagnostics=diagnostics)),
                 "--metadata",
@@ -731,6 +746,37 @@ def _citation_candidate_target_routes(
     return tuple(dict.fromkeys(route for route in routes if route))
 
 
+def _citation_query_fields(
+    config: Mapping[str, Any],
+    *,
+    diagnostics: Sequence[str],
+) -> str:
+    fields = list(_string_tuple(config.get("query_fields")) or ("question", "question_answer"))
+    if _citation_needs_alignment_sweep(diagnostics):
+        fields.extend(("citation_question", "citation_entity"))
+    return ",".join(dict.fromkeys(field for field in fields if field))
+
+
+def _citation_source_family_filters(
+    config: Mapping[str, Any],
+    *,
+    diagnostics: Sequence[str],
+) -> str:
+    filters = list(_string_tuple(config.get("source_family_filters")) or ("off",))
+    if _citation_needs_alignment_sweep(diagnostics):
+        filters = ["planned_rerank", *filters]
+    return ",".join(dict.fromkeys(mode for mode in filters if mode))
+
+
+def _citation_needs_alignment_sweep(diagnostics: Sequence[str]) -> bool:
+    return bool({
+        "extract_structured_facts_from_retrieved_sources",
+        "improve_claim_evidence_alignment_rules",
+        "improve_claim_intent_alignment_or_query_construction",
+        "improve_query_planning_or_route_selection",
+    } & set(diagnostics))
+
+
 def _citation_retriever_min_overlaps(
     config: Mapping[str, Any],
     *,
@@ -758,9 +804,8 @@ def _citation_verifier_min_overlap(
     *,
     diagnostics: Sequence[str],
 ) -> str:
+    _ = diagnostics
     current = str(config.get("verifier_min_overlap") or "0.65")
-    if "tighten_false_alarm_calibration" in diagnostics:
-        return "0.8"
     return current
 
 

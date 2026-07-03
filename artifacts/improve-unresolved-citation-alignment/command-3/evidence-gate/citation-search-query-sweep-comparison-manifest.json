@@ -13,16 +13,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep.json",
-      "sha256": "e2eb0c35d541b3ed749f40549803706f0ed8157a79592d78a26022abef440240",
-      "size_bytes": 468524
+      "sha256": "71baa7e9370b406f3e1406e06278010fe8e51234ec353b620b27469425756bcf",
+      "size_bytes": 1725399
     },
     "query_sweep_comparison": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "citation-search-query-sweep-comparison.json",
-      "sha256": "d861c9d26af11ab970dfce95d2f90bcd229ca7268d2be6edc63f4fc4c3e483e3",
-      "size_bytes": 17848
+      "sha256": "5b2498a6892aa463bd28a74a0d30258a072c2dedc6b7c835a66eeb5ff75881cf",
+      "size_bytes": 31136
     }
   },
   "digest_algorithm": "sha256",

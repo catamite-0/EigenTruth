@@ -5,16 +5,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-research-bound-command-plan-approved.json",
-      "sha256": "4a069c77edc7b09e774d86131ff2886b8c46ceb47b5b92a28f120b3078326635",
-      "size_bytes": 11721
+      "sha256": "d6a931f356df3e629ece419017653a512d56f8e20ba524437fa03685e67f284d",
+      "size_bytes": 13358
     },
     "frontier_research_queue_bound_command_run_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "reviewed-bound-command-run-report.json",
-      "sha256": "6ad8ebbfbf8b9dd66385e3123ea8760db37a626c18fac39950663cb98a0f1d55",
-      "size_bytes": 22547
+      "sha256": "e854240f77b66c738fac7c28087676d419d328fdd876b9e40a1712ef26c5974e",
+      "size_bytes": 23936
     }
   },
   "digest_algorithm": "sha256",

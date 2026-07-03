@@ -17,6 +17,7 @@
   "input_path": "artifacts/improve-unresolved-citation-alignment/command-1/source-family-citation-search-requests.jsonl",
   "metadata": {
     "closure_action": "improve_unresolved_citation_alignment",
+    "diagnostic_query_mode": "question_and_query",
     "source_workflow": "source_family_citation_search_workflow"
   },
   "output_path": "artifacts/improve-unresolved-citation-alignment/command-1/source-family-citation-search-results.jsonl",
