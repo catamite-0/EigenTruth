@@ -1656,6 +1656,12 @@ Added the first monitor-first tool-selection audit layer:
   control plane: a ready seed audit plus staged command bindings produces a
   `stage_frontier_queue_seed_inputs` next action and a reviewable
   `bind_frontier_research_queue_seed_inputs.py` command template.
+- The same summary/planner handoff now separates partial scoped covered-fact
+  alignment from generic citation tuning. When semantic-gap covered-fact route
+  evidence already promotes but covers fewer records than the unresolved target
+  queue, the summary emits `expand_scoped_covered_fact_alignment` with
+  coverage gap/rate metadata, and the planner lowers it back through
+  `run_retrieval_semantic_gap_review_workflow.py --run-covered-fact-route`.
 - `frontier_queue_execution_smoke.py` now exercises the same source-family seed
   staging path before the reviewed command dry-run path, so release smoke catches
   regressions in both non-evidence handoffs without executing child workflows.

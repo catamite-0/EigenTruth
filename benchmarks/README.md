@@ -4451,7 +4451,11 @@ route record count, and best covered-fact route metrics. A promoted semantic-gap
 lane means only that the reviewed source-backed facts passed their scoped
 covered-fact route audit. It can suppress the generic citation-alignment next
 action for those reviewed facts, but it is not broad recall evidence and does
-not by itself close source-family, citation, or world-model lanes.
+not by itself close source-family, citation, or world-model lanes. If that
+promoted scoped route covers only part of the unresolved target queue, the
+summary emits `expand_scoped_covered_fact_alignment` with coverage gap/rate
+metadata so the next plan expands source-backed alignment instead of restarting
+broad citation tuning.
 
 The same summary can feed the generic frontier command-plan handoff:
 
@@ -4466,7 +4470,8 @@ python benchmarks/plan_frontier_research_queue_commands.py \
 ```
 
 For unresolved summaries, the planner synthesizes reviewable command templates
-for semantic-gap covered-fact route completion, citation query-mode replays,
+for semantic-gap covered-fact route completion or scoped alignment expansion,
+citation query-mode replays,
 numeric/temporal world-model rule fill/adapter/promotion chains, and frontier
 queue command-binding review, approved re-bind, execution, or repair re-run
 steps. Citation templates use query-sweep diagnostics to lower retrieval
@@ -4476,6 +4481,10 @@ source-family coverage audit/collection commands when corpus expansion is the
 recommended next action. The templates keep output paths, registry keys, and source-backed
 binding sidecars as `...` placeholders, so the follow-up scaffold/bind/run
 steps still require review before anything executes.
+`expand_scoped_covered_fact_alignment` reuses
+`run_retrieval_semantic_gap_review_workflow.py --run-covered-fact-route` and
+stamps `closure_action=expand_scoped_covered_fact_alignment` into the command
+metadata for traceability.
 The same planner also accepts `source_family_catalog_collection_plan` reports
 and lowers ready collection-task families into provider-specific catalog
 adapter command templates, keeping URL seeds and output artifacts review-bound.

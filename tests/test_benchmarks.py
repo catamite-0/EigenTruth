@@ -36634,6 +36634,39 @@ def test_frontier_research_queue_command_plan_templates_semantic_gap_without_pri
     assert requirements["status"] == "ready"
 
 
+def test_frontier_research_queue_command_plan_templates_scoped_alignment_expansion():
+    plan_module = importlib.import_module("benchmarks.plan_frontier_research_queue_commands")
+    summary = {
+        "workflow": "unresolved_frontier_evidence_summary",
+        "status": "needs_evidence",
+        "next_actions": [
+            {
+                "action_id": "expand_scoped_covered_fact_alignment",
+                "lane": "semantic_gap_review",
+                "priority": 88,
+                "reason": "scoped covered-fact coverage is partial",
+                "semantic_gap_covered_fact_route_n_records": 2,
+                "semantic_gap_coverage_gap_count": 1,
+                "semantic_gap_coverage_rate": 2 / 3,
+                "unresolved_target_count": 3,
+            }
+        ],
+    }
+
+    payload = plan_module.build_frontier_research_queue_command_plan(source=summary)
+    entry = payload["entries"][0]
+    command = entry["command_templates"][0]
+
+    assert payload["status"] == "needs_inputs"
+    assert entry["action_id"] == "expand_scoped_covered_fact_alignment"
+    assert entry["title"] == "Expand scoped covered-fact alignment coverage"
+    assert entry["metadata"]["semantic_gap_coverage_gap_count"] == 1
+    assert entry["metadata"]["semantic_gap_coverage_rate"] == pytest.approx(2 / 3)
+    assert entry["metadata"]["unresolved_target_count"] == 3
+    assert "--run-covered-fact-route" in command
+    assert "closure_action=expand_scoped_covered_fact_alignment" in command
+
+
 def test_frontier_research_queue_requirement_checks_cover_control_plane_commands():
     requirements_module = importlib.import_module("benchmarks.frontier_research_command_requirements")
     commands = {
@@ -62700,16 +62733,21 @@ def test_unresolved_frontier_evidence_summary_reports_remaining_lanes(tmp_path):
     semantic_partial_actions = {
         action["action_id"] for action in semantic_partial_payload["next_actions"]
     }
-    semantic_partial_citation_action = next(
+    semantic_partial_expand_action = next(
         action
         for action in semantic_partial_payload["next_actions"]
-        if action["action_id"] == "improve_unresolved_citation_alignment"
+        if action["action_id"] == "expand_scoped_covered_fact_alignment"
     )
     assert semantic_partial_payload["lanes"]["semantic_gap_review"]["status"] == "promote"
-    assert "improve_unresolved_citation_alignment" in semantic_partial_actions
-    assert semantic_partial_citation_action["semantic_gap_review_status"] == "promote"
-    assert semantic_partial_citation_action["semantic_gap_covered_fact_route_n_records"] == 2
-    assert semantic_partial_citation_action["unresolved_target_count"] == 3
+    assert "expand_scoped_covered_fact_alignment" in semantic_partial_actions
+    assert "improve_unresolved_citation_alignment" not in semantic_partial_actions
+    assert semantic_partial_payload["summary"]["semantic_gap_review_coverage_gap_count"] == 1
+    assert semantic_partial_payload["summary"]["semantic_gap_review_coverage_rate"] == pytest.approx(2 / 3)
+    assert semantic_partial_expand_action["semantic_gap_review_status"] == "promote"
+    assert semantic_partial_expand_action["semantic_gap_covered_fact_route_n_records"] == 2
+    assert semantic_partial_expand_action["semantic_gap_coverage_gap_count"] == 1
+    assert semantic_partial_expand_action["semantic_gap_coverage_rate"] == pytest.approx(2 / 3)
+    assert semantic_partial_expand_action["unresolved_target_count"] == 3
 
     semantic_with_route_payload = module.summarize_unresolved_frontier_evidence(
         unresolved_queue=queue,

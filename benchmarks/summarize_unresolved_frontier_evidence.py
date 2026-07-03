@@ -396,6 +396,15 @@ def run(
                 "semantic_gap_review_approved_source_document_count": payload["lanes"][
                     "semantic_gap_review"
                 ]["approved_source_document_count"],
+                "semantic_gap_review_covered_fact_route_n_records": payload["summary"][
+                    "semantic_gap_review_covered_fact_route_n_records"
+                ],
+                "semantic_gap_review_coverage_gap_count": payload["summary"][
+                    "semantic_gap_review_coverage_gap_count"
+                ],
+                "semantic_gap_review_coverage_rate": payload["summary"][
+                    "semantic_gap_review_coverage_rate"
+                ],
                 "semantic_gap_review_standalone_covered_fact_route_source_document_count": (
                     payload["lanes"]["semantic_gap_review"][
                         "standalone_covered_fact_route_source_document_count"
@@ -1809,7 +1818,47 @@ def _next_actions(lanes: Mapping[str, Mapping[str, Any]]) -> list[dict[str, Any]
             "lane": "source_family_acquisition",
             "reason": "source-family coverage is not complete for unresolved citation requests",
         })
-    if (
+    if _scoped_covered_fact_alignment_needs_expansion(source, citation, semantic, queue):
+        actions.append({
+            "action_id": "expand_scoped_covered_fact_alignment",
+            "priority": 88,
+            "lane": "semantic_gap_review",
+            "reason": (
+                "source acquisition is covered and scoped covered-fact route "
+                "evidence promotes, but covered-fact route records do not yet "
+                "cover the unresolved target queue; continue source-backed "
+                "alignment review instead of broad citation tuning"
+            ),
+            "semantic_gap_review_status": semantic.get("status"),
+            "semantic_gap_covered_fact_route_n_records": semantic.get(
+                "covered_fact_route_n_records", 0
+            ),
+            "semantic_gap_coverage_gap_count": _semantic_gap_coverage_gap_count(
+                semantic,
+                queue,
+            ),
+            "semantic_gap_coverage_rate": _semantic_gap_coverage_rate(semantic, queue),
+            "semantic_gap_best_candidate_fact_coverage_count": semantic.get(
+                "best_candidate_fact_coverage_count", 0
+            ),
+            "semantic_gap_best_records_with_joined_facts": semantic.get(
+                "best_records_with_joined_facts", 0
+            ),
+            "semantic_gap_covered_fact_retrieval_qa_document_count": semantic.get(
+                "covered_fact_retrieval_qa_document_count", 0
+            ),
+            "semantic_gap_covered_fact_retrieval_query_sweep_count": semantic.get(
+                "covered_fact_retrieval_query_sweep_count", 0
+            ),
+            "semantic_gap_best_covered_fact_retrieval_blind_refuted_count": semantic.get(
+                "best_covered_fact_retrieval_blind_refuted_count", 0
+            ),
+            "semantic_gap_best_covered_fact_retrieval_verified_false_alarm": semantic.get(
+                "best_covered_fact_retrieval_verified_false_alarm"
+            ),
+            "unresolved_target_count": queue.get("target_count", 0),
+        })
+    elif (
         source.get("status") == "covered"
         and citation.get("status") != "promote"
         and not _semantic_gap_review_covers_queue(semantic, queue)
@@ -2058,6 +2107,41 @@ def _semantic_gap_review_covers_queue(
     return _int(semantic.get("covered_fact_route_n_records")) >= target_count
 
 
+def _scoped_covered_fact_alignment_needs_expansion(
+    source: Mapping[str, Any],
+    citation: Mapping[str, Any],
+    semantic: Mapping[str, Any],
+    queue: Mapping[str, Any],
+) -> bool:
+    if source.get("status") != "covered" or citation.get("status") == "promote":
+        return False
+    if semantic.get("status") != "promote":
+        return False
+    if _int(semantic.get("covered_fact_route_n_records")) <= 0:
+        return False
+    return not _semantic_gap_review_covers_queue(semantic, queue)
+
+
+def _semantic_gap_coverage_gap_count(
+    semantic: Mapping[str, Any],
+    queue: Mapping[str, Any],
+) -> int:
+    return max(
+        _int(queue.get("target_count")) - _int(semantic.get("covered_fact_route_n_records")),
+        0,
+    )
+
+
+def _semantic_gap_coverage_rate(
+    semantic: Mapping[str, Any],
+    queue: Mapping[str, Any],
+) -> float | None:
+    target_count = _int(queue.get("target_count"))
+    if target_count <= 0:
+        return None
+    return min(_int(semantic.get("covered_fact_route_n_records")) / target_count, 1.0)
+
+
 def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     lane_statuses = {name: str(lane.get("status") or "unknown") for name, lane in lanes.items()}
     return {
@@ -2156,6 +2240,14 @@ def _summary(lanes: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
         ),
         "semantic_gap_review_covered_fact_route_n_records": _int(
             lanes["semantic_gap_review"].get("covered_fact_route_n_records")
+        ),
+        "semantic_gap_review_coverage_gap_count": _semantic_gap_coverage_gap_count(
+            lanes["semantic_gap_review"],
+            lanes["unresolved_queue"],
+        ),
+        "semantic_gap_review_coverage_rate": _semantic_gap_coverage_rate(
+            lanes["semantic_gap_review"],
+            lanes["unresolved_queue"],
         ),
         "semantic_gap_review_covered_fact_mapping_audit_count": _int(
             lanes["semantic_gap_review"].get("covered_fact_mapping_audit_count")
@@ -2430,6 +2522,21 @@ def _write_manifest(
             ),
             "semantic_gap_review_approved_source_document_count": _nested(
                 payload, "lanes", "semantic_gap_review", "approved_source_document_count"
+            ),
+            "semantic_gap_review_covered_fact_route_n_records": _nested(
+                payload,
+                "summary",
+                "semantic_gap_review_covered_fact_route_n_records",
+            ),
+            "semantic_gap_review_coverage_gap_count": _nested(
+                payload,
+                "summary",
+                "semantic_gap_review_coverage_gap_count",
+            ),
+            "semantic_gap_review_coverage_rate": _nested(
+                payload,
+                "summary",
+                "semantic_gap_review_coverage_rate",
             ),
             "semantic_gap_review_standalone_covered_fact_route_source_document_count": _nested(
                 payload,

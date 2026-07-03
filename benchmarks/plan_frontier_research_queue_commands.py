@@ -643,7 +643,10 @@ def _unresolved_summary_actions(
         action_id = str(action.get("action_id") or "")
         if action_id == "improve_unresolved_citation_alignment":
             actions.append(_unresolved_citation_alignment_action(payload, action, source_path=source_path))
-        elif action_id == "complete_retrieval_semantic_gap_review":
+        elif action_id in {
+            "complete_retrieval_semantic_gap_review",
+            "expand_scoped_covered_fact_alignment",
+        }:
             actions.append(_unresolved_semantic_gap_review_action(payload, action, source_path=source_path))
         elif action_id == "review_frontier_queue_command_bindings":
             actions.append(_unresolved_frontier_queue_review_action(payload, action, source_path=source_path))
@@ -1060,6 +1063,7 @@ def _unresolved_semantic_gap_review_action(
     *,
     source_path: Path | None,
 ) -> Mapping[str, Any]:
+    action_id = str(action.get("action_id") or "complete_retrieval_semantic_gap_review")
     workflow_paths = _string_tuple(_nested(payload, "paths", "semantic_gap_review_workflows"))
     commands: list[str] = []
     for workflow_path in workflow_paths:
@@ -1067,6 +1071,7 @@ def _unresolved_semantic_gap_review_action(
             _semantic_gap_review_commands(
                 workflow_path,
                 source_path=source_path,
+                closure_action=action_id,
             )
         )
     required_inputs: tuple[str, ...] = ()
@@ -1077,6 +1082,7 @@ def _unresolved_semantic_gap_review_action(
                 record_indices_json=None,
                 config={},
                 include_record_indices_placeholder=True,
+                closure_action=action_id,
             )
         )
         required_inputs = (
@@ -1085,7 +1091,11 @@ def _unresolved_semantic_gap_review_action(
         )
     return {
         **dict(action),
-        "title": "Complete retrieval semantic-gap covered-fact review",
+        "title": (
+            "Expand scoped covered-fact alignment coverage"
+            if action_id == "expand_scoped_covered_fact_alignment"
+            else "Complete retrieval semantic-gap covered-fact review"
+        ),
         "action_type": "workflow_plan",
         "evidence_routes": (
             "semantic_gap_review",
@@ -1116,6 +1126,14 @@ def _unresolved_semantic_gap_review_action(
             "source_family_qa_document_count": _int_or_zero(
                 action.get("source_family_qa_document_count")
             ),
+            "semantic_gap_covered_fact_route_n_records": _int_or_zero(
+                action.get("semantic_gap_covered_fact_route_n_records")
+            ),
+            "semantic_gap_coverage_gap_count": _int_or_zero(
+                action.get("semantic_gap_coverage_gap_count")
+            ),
+            "semantic_gap_coverage_rate": action.get("semantic_gap_coverage_rate"),
+            "unresolved_target_count": _int_or_zero(action.get("unresolved_target_count")),
         },
     }
 
@@ -1124,6 +1142,7 @@ def _semantic_gap_review_commands(
     workflow_path_value: str,
     *,
     source_path: Path | None,
+    closure_action: str = "complete_retrieval_semantic_gap_review",
 ) -> tuple[str, ...]:
     workflow_path = _resolve_path(workflow_path_value, base=source_path)
     workflow = _load_optional_json(workflow_path)
@@ -1145,6 +1164,7 @@ def _semantic_gap_review_commands(
             record_indices_json=record_indices,
             config=_mapping(workflow.get("config")),
             include_record_indices_placeholder=False,
+            closure_action=closure_action,
         ),
     )
 
@@ -1155,6 +1175,7 @@ def _semantic_gap_review_command(
     record_indices_json: Path | None,
     config: Mapping[str, Any],
     include_record_indices_placeholder: bool,
+    closure_action: str = "complete_retrieval_semantic_gap_review",
 ) -> str:
     parts: list[Any] = [
         "python",
@@ -1195,7 +1216,7 @@ def _semantic_gap_review_command(
         parts.append("--keep-qid-values")
     parts.extend((
         "--metadata",
-        "closure_action=complete_retrieval_semantic_gap_review",
+        f"closure_action={closure_action}",
     ))
     return _shell_join(parts)
 
@@ -2106,6 +2127,14 @@ def _command_entry(action: Mapping[str, Any], *, index: int, plan_root: Path) ->
             "source_family_qa_document_count": _int_or_zero(
                 metadata.get("source_family_qa_document_count")
             ),
+            "semantic_gap_covered_fact_route_n_records": _int_or_zero(
+                metadata.get("semantic_gap_covered_fact_route_n_records")
+            ),
+            "semantic_gap_coverage_gap_count": _int_or_zero(
+                metadata.get("semantic_gap_coverage_gap_count")
+            ),
+            "semantic_gap_coverage_rate": metadata.get("semantic_gap_coverage_rate"),
+            "unresolved_target_count": _int_or_zero(metadata.get("unresolved_target_count")),
             "collection_request_count": _int_or_zero(
                 metadata.get("collection_request_count")
             ),
