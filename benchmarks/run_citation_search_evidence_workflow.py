@@ -47,6 +47,9 @@ from benchmarks.build_citation_search_adapter_handoff import (  # noqa: E402
     run as run_citation_search_handoff,
 )
 from benchmarks.compare_blind_spot_query_sweeps import run as run_query_sweep_comparison  # noqa: E402
+from benchmarks.plan_citation_binding_evidence_collection import (  # noqa: E402
+    run as run_binding_collection_plan,
+)
 from benchmarks.summarize_citation_binding_audit_failures import (  # noqa: E402
     run as run_binding_failure_review,
 )
@@ -152,6 +155,7 @@ def run(
     comparison_report: dict[str, Any] | None = None
     binding_audit_report: dict[str, Any] | None = None
     binding_failure_review: dict[str, Any] | None = None
+    binding_collection_plan: dict[str, Any] | None = None
     corpus_path = paths["corpus"] if handoff["external_retrieval_corpus"] is not None else None
 
     if corpus_path is not None and audit_source_bindings:
@@ -176,6 +180,14 @@ def run(
             binding_audit_paths=(paths["binding_audit"],),
             output_path=paths["binding_failure_review"],
             max_examples_per_issue=3,
+            metadata={**dict(metadata or {}), "source_workflow": WORKFLOW},
+            compact_json=compact_json,
+        )
+        binding_collection_plan = run_binding_collection_plan(
+            binding_audit_paths=(paths["binding_audit"],),
+            report_json_path=paths["binding_collection_plan"],
+            collection_requests_jsonl_path=paths["binding_collection_requests"],
+            max_examples_per_request=3,
             metadata={**dict(metadata or {}), "source_workflow": WORKFLOW},
             compact_json=compact_json,
         )
@@ -299,6 +311,7 @@ def run(
             handoff=handoff,
             binding_audit_report=binding_audit_report,
             binding_failure_review=binding_failure_review,
+            binding_collection_plan=binding_collection_plan,
             provenance_report=provenance_report,
             query_sweep_report=query_sweep_report,
             comparison_report=comparison_report,
@@ -312,6 +325,7 @@ def run(
             has_corpus=corpus_path is not None,
             has_binding_audit=binding_audit_report is not None,
             has_binding_failure_review=binding_failure_review is not None,
+            has_binding_collection_plan=binding_collection_plan is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
             has_comparison=comparison_report is not None,
@@ -334,6 +348,7 @@ def run(
             has_corpus=corpus_path is not None,
             has_binding_audit=binding_audit_report is not None,
             has_binding_failure_review=binding_failure_review is not None,
+            has_binding_collection_plan=binding_collection_plan is not None,
             has_provenance=provenance_report is not None,
             has_query_sweep=query_sweep_report is not None,
             has_comparison=comparison_report is not None,
@@ -386,6 +401,21 @@ def run(
                 report,
                 "summary",
                 "binding_failure_dominant_recommendation",
+            ),
+            "binding_collection_request_count": _nested_int(
+                report,
+                "summary",
+                "binding_collection_request_count",
+            ),
+            "binding_collection_lane_counts": _nested(
+                report,
+                "summary",
+                "binding_collection_lane_counts",
+            ),
+            "binding_collection_dominant_lane": _nested(
+                report,
+                "summary",
+                "binding_collection_dominant_lane",
             ),
             "query_sweep_no_hit_strategy_count": _nested_int(
                 report,
@@ -465,6 +495,21 @@ def run(
                     "summary",
                     "binding_failure_dominant_recommendation",
                 ),
+                "binding_collection_request_count": _nested_int(
+                    report,
+                    "summary",
+                    "binding_collection_request_count",
+                ),
+                "binding_collection_lane_counts": _nested(
+                    report,
+                    "summary",
+                    "binding_collection_lane_counts",
+                ),
+                "binding_collection_dominant_lane": _nested(
+                    report,
+                    "summary",
+                    "binding_collection_dominant_lane",
+                ),
                 "query_sweep_no_hit_strategy_count": _nested_int(
                     report,
                     "summary",
@@ -500,6 +545,8 @@ def _paths(output: Path) -> dict[str, Path]:
         "adapter_requests": output / "citation-search-adapter-requests.jsonl",
         "artifact_manifest": output / "artifact-manifest.json",
         "binding_audit": output / "citation-search-binding-audit.json",
+        "binding_collection_plan": output / "citation-search-binding-evidence-collection-plan.json",
+        "binding_collection_requests": output / "citation-search-binding-evidence-collection-requests.jsonl",
         "binding_failure_review": output / "citation-search-binding-failure-review.json",
         "binding_manifest": output / "citation-search-binding-audit-manifest.json",
         "bound_corpus": output / "citation-search-bound-corpus.json",
@@ -611,6 +658,7 @@ def _summary(
     handoff: Mapping[str, Any],
     binding_audit_report: Mapping[str, Any] | None,
     binding_failure_review: Mapping[str, Any] | None,
+    binding_collection_plan: Mapping[str, Any] | None,
     provenance_report: Mapping[str, Any] | None,
     query_sweep_report: Mapping[str, Any] | None,
     comparison_report: Mapping[str, Any] | None,
@@ -680,6 +728,25 @@ def _summary(
             "summary",
             "recommendation_counts",
         ),
+        "binding_collection_plan_status": (
+            None if binding_collection_plan is None else binding_collection_plan.get("status")
+        ),
+        "binding_collection_request_count": _nested_int(
+            binding_collection_plan,
+            "summary",
+            "collection_request_count",
+        ),
+        "binding_collection_lane_counts": _nested(
+            binding_collection_plan,
+            "summary",
+            "lane_counts",
+        ),
+        "binding_collection_priority_counts": _nested(
+            binding_collection_plan,
+            "summary",
+            "priority_counts",
+        ),
+        "binding_collection_dominant_lane": _nested(binding_collection_plan, "summary", "dominant_lane"),
         "provenance_status": None if provenance_report is None else provenance_report.get("status"),
         "provenance_passed": None if provenance_report is None else bool(provenance_report.get("passed")),
         "evidence_class": None if provenance_report is None else provenance_report.get("evidence_class"),
@@ -876,6 +943,7 @@ def _report_paths(
     has_corpus: bool,
     has_binding_audit: bool,
     has_binding_failure_review: bool,
+    has_binding_collection_plan: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
@@ -895,6 +963,12 @@ def _report_paths(
         "binding_audit": str(paths["binding_audit"]) if has_binding_audit else None,
         "binding_failure_review": (
             str(paths["binding_failure_review"]) if has_binding_failure_review else None
+        ),
+        "binding_collection_plan": (
+            str(paths["binding_collection_plan"]) if has_binding_collection_plan else None
+        ),
+        "binding_collection_requests": (
+            str(paths["binding_collection_requests"]) if has_binding_collection_plan else None
         ),
         "bound_source_documents": str(paths["bound_source_documents"]) if has_binding_audit else None,
         "bound_retrieval_corpus": str(paths["bound_corpus"]) if has_binding_audit and has_corpus else None,
@@ -928,6 +1002,7 @@ def _manifest_artifacts(
     has_corpus: bool,
     has_binding_audit: bool,
     has_binding_failure_review: bool,
+    has_binding_collection_plan: bool,
     has_provenance: bool,
     has_query_sweep: bool,
     has_comparison: bool,
@@ -949,6 +1024,8 @@ def _manifest_artifacts(
         "raw_external_retrieval_corpus": paths["corpus"] if has_corpus else None,
         "binding_audit": paths["binding_audit"] if has_binding_audit else None,
         "binding_failure_review": paths["binding_failure_review"] if has_binding_failure_review else None,
+        "binding_collection_plan": paths["binding_collection_plan"] if has_binding_collection_plan else None,
+        "binding_collection_requests": paths["binding_collection_requests"] if has_binding_collection_plan else None,
         "bound_source_documents": paths["bound_source_documents"] if has_binding_audit else None,
         "bound_retrieval_corpus": paths["bound_corpus"] if has_binding_audit and has_corpus else None,
         "binding_manifest": paths["binding_manifest"] if has_binding_audit else None,

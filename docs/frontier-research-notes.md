@@ -969,6 +969,18 @@ Added the first monitor-first tool-selection audit layer:
   `--clip-binding-evidence-spans`, but the replay showed it drops the blind
   refute count to `0/89`, so clipping remains an explicit experiment rather
   than a promoted default.
+- `plan_citation_binding_evidence_collection.py` now turns those rejected
+  binding rows into a lane-specific non-evidence worklist: numeric/statistical,
+  temporal, causal/procedural, role/location, source-family expansion,
+  provenance repair, claim-specific span, and alignment-review collection
+  requests. `run_citation_search_evidence_workflow.py --audit-source-bindings`
+  writes the plan and JSONL sidecar automatically. This moves the citation
+  branch from "blocked with diagnostics" to "blocked with executable collection
+  lanes" without promoting plans as verifier evidence or changing the
+  route-quality gates. A command-3 replay produces `388` collection requests:
+  `156` claim-alignment reviews, `124` claim-specific evidence-span requests,
+  `36` causal/procedural requests, `32` numeric/statistical requests, `20`
+  temporal requests, and `20` location-specific requests.
 - `run_external_citation_search_adapter_workflow.py` adds the local command
   boundary on top of that gate: it writes sanitized `{input}` request JSONL,
   requires the adapter to write `{output}` result JSONL, and then runs the

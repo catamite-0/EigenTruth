@@ -59349,6 +59349,115 @@ def test_summarize_citation_binding_audit_failures_reports_evidence_quality_gaps
     assert record.metadata["suite"] == "unit"
 
 
+def test_plan_citation_binding_evidence_collection_builds_lane_worklist(tmp_path):
+    module = importlib.import_module("benchmarks.plan_citation_binding_evidence_collection")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    binding_audit_path = tmp_path / "binding-audit.json"
+    output_path = tmp_path / "binding-collection-plan.json"
+    requests_path = tmp_path / "binding-collection-requests.jsonl"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    binding_audit_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "citation_search_result_binding_audit",
+            "status": "ready",
+            "summary": {
+                "source_document_count": 3,
+                "accepted_source_document_count": 1,
+                "rejected_source_document_count": 2,
+            },
+            "records": [
+                {
+                    "source_document_index": 1,
+                    "status": "accepted",
+                    "issue_codes": [],
+                    "request_id": "cite-search-alpha",
+                    "query": "What is Alpha?",
+                    "question_type": "definition",
+                    "source": "https://example.org/alpha",
+                },
+                {
+                    "source_document_index": 2,
+                    "status": "rejected",
+                    "issue_codes": [
+                        "numeric_intent_requires_numeric_evidence",
+                        "evidence_alignment_insufficient_evidence",
+                    ],
+                    "request_id": "cite-search-passport",
+                    "query": "Do more than 20% of Americans have passports?",
+                    "question_type": "quantity",
+                    "model_answer": "No",
+                    "source": "https://example.org/passports",
+                    "alignment": {
+                        "status": "insufficient_evidence",
+                        "keyword_overlap": 0.4,
+                        "number_recall": 0.0,
+                        "entity_recall": 1.0,
+                    },
+                    "intent": {"reason": "numeric_intent_requires_numeric_evidence"},
+                    "source_family": {"reason": "source_family_not_required"},
+                },
+                {
+                    "source_document_index": 3,
+                    "status": "rejected",
+                    "issue_codes": [
+                        "causal_intent_requires_causal_evidence",
+                        "evidence_alignment_misaligned",
+                    ],
+                    "request_id": "cite-search-policy",
+                    "query": "Why did the policy change?",
+                    "question_type": "causal",
+                    "source": "https://example.org/policy",
+                    "alignment": {"status": "misaligned", "keyword_overlap": 0.1},
+                    "intent": {"reason": "causal_intent_requires_causal_evidence"},
+                    "source_family": {"reason": "source_family_not_required"},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        binding_audit_paths=(binding_audit_path,),
+        report_json_path=output_path,
+        collection_requests_jsonl_path=requests_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="citation-binding-collection-plan-unit",
+        version="0.1",
+        metadata={"suite": "unit"},
+    )
+    requests = [
+        json.loads(line)
+        for line in requests_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    lanes = {request["lane"] for request in requests}
+    serialized = json.dumps(payload, sort_keys=True)
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:citation-binding-collection-plan-unit:0.1"
+    )
+
+    assert payload["status"] == "ready_for_collection"
+    assert payload["summary"]["collection_request_count"] == 4
+    assert lanes == {
+        "causal_procedural_evidence",
+        "claim_alignment_review",
+        "claim_specific_evidence_span",
+        "numeric_statistical_evidence",
+    }
+    assert payload["summary"]["lane_counts"]["numeric_statistical_evidence"] == 1
+    assert any("source_value" in request["required_fields"] for request in requests)
+    assert all(request["provenance"]["not_verifier_evidence"] is True for request in requests)
+    assert "model_answer" not in serialized
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+    assert record.metadata["workflow"] == "citation_binding_evidence_collection_plan"
+    assert record.metadata["collection_request_count"] == 4
+    assert record.metadata["suite"] == "unit"
+
+
 def test_plan_blind_spot_evidence_expansion_builds_collection_targets(tmp_path):
     module = importlib.import_module("benchmarks.plan_blind_spot_evidence_expansion")
     registry_module = importlib.import_module("eigentruth.registry")
@@ -65349,6 +65458,9 @@ def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
     binding_failure_review = json.loads(
         (output_dir / "citation-search-binding-failure-review.json").read_text(encoding="utf-8")
     )
+    binding_collection_plan = json.loads(
+        (output_dir / "citation-search-binding-evidence-collection-plan.json").read_text(encoding="utf-8")
+    )
     query_sweep = json.loads((output_dir / "citation-search-query-sweep.json").read_text(encoding="utf-8"))
 
     assert payload["config"]["audit_source_bindings"] is True
@@ -65363,11 +65475,20 @@ def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
         payload["summary"]["binding_failure_dominant_recommendation"]
         == "collect_numeric_or_statistical_evidence"
     )
+    assert payload["summary"]["binding_collection_plan_status"] == "ready_for_collection"
+    assert payload["summary"]["binding_collection_request_count"] >= 1
+    assert payload["summary"]["binding_collection_lane_counts"]["numeric_statistical_evidence"] == 1
     assert workflow_report["paths"]["external_retrieval_corpus"].endswith("citation-search-bound-corpus.json")
     assert workflow_report["paths"]["raw_external_retrieval_corpus"].endswith("citation-search-corpus.json")
     assert workflow_report["paths"]["binding_audit"].endswith("citation-search-binding-audit.json")
     assert workflow_report["paths"]["binding_failure_review"].endswith(
         "citation-search-binding-failure-review.json"
+    )
+    assert workflow_report["paths"]["binding_collection_plan"].endswith(
+        "citation-search-binding-evidence-collection-plan.json"
+    )
+    assert workflow_report["paths"]["binding_collection_requests"].endswith(
+        "citation-search-binding-evidence-collection-requests.jsonl"
     )
     assert binding_report["summary"]["accepted_source_document_count"] == 1
     assert binding_failure_review["summary"]["dominant_issue"] == "evidence_alignment_misaligned"
@@ -65375,6 +65496,7 @@ def test_citation_search_evidence_workflow_can_audit_source_bindings(tmp_path):
         binding_failure_review["summary"]["recommendation_counts"]["collect_numeric_or_statistical_evidence"]
         == 1
     )
+    assert binding_collection_plan["summary"]["lane_counts"]["numeric_statistical_evidence"] == 1
     assert query_sweep["source"]["corpus_paths"] == [str(output_dir / "citation-search-bound-corpus.json")]
 
 
