@@ -1,0 +1,12 @@
+{
+  "entries": [],
+  "metadata": {
+    "fixture": "frontier_queue_execution_smoke"
+  },
+  "schema_version": 1,
+  "source": {
+    "command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-frontier-command-plan.json"
+  },
+  "status": "ready",
+  "workflow": "frontier_research_queue_bound_command_plan"
+}

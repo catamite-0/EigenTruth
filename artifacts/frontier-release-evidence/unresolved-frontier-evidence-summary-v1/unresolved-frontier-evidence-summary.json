@@ -262,20 +262,42 @@
         }
       ],
       "command_count": 3,
-      "control_plane_smoke_status": "not_configured",
+      "control_plane_smoke_status": "pass",
       "dry_run_count": 0,
       "dry_run_report_count": 0,
       "executed_count": 3,
       "executed_report_count": 1,
       "failed_count": 0,
-      "frontier_queue_execution_smoke_count": 0,
+      "frontier_queue_execution_smoke_count": 1,
       "frontier_queue_execution_smoke_failed_count": 0,
       "frontier_queue_execution_smoke_manifest_failed_count": 0,
-      "frontier_queue_execution_smoke_manifest_verified_count": 0,
-      "frontier_queue_execution_smoke_passed_count": 0,
-      "frontier_queue_execution_smoke_status_counts": {},
+      "frontier_queue_execution_smoke_manifest_verified_count": 1,
+      "frontier_queue_execution_smoke_passed_count": 1,
+      "frontier_queue_execution_smoke_status_counts": {
+        "pass": 1
+      },
       "frontier_queue_execution_smoke_unverified_count": 0,
-      "frontier_queue_execution_smokes": [],
+      "frontier_queue_execution_smokes": [
+        {
+          "artifact_manifest": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json",
+          "artifacts_are_verifier_evidence": false,
+          "binding_not_reviewed_count": 0,
+          "dry_run_count": 2,
+          "dry_run_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-dry-run.json",
+          "executes_child_commands": false,
+          "failure_reasons": [],
+          "index": 1,
+          "manifest_verified": true,
+          "passed": true,
+          "remaining_placeholder_count": 0,
+          "review_approved_entry_count": 1,
+          "review_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/command-binding-review/frontier-command-binding-review.json",
+          "staged_upstream_output_count": 1,
+          "status": "pass",
+          "unverified": false,
+          "workflow": "frontier_queue_execution_smoke"
+        }
+      ],
       "invalid_command_count": 0,
       "materialized_output_count": 2,
       "missing_binding_count": 0,
@@ -672,6 +694,8 @@
     }
   },
   "metadata": {
+    "closure_update": "frontier_queue_execution_smoke",
+    "sample_scope": "control_plane_health",
     "source_workflow": "reviewed_citation_alignment_rerun"
   },
   "next_actions": [
@@ -721,8 +745,12 @@
     "frontier_command_binding_reviews": [
       "artifacts/improve-unresolved-citation-alignment/command-binding-review/frontier-command-binding-review.json"
     ],
-    "frontier_queue_execution_smoke_manifests": [],
-    "frontier_queue_execution_smokes": [],
+    "frontier_queue_execution_smoke_manifests": [
+      "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json"
+    ],
+    "frontier_queue_execution_smokes": [
+      "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-smoke.json"
+    ],
     "input_fill_result_rollup": null,
     "mechanism_handoff_bundle": "artifacts/truthfulqa-frontier-smollm2-l80-mechanism-handoff-evidence-bundle/mechanism-handoff-evidence-bundle.json",
     "requeued_rule_input_plan": "artifacts/frontier-release-evidence/unresolved-world-model-rule-requeued-input-plan-v1/rule-input-collection-plan.json",
@@ -779,10 +807,10 @@
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_review_count": 1,
-    "frontier_queue_execution_smoke_count": 0,
-    "frontier_queue_execution_smoke_manifest_verified_count": 0,
-    "frontier_queue_execution_smoke_passed_count": 0,
-    "frontier_queue_execution_smoke_status": "not_configured",
+    "frontier_queue_execution_smoke_count": 1,
+    "frontier_queue_execution_smoke_manifest_verified_count": 1,
+    "frontier_queue_execution_smoke_passed_count": 1,
+    "frontier_queue_execution_smoke_status": "pass",
     "frontier_queue_execution_status": "promote",
     "lane_statuses": {
       "citation_evidence": "blocked",

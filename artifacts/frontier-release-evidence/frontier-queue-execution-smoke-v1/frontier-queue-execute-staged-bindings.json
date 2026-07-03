@@ -1,0 +1,334 @@
+{
+  "bindings": {
+    "execute_reviewed_frontier_queue_command_plan": {
+      "bound_commands": [
+        "python benchmarks/bind_frontier_research_queue_command_plan.py --command-plan artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-frontier-command-plan.json --bindings artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-approved-command-bindings.json --json artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json --artifact-manifest artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan-manifest.json --registry artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json --name execute-reviewed-frontier-queue-command-plan-command-1 --version 0.1",
+        "python benchmarks/run_frontier_research_queue_bound_command_plan.py --bound-command-plan artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json --json artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json --artifact-manifest artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest-manifest.json --registry artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json --name execute-reviewed-frontier-queue-command-plan-command-2 --version 0.1 --execute"
+      ],
+      "command_requirement_issue_count": 0,
+      "command_requirements": [
+        {
+          "command_index": 1,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--command-plan",
+            "--bindings",
+            "--json",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/bind_frontier_research_queue_command_plan.py",
+          "status": "ready"
+        },
+        {
+          "command_index": 2,
+          "known_command": true,
+          "missing_required_flags": [],
+          "missing_required_input_flags": [],
+          "required_flags": [
+            "--bound-command-plan",
+            "--json",
+            "--artifact-manifest"
+          ],
+          "required_input_flags": [],
+          "script": "benchmarks/run_frontier_research_queue_bound_command_plan.py",
+          "status": "ready"
+        }
+      ],
+      "command_template_values": [],
+      "input_reviews": [],
+      "placeholder_count": 11,
+      "placeholder_reviews": [
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-approved-command-bindings.json",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 1,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json",
+            "source": "planned_output"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json",
+            "source": "registry_output_path"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "execute-reviewed-frontier-queue-command-plan-command-1"
+          },
+          "token_index": 13
+        },
+        {
+          "command_index": 1,
+          "context": {
+            "after": [],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 15
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--json",
+              "..."
+            ],
+            "before": [
+              "benchmarks/run_frontier_research_queue_bound_command_plan.py",
+              "--bound-command-plan"
+            ]
+          },
+          "flag": "--bound-command-plan",
+          "placeholder_index": 1,
+          "stage_status": "staged_upstream_output",
+          "status": "unbound",
+          "suggested_binding": {
+            "input_name_hint": "bound_command_plan",
+            "reason": "input_or_report_path",
+            "review_required": true
+          },
+          "token_index": 3
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--artifact-manifest",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--json"
+            ]
+          },
+          "flag": "--json",
+          "placeholder_index": 2,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json",
+            "source": "planned_output"
+          },
+          "token_index": 5
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--registry",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--artifact-manifest"
+            ]
+          },
+          "flag": "--artifact-manifest",
+          "placeholder_index": 3,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest-manifest.json",
+            "source": "derived_manifest_path"
+          },
+          "token_index": 7
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--name",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--registry"
+            ]
+          },
+          "flag": "--registry",
+          "placeholder_index": 4,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json",
+            "source": "registry_output_path"
+          },
+          "token_index": 9
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--version",
+              "..."
+            ],
+            "before": [
+              "...",
+              "--name"
+            ]
+          },
+          "flag": "--name",
+          "placeholder_index": 5,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "action_id_command_index",
+            "value": "execute-reviewed-frontier-queue-command-plan-command-2"
+          },
+          "token_index": 11
+        },
+        {
+          "command_index": 2,
+          "context": {
+            "after": [
+              "--execute"
+            ],
+            "before": [
+              "...",
+              "--version"
+            ]
+          },
+          "flag": "--version",
+          "placeholder_index": 6,
+          "stage_status": "staged",
+          "status": "unbound",
+          "suggested_binding": {
+            "source": "default_version",
+            "value": "0.1"
+          },
+          "token_index": 13
+        }
+      ],
+      "remaining_placeholder_count": 0,
+      "required_inputs": [],
+      "review_status": "needs_review",
+      "staged_placeholder_count": 11,
+      "staged_upstream_output_count": 1
+    }
+  },
+  "config": {
+    "auto_approves_review": false,
+    "auto_binds_source_backed_inputs": false,
+    "stage_upstream_outputs": true
+  },
+  "generated_by": "frontier_research_queue_binding_suggestion_staging",
+  "inputs": {},
+  "metadata": {
+    "not_verifier_evidence": true,
+    "smoke": "frontier-queue-execution-smoke"
+  },
+  "review_summary": {
+    "entry_count": 1,
+    "missing_suggestion_placeholder_count": 0,
+    "placeholder_count": 11,
+    "remaining_placeholder_count": 0,
+    "required_input_count": 0,
+    "review_required_placeholder_count": 0,
+    "staged_placeholder_count": 11,
+    "staged_upstream_output_count": 1
+  },
+  "schema_version": 1,
+  "source": {
+    "binding_scaffold": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-binding-scaffold.json",
+    "binding_scaffold_workflow": "frontier_research_queue_binding_scaffold",
+    "command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-command-plan.json"
+  },
+  "staging_summary": {
+    "action_ids": [
+      "execute_reviewed_frontier_queue_command_plan"
+    ],
+    "command_count": 2,
+    "entry_count": 1,
+    "missing_suggestion_placeholder_count": 0,
+    "placeholder_count": 11,
+    "remaining_placeholder_count": 0,
+    "required_input_count": 0,
+    "review_required_placeholder_count": 0,
+    "staged_placeholder_count": 11,
+    "staged_upstream_output_count": 1
+  },
+  "status": "needs_review",
+  "workflow": "frontier_research_queue_command_bindings"
+}

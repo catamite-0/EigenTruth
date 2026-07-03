@@ -1,0 +1,48 @@
+{
+  "artifacts": {
+    "frontier_research_queue_bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-approved-bound-command-plan.json",
+      "sha256": "1432527b862847135412b435201c43ee3fb0424ac94f888dededac07d5ea8f9a",
+      "size_bytes": 7152
+    },
+    "frontier_research_queue_bound_command_run_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execution-dry-run.json",
+      "sha256": "2f87c7dc6c6df5a50b901c06e3a4b44b3d94dcb978204eeed9a93effb7fd3165",
+      "size_bytes": 9308
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "binding_not_reviewed_count": 0,
+    "command_count": 2,
+    "dry_run": true,
+    "dry_run_count": 2,
+    "entry_count": 1,
+    "executed_count": 0,
+    "execution_mode": "sequential",
+    "failed_count": 0,
+    "invalid_command_count": 0,
+    "materialized_output_count": 0,
+    "missing_output_count": 0,
+    "not_verifier_evidence": true,
+    "require_reviewed_bindings": true,
+    "runner": "run_frontier_research_queue_bound_command_plan",
+    "smoke": "frontier-queue-execution-smoke",
+    "status": "dry_run",
+    "workers": 1,
+    "workflow": "frontier_research_queue_bound_command_run_report"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

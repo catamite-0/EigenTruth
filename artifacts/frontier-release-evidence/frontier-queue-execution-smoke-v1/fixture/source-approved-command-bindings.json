@@ -1,0 +1,9 @@
+{
+  "bindings": {},
+  "metadata": {
+    "fixture": "frontier_queue_execution_smoke"
+  },
+  "schema_version": 1,
+  "status": "approved",
+  "workflow": "frontier_research_queue_command_bindings"
+}

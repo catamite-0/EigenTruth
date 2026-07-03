@@ -1,0 +1,170 @@
+{
+  "config": {
+    "approved_review_statuses": [
+      "approved",
+      "reviewed"
+    ],
+    "command_timeout_seconds": null,
+    "cwd": "/home/z/projects/active/EigenTruth",
+    "dry_run": true,
+    "executes_commands": false,
+    "execution_mode": "sequential",
+    "python_executable": "/home/z/projects/active/EigenTruth/.venv/bin/python",
+    "require_reviewed_bindings": true,
+    "stop_on_failure": true,
+    "workers": 1
+  },
+  "entries": [
+    {
+      "action_id": "execute_reviewed_frontier_queue_command_plan",
+      "commands": [
+        {
+          "argv": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/bind_frontier_research_queue_command_plan.py",
+            "--command-plan",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-frontier-command-plan.json",
+            "--bindings",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-approved-command-bindings.json",
+            "--json",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json",
+            "--artifact-manifest",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan-manifest.json",
+            "--registry",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json",
+            "--name",
+            "execute-reviewed-frontier-queue-command-plan-command-1",
+            "--version",
+            "0.1"
+          ],
+          "command": "python benchmarks/bind_frontier_research_queue_command_plan.py --command-plan artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-frontier-command-plan.json --bindings artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-approved-command-bindings.json --json artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json --artifact-manifest artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan-manifest.json --registry artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json --name execute-reviewed-frontier-queue-command-plan-command-1 --version 0.1",
+          "cwd": "/home/z/projects/active/EigenTruth",
+          "index": 1,
+          "returncode": null,
+          "status": "dry_run"
+        },
+        {
+          "argv": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/run_frontier_research_queue_bound_command_plan.py",
+            "--bound-command-plan",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json",
+            "--json",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json",
+            "--artifact-manifest",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest-manifest.json",
+            "--registry",
+            "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json",
+            "--name",
+            "execute-reviewed-frontier-queue-command-plan-command-2",
+            "--version",
+            "0.1",
+            "--execute"
+          ],
+          "command": "python benchmarks/run_frontier_research_queue_bound_command_plan.py --bound-command-plan artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json --json artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json --artifact-manifest artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest-manifest.json --registry artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/registry.json --name execute-reviewed-frontier-queue-command-plan-command-2 --version 0.1 --execute",
+          "cwd": "/home/z/projects/active/EigenTruth",
+          "index": 2,
+          "returncode": null,
+          "status": "dry_run"
+        }
+      ],
+      "entry_id": "frontier-research-0001",
+      "evidence_routes": [
+        "frontier_queue_execution"
+      ],
+      "execution_status": "dry_run",
+      "expected_outputs": [
+        {
+          "exists": false,
+          "name": "frontier_approved_bound_command_plan",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json",
+          "status": "planned"
+        },
+        {
+          "exists": false,
+          "name": "frontier_approved_bound_command_manifest",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json",
+          "status": "planned"
+        },
+        {
+          "exists": false,
+          "name": "frontier_bound_command_run_report",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-bound-command-run-report.json",
+          "status": "planned"
+        },
+        {
+          "exists": false,
+          "name": "frontier_bound_command_run_manifest",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-bound-command-run-manifest.json",
+          "status": "planned"
+        }
+      ],
+      "planned_outputs": [
+        {
+          "name": "frontier_approved_bound_command_plan",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-plan.json",
+          "status": "planned"
+        },
+        {
+          "name": "frontier_approved_bound_command_manifest",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-approved-bound-command-manifest.json",
+          "status": "planned"
+        },
+        {
+          "name": "frontier_bound_command_run_report",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-bound-command-run-report.json",
+          "status": "planned"
+        },
+        {
+          "name": "frontier_bound_command_run_manifest",
+          "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/planned-command-outputs/execute-reviewed-frontier-queue-command-plan/frontier-bound-command-run-manifest.json",
+          "status": "planned"
+        }
+      ],
+      "source_command_status": "ready",
+      "title": "Execute reviewed frontier queue command plan"
+    }
+  ],
+  "metadata": {
+    "not_verifier_evidence": true,
+    "smoke": "frontier-queue-execution-smoke"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-dry-run-manifest.json",
+    "run_report": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-dry-run.json"
+  },
+  "schema_version": 1,
+  "source": {
+    "bound_command_plan": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execute-approved-bound-command-plan.json",
+    "bound_plan_status": "ready"
+  },
+  "status": "dry_run",
+  "summary": {
+    "binding_not_reviewed_count": 0,
+    "command_count": 2,
+    "command_status_counts": {
+      "dry_run": 2
+    },
+    "dry_run_count": 2,
+    "entry_count": 1,
+    "entry_status_counts": {
+      "dry_run": 1
+    },
+    "executed_count": 0,
+    "expected_output_count": 4,
+    "failed_count": 0,
+    "invalid_command_count": 0,
+    "materialized_output_count": 0,
+    "missing_output_count": 0,
+    "output_status_counts": {
+      "planned": 4
+    },
+    "planned_output_count": 4,
+    "ready_entry_count": 1,
+    "skipped_count": 0,
+    "succeeded_count": 0,
+    "timed_out_count": 0,
+    "unchecked_output_count": 0
+  },
+  "workflow": "frontier_research_queue_bound_command_run_report"
+}

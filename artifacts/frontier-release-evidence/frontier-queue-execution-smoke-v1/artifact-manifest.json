@@ -1,0 +1,220 @@
+{
+  "artifacts": {
+    "approved_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review/frontier-queue-execute-approved-bindings.json",
+      "sha256": "a3d261975760224124fe6562533f56aa0f9311b0c85e416e137e7ffd8e57f779",
+      "size_bytes": 12099
+    },
+    "approved_bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-approved-bound-command-plan.json",
+      "sha256": "1432527b862847135412b435201c43ee3fb0424ac94f888dededac07d5ea8f9a",
+      "size_bytes": 7152
+    },
+    "approved_bound_command_plan_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-approved-bound-command-plan-manifest.json",
+      "sha256": "c13635cf24f3ae5401104714b7d7a90054538810d79642f0a5136c6787e75e88",
+      "size_bytes": 1477
+    },
+    "binding_review_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review/artifact-manifest.json",
+      "sha256": "41da4bd16c67f6b2daa873d8c207f8bcaf939e5af358ce2046ac3019ad23d372",
+      "size_bytes": 2453
+    },
+    "binding_review_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review/command-binding-review-records.jsonl",
+      "sha256": "201d6f6d524028ff664f073f87b9815fb5c6068c2db11bc225101c06ac1e9498",
+      "size_bytes": 452
+    },
+    "binding_review_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review/frontier-command-binding-review.json",
+      "sha256": "20bd504cebdc0e946f0425517f179c3a21912575268256e8ef31d86fc802b960",
+      "size_bytes": 16800
+    },
+    "binding_review_template": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review/command-binding-review-template.jsonl",
+      "sha256": "c309a4b9442c7189ef949b920abe6bf50d92d0ebec3c51fe491fd7b79a80ed17",
+      "size_bytes": 570
+    },
+    "binding_scaffold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-binding-scaffold.json",
+      "sha256": "37b600c57764108f3646b5f4f8213f77eca428a315824510e0aab04a8374071f",
+      "size_bytes": 19051
+    },
+    "binding_scaffold_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-binding-scaffold-manifest.json",
+      "sha256": "f87778ffd3b6f3b2f77cb94984faafb689dcf6589ff108c3f2a83d2ff7bff324",
+      "size_bytes": 1431
+    },
+    "binding_skeleton": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-binding-skeleton.json",
+      "sha256": "b6e2aac660fc12cb3d49f4830f4e28049ba7da07cd6ec1be4e9dda57b1960cb8",
+      "size_bytes": 8167
+    },
+    "bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-bound-command-plan.json",
+      "sha256": "e4d853196a1136176c0e66fe2e980a3b602c3feb1049b5f185401f7346baa2f5",
+      "size_bytes": 7116
+    },
+    "bound_command_plan_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-bound-command-plan-manifest.json",
+      "sha256": "570cd2446bf51b8959ecde4b95e81d68bbc2b72f4505de87e9705aca5b292c96",
+      "size_bytes": 1443
+    },
+    "command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-command-plan.json",
+      "sha256": "eb650ea1145b2c2f260a2a25056227dce1b6716a857315e8109f06740d264632",
+      "size_bytes": 7177
+    },
+    "command_plan_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-command-plan-manifest.json",
+      "sha256": "268a4d7885fc4e0a26ae729158699120294631ee00cc82e01a4a3c44ee97b1fb",
+      "size_bytes": 1056
+    },
+    "dry_run_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execution-dry-run-manifest.json",
+      "sha256": "1a3462fbf0ad5bb22e2049e6d55c3e5c9e46bfdad0d940e787751e4fe68b8807",
+      "size_bytes": 1425
+    },
+    "dry_run_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execution-dry-run.json",
+      "sha256": "2f87c7dc6c6df5a50b901c06e3a4b44b3d94dcb978204eeed9a93effb7fd3165",
+      "size_bytes": 9308
+    },
+    "review_decisions": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-review-decisions.jsonl",
+      "sha256": "95d3534be8a3bc5e09f570a2478f71cd0ac79989418955491077eedb7a4dcfae",
+      "size_bytes": 202
+    },
+    "smoke_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execution-smoke.json",
+      "sha256": "2ca6daa739d64758d08d00b7d9164bac47f2655a6f1016d77e80f20fc34a4856",
+      "size_bytes": 2209
+    },
+    "source_approved_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fixture/source-approved-command-bindings.json",
+      "sha256": "a8552e6711ce9ccfd052baeb0e2364e1f8172057330ec4cd54795d185fdc19d2",
+      "size_bytes": 195
+    },
+    "source_binding_review": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fixture/source-command-binding-review.json",
+      "sha256": "b5be4584a313a2f9798be1ad462d88e878ebb8fe4f3d46cdce6f7ed2dc871d38",
+      "size_bytes": 546
+    },
+    "source_bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fixture/source-bound-command-plan.json",
+      "sha256": "bc2cb26f17344314510f363ca031e39c7b3549e698f49d9b5af9ab314a9cdeaf",
+      "size_bytes": 346
+    },
+    "source_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fixture/source-frontier-command-plan.json",
+      "sha256": "29f69ac816ce8bd751303812feb0d641001202b9d0b2993bda664845f614c324",
+      "size_bytes": 187
+    },
+    "staged_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-staged-bindings.json",
+      "sha256": "e3d648e8190bebd1747b4a71ca4827184d0dcef43a81f84f664af1c9db4df865",
+      "size_bytes": 11833
+    },
+    "staged_bindings_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-staged-bindings-manifest.json",
+      "sha256": "1bb288dcf485fac254edb9f9d0005a706c01b65badba4a7b1ccee24e6628b9e2",
+      "size_bytes": 1241
+    },
+    "unresolved_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "fixture/unresolved-frontier-summary.json",
+      "sha256": "ad82315a0c418f34b868ee248ba0ade7eaa9831283ce877983ed1cad62fa7c6a",
+      "size_bytes": 738
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run_count": 2,
+    "not_verifier_evidence": true,
+    "runner": "frontier_queue_execution_smoke",
+    "staged_upstream_output_count": 1,
+    "status": "pass",
+    "workflow": "frontier_queue_execution_smoke"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 25,
+    "directory_count": 0,
+    "file_count": 25,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "artifacts": {
+    "bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "command-binding-review/frontier-queue-execute-approved-bindings.json",
+      "sha256": "a3d261975760224124fe6562533f56aa0f9311b0c85e416e137e7ffd8e57f779",
+      "size_bytes": 12099
+    },
+    "command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-command-plan.json",
+      "sha256": "eb650ea1145b2c2f260a2a25056227dce1b6716a857315e8109f06740d264632",
+      "size_bytes": 7177
+    },
+    "frontier_research_queue_bound_command_plan": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-approved-bound-command-plan.json",
+      "sha256": "1432527b862847135412b435201c43ee3fb0424ac94f888dededac07d5ea8f9a",
+      "size_bytes": 7152
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "command_count": 2,
+    "entry_count": 1,
+    "missing_input_count": 0,
+    "not_verifier_evidence": true,
+    "ready_entry_count": 1,
+    "review_required_entry_count": 0,
+    "runner": "bind_frontier_research_queue_command_plan",
+    "smoke": "frontier-queue-execution-smoke",
+    "status": "ready",
+    "unbound_placeholder_count": 0,
+    "workflow": "frontier_research_queue_bound_command_plan"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

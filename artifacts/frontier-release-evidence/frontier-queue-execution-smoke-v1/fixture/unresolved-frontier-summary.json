@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "fixture": "frontier_queue_execution_smoke",
+    "not_verifier_evidence": true
+  },
+  "next_actions": [
+    {
+      "action_id": "execute_reviewed_frontier_queue_command_plan",
+      "command_count": 2,
+      "dry_run_report_count": 0,
+      "lane": "frontier_queue_execution",
+      "priority": 83,
+      "ready_review_count": 1,
+      "reason": "smoke fixture has a reviewed command plan awaiting execution"
+    }
+  ],
+  "paths": {
+    "frontier_command_binding_reviews": [
+      "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/fixture/source-command-binding-review.json"
+    ]
+  },
+  "schema_version": 1,
+  "status": "needs_evidence",
+  "workflow": "unresolved_frontier_evidence_summary"
+}

@@ -56,6 +56,22 @@
       "sha256": "435e20c193758b98a310b9e313177e7ecd5ee4eb5b149a564b7490dbc0511192",
       "size_bytes": 28456
     },
+    "frontier_queue_execution_smoke_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execution-smoke-v1/frontier-queue-execution-smoke.json",
+      "sha256": "2ca6daa739d64758d08d00b7d9164bac47f2655a6f1016d77e80f20fc34a4856",
+      "size_bytes": 2209
+    },
+    "frontier_queue_execution_smoke_manifest_1": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../frontier-queue-execution-smoke-v1/artifact-manifest.json",
+      "sha256": "e997a22a3077bb5b6d1a48fc369a06dc728886950da9300dc9ff8ded73b93c6c",
+      "size_bytes": 7418
+    },
     "mechanism_handoff_bundle": {
       "exists": true,
       "file_count": 1,
@@ -165,8 +181,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "unresolved-frontier-evidence-summary.json",
-      "sha256": "8e3c39f69fabd7080196ef05a12b70b7cdf46f87fc29f836611e5b14a9adfae1",
-      "size_bytes": 32209
+      "sha256": "53f08dec826bc6dd134a1cc41d4798270ddff7959177939570497146b5003d5e",
+      "size_bytes": 33526
     },
     "unresolved_queue": {
       "exists": true,
@@ -192,14 +208,16 @@
     "citation_query_sweep_target_route_not_selected_strategy_count": 0,
     "citation_query_sweep_verified_false_alarm_above_max_strategy_count": 120,
     "citation_status": "blocked",
+    "closure_update": "frontier_queue_execution_smoke",
     "frontier_bound_command_run_count": 1,
     "frontier_bound_command_succeeded_count": 3,
     "frontier_command_binding_review_count": 1,
-    "frontier_queue_execution_smoke_count": 0,
-    "frontier_queue_execution_smoke_manifest_verified_count": 0,
-    "frontier_queue_execution_smoke_status": "not_configured",
+    "frontier_queue_execution_smoke_count": 1,
+    "frontier_queue_execution_smoke_manifest_verified_count": 1,
+    "frontier_queue_execution_smoke_status": "pass",
     "frontier_queue_execution_status": "promote",
     "next_action_count": 1,
+    "sample_scope": "control_plane_health",
     "semantic_gap_review_approved_source_document_count": 7,
     "semantic_gap_review_promoted_workflow_count": 1,
     "semantic_gap_review_status": "promote",
@@ -221,9 +239,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 22,
+    "artifact_count": 24,
     "directory_count": 0,
-    "file_count": 22,
+    "file_count": 24,
     "missing_count": 0
   }
 }

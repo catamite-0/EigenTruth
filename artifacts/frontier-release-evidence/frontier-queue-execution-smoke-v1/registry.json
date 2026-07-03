@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json",
+        "binding_not_reviewed_count": 0,
+        "dry_run_count": 2,
+        "manifest_passed": true,
+        "not_verifier_evidence": true,
+        "status": "pass",
+        "workflow": "frontier_queue_execution_smoke"
+      },
+      "name": "frontier-queue-execution-smoke",
+      "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/frontier-queue-execution-smoke.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "manifest_summary": {
+          "artifact_count": 25,
+          "directory_count": 0,
+          "file_count": 25,
+          "missing_count": 0
+        },
+        "not_verifier_evidence": true,
+        "status": "pass",
+        "workflow": "frontier_queue_execution_smoke"
+      },
+      "name": "frontier-queue-execution-smoke",
+      "path": "artifacts/frontier-release-evidence/frontier-queue-execution-smoke-v1/artifact-manifest.json",
+      "version": "0.1"
+    }
+  ],
+  "schema_version": 1
+}

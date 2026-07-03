@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "binding_scaffold": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-binding-scaffold.json",
+      "sha256": "37b600c57764108f3646b5f4f8213f77eca428a315824510e0aab04a8374071f",
+      "size_bytes": 19051
+    },
+    "frontier_research_queue_staged_command_bindings": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "frontier-queue-execute-staged-bindings.json",
+      "sha256": "e3d648e8190bebd1747b4a71ca4827184d0dcef43a81f84f664af1c9db4df865",
+      "size_bytes": 11833
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "bindings_workflow": "frontier_research_queue_command_bindings",
+    "entry_count": 1,
+    "not_verifier_evidence": true,
+    "remaining_placeholder_count": 0,
+    "runner": "stage_frontier_research_queue_binding_suggestions",
+    "smoke": "frontier-queue-execution-smoke",
+    "staged_placeholder_count": 11,
+    "staged_upstream_output_count": 1,
+    "status": "needs_review",
+    "workflow": "frontier_research_queue_binding_suggestion_staging"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}
