@@ -12,7 +12,7 @@
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://python.org)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[Quick start](#quick-start) | [0.2.0 Notes](docs/release-0.2.0.md) | [0.2 Readiness](docs/release-0.2.0-readiness.md) | [Architecture Map](docs/architecture.md) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
+[Quick start](#quick-start) | [0.2.0 Notes](docs/release-0.2.0.md) | [0.2 Readiness](docs/release-0.2.0-readiness.md) | [Architecture Map](docs/architecture.md) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Development Summary](docs/development-summary-2026-07-04.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
 
 </div>
 

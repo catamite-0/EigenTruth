@@ -87,6 +87,8 @@ the broad citation/search route is solved.
   workflow.
 - Use `docs/product-development-spec.md` for product boundaries and non-goals.
 - Use `docs/release-0.2.0.md` for release evidence and validation history.
+- Use `docs/development-summary-2026-07-04.md` for the latest branch cleanup,
+  scratch cleanup, and development handoff summary.
 - Use `benchmarks/README.md` for reproducible CLI workflows.
 - Run `make check-fast` for lint, tests, and dependency consistency.
 - Run `make check` before pushing Python/source changes.
