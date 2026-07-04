@@ -2,9 +2,9 @@
 
 # EigenTruth
 
-**Research-preview PyTorch toolkit for LLM representation monitoring, geometric drift diagnostics, and experimental activation steering**
+**Research-preview PyTorch toolkit for calibrated LLM observability, representation diagnostics, verifier/control traces, and optional activation steering**
 
-**面向大模型表征监测、几何漂移诊断与实验性激活引导的 PyTorch 研究预览工具库**
+**面向大模型校准观测、表征诊断、验证/控制轨迹与可选激活引导的 PyTorch 研究预览工具库**
 
 [![Status: Research Preview](https://img.shields.io/badge/status-alpha%20research%20preview-yellow.svg)]()
 [![CI](https://github.com/catamitez0-maker/EigenTruth/actions/workflows/ci.yml/badge.svg)](https://github.com/catamitez0-maker/EigenTruth/actions/workflows/ci.yml)
@@ -12,7 +12,7 @@
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://python.org)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[Quick start](#quick-start) | [0.2.0 Notes](docs/release-0.2.0.md) | [Architecture Map](docs/architecture.md) | [Architecture](#architecture) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
+[Quick start](#quick-start) | [0.2.0 Notes](docs/release-0.2.0.md) | [0.2 Readiness](docs/release-0.2.0-readiness.md) | [Architecture Map](docs/architecture.md) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
 
 </div>
 
@@ -23,19 +23,25 @@ EigenTruth is an alpha-stage research toolkit. It is intended for controlled exp
 EigenTruth 是一个处于 alpha 阶段的研究预览工具库，适用于受控实验、诊断和可复现探索。它尚未达到生产可用状态，不能证明模型输出为真，也不能作为已部署系统的安全边界。
 
 The current package baseline is the `0.2.0` research release. See
-[`docs/release-0.2.0.md`](docs/release-0.2.0.md) for the supported scope,
-evidence summary, negative results, and remaining limitations.
-For a compact codebase map, start with
-[`docs/architecture.md`](docs/architecture.md) before diving into the longer
-component tables below.
+[`docs/release-0.2.0.md`](docs/release-0.2.0.md) for supported scope, evidence
+summary, negative results, and remaining limitations. For the shortest current
+codebase map, start with [`docs/architecture.md`](docs/architecture.md).
 
-Current local closure snapshot: merged `main` at `dcdf270` contains the
-calibrated-observability frontier gates. The unresolved frontier evidence
-summary is `promote`, its `next_actions` list is empty, covered-fact route
-coverage is `1.0` with coverage gap `0`, closure verification is `pass`, and the
-derived frontier command plan is `empty`. Historical blocked citation/search
-diagnostics remain documented as negative evidence rather than hidden behind the
-closure state.
+Current GitHub-facing baseline: `main` at `da49c21` closes the 0.2 readiness
+wrap-up. The calibrated-observability frontier gates entered `main` at
+`dcdf270`; the unresolved frontier evidence summary is `promote`, its
+`next_actions` list is empty, covered-fact route coverage is `1.0` with coverage
+gap `0`, closure verification is `pass`, and the derived frontier command plan
+is `empty`. Historical blocked citation/search diagnostics remain documented as
+negative evidence rather than hidden behind the closure state.
+
+The public surface is organized around five monitor-first layers:
+
+- **Observe** hidden-state geometry, spectra, trajectories, pathway signals, and uncertainty proxies.
+- **Calibrate** score dumps into direction-aware conformal thresholds, p-values, abstention gates, and reusable artifacts.
+- **Control** route calibrated risk into accept/retrieve/execute/abstain/clarify actions with JSON-ready traces.
+- **Verify** claims through local deterministic verifiers, retrieval/state/world-model adapter shells, and provenance checks.
+- **Record** manifests, registry entries, action receipts, trace summaries, and negative evidence for reproducible review.
 
 The current implementation explores a research hypothesis: hallucination-related generation behavior may sometimes be accompanied by measurable geometric drift in hidden-state representations. The signals exposed by this project are experimental diagnostics, not calibrated factuality scores.
 

@@ -77,7 +77,7 @@ models remain optional or adapter-level integrations.
 | Sequential conformal replay | Accepted as session/batch audit primitive. | `sequential_pvalue_monitor(...)`, `SequentialConformalArtifact`, `RiskController(..., sequential_gate=...)`, and demo replay tests cover finite alpha spending; sequence traces are kept separate from timed ProductTrace runtime budgets. |
 | World-model traceability | Accepted as observable control-plane evidence. | `StateTransitionVerifier` emits reference/view/conflict metadata; `ProductTrace.world_model_summary()` and verifier-signal dumps preserve nested world-model metadata while ignoring generic prediction metadata. |
 | Frontier evidence handoff | Accepted as fail-closed local release boundary. | Release workflows preserve frontier evidence track status, multiple-testing status, and citation/source-family batch rollup counts through registry metadata, ProductPromotionContract, bounded ProductTrace metadata, runtime baselines, and drift gates. |
-| Unresolved frontier closure | Accepted as scoped coordination closure, not as broad citation/search success. | Merged main at `dcdf270` carries the `unresolved_frontier_evidence_summary` artifact with `status=promote`, `next_actions=[]`, semantic-gap covered-fact route coverage `1.0`, coverage gap `0`, and closure verification `pass`; the derived frontier command plan is `empty`. Historical citation/search query-sweep blockers remain visible as negative evidence. |
+| Unresolved frontier closure | Accepted as scoped coordination closure, not as broad citation/search success. | The frontier gates merged at `dcdf270`, and the documentation/readiness wrap-up is on `main` at `da49c21`. The `unresolved_frontier_evidence_summary` artifact has `status=promote`, `next_actions=[]`, semantic-gap covered-fact route coverage `1.0`, coverage gap `0`, and closure verification `pass`; the derived frontier command plan is `empty`. Historical citation/search query-sweep blockers remain visible as negative evidence. |
 
 ## Known Non-Claims
 
@@ -108,7 +108,7 @@ The 0.2 frontier-gates branch was revalidated before merge on 2026-07-03:
 `1622 passed`, `pip check` reported no broken requirements, deterministic smoke
 workflows ran, and package build produced `eigentruth-0.2.0.tar.gz` plus
 `eigentruth-0.2.0-py3-none-any.whl`. The branch was then merged into `main` as
-`dcdf270`.
+`dcdf270`; the follow-up readiness/documentation wrap-up is `da49c21`.
 
 Representative calibrated-observability chain:
 

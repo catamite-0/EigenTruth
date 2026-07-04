@@ -8,13 +8,14 @@ research-preview toolkit.
 
 ## Branch State
 
-- `main` has been fast-forwarded to `origin/main` at `dcdf270`.
+- `main` is synced with `origin/main` at `da49c21`.
 - `dcdf270` is the merge commit for the calibrated-observability frontier gates.
-- The previous local feature branch
-  `codex/calibrated-observability-frontier-gates` points to `0346437`; its remote
-  tracking branch has been removed after merge.
-- The current 0.2 documentation wrap-up work is isolated on
-  `codex/0-2-wrap-up`.
+- `da49c21` is the follow-up documentation/readiness wrap-up commit.
+- Merged local feature branches and patch-equivalent stale remote branches have
+  been pruned.
+- `codex/qwen05-truthfulqa-results` remains intentionally preserved as a large
+  research-candidate branch for selective future extraction, not as a direct
+  merge target.
 
 ## Validation Snapshot
 
@@ -28,14 +29,18 @@ The 0.2 frontier-gates branch was validated before merge on 2026-07-03:
 - package build produced `dist/eigentruth-0.2.0.tar.gz` and
   `dist/eigentruth-0.2.0-py3-none-any.whl`.
 
-After this documentation wrap-up, run at least:
+The documentation wrap-up at `da49c21` was checked with targeted validation:
 
-```bash
-make check-fast
-```
+- `git diff --check` passed.
+- `.venv/bin/python -m ruff check src tests examples benchmarks` passed.
+- Public API import sanity for `EigenTruthWrapper`, `ProductTrace`,
+  `RiskController`, `LayerScoreSweepCalibrator`, and `ArtifactRegistry` passed.
+- `benchmarks/frontier_artifact_reference_smoke.py` passed with
+  `status=pass`, `references=14`, `manifests=3`, and `missing=0`.
 
-Run `make check` or `make release-check` again if Python source, packaging
-metadata, release gates, or checked-in benchmark artifacts change.
+Run `make check-fast` before the next source change, and run `make check` or
+`make release-check` again if Python source, packaging metadata, release gates,
+or checked-in benchmark artifacts change.
 
 Generated `dist/`, `build/`, and `src/eigentruth.egg-info/` outputs remain build
 products and should not be committed unless a release process explicitly asks

@@ -59,8 +59,9 @@ be configured explicitly behind an adapter or optional extra.
 
 ## Current 0.2 Closure State
 
-As of the merged main branch at `dcdf270`, the 0.2 calibrated-observability work
-has a closed local artifact chain:
+As of `main` at `da49c21`, the 0.2 calibrated-observability work has a closed
+local artifact chain. The frontier gates entered `main` at `dcdf270`; `da49c21`
+adds the readiness/documentation wrap-up:
 
 - score dumps, layer/score sweeps, conformal calibration artifacts, risk
   decisions, action requests/results, and product traces are all represented by
