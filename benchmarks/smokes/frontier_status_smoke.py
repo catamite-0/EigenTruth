@@ -8,11 +8,12 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+from benchmarks.lib.paths import ensure_repo_root_on_path
 
+REPO_ROOT = ensure_repo_root_on_path()
 from benchmarks.build_frontier_status_report import (  # noqa: E402
     DEFAULT_EVIDENCE_GAP_PLAN,
     DEFAULT_PRODUCT_CONTRACT,

@@ -28,17 +28,17 @@
       "exists": true,
       "file_count": 1,
       "kind": "file",
-      "path": "../runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json",
-      "sha256": "eb47f845d63e4891befca11a26a0e7dc0e94cdec68bfb37ab6d884f1fd41a716",
-      "size_bytes": 4612
+      "path": "../baselines/pre_generation_probe_comparison/comparison.json",
+      "sha256": "6a4253d67746b10804cd4934efb74dc4cfd0aa7ab936aec812af809ac4452915",
+      "size_bytes": 723
     },
     "product_promotion_contract_evidence_handoff": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "product-promotion-contract-evidence-handoff.json",
-      "sha256": "0fe9c2be58041d18afd61b1c69d4a97590e9539f678068b98703d84dd9ef6884",
-      "size_bytes": 92860
+      "sha256": "0993642be1653e22c91ba1a1c19fde05938ad01250753a41fb5ac4e9dfa1be7a",
+      "size_bytes": 92788
     },
     "product_promotion_contract_evidence_handoff_audit": {
       "exists": true,

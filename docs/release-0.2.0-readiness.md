@@ -35,12 +35,24 @@ The documentation wrap-up at `da49c21` was checked with targeted validation:
 - `.venv/bin/python -m ruff check src tests examples benchmarks` passed.
 - Public API import sanity for `EigenTruthWrapper`, `ProductTrace`,
   `RiskController`, `LayerScoreSweepCalibrator`, and `ArtifactRegistry` passed.
-- `benchmarks/frontier_artifact_reference_smoke.py` passed with
+- `benchmarks/smokes/frontier_artifact_reference_smoke.py` passed with
   `status=pass`, `references=14`, `manifests=3`, and `missing=0`.
 
 Run `make check-fast` before the next source change, and run `make check` or
 `make release-check` again if Python source, packaging metadata, release gates,
 or checked-in benchmark artifacts change.
+
+### 2026-07-05 Refactor Note
+
+The validation targets are now layered. `make check-fast` excludes tests marked
+`artifact` or `workflow`, while `make test-workflow` and `make test-artifacts`
+run those layers explicitly. This keeps clean-checkout development validation
+from depending on ignored `artifacts/runtime_evidence/` outputs while preserving
+release-artifact checks for `release-check`.
+
+The product-promotion handoff manifests now reference the tracked compact
+baseline at `artifacts/baselines/pre_generation_probe_comparison/` instead of
+the ignored local runtime-evidence comparison report.
 
 Generated `dist/`, `build/`, and `src/eigentruth.egg-info/` outputs remain build
 products and should not be committed unless a release process explicitly asks

@@ -747,12 +747,14 @@ python benchmarks/compare_pre_generation_probe_workflows.py \
   --min-redline-auroc-margin 0.05
 ```
 
-That comparison can be used as release evidence:
+For maintained release or smoke inputs, copy the compact comparison into
+`artifacts/baselines/` or `artifacts/release/` and verify it through a manifest.
+The current tracked baseline can be used directly:
 
 ```bash
 python benchmarks/compare_release_candidates.py \
   --readiness-registry artifacts/registry.json \
-  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json
+  --pre-generation-probe-comparison artifacts/baselines/pre_generation_probe_comparison/comparison.json
 ```
 
 By default, that export writes one prompt-level record per question and uses the
@@ -6790,7 +6792,7 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
   --json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff.json \
   --audit-json artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract-evidence-handoff-audit.json \
-  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --pre-generation-probe-comparison artifacts/baselines/pre_generation_probe_comparison/comparison.json \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_structured_qa_audit_v0/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
@@ -7179,7 +7181,7 @@ not fill source-backed numeric/temporal inputs and still leaves
 For a no-model local fixture of the queue-execution control plane, run:
 
 ```bash
-python benchmarks/frontier_queue_execution_smoke.py \
+python benchmarks/smokes/frontier_queue_execution_smoke.py \
   --output-dir artifacts/frontier-queue-execution-smoke
 ```
 
@@ -7535,7 +7537,7 @@ python benchmarks/export_product_promotion_contract_evidence_handoff.py \
   --contract "$PRODUCT_V19_DIR/product-promotion-contract.json" \
   --json "$PRODUCT_V19_DIR/product-promotion-contract-evidence-handoff.json" \
   --audit-json "$PRODUCT_V19_DIR/product-promotion-contract-evidence-handoff-audit.json" \
-  --pre-generation-probe-comparison artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --pre-generation-probe-comparison artifacts/baselines/pre_generation_probe_comparison/comparison.json \
   --triple-extraction-fixture-matrix artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix-v1/triple-extraction-fixture-matrix.json \
   --counterfactual-verification artifacts/smollm2_product_counterfactual_blind_spot_wikidata_structured_qa_audit_v1/counterfactual-verification-report.json \
   --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow_action_gated_v0/product-trace-replay-workflow.json \
@@ -10900,13 +10902,13 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/cache_worker_sweep_smoke.py`, and
 `benchmarks/registry_baseline_smoke.py`, plus
 `benchmarks/performance_baseline_smoke.py`,
-`benchmarks/product_promotion_contract_smoke.py`,
-`benchmarks/frontier_status_smoke.py`,
-`benchmarks/frontier_release_evidence_smoke.py`,
-`benchmarks/frontier_artifact_reference_smoke.py`,
-`benchmarks/frontier_queue_execution_smoke.py`,
-`benchmarks/product_trace_replay_smoke.py`, and
-`benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
+`benchmarks/smokes/product_promotion_contract_smoke.py`,
+`benchmarks/smokes/frontier_status_smoke.py`,
+`benchmarks/smokes/frontier_release_evidence_smoke.py`,
+`benchmarks/smokes/frontier_artifact_reference_smoke.py`,
+`benchmarks/smokes/frontier_queue_execution_smoke.py`,
+`benchmarks/smokes/product_trace_replay_smoke.py`, and
+`benchmarks/smokes/release_candidate_registry_smoke.py`. These use fixed synthetic profile
 payloads plus the checked-in v1.9 product handoff, the active v1.9/v7
 receipt-aware `77/77` evidence handoff, active frontier status, and active
 frontier doc references to verify that direct gates, cache-profile gates, worker-count sweep

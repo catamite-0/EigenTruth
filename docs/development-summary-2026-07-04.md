@@ -145,3 +145,19 @@ files, not source or tracked artifacts.
   release-evidence review, but future heavy artifacts may need a stricter
   storage policy.
 - `qwen05` remains highly divergent. Direct merge is not recommended.
+
+## 2026-07-05 Maintenance Refactor Update
+
+The repository now separates fast unit/workflow validation from release-artifact
+checks. `make check-fast` runs lint, non-artifact/non-workflow tests, and
+`pip check`; `make test-workflow` runs no-model workflow smoke tests; and
+`make test-artifacts` runs tracked baseline/release artifact checks.
+
+The previous product-promotion handoff smoke depended on an ignored
+`artifacts/runtime_evidence/` pre-generation comparison report. That compact
+input is now tracked under
+`artifacts/baselines/pre_generation_probe_comparison/`, and the product handoff
+manifests point to the tracked baseline instead of ignored local runtime
+scratch. The long README was archived to
+`docs/evidence/legacy-readme-2026-07-05.md`; the root README is now a shorter
+entry point.

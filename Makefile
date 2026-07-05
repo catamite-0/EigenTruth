@@ -1,7 +1,8 @@
 PYTHON ?= $(shell if [ -x .venv/bin/python ]; then printf %s .venv/bin/python; elif command -v python3 >/dev/null 2>&1; then command -v python3; else command -v python; fi)
 RUFF_TARGETS := src tests examples benchmarks
+PYTEST ?= $(PYTHON) -m pytest
 
-.PHONY: install-dev install-examples lint test pip-check perf-check build check-fast check release-check
+.PHONY: install-dev install-examples lint test test-unit test-workflow test-artifacts pip-check perf-check build check-fast check release-check
 
 install-dev:
 	$(PYTHON) -m pip install --upgrade pip
@@ -14,7 +15,16 @@ lint:
 	$(PYTHON) -m ruff check $(RUFF_TARGETS)
 
 test:
-	$(PYTHON) -m pytest tests/ -v
+	$(PYTEST) tests/ -v
+
+test-unit:
+	$(PYTEST) tests/ -v -m "not artifact and not workflow"
+
+test-workflow:
+	$(PYTEST) tests/ -v -m "workflow and not artifact"
+
+test-artifacts:
+	$(PYTEST) tests/ -v -m "artifact"
 
 pip-check:
 	$(PYTHON) -m pip check
@@ -29,19 +39,14 @@ perf-check:
 	$(PYTHON) benchmarks/concept_registry_smoke.py
 	$(PYTHON) benchmarks/triple_extraction_smoke.py
 	$(PYTHON) benchmarks/performance_baseline_smoke.py
-	$(PYTHON) benchmarks/product_promotion_contract_smoke.py
-	$(PYTHON) benchmarks/frontier_status_smoke.py
-	$(PYTHON) benchmarks/frontier_release_evidence_smoke.py
-	$(PYTHON) benchmarks/frontier_artifact_reference_smoke.py
-	$(PYTHON) benchmarks/frontier_queue_execution_smoke.py
-	$(PYTHON) benchmarks/product_trace_replay_smoke.py
-	$(PYTHON) benchmarks/release_candidate_registry_smoke.py
+	$(PYTHON) benchmarks/smokes/product_trace_replay_smoke.py
+	$(PYTHON) benchmarks/smokes/release_candidate_registry_smoke.py
 
 build:
 	$(PYTHON) -m build
 
-check-fast: lint test pip-check
+check-fast: lint test-unit pip-check
 
-check: check-fast perf-check
+check: check-fast test-workflow perf-check
 
-release-check: check build
+release-check: check test-artifacts build

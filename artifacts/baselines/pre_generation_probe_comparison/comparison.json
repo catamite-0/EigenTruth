@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "workflow": "pre_generation_probe_workflow_comparison",
+  "status": "promote",
+  "source": "baseline_snapshot",
+  "summary": {
+    "model_count": 2,
+    "run_count": 2,
+    "redline_run_count": 2,
+    "redline_passed": true,
+    "best_run": "qwen05",
+    "best_model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "best_layer": -4,
+    "best_test_label_auroc": 0.8346153846153846,
+    "best_redline_signal": "answer_negation_flag",
+    "best_redline_auroc": 0.7403846153846154,
+    "best_redline_margin": 0.09423076923076923
+  },
+  "notes": [
+    "Compact tracked baseline for release smoke manifest verification.",
+    "Heavy records and model artifacts remain under ignored runtime_evidence paths."
+  ]
+}

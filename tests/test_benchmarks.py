@@ -35149,8 +35149,9 @@ def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
     ] == "promote"
 
 
+@pytest.mark.artifact
 def test_product_promotion_contract_smoke_verifies_default_current_handoff():
-    module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
+    module = importlib.import_module("benchmarks.smokes.product_promotion_contract_smoke")
 
     payload = module.build_product_promotion_contract_smoke()
 
@@ -35177,8 +35178,9 @@ def test_product_promotion_contract_smoke_verifies_default_current_handoff():
     }
 
 
+@pytest.mark.artifact
 def test_product_promotion_contract_smoke_allows_explicit_legacy_handoff():
-    module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
+    module = importlib.import_module("benchmarks.smokes.product_promotion_contract_smoke")
 
     payload = module.build_product_promotion_contract_smoke(
         evidence_handoff_manifest_path=module.LEGACY_EVIDENCE_HANDOFF_MANIFEST_PATH,
@@ -35195,8 +35197,9 @@ def test_product_promotion_contract_smoke_allows_explicit_legacy_handoff():
     assert payload["evidence_handoff_missing_metric_count"] == 0
 
 
+@pytest.mark.artifact
 def test_product_promotion_contract_smoke_fails_closed_on_missing_registry_record(tmp_path):
-    module = importlib.import_module("benchmarks.product_promotion_contract_smoke")
+    module = importlib.import_module("benchmarks.smokes.product_promotion_contract_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
     registry_path = tmp_path / "registry.json"
     registry_module.ArtifactRegistry.load_json(registry_path).save_json()
@@ -35205,8 +35208,9 @@ def test_product_promotion_contract_smoke_fails_closed_on_missing_registry_recor
         module.build_product_promotion_contract_smoke(registry_path=registry_path)
 
 
+@pytest.mark.artifact
 def test_frontier_release_evidence_smoke_verifies_promoted_contract_report():
-    module = importlib.import_module("benchmarks.frontier_release_evidence_smoke")
+    module = importlib.import_module("benchmarks.smokes.frontier_release_evidence_smoke")
 
     payload = module.build_frontier_release_evidence_smoke()
 
@@ -35226,8 +35230,9 @@ def test_frontier_release_evidence_smoke_verifies_promoted_contract_report():
     assert payload["report"].endswith("frontier-release-evidence-budget-target-sweep-v5.json")
 
 
+@pytest.mark.artifact
 def test_frontier_release_evidence_smoke_fails_closed_on_blocked_report(tmp_path):
-    module = importlib.import_module("benchmarks.frontier_release_evidence_smoke")
+    module = importlib.import_module("benchmarks.smokes.frontier_release_evidence_smoke")
     report_path = tmp_path / "frontier-release-evidence.json"
     manifest_path = tmp_path / "artifact-manifest.json"
 
@@ -35396,8 +35401,9 @@ def test_frontier_status_report_can_refresh_research_queue_from_source_path(tmp_
     assert payload["research_queue"]["gaps"][0]["research_axis"] == "participation_calibration"
 
 
+@pytest.mark.artifact
 def test_frontier_status_smoke_verifies_current_defaults():
-    module = importlib.import_module("benchmarks.frontier_status_smoke")
+    module = importlib.import_module("benchmarks.smokes.frontier_status_smoke")
 
     payload = module.build_frontier_status_smoke()
 
@@ -41940,8 +41946,9 @@ def _frontier_status_gap_plan() -> dict[str, Any]:
     }
 
 
+@pytest.mark.artifact
 def test_frontier_artifact_reference_smoke_verifies_active_docs(tmp_path):
-    module = importlib.import_module("benchmarks.frontier_artifact_reference_smoke")
+    module = importlib.import_module("benchmarks.smokes.frontier_artifact_reference_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
 
     payload = module.build_frontier_artifact_reference_smoke(tmp_path)
@@ -41957,8 +41964,9 @@ def test_frontier_artifact_reference_smoke_verifies_active_docs(tmp_path):
     assert registry.get(module.SMOKE_RECORD_KEY).metadata["status"] == "passed"
 
 
+@pytest.mark.artifact
 def test_frontier_artifact_reference_smoke_fails_closed_on_blocked_audit():
-    module = importlib.import_module("benchmarks.frontier_artifact_reference_smoke")
+    module = importlib.import_module("benchmarks.smokes.frontier_artifact_reference_smoke")
 
     with pytest.raises(AssertionError, match="did not pass"):
         module._assert_frontier_reference_audit({
@@ -41978,8 +41986,9 @@ def test_frontier_artifact_reference_smoke_fails_closed_on_blocked_audit():
         })
 
 
+@pytest.mark.workflow
 def test_frontier_queue_execution_smoke_writes_manifest_and_registry(tmp_path):
-    module = importlib.import_module("benchmarks.frontier_queue_execution_smoke")
+    module = importlib.import_module("benchmarks.smokes.frontier_queue_execution_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
 
     payload = module.build_frontier_queue_execution_smoke(tmp_path)
@@ -42012,8 +42021,9 @@ def test_frontier_queue_execution_smoke_writes_manifest_and_registry(tmp_path):
     assert registry.get(module.SMOKE_MANIFEST_RECORD_KEY).metadata["status"] == "pass"
 
 
+@pytest.mark.workflow
 def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tmp_path):
-    module = importlib.import_module("benchmarks.product_trace_replay_smoke")
+    module = importlib.import_module("benchmarks.smokes.product_trace_replay_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
 
     payload = module.build_product_trace_replay_smoke(tmp_path)
@@ -42033,8 +42043,9 @@ def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tm
     assert registry.get("report:product-trace-replay-smoke:0.1").metadata["status"] == "promote"
 
 
+@pytest.mark.workflow
 def test_release_candidate_registry_smoke_writes_promoted_and_blocked_reports(tmp_path):
-    module = importlib.import_module("benchmarks.release_candidate_registry_smoke")
+    module = importlib.import_module("benchmarks.smokes.release_candidate_registry_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
 
     payload = module.build_release_candidate_registry_smoke(tmp_path)
@@ -63568,7 +63579,7 @@ def test_unresolved_frontier_evidence_summary_surfaces_input_fill_rollup_adapter
 
 def test_unresolved_frontier_evidence_summary_tracks_frontier_queue_execution_gate(tmp_path):
     module = importlib.import_module("benchmarks.summarize_unresolved_frontier_evidence")
-    smoke_module = importlib.import_module("benchmarks.frontier_queue_execution_smoke")
+    smoke_module = importlib.import_module("benchmarks.smokes.frontier_queue_execution_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
 
     ready_review = {

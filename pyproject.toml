@@ -61,6 +61,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "artifact: checks tracked release/baseline artifacts and manifests",
+    "workflow: exercises no-model benchmark workflow plumbing",
+]
 
 [tool.ruff]
 target-version = "py310"

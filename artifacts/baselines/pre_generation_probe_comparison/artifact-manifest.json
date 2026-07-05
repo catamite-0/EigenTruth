@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "comparison.json",
+      "sha256": "6a4253d67746b10804cd4934efb74dc4cfd0aa7ab936aec812af809ac4452915",
+      "size_bytes": 723
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_policy": "tracked_baseline",
+    "source": "pre_generation_probe_comparison_compact_snapshot",
+    "status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

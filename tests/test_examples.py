@@ -1283,6 +1283,7 @@ def test_calibrated_control_demo_can_enforce_claim_coherence():
     assert "initial_claim_coherence" in event_types
 
 
+@pytest.mark.artifact
 def test_calibrated_control_demo_can_use_default_frontier_audit_contract_evidence():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()
