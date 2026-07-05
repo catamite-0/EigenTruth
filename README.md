@@ -1,8 +1,8 @@
 # EigenTruth
 
-**Alpha research-preview PyTorch toolkit for calibrated LLM observability,
-representation diagnostics, verifier/control traces, and optional activation
-steering.**
+**Alpha research-preview PyTorch toolkit for evidence-grounded LLM
+self-revision, calibrated observability, verifier/control traces, and optional
+activation steering.**
 
 EigenTruth is for controlled experiments and reproducible diagnostics. It is not
 a production hallucination detector, truth oracle, factuality guarantee, or
@@ -14,8 +14,10 @@ safety boundary for deployed systems.
 - Core dependency: `torch>=2.0`.
 - Optional Hugging Face, dataset, retrieval, database, rewrite-model, and
   world-model integrations stay behind extras or adapters.
-- The repository is being reorganized around stable core APIs, grouped
-  benchmark workflows, and lightweight tracked baseline artifacts.
+- The 0.3 research direction focuses on reducing evidence-revision stubbornness
+  in small and mid-sized open models.
+- Artifact governance remains the evidence backbone, but the main research
+  story is now text-first correction and inference control.
 
 ## Quick Start
 
@@ -56,6 +58,9 @@ changing model activations.
 ## Main Docs
 
 - [Architecture](docs/architecture.md)
+- [Project positioning](docs/project-positioning.md)
+- [0.3 research direction](docs/research-direction.md)
+- [Future multimodal extension](docs/multimodal-extension.md)
 - [Artifact policy](docs/artifact-policy.md)
 - [Testing](docs/testing.md)
 - [Workflow guide](docs/workflows/README.md)
@@ -70,6 +75,8 @@ changing model activations.
 
 - Do not treat EigenTruth as proof that an answer is true.
 - Do not use activation steering as a production safety mechanism.
+- Do not treat output filtering as the main correction mechanism.
+- Do not train from unverified self-generated correction samples.
 - Do not promote adapter requests or local scratch outputs as evidence before
   they are source-backed, manifest-verified, and tied to a documented baseline
   or release boundary.

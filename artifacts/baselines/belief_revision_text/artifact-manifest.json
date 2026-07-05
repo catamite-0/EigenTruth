@@ -1,0 +1,27 @@
+{
+  "artifacts": {
+    "belief_revision_seed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/belief-revision-seed.jsonl",
+      "sha256": "831a098e70cdddb3a3fde5759e74e257deb3b0c96283aa28638d146ec55c4a05",
+      "size_bytes": 4071
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_policy": "tracked_baseline",
+    "example_count": 4,
+    "language": "zh",
+    "success_metric": "stubbornness_rate",
+    "workflow": "belief_revision_eval"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

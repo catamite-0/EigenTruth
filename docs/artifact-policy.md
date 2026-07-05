@@ -36,3 +36,8 @@ hidden test dependency.
 replacement for the previous ignored
 `artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/`
 comparison report used by product-promotion handoff smoke checks.
+
+`artifacts/baselines/belief_revision_text/` is the compact tracked seed fixture
+for the 0.3 text belief-revision kill-test. It is intentionally small and should
+grow through reviewed baseline updates, not through local runtime scratch
+outputs.

@@ -1,6 +1,9 @@
 # EigenTruth Roadmap
 
-EigenTruth is an alpha-stage research preview. This roadmap focuses on making experiments easier to reproduce and the project easier to review without implying production readiness.
+EigenTruth is an alpha-stage research preview. The 0.3 roadmap shifts the main
+research goal from broad hallucination detection toward evidence-grounded
+self-revision for open small and mid-sized models, without implying production
+readiness.
 
 The product and development charter lives in [`docs/product-development-spec.md`](docs/product-development-spec.md). It defines EigenTruth as a representation-observability and factuality-control toolkit rather than a standalone truth oracle.
 
@@ -15,7 +18,19 @@ visible as negative evidence. Historical stale feature branches have been
 pruned; `codex/qwen05-truthfulqa-results` remains a large research-candidate
 branch to mine selectively, not to merge wholesale.
 
-## Near-Term Milestones
+## 0.3 Near-Term Milestones
+
+### 0.3 Evidence-Grounded Self-Revision
+
+- Add a text-first belief-revision benchmark for stubbornness and unsupported
+  persistence.
+- Implement TruthMemory, CorrectionBuffer, RevisionTrace, and a deterministic
+  EvidenceGroundedRevisionEngine.
+- Export only verified correction rows for later SFT/DPO/LoRA experiments.
+- Add an InferenceCorrectionController that maps revision, diagnostic, and
+  verification signals to accept, revise, retrieve, regenerate, or abstain.
+- Keep multimodal grounding out of scope until the text kill-test shows a
+  measurable correction gain.
 
 ### 0.3 Control And Verification Hardening
 

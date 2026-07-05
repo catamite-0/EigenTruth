@@ -59,6 +59,11 @@ from eigentruth.core.trajectory import (
     residual_contribution_profile,
     trajectory_convergence_metrics,
 )
+from eigentruth.inference_control import (
+    InferenceCorrectionController,
+    InferenceCorrectionDecision,
+    RevisionAction,
+)
 from eigentruth.intervention.activation import (
     ActivationInterventionSummary,
     ActivationPatchSummary,
@@ -80,8 +85,16 @@ from eigentruth.intervention.pathways import (
     knockout_attention_pathway,
     pathway_intervention_effect,
 )
+from eigentruth.memory import CorrectionBuffer, CorrectionRecord, EvidenceRecord, TruthMemory
 from eigentruth.models.wrapper import EigenTruthWrapper
 from eigentruth.registry import ConceptArtifact, load_concept_artifact
+from eigentruth.revision import (
+    BeliefRevisionExample,
+    BeliefRevisionResult,
+    ClaimRevision,
+    EvidenceGroundedRevisionEngine,
+    RevisionTrace,
+)
 from eigentruth.training import (
     RepresentationTelemetryRecorder,
     RepresentationTelemetryReport,
@@ -110,6 +123,18 @@ __all__ = [
     "ActivationPatchSummary",
     "AttentionPathwayKnockoutReport",
     "PathwayInterventionEffect",
+    "InferenceCorrectionController",
+    "InferenceCorrectionDecision",
+    "RevisionAction",
+    "TruthMemory",
+    "EvidenceRecord",
+    "CorrectionBuffer",
+    "CorrectionRecord",
+    "BeliefRevisionExample",
+    "BeliefRevisionResult",
+    "ClaimRevision",
+    "EvidenceGroundedRevisionEngine",
+    "RevisionTrace",
     "TemporaryActivationIntervention",
     "TemporaryActivationPatch",
     "TruthManifold",

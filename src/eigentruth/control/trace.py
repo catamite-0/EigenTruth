@@ -2633,6 +2633,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "artifact_target_layer",
     "artifact_scores",
     "source",
+    "revision",
     "promotion_contract_source",
     "promotion_contract_budget_enabled",
     "promotion_contract_model_id",
