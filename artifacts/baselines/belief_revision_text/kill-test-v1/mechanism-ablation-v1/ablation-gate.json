@@ -1,0 +1,38 @@
+{
+  "decision": "PAUSE_DISTINCT_REVISION_LOOP",
+  "failures": [],
+  "interpretation": "This gate concerns the draft-bearing revision-loop mechanism only. It does not pause evidence-conditioned correction research.",
+  "models": [
+    {
+      "model_family": "qwen",
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "paired_bootstrap_95ci": [
+        -0.583333,
+        -0.25
+      ],
+      "paired_outcomes": {
+        "ties": 22,
+        "treatment_losses": 23,
+        "treatment_wins": 3
+      },
+      "revision_loop_minus_no_draft_success": -0.416667
+    },
+    {
+      "model_family": "smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "paired_bootstrap_95ci": [
+        -0.270833,
+        0.083333
+      ],
+      "paired_outcomes": {
+        "ties": 29,
+        "treatment_losses": 12,
+        "treatment_wins": 7
+      },
+      "revision_loop_minus_no_draft_success": -0.104167
+    }
+  ],
+  "primary_comparison": "evidence_draft_explicit_stance minus evidence_only_explicit_stance",
+  "schema_version": 1,
+  "workflow": "belief_revision_mechanism_ablation_gate"
+}
