@@ -1,0 +1,65 @@
+{
+  "artifacts": {
+    "kill_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/real-model-results/kill-gate.json",
+      "sha256": "9962908e11faf0ba7a7587031207d578b1da36ec9bf7b3ce0d40b8c30b24f53b",
+      "size_bytes": 3350
+    },
+    "qwen_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/real-model-results/qwen-report.json",
+      "sha256": "8768f49b34a947a901fe9c90e6d18416ccae33201b16cf817fd6da347f388757",
+      "size_bytes": 134879
+    },
+    "runtime_examples": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/runtime-examples.jsonl",
+      "sha256": "5d63a15d6e952ba68c53d26c5d0556b427d96e673e66669df51ce4c930f0e6c2",
+      "size_bytes": 30100
+    },
+    "scoring_labels": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/scoring-labels.jsonl",
+      "sha256": "afef5c265effc10826e809a9831d30a22eeb6f497d7517b7812f50b8ba24a319",
+      "size_bytes": 16250
+    },
+    "smollm_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/real-model-results/smollm-report.json",
+      "sha256": "3f3d11601885e0e6ed509da0edd071550e9dde5ccd837f4e6033c81d017946db",
+      "size_bytes": 142494
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "decision": "CONTINUE_0_3",
+    "decoding": {
+      "do_sample": false,
+      "max_new_tokens": 64,
+      "seed": 0,
+      "temperature": 0.0,
+      "top_p": 1.0
+    },
+    "example_count_per_model": 48,
+    "labels_separated_from_generation_inputs": true,
+    "workflow": "belief_revision_kill_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

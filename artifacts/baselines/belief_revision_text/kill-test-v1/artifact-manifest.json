@@ -1,0 +1,50 @@
+{
+  "artifacts": {
+    "build_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/build-report.json",
+      "sha256": "64537dd1422dbba9cad0d70f9396d62e1e4d9af1995ff619c67bf7c826b0f58c",
+      "size_bytes": 1779
+    },
+    "runtime_examples": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/runtime-examples.jsonl",
+      "sha256": "5d63a15d6e952ba68c53d26c5d0556b427d96e673e66669df51ce4c930f0e6c2",
+      "size_bytes": 30100
+    },
+    "scoring_labels": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/scoring-labels.jsonl",
+      "sha256": "afef5c265effc10826e809a9831d30a22eeb6f497d7517b7812f50b8ba24a319",
+      "size_bytes": 16250
+    },
+    "source_verified_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/wikidata-country-core-facts-structured-qa-route/verified-records.jsonl",
+      "sha256": "55add35a0178ae7c9b451356bb8110f87374fc0cceaaead93953abc4a378ce53",
+      "size_bytes": 2116742
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "example_count": 48,
+    "labels_separated_from_generation_inputs": true,
+    "split_name": "kill-test-v1",
+    "workflow": "build_belief_revision_kill_test"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}
