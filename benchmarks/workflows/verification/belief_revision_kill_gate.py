@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REQUIRED_METHODS = (
     "baseline_prompt",
     "self_correction_prompt",
