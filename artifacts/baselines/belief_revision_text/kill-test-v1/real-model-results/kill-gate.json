@@ -1,0 +1,77 @@
+{
+  "decision": "CONTINUE_0_3",
+  "failures": [],
+  "models": [
+    {
+      "correction_gain": 0.20833333333333337,
+      "decoding_config": {
+        "do_sample": false,
+        "max_new_tokens": 64,
+        "seed": 0,
+        "temperature": 0.0,
+        "top_p": 1.0
+      },
+      "eigentruth_correction_success_rate": 0.5833333333333334,
+      "eigentruth_stubbornness_rate": 0.041666666666666664,
+      "example_count": 48,
+      "example_ids_sha256": "f941b9408b21a088dd89e1344b8fa9a1fc39928b2f0d42ea44fb9efd2f843c9d",
+      "integrity_failures": [],
+      "missing_methods": [],
+      "model_family": "qwen",
+      "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "model_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "prompt_template_sha256": {
+        "baseline_prompt": "f25b202ac90e3e29e91fddb932647b935c780b99362ca900fe7701739d3c1425",
+        "eigentruth_revision_loop": "bcaba75c802cec3aaaf42344b997be6786fdacca10f726875aaa089160d45d30",
+        "rag_evidence_only": "bf174ffe835f1c687cbf0ee719d362607d55dbe85600a20bae1569e67e7016c3",
+        "self_correction_prompt": "e4e4a49e7c9766664fe547f0caf07453683a5fb812117dbce1d16f0a78a9e0ec"
+      },
+      "runtime_examples_sha256": "5d63a15d6e952ba68c53d26c5d0556b427d96e673e66669df51ce4c930f0e6c2",
+      "scoring_labels_sha256": "afef5c265effc10826e809a9831d30a22eeb6f497d7517b7812f50b8ba24a319",
+      "self_correction_stubbornness_rate": 0.4375,
+      "self_correction_success_rate": 0.375,
+      "stubbornness_reduction": 0.3958333333333333
+    },
+    {
+      "correction_gain": 0.47916666666666663,
+      "decoding_config": {
+        "do_sample": false,
+        "max_new_tokens": 64,
+        "seed": 0,
+        "temperature": 0.0,
+        "top_p": 1.0
+      },
+      "eigentruth_correction_success_rate": 0.6875,
+      "eigentruth_stubbornness_rate": 0.2708333333333333,
+      "example_count": 48,
+      "example_ids_sha256": "f941b9408b21a088dd89e1344b8fa9a1fc39928b2f0d42ea44fb9efd2f843c9d",
+      "integrity_failures": [],
+      "missing_methods": [],
+      "model_family": "smollm",
+      "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "model_revision": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+      "prompt_template_sha256": {
+        "baseline_prompt": "f25b202ac90e3e29e91fddb932647b935c780b99362ca900fe7701739d3c1425",
+        "eigentruth_revision_loop": "bcaba75c802cec3aaaf42344b997be6786fdacca10f726875aaa089160d45d30",
+        "rag_evidence_only": "bf174ffe835f1c687cbf0ee719d362607d55dbe85600a20bae1569e67e7016c3",
+        "self_correction_prompt": "e4e4a49e7c9766664fe547f0caf07453683a5fb812117dbce1d16f0a78a9e0ec"
+      },
+      "runtime_examples_sha256": "5d63a15d6e952ba68c53d26c5d0556b427d96e673e66669df51ce4c930f0e6c2",
+      "scoring_labels_sha256": "afef5c265effc10826e809a9831d30a22eeb6f497d7517b7812f50b8ba24a319",
+      "self_correction_stubbornness_rate": 0.6458333333333334,
+      "self_correction_success_rate": 0.20833333333333334,
+      "stubbornness_reduction": 0.37500000000000006
+    }
+  ],
+  "policy": {
+    "maximum_regressed_models": 0,
+    "minimum_correction_gain": 0.1,
+    "minimum_examples_per_model": 20,
+    "minimum_model_families": 2,
+    "minimum_models": 2,
+    "minimum_stubbornness_reduction": 0.1,
+    "require_qwen_and_non_qwen": true
+  },
+  "schema_version": 1,
+  "workflow": "belief_revision_kill_gate"
+}

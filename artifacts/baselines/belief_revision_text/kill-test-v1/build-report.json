@@ -1,0 +1,49 @@
+{
+  "example_ids_sha256": "f941b9408b21a088dd89e1344b8fa9a1fc39928b2f0d42ea44fb9efd2f843c9d",
+  "labels_separated_from_generation_inputs": true,
+  "research_boundary": "Evaluation-held-out controlled evidence split derived from tracked Wikidata rows. It is not claimed to be absent from model pretraining data.",
+  "runtime_examples_path": "artifacts/baselines/belief_revision_text/kill-test-v1/runtime-examples.jsonl",
+  "runtime_examples_sha256": "5d63a15d6e952ba68c53d26c5d0556b427d96e673e66669df51ce4c930f0e6c2",
+  "runtime_forbidden_fields": [
+    "accepted_answers",
+    "candidate_answers",
+    "contradiction_label",
+    "corrected_claim",
+    "expected_action",
+    "expected_revision",
+    "is_false",
+    "label",
+    "rejected_answers",
+    "stance"
+  ],
+  "schema_version": 1,
+  "scoring_labels_path": "artifacts/baselines/belief_revision_text/kill-test-v1/scoring-labels.jsonl",
+  "scoring_labels_sha256": "afef5c265effc10826e809a9831d30a22eeb6f497d7517b7812f50b8ba24a319",
+  "selection": {
+    "case_assignment": "first n-4 contradiction, next 2 support, final 2 insufficient",
+    "examples_per_property": 16,
+    "properties": [
+      "capital",
+      "currency",
+      "official language"
+    ],
+    "sort_order": "property then country"
+  },
+  "source_path": "artifacts/wikidata-country-core-facts-structured-qa-route/verified-records.jsonl",
+  "source_sha256": "55add35a0178ae7c9b451356bb8110f87374fc0cceaaead93953abc4a378ce53",
+  "split_name": "kill-test-v1",
+  "summary": {
+    "case_counts": {
+      "contradiction": 36,
+      "insufficient": 6,
+      "support": 6
+    },
+    "example_count": 48,
+    "property_counts": {
+      "capital": 16,
+      "currency": 16,
+      "official language": 16
+    }
+  },
+  "workflow": "build_belief_revision_kill_test"
+}
