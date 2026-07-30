@@ -47,3 +47,9 @@ The first milestone should be treated as a kill-test. If EigenTruth does not
 reduce stubbornness by a meaningful margin on Qwen/DeepSeek/Llama-style models,
 the project should pause deeper training and inference-control complexity.
 
+The executable decision policy lives in
+`benchmarks/workflows/verification/belief_revision_kill_gate.py`. The default
+continuation threshold is a 0.10 absolute stubbornness reduction and a 0.10
+absolute correction-success gain over self-correction on every eligible model,
+with at least two distinct models and 20 held-out examples per model. Results
+that do not meet sample requirements remain `INSUFFICIENT_EVIDENCE`.
