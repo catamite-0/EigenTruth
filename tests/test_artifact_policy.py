@@ -40,6 +40,23 @@ def test_belief_revision_real_model_kill_test_manifest_verifies():
     assert verification.checked == 5
 
 
+def test_belief_revision_mechanism_ablation_manifest_verifies():
+    manifest_path = (
+        REPO_ROOT
+        / "artifacts"
+        / "baselines"
+        / "belief_revision_text"
+        / "kill-test-v1"
+        / "mechanism-ablation-v1"
+        / "artifact-manifest.json"
+    )
+
+    verification = load_and_verify_artifact_manifest(manifest_path, root=REPO_ROOT)
+
+    assert verification.passed is True
+    assert verification.checked == 5
+
+
 def test_default_product_handoff_manifests_do_not_require_runtime_evidence():
     manifest_paths = (
         REPO_ROOT

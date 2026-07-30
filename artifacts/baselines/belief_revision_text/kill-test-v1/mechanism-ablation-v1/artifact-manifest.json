@@ -1,0 +1,60 @@
+{
+  "artifacts": {
+    "ablation_gate": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/mechanism-ablation-v1/ablation-gate.json",
+      "sha256": "65194e7a1e554ba485e632779dba9e284f9e6f5dc690a67ff499e5b3541383ff",
+      "size_bytes": 1099
+    },
+    "qwen_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/mechanism-ablation-v1/qwen-report.json",
+      "sha256": "330145356200f1e0d3f36b96496b151bfe0dd382e76ce5c75349808748c2c427",
+      "size_bytes": 212686
+    },
+    "runtime_examples": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/runtime-examples.jsonl",
+      "sha256": "5d63a15d6e952ba68c53d26c5d0556b427d96e673e66669df51ce4c930f0e6c2",
+      "size_bytes": 30100
+    },
+    "scoring_labels": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/scoring-labels.jsonl",
+      "sha256": "afef5c265effc10826e809a9831d30a22eeb6f497d7517b7812f50b8ba24a319",
+      "size_bytes": 16250
+    },
+    "smollm_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "artifacts/baselines/belief_revision_text/kill-test-v1/mechanism-ablation-v1/smollm-report.json",
+      "sha256": "1b20b514248f83b9bd31e929dec8858b73c2f56a603748a1b895ad01fbfeb491",
+      "size_bytes": 222031
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "arms_per_model": 6,
+    "decision": "PAUSE_DISTINCT_REVISION_LOOP",
+    "example_count_per_model": 48,
+    "private_blinding_material_committed": false,
+    "semantic_adjudication_status": "pending",
+    "workflow": "belief_revision_mechanism_ablation_gate"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}
