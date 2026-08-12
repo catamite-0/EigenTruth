@@ -39,7 +39,7 @@ PROVIDER = "worldbank"
 SOURCE_FAMILY = "official_statistics"
 API_BASE_URL = "https://api.worldbank.org/v2"
 DEFAULT_INDICATOR = "SP.POP.TOTL"
-DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamitez0-maker/EigenTruth)"
+DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamite-0/EigenTruth)"
 RESERVED_FIELDS = {
     "answer",
     "claim_id",

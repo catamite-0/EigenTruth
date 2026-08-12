@@ -34,7 +34,7 @@ from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noq
 DEFAULT_API_ENDPOINT = "https://www.wikidata.org/w/api.php"
 DEFAULT_USER_AGENT = (
     "EigenTruth/0.1 blind-spot-wikidata-evidence "
-    "(https://github.com/catamitez0-maker/EigenTruth)"
+    "(https://github.com/catamite-0/EigenTruth)"
 )
 WIKIDATA_LICENSE_URL = "https://www.wikidata.org/wiki/Wikidata:Licensing"
 WIKIDATA_ENTITY_URL = "https://www.wikidata.org/wiki/"

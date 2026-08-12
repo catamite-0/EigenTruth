@@ -39,7 +39,7 @@ WORKFLOW = "gdelt_source_family_catalog_adapter"
 PROVIDER = "gdelt"
 SOURCE_FAMILY = "news"
 API_BASE_URL = "https://api.gdeltproject.org/api/v2/doc/doc"
-DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamitez0-maker/EigenTruth)"
+DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamite-0/EigenTruth)"
 RESERVED_FIELDS = {
     "answer",
     "claim_id",

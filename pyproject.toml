@@ -51,9 +51,9 @@ examples = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/catamitez0-maker/EigenTruth"
-Repository = "https://github.com/catamitez0-maker/EigenTruth"
-Issues = "https://github.com/catamitez0-maker/EigenTruth/issues"
+Homepage = "https://github.com/catamite-0/EigenTruth"
+Repository = "https://github.com/catamite-0/EigenTruth"
+Issues = "https://github.com/catamite-0/EigenTruth/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

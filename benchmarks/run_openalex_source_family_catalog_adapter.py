@@ -39,7 +39,7 @@ WORKFLOW = "openalex_source_family_catalog_adapter"
 PROVIDER = "openalex"
 SOURCE_FAMILY = "scholarly"
 API_BASE_URL = "https://api.openalex.org/works"
-DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamitez0-maker/EigenTruth)"
+DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamite-0/EigenTruth)"
 DEFAULT_SELECT_FIELDS = (
     "id",
     "doi",

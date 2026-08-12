@@ -41,7 +41,7 @@ from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noq
 WORKFLOW = "official_site_source_family_catalog_adapter"
 PROVIDER = "official_site"
 SOURCE_FAMILY = "official"
-DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamitez0-maker/EigenTruth)"
+DEFAULT_USER_AGENT = "EigenTruth/0.2 (https://github.com/catamite-0/EigenTruth)"
 RESERVED_TASK_FIELDS = {
     "answer",
     "claim_id",

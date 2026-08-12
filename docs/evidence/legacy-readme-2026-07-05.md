@@ -7,7 +7,7 @@
 **面向大模型校准观测、表征诊断、验证/控制轨迹与可选激活引导的 PyTorch 研究预览工具库**
 
 [![Status: Research Preview](https://img.shields.io/badge/status-alpha%20research%20preview-yellow.svg)]()
-[![CI](https://github.com/catamitez0-maker/EigenTruth/actions/workflows/ci.yml/badge.svg)](https://github.com/catamitez0-maker/EigenTruth/actions/workflows/ci.yml)
+[![CI](https://github.com/catamite-0/EigenTruth/actions/workflows/ci.yml/badge.svg)](https://github.com/catamite-0/EigenTruth/actions/workflows/ci.yml)
 [![Framework: PyTorch](https://img.shields.io/badge/framework-PyTorch%202.0%2B-ee4c2c.svg)](https://pytorch.org)
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://python.org)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -103,19 +103,19 @@ EigenTruth 不能保证事实正确性，不能消除幻觉，不能验证模型
 Core install, for the math engine and offline diagnostics:
 
 ```bash
-pip install git+https://github.com/catamitez0-maker/EigenTruth.git
+pip install git+https://github.com/catamite-0/EigenTruth.git
 ```
 
 Install the Hugging Face extra when using `EigenTruthWrapper` with model-loading workflows:
 
 ```bash
-pip install "eigentruth[hf] @ git+https://github.com/catamitez0-maker/EigenTruth.git"
+pip install "eigentruth[hf] @ git+https://github.com/catamite-0/EigenTruth.git"
 ```
 
 For local development:
 
 ```bash
-git clone https://github.com/catamitez0-maker/EigenTruth.git
+git clone https://github.com/catamite-0/EigenTruth.git
 cd EigenTruth
 python -m venv .venv
 # POSIX:   source .venv/bin/activate
@@ -1371,7 +1371,7 @@ If EigenTruth is useful for your research, cite the repository and include the c
   title   = {EigenTruth: Geometric Representation Monitoring and Steering for LLMs},
   author  = {EigenTruth Team},
   year    = {2025},
-  url     = {https://github.com/catamitez0-maker/EigenTruth},
+  url     = {https://github.com/catamite-0/EigenTruth},
   license = {Apache-2.0}
 }
 ```

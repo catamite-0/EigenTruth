@@ -9,7 +9,7 @@ EigenTruth is an alpha-stage research preview. It is not a production safety sys
 EigenTruth requires Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/catamitez0-maker/EigenTruth.git
+git clone https://github.com/catamite-0/EigenTruth.git
 cd EigenTruth
 python -m venv .venv
 ```
@@ -96,7 +96,7 @@ Common types include `feat`, `fix`, `docs`, `test`, `refactor`, and `ci`.
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/catamitez0-maker/EigenTruth/issues) for reproducible bugs, documentation gaps, feature proposals, and improvements to experiment quality.
+Use [GitHub Issues](https://github.com/catamite-0/EigenTruth/issues) for reproducible bugs, documentation gaps, feature proposals, and improvements to experiment quality.
 
 Include:
 
@@ -126,7 +126,7 @@ EigenTruth 是一个处于 alpha 阶段的研究预览项目。它不是生产�
 EigenTruth 需要 Python 3.10 或更高版本。
 
 ```bash
-git clone https://github.com/catamitez0-maker/EigenTruth.git
+git clone https://github.com/catamite-0/EigenTruth.git
 cd EigenTruth
 python -m venv .venv
 ```
@@ -198,7 +198,7 @@ make release-check  # 也会构建包
 
 ## Issue 报告
 
-可使用 [GitHub Issues](https://github.com/catamitez0-maker/EigenTruth/issues) 报告可复现 bug、文档缺口、功能建议和实验质量改进。
+可使用 [GitHub Issues](https://github.com/catamite-0/EigenTruth/issues) 报告可复现 bug、文档缺口、功能建议和实验质量改进。
 
 请包含操作系统、Python 版本、PyTorch 和 Transformers 版本、模型标识、目标层、相关配置、最小复现方式、预期行为和实际行为。请移除日志或堆栈信息中的敏感内容。
 

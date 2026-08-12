@@ -29,7 +29,7 @@ from eigentruth.registry import build_artifact_manifest  # noqa: E402
 DEFAULT_ENDPOINT = "https://query.wikidata.org/sparql"
 DEFAULT_USER_AGENT = (
     "EigenTruth/0.1 retrieval-evidence-research "
-    "(https://github.com/catamitez0-maker/EigenTruth)"
+    "(https://github.com/catamite-0/EigenTruth)"
 )
 WIKIDATA_LICENSE_URL = "https://www.wikidata.org/wiki/Wikidata:Licensing"
 WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"

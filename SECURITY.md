@@ -22,7 +22,7 @@ Security reports may include:
 - dependency vulnerabilities with a concrete impact on this project
 - documentation that encourages unsafe execution of untrusted code or artifacts
 
-For ordinary bugs, feature requests, or documentation improvements, use [GitHub Issues](https://github.com/catamitez0-maker/EigenTruth/issues).
+For ordinary bugs, feature requests, or documentation improvements, use [GitHub Issues](https://github.com/catamite-0/EigenTruth/issues).
 
 ## Research-Preview Disclaimer
 
